@@ -1,0 +1,20 @@
+appId: com.devtools.app
+productName: DevTools App
+directories:
+  output: dist-electron/pack
+files:
+  - dist
+  - dist-electron
+  - package.json
+win:
+  target: nsis
+  icon: public/electron-vite.svg
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: dmg
+  icon: public/electron-vite.svg
+linux:
+  target: AppImage
+  icon: public/electron-vite.svg

@@ -1,0 +1,383 @@
+# TODO List - DevTools App
+
+## Phase 1: Project Setup & Core UI
+
+### 1.1 Project Initialization
+
+- [x] Initialize Vite + React + TypeScript project
+- [x] Setup Electron with Vite plugin
+- [x] Configure TypeScript (tsconfig.json)
+- [x] Setup ESLint + Prettier
+- [x] Configure Tailwind CSS with custom theme
+- [ ] Install all core dependencies
+- [x] Install all dev dependencies
+- [x] Setup Vitest for testing
+- [ ] Create basic project structure
+
+### 1.2 Electron Configuration
+
+- [x] Create electron/main/main.ts (main process)
+- [x] Create electron/preload/preload.ts (preload script)
+- [x] Configure window (frameless, transparent, vibrancy)
+- [x] Setup IPC communication structure
+- [x] Configure electron-builder (electron-builder.yml)
+- [ ] Setup auto-updater configuration
+- [x] Test window creation and basic functionality
+
+### 1.3 Base Layout Components
+
+- [ ] Create WindowControls component (traffic lights)
+- [ ] Create Sidebar component structure
+- [ ] Create DynamicIsland component
+- [ ] Create ToolPane component (input/output)
+- [ ] Create main App layout
+- [ ] Setup routing/navigation structure
+
+### 1.4 Glassmorphism Styling
+
+- [ ] Setup Tailwind custom theme (glass colors, squircle radius)
+- [ ] Create base glassmorphism utility classes
+- [ ] Style main container with gradient background
+- [ ] Style Sidebar with glass effect
+- [ ] Style ToolPane with glass effect
+- [ ] Style buttons with glassmorphism
+- [ ] Create Card component with glass styling
+- [ ] Setup custom scrollbar styling
+- [ ] Test glassmorphism on Windows and macOS
+
+### 1.5 Basic Navigation
+
+- [ ] Create tool categories structure
+- [ ] Create navigation list in Sidebar
+- [ ] Implement tool selection logic
+- [ ] Add icons to navigation items (Lucide)
+- [ ] Add hover effects to navigation
+- [ ] Add active state styling
+- [ ] Test navigation flow
+
+---
+
+## Phase 2: Tool Integration & Core Features
+
+### 2.1 State Management Setup
+
+- [ ] Create toolStore.ts (Zustand)
+- [ ] Create uiStore.ts (Zustand)
+- [ ] Create settingsStore.ts (Zustand)
+- [ ] Setup electron-store integration
+- [ ] Implement persistence middleware
+- [ ] Test state management flow
+
+### 2.2 Code Editor Component
+
+- [ ] Integrate CodeMirror (@uiw/react-codemirror)
+- [ ] Create CodeEditor component wrapper
+- [ ] Setup syntax highlighting
+- [ ] Add theme for glassmorphism
+- [ ] Implement line numbers and basic features
+- [ ] Test editor functionality
+
+### 2.3 Tool Pane Implementation
+
+- [ ] Complete ToolPane component
+- [ ] Add input pane with CodeEditor
+- [ ] Add output pane with display area
+- [ ] Implement Clear button
+- [ ] Implement Copy button
+- [ ] Implement Download button
+- [ ] Add tool-specific action buttons
+- [ ] Test pane interactions
+
+### 2.4 First Tool Implementation (JSON Formatter)
+
+- [ ] Create tools/json/JsonFormatter.tsx
+- [ ] Implement JSON prettify
+- [ ] Implement JSON minify
+- [ ] Implement JSON validate
+- [ ] Add error handling
+- [ ] Test JSON formatter tool
+
+### 2.5 Tool System Architecture
+
+- [ ] Create tool registry system
+- [ ] Create tool wrapper component
+- [ ] Setup tool routing
+- [ ] Create tool configuration system
+- [ ] Test tool switching
+
+---
+
+## Phase 3: Core Tools Implementation
+
+### 3.1 Converter Tools
+
+- [ ] Base64 string encoder/decoder
+- [ ] Base64 file converter
+- [ ] YAML ⇄ JSON converter
+- [ ] JSON ⇄ XML converter
+- [ ] XML ⇄ JSON converter
+- [ ] Markdown to HTML
+- [ ] Case converter
+- [ ] Color converter (hex, rgb, hsl)
+- [ ] Date-time converter
+- [ ] Integer base converter
+
+### 3.2 Crypto Tools
+
+- [ ] Hash text (MD5, SHA1, SHA256, SHA512, SHA3)
+- [ ] UUID generator
+- [ ] ULID generator
+- [ ] Token generator
+- [ ] Password strength analyser
+- [ ] HMAC generator
+- [ ] Encrypt/decrypt text (AES)
+- [ ] Bcrypt hasher
+
+### 3.3 Web Tools
+
+- [ ] URL encoder/decoder
+- [ ] JWT parser
+- [ ] HTML entities escape/unescape
+- [ ] URL parser
+- [ ] Basic auth generator
+- [ ] Slugify string
+- [ ] User-agent parser
+- [ ] HTTP status codes list
+- [ ] JSON diff
+
+### 3.4 Development Tools
+
+- [ ] JSON prettify and format
+- [ ] JSON minify
+- [ ] JSON to CSV
+- [ ] SQL prettify and format
+- [ ] YAML prettify and format
+- [ ] XML formatter
+- [ ] Regex Tester
+- [ ] Crontab generator
+- [ ] Docker run → docker-compose converter
+- [ ] Chmod calculator
+- [ ] Email normalizer
+
+### 3.5 Text Tools
+
+- [ ] Lorem ipsum generator
+- [ ] Text statistics
+- [ ] Text diff
+- [ ] String obfuscator
+- [ ] Case converter
+- [ ] ASCII Art Text Generator
+
+### 3.6 Network Tools
+
+- [ ] IPv4 subnet calculator
+- [ ] IPv4 address converter
+- [ ] MAC address generator
+- [ ] MAC address lookup
+
+### 3.7 Math & Measurement Tools
+
+- [ ] Math evaluator
+- [ ] Percentage calculator
+- [ ] Temperature converter
+- [ ] Chronometer
+
+### 3.8 Image Tools
+
+- [ ] QR Code generator
+- [ ] WiFi QR Code generator
+- [ ] SVG placeholder generator
+
+### 3.9 Data Tools
+
+- [ ] Phone parser and formatter
+- [ ] IBAN validator and parser
+
+---
+
+## Phase 4: Polish & Advanced Features
+
+### 4.1 Animations & Transitions
+
+- [ ] Add Framer Motion animations
+- [ ] Implement status pulse animation (Dynamic Island)
+- [ ] Add hover transitions
+- [ ] Add focus effects
+- [ ] Add page transitions
+- [ ] Optimize animation performance
+
+### 4.2 Dynamic Island
+
+- [ ] Complete Dynamic Island component
+- [ ] Add status indicators
+- [ ] Add latency display
+- [ ] Add active tool indicator
+- [ ] Implement pulse animation
+- [ ] Test on different screen sizes
+
+### 4.3 Keyboard Shortcuts
+
+- [ ] Implement Cmd/Ctrl + K for search
+- [ ] Add tool-specific shortcuts
+- [ ] Add navigation shortcuts
+- [ ] Create shortcuts help modal
+- [ ] Store shortcuts in settings
+
+### 4.4 Settings & Persistence
+
+- [ ] Create Settings UI
+- [ ] Implement preferences storage
+- [ ] Add theme settings (if needed)
+- [ ] Add window state persistence
+- [ ] Add tool history persistence
+- [ ] Test persistence across app restarts
+
+### 4.5 Tool Search & Filter
+
+- [ ] Implement search functionality
+- [ ] Add filter by category
+- [ ] Add recent tools section
+- [ ] Add favorites system
+- [ ] Implement tool sorting
+- [ ] Test search performance
+
+### 4.6 History & Favorites
+
+- [ ] Create history store
+- [ ] Implement tool usage history
+- [ ] Add favorites functionality
+- [ ] Create history UI
+- [ ] Add clear history option
+- [ ] Test history persistence
+
+### 4.7 Export/Import
+
+- [ ] Implement export tool data
+- [ ] Implement import tool data
+- [ ] Add export settings
+- [ ] Add backup/restore functionality
+- [ ] Test export/import flow
+
+### 4.8 File Handling
+
+- [ ] Implement drag & drop for files
+- [ ] Add file picker integration
+- [ ] Handle file reading (Electron IPC)
+- [ ] Handle file saving (Electron IPC)
+- [ ] Test file operations
+
+### 4.9 Toast Notifications
+
+- [ ] Integrate Sonner
+- [ ] Add toast for copy actions
+- [ ] Add toast for download actions
+- [ ] Add toast for errors
+- [ ] Add toast for success messages
+- [ ] Style toasts with glassmorphism
+
+---
+
+## Phase 5: Performance & Optimization
+
+### 5.1 Performance Optimizations
+
+- [ ] Implement virtual scrolling for long lists
+- [ ] Add lazy loading for tool components
+- [ ] Add React.memo for expensive components
+- [ ] Implement debouncing for input handlers
+- [ ] Optimize Zustand selectors
+- [ ] Test performance with large data
+
+### 5.2 Code Optimization
+
+- [ ] Review and optimize bundle size
+- [ ] Implement code splitting
+- [ ] Optimize images and assets
+- [ ] Remove unused dependencies
+- [ ] Optimize Electron main process
+
+### 5.3 Error Handling
+
+- [ ] Add error boundaries
+- [ ] Implement error logging
+- [ ] Add user-friendly error messages
+- [ ] Handle network errors (if applicable)
+- [ ] Test error scenarios
+
+### 5.4 Testing
+
+- [ ] Write unit tests for utilities
+- [ ] Write component tests
+- [ ] Write integration tests for tools
+- [ ] Test Electron IPC communication
+- [ ] Test cross-platform compatibility
+
+---
+
+## Phase 6: Build & Distribution
+
+### 6.1 Build Configuration
+
+- [ ] Finalize electron-builder.yml
+- [ ] Configure Windows build (NSIS)
+- [ ] Configure macOS build (DMG)
+- [ ] Setup code signing (macOS)
+- [ ] Setup notarization (macOS)
+- [ ] Test build process
+
+### 6.2 Auto-updater
+
+- [ ] Complete auto-updater implementation
+- [ ] Setup update server/endpoint
+- [ ] Test update flow
+- [ ] Add update notifications
+- [ ] Handle update errors
+
+### 6.3 Documentation
+
+- [ ] Create README.md
+- [ ] Document installation process
+- [ ] Document tool usage
+- [ ] Create changelog
+- [ ] Add screenshots/demos
+
+### 6.4 Release Preparation
+
+- [ ] Version bumping
+- [ ] Create release notes
+- [ ] Test on Windows
+- [ ] Test on macOS
+- [ ] Final QA testing
+- [ ] Create release build
+
+---
+
+## Ongoing Tasks
+
+### Maintenance
+
+- [ ] Monitor error logs
+- [ ] Update dependencies regularly
+- [ ] Fix reported bugs
+- [ ] Add requested features
+- [ ] Performance monitoring
+
+### Future Enhancements
+
+- [ ] Additional tools (based on feedback)
+- [ ] Plugin system (if needed)
+- [ ] Cloud sync (optional)
+- [ ] Multi-language support (if needed)
+- [ ] Advanced customization options
+
+---
+
+## Notes
+
+- Prioritize Phase 1 and Phase 2 for MVP
+- Each tool should be isolated and testable
+- Follow glassmorphism design consistently
+- Ensure all tools work client-side (privacy)
+- Test on both Windows and macOS
+- Keep bundle size optimized
+- Document all tools with examples
