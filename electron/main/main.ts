@@ -22,6 +22,10 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
     },
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     // Frameless and transparent for custom UI
     frame: false,
     transparent: true,

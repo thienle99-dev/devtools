@@ -26,12 +26,12 @@
 
 ### 1.3 Base Layout Components
 
-- [ ] Create WindowControls component (traffic lights)
-- [ ] Create Sidebar component structure
-- [ ] Create DynamicIsland component
-- [ ] Create ToolPane component (input/output)
-- [ ] Create main App layout
-- [ ] Setup routing/navigation structure
+- [x] Create WindowControls component (traffic lights)
+- [x] Create Sidebar component structure
+- [x] Create DynamicIsland component
+- [x] Create ToolPane component (input/output)
+- [x] Create main App layout
+- [x] Setup routing/navigation structure
 
 ### 1.4 Glassmorphism Styling
 
