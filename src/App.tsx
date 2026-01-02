@@ -6,6 +6,7 @@ import { WindowControls } from './components/layout/WindowControls';
 import { DynamicIsland } from './components/layout/DynamicIsland';
 import { ToolPane } from './components/layout/ToolPane';
 import { ToolPlaceholder } from './components/layout/ToolPlaceholder';
+import { JsonFormatter } from './tools/json/JsonFormatter';
 
 // Lazy load pages for better initial load performance
 const SettingsPage = lazy(() => import('./pages/Settings'));
@@ -71,14 +72,7 @@ function App() {
                   <Route path="/" element={<Navigate to="/json-format" replace />} />
                   <Route
                     path="/json-format"
-                    element={
-                      <ToolPane
-                        title="JSON Formatter"
-                        description="Prettify, minify and validate JSON data"
-                      >
-                        <ToolPlaceholder name="JSON Formatter" />
-                      </ToolPane>
-                    }
+                    element={<JsonFormatter />}
                   />
                   <Route
                     path="/json-yaml"
