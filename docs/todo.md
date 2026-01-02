@@ -35,15 +35,15 @@
 
 ### 1.4 Glassmorphism Styling
 
-- [ ] Setup Tailwind custom theme (glass colors, squircle radius)
-- [ ] Create base glassmorphism utility classes
-- [ ] Style main container with gradient background
-- [ ] Style Sidebar with glass effect
-- [ ] Style ToolPane with glass effect
-- [ ] Style buttons with glassmorphism
-- [ ] Create Card component with glass styling
-- [ ] Setup custom scrollbar styling
-- [ ] Test glassmorphism on Windows and macOS
+- [x] Setup Tailwind custom theme (glass colors, squircle radius)
+- [x] Create base glassmorphism utility classes
+- [x] Style main container with gradient background
+- [x] Style Sidebar with glass effect
+- [x] Style ToolPane with glass effect
+- [x] Style buttons with glassmorphism
+- [x] Create Card component with glass styling
+- [x] Setup custom scrollbar styling
+- [x] Test glassmorphism on Windows and macOS
 
 ### 1.5 Basic Navigation
 

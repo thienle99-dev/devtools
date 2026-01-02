@@ -44,13 +44,10 @@ body {
 
 /* Glassmorphism background for the whole app */
 .bg-app-gradient {
-  background: radial-gradient(circle at top left, #1e1b4b 0%, #000000 100%);
-}
-
-@layer components {
-  .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
-  }
+  background:
+    radial-gradient(circle at 10% 20%, rgba(30, 27, 75, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(67, 56, 202, 0.1) 0%, transparent 50%),
+    #050505;
 }
 
 @theme {
@@ -59,9 +56,105 @@ body {
   --color-glass-200: rgba(255, 255, 255, 0.2);
   --color-glass-300: rgba(255, 255, 255, 0.3);
 
+  --radius-squircle: 24px;
   --radius-3xl: 1.5rem;
   --radius-4xl: 2rem;
   --radius-5xl: 2.5rem;
 
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer components {
+
+  /* Premium Glass Cards - Using standard CSS to avoid @apply issues with arbitrary values in v4 */
+  .glass-panel {
+    background-color: rgba(15, 15, 20, 0.6);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  }
+
+  .glass-panel-light {
+    background-color: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  /* Glass Buttons */
+  .glass-button {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    /* 12px / xl */
+    padding: 0.5rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: white;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-button:active {
+    background-color: rgba(255, 255, 255, 0.03);
+    transform: scale(0.95);
+  }
+
+  .glass-button-primary {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(79, 70, 229, 0.8);
+    /* indigo-500/80 */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.625rem 1.5rem;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+
+  .glass-button-primary:hover {
+    background-color: rgb(79, 70, 229);
+    /* indigo-500 */
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+  }
+
+  .glass-button-primary:active {
+    background-color: rgb(67, 56, 202);
+    /* indigo-600 */
+    transform: scale(0.95);
+  }
+
+  /* Glass Inputs */
+  .glass-input {
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: white;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+  }
+
+  .glass-input:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  .glass-input:focus {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
 }

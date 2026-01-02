@@ -44,14 +44,14 @@ const categories = [
 
 export const Sidebar: React.FC = () => {
     return (
-        <aside className="w-64 h-full bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col transition-all duration-300">
-            <div className="p-4 flex items-center mb-2">
+        <aside className="w-64 h-full glass-panel-light border-r-0 flex flex-col transition-all duration-300 z-20">
+            <div className="p-4 flex items-center mb-2 mt-2">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                     <input
                         type="text"
                         placeholder="Search tools..."
-                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+                        className="glass-input w-full pl-10"
                     />
                 </div>
             </div>
@@ -86,8 +86,8 @@ export const Sidebar: React.FC = () => {
                 ))}
             </nav>
 
-            <div className="p-4 border-t border-white/10">
-                <button className="flex items-center w-full px-3 py-2 rounded-lg text-sm text-white/60 hover:bg-white/5 hover:text-white transition-all">
+            <div className="p-4 border-t border-white/5">
+                <button className="glass-button w-full flex items-center justify-start border-none bg-transparent hover:bg-white/5">
                     <Settings className="w-4 h-4 mr-3" />
                     Settings
                 </button>
