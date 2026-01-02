@@ -70,12 +70,12 @@
 
 ### 2.2 Code Editor Component
 
-- [ ] Integrate CodeMirror (@uiw/react-codemirror)
-- [ ] Create CodeEditor component wrapper
-- [ ] Setup syntax highlighting
-- [ ] Add theme for glassmorphism
-- [ ] Implement line numbers and basic features
-- [ ] Test editor functionality
+- [x] Integrate CodeMirror (@uiw/react-codemirror)
+- [x] Create CodeEditor component wrapper
+- [x] Setup syntax highlighting
+- [x] Add theme for glassmorphism
+- [x] Implement line numbers and basic features
+- [x] Test editor functionality
 
 ### 2.3 Tool Pane Implementation
 

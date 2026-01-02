@@ -1,26 +1,40 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '../../utils/cn';
+import { CodeEditor } from '../ui/CodeEditor';
 
 export const ToolPlaceholder: React.FC<{ name: string }> = ({ name }) => {
+    const language = useMemo(() => {
+        const n = name.toLowerCase();
+        if (n.includes('json')) return 'json';
+        if (n.includes('sql')) return 'sql';
+        if (n.includes('html')) return 'html';
+        if (n.includes('css')) return 'css';
+        if (n.includes('xml')) return 'html'; // XML uses HTML mode often
+        if (n.includes('yaml')) return 'yaml';
+        if (n.includes('script') || n.includes('js')) return 'javascript';
+        return 'text';
+    }, [name]);
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Input</label>
-                    <div className="h-96 glass-input !p-0 overflow-hidden focus-within:ring-1 focus-within:ring-border-glass">
-                        <textarea
-                            className="w-full h-full bg-transparent border-none outline-none resize-none p-4 font-mono text-sm text-foreground placeholder:text-foreground-muted"
-                            placeholder="Paste your content here..."
-                        />
-                    </div>
+                    <CodeEditor
+                        className="h-96"
+                        language={language}
+                        placeholder="Paste your content here..."
+                    />
                 </div>
                 <div className="space-y-3">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Output</label>
-                    <div className="h-96 glass-input !p-0 overflow-hidden bg-[var(--color-glass-input)]">
-                        <pre className="w-full h-full overflow-auto custom-scrollbar p-4 font-mono text-sm text-emerald-400">
-                            {`// Output for ${name} will appear here`}
-                        </pre>
-                    </div>
+                    <CodeEditor
+                        className="h-96"
+                        language={language}
+                        value={`// Output for ${name} will appear here`}
+                        readOnly={true}
+                        editable={false}
+                    />
                 </div>
             </div>
 
