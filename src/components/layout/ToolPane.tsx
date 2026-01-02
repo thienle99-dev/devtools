@@ -7,9 +7,20 @@ interface ToolPaneProps {
     description?: string;
     children: ReactNode;
     actions?: ReactNode;
+    onCopy?: () => void;
+    onDownload?: () => void;
+    onClear?: () => void;
 }
 
-export const ToolPane: React.FC<ToolPaneProps> = ({ title, description, children, actions }) => {
+export const ToolPane: React.FC<ToolPaneProps> = ({
+    title,
+    description,
+    children,
+    actions,
+    onCopy,
+    onDownload,
+    onClear
+}) => {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden glass-panel rounded-3xl m-2 shadow-2xl relative">
             {/* Header */}
@@ -22,13 +33,28 @@ export const ToolPane: React.FC<ToolPaneProps> = ({ title, description, children
                 <div className="flex items-center space-x-2">
                     {actions}
                     <div className="flex bg-[var(--color-glass-input)] rounded-xl p-1 border border-border-glass">
-                        <button className="p-2 text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover rounded-lg transition-all" title="Copy">
+                        <button
+                            onClick={onCopy}
+                            className="p-2 text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Copy Output"
+                            disabled={!onCopy}
+                        >
                             <Copy className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover rounded-lg transition-all" title="Download">
+                        <button
+                            onClick={onDownload}
+                            className="p-2 text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download Output"
+                            disabled={!onDownload}
+                        >
                             <Download className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all" title="Clear">
+                        <button
+                            onClick={onClear}
+                            className="p-2 text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Clear Input"
+                            disabled={!onClear}
+                        >
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
