@@ -225,12 +225,12 @@
 
 ### 4.4 Settings & Persistence
 
-- [ ] Create Settings UI
-- [ ] Implement preferences storage
-- [ ] Add theme settings (if needed)
-- [ ] Add window state persistence
-- [ ] Add tool history persistence
-- [ ] Test persistence across app restarts
+- [x] Create Settings UI
+- [x] Implement preferences storage
+- [x] Add theme settings (if needed)
+- [x] Add window state persistence
+- [x] Add tool history persistence
+- [x] Test persistence across app restarts
 
 ### 4.5 Tool Search & Filter
 

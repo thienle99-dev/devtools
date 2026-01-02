@@ -20,4 +20,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   },
 
   // You can expose other weird methods here
+  process: {
+    platform: process.platform,
+  },
 })

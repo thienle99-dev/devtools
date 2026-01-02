@@ -18,15 +18,19 @@ let win: BrowserWindow | null
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 function createWindow() {
+  const windowBounds = store.get('windowBounds') as { width: number; height: number; x?: number; y?: number } || {
+    width: 1200,
+    height: 800,
+  };
+
   win = new BrowserWindow({
     icon: join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
     webPreferences: {
-      preload: join(__dirname, '../preload/preload.mjs'),
+      preload: join(__dirname, 'preload.mjs'),
       nodeIntegration: true,
       contextIsolation: true,
     },
-    width: 1200,
-    height: 800,
+    ...windowBounds,
     minWidth: 900,
     minHeight: 600,
     // Frameless and transparent for custom UI
@@ -36,6 +40,13 @@ function createWindow() {
     vibrancy: 'sidebar', // for macOS
     trafficLightPosition: { x: 15, y: 15 }, // macOS specific
   })
+
+  // Save window bounds on change
+  const saveBounds = () => {
+    store.set('windowBounds', win?.getBounds())
+  }
+  win.on('resize', saveBounds)
+  win.on('move', saveBounds)
 
   // Handle Store IPC
   ipcMain.handle('store-get', (_event, key) => store.get(key))

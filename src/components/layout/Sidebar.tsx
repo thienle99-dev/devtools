@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import {
     Box,
     Code2,
-    FileJson,
     Hash,
     Globe,
     Settings,
@@ -87,10 +86,16 @@ export const Sidebar: React.FC = () => {
             </nav>
 
             <div className="p-4 border-t border-white/5">
-                <button className="glass-button w-full flex items-center justify-start border-none bg-transparent hover:bg-white/5">
+                <NavLink
+                    to="/settings"
+                    className={({ isActive }) => cn(
+                        "glass-button w-full flex items-center justify-start border-none bg-transparent hover:bg-white/5",
+                        isActive && "bg-white/10 text-white"
+                    )}
+                >
                     <Settings className="w-4 h-4 mr-3" />
                     Settings
-                </button>
+                </NavLink>
             </div>
         </aside>
     );

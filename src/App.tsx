@@ -4,6 +4,7 @@ import { WindowControls } from './components/layout/WindowControls';
 import { DynamicIsland } from './components/layout/DynamicIsland';
 import { ToolPane } from './components/layout/ToolPane';
 import { ToolPlaceholder } from './components/layout/ToolPlaceholder';
+import SettingsPage from './pages/Settings';
 
 function App() {
   return (
@@ -64,6 +65,7 @@ function App() {
                     </ToolPane>
                   }
                 />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route
                   path="*"
                   element={

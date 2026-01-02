@@ -8867,15 +8867,18 @@ process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.D
 var win;
 var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 function createWindow() {
+	const windowBounds = store.get("windowBounds") || {
+		width: 1200,
+		height: 800
+	};
 	win = new BrowserWindow({
 		icon: join(process.env.VITE_PUBLIC || "", "electron-vite.svg"),
 		webPreferences: {
-			preload: join(__dirname, "../preload/preload.mjs"),
+			preload: join(__dirname, "preload.mjs"),
 			nodeIntegration: true,
 			contextIsolation: true
 		},
-		width: 1200,
-		height: 800,
+		...windowBounds,
 		minWidth: 900,
 		minHeight: 600,
 		frame: false,
@@ -8887,6 +8890,11 @@ function createWindow() {
 			y: 15
 		}
 	});
+	const saveBounds = () => {
+		store.set("windowBounds", win?.getBounds());
+	};
+	win.on("resize", saveBounds);
+	win.on("move", saveBounds);
 	ipcMain.handle("store-get", (_event, key) => store.get(key));
 	ipcMain.handle("store-set", (_event, key, value) => store.set(key, value));
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
