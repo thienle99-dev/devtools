@@ -1,0 +1,187 @@
+import React, { useEffect } from 'react';
+import { Button } from '../../components/ui/Button';
+import { ToolPane } from '../../components/layout/ToolPane';
+import { useToolStore } from '../../store/toolStore';
+import zxcvbn from 'zxcvbn';
+
+const TOOL_ID = 'token-generator';
+
+const CHAR_SETS = {
+    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lowercase: 'abcdefghijklmnopqrstuvwxyz',
+    numbers: '0123456789',
+    symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-='
+};
+
+export const TokenGenerator: React.FC = () => {
+    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+
+    // Default options
+    const data = tools[TOOL_ID] || {
+        options: {
+            length: 16,
+            uppercase: true,
+            lowercase: true,
+            numbers: true,
+            symbols: false,
+            excludeSimilar: false, // 1, l, I, 0, O
+            quantity: 1
+        },
+        output: '',
+        meta: { strength: null }
+    };
+
+    const { options, output, meta } = data;
+
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
+
+    const updateOption = (key: string, value: any) => {
+        setToolData(TOOL_ID, { options: { ...options, [key]: value } });
+    };
+
+    const generate = () => {
+        let chars = '';
+        if (options.uppercase) chars += CHAR_SETS.uppercase;
+        if (options.lowercase) chars += CHAR_SETS.lowercase;
+        if (options.numbers) chars += CHAR_SETS.numbers;
+        if (options.symbols) chars += CHAR_SETS.symbols;
+
+        if (options.excludeSimilar) {
+            chars = chars.replace(/[ilLI|10Oo]/g, '');
+        }
+
+        if (!chars) {
+            setToolData(TOOL_ID, { output: 'Please select at least one character set.' });
+            return;
+        }
+
+        const quantity = Math.max(1, Math.min(50, options.quantity || 1));
+        const length = Math.max(4, Math.min(128, options.length || 16));
+
+        const tokens: string[] = [];
+
+        for (let q = 0; q < quantity; q++) {
+            let token = '';
+            const array = new Uint32Array(length);
+            crypto.getRandomValues(array);
+            for (let i = 0; i < length; i++) {
+                token += chars[array[i] % chars.length];
+            }
+            tokens.push(token);
+        }
+
+        const result = tokens.join('\n');
+
+        // Analyze strength of the first token (if length > 0)
+        let strengthResult = null;
+        if (tokens.length > 0 && result.length > 0) {
+            strengthResult = zxcvbn(tokens[0]);
+        }
+
+        setToolData(TOOL_ID, {
+            output: result,
+            meta: { strength: strengthResult }
+        });
+    };
+
+    const handleClear = () => clearToolData(TOOL_ID);
+    const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
+
+    // Check if we already have output; generate if empty on first load could be nice, currently manual.
+
+    return (
+        <ToolPane
+            title="Token & Password Generator"
+            description="Generate secure random tokens and passwords with strength analysis"
+            onClear={handleClear}
+            onCopy={handleCopy}
+            actions={<Button variant="primary" onClick={generate}>Generate</Button>}
+        >
+            <div className="max-w-4xl mx-auto space-y-6 py-6 px-4 h-full flex flex-col">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Length: {options.length}</label>
+                            <input
+                                type="range"
+                                min="4"
+                                max="64"
+                                value={options.length}
+                                onChange={(e) => updateOption('length', parseInt(e.target.value))}
+                                className="w-full h-2 bg-bg-glass-hover rounded-lg appearance-none cursor-pointer"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { id: 'uppercase', label: 'Uppercase (A-Z)' },
+                                { id: 'lowercase', label: 'Lowercase (a-z)' },
+                                { id: 'numbers', label: 'Numbers (0-9)' },
+                                { id: 'symbols', label: 'Symbols (!@#)' },
+                            ].map(opt => (
+                                <div key={opt.id} className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={options[opt.id]}
+                                        onChange={(e) => updateOption(opt.id, e.target.checked)}
+                                        className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
+                                    />
+                                    <label className="text-sm cursor-pointer" onClick={() => updateOption(opt.id, !options[opt.id])}>{opt.label}</label>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex items-center space-x-2 pt-2">
+                            <input
+                                type="checkbox"
+                                checked={options.excludeSimilar}
+                                onChange={(e) => updateOption('excludeSimilar', e.target.checked)}
+                                className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
+                            />
+                            <label className="text-sm cursor-pointer underline decoration-dotted" onClick={() => updateOption('excludeSimilar', !options.excludeSimilar)} title="Excludes 1, l, I, 0, O, etc.">Exclude Similar Characters</label>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex-1 relative h-full flex flex-col">
+                            <textarea
+                                readOnly
+                                value={output}
+                                placeholder="Generated tokens will appear here..."
+                                className="glass-input w-full flex-1 font-mono text-lg resize-none p-4"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Strength Meter */}
+                {meta?.strength && options.quantity === 1 && (
+                    <div className="border border-border-glass rounded-xl p-4 bg-bg-glass-hover">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-xs font-bold uppercase tracking-widest">Strength Analysis</h3>
+                            <span className="text-xs font-mono">Score: {meta.strength.score}/4</span>
+                        </div>
+                        <div className="flex space-x-1 h-2 mb-2">
+                            {[0, 1, 2, 3, 4].map(i => (
+                                <div
+                                    key={i}
+                                    className={`flex-1 rounded-full transition-colors ${i < meta.strength.score + 1
+                                        ? ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-emerald-500'][meta.strength.score]
+                                        : 'bg-black/10'
+                                        }`}
+                                />
+                            ))}
+                        </div>
+                        <p className="text-sm text-foreground-secondary italic">
+                            {meta.strength.feedback?.warning && <span className="text-red-400 mr-2">{meta.strength.feedback.warning}</span>}
+                            {meta.strength.feedback?.suggestions && meta.strength.feedback.suggestions.join(' ')}
+                            {meta.strength.crack_times_display && (
+                                <span className="block mt-1 opacity-70">Crack time (offline): {meta.strength.crack_times_display.offline_slow_hashing_1e4_per_second}</span>
+                            )}
+                        </p>
+                    </div>
+                )}
+            </div>
+        </ToolPane>
+    );
+};

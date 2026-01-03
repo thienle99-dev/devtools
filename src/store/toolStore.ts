@@ -6,6 +6,7 @@ interface ToolData {
     input: string;
     output: string;
     options: Record<string, any>;
+    meta?: Record<string, any>;
 }
 
 interface ToolStore {

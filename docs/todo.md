@@ -123,14 +123,14 @@
 
 ### 3.2 Crypto Tools
 
-- [ ] Hash text (MD5, SHA1, SHA256, SHA512, SHA3)
-- [ ] UUID generator
-- [ ] ULID generator
-- [ ] Token generator
-- [ ] Password strength analyser
-- [ ] HMAC generator
-- [ ] Encrypt/decrypt text (AES)
-- [ ] Bcrypt hasher
+- [x] Hash text (MD5, SHA1, SHA256, SHA512, SHA3)
+- [x] UUID generator
+- [x] ULID generator
+- [x] Token generator
+- [x] Password strength analyser
+- [x] HMAC generator
+- [x] Encrypt/decrypt text (AES)
+- [x] Bcrypt hasher
 
 ### 3.3 Web Tools
 

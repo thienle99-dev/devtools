@@ -52,6 +52,13 @@ import { DateConverter } from './converters/DateConverter';
 import { ColorConverter } from './converters/ColorConverter';
 import { Base64FileConverter } from './converters/Base64FileConverter';
 
+import { HashGenerator } from './crypto/HashGenerator';
+import { UuidGenerator } from './crypto/UuidGenerator';
+import { TokenGenerator } from './crypto/TokenGenerator';
+import { HmacGenerator } from './crypto/HmacGenerator';
+import { AesEncryptor } from './crypto/AesEncryptor';
+import { BcryptGenerator } from './crypto/BcryptGenerator';
+
 // Import placeholders for now (we'll replace them as we build them)
 import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
 import { ToolPane } from '../components/layout/ToolPane';
@@ -182,19 +189,61 @@ export const TOOLS: ToolDefinition[] = [
         id: 'hash',
         name: 'Hash Generator',
         path: '/hash',
-        description: 'Generate various cryptographic hashes',
+        description: 'Generate MD5, SHA1, SHA256 hashes',
         category: 'crypto',
         icon: Hash,
-        component: createPlaceholder('Hash Generator', 'Generate various cryptographic hashes'),
+        component: HashGenerator,
+        keywords: ['hash', 'md5', 'sha', 'crypto']
+    },
+    {
+        id: 'hmac',
+        name: 'HMAC Generator',
+        path: '/hmac',
+        description: 'Keyed-hash message authentication code',
+        category: 'crypto',
+        icon: Hash,
+        component: HmacGenerator,
+        keywords: ['hmac', 'key', 'hash', 'security']
+    },
+    {
+        id: 'bcrypt',
+        name: 'Bcrypt Hash',
+        path: '/bcrypt',
+        description: 'Generate and compare Bcrypt hashes',
+        category: 'crypto',
+        icon: Hash,
+        component: BcryptGenerator,
+        keywords: ['bcrypt', 'password', 'hash', 'salt']
     },
     {
         id: 'uuid',
-        name: 'UUID Generator',
+        name: 'UUID / ULID',
         path: '/uuid',
-        description: 'Generate unique identifiers (UUIDs)',
+        description: 'Generate unique identifiers',
         category: 'crypto',
-        icon: Hash, // Or a better ID icon
-        component: createPlaceholder('UUID Generator', 'Generate unique identifiers (UUIDs)'),
+        icon: Hash, // fingerprint icon if available?
+        component: UuidGenerator,
+        keywords: ['uuid', 'ulid', 'guid', 'id']
+    },
+    {
+        id: 'token-generator',
+        name: 'Token Generator',
+        path: '/token-generator',
+        description: 'Secure passwords and tokens',
+        category: 'crypto',
+        icon: Hash, // Key icon?
+        component: TokenGenerator,
+        keywords: ['token', 'password', 'random', 'secure']
+    },
+    {
+        id: 'aes',
+        name: 'AES Encryptor',
+        path: '/aes',
+        description: 'Encrypt/Decrypt text with AES',
+        category: 'crypto',
+        icon: Hash, // Lock icon?
+        component: AesEncryptor,
+        keywords: ['aes', 'encrypt', 'decrypt', 'cipher']
     },
 
     // Web
