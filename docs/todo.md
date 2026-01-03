@@ -110,16 +110,16 @@
 
 ### 3.1 Converter Tools
 
-- [ ] Base64 string encoder/decoder
+- [x] Base64 string encoder/decoder
 - [ ] Base64 file converter
-- [ ] YAML ⇄ JSON converter
+- [x] YAML ⇄ JSON converter
 - [ ] JSON ⇄ XML converter
 - [ ] XML ⇄ JSON converter
 - [ ] Markdown to HTML
-- [ ] Case converter
+- [x] Case converter
 - [ ] Color converter (hex, rgb, hsl)
 - [ ] Date-time converter
-- [ ] Integer base converter
+- [x] Integer base converter
 
 ### 3.2 Crypto Tools
 

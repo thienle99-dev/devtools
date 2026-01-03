@@ -42,6 +42,10 @@ export const CATEGORIES: CategoryDefinition[] = [
 
 // Import existing tools
 import { JsonFormatter } from './json/JsonFormatter';
+import { JsonYamlConverter } from './converters/JsonYamlConverter';
+import { Base64Converter } from './converters/Base64Converter';
+import { NumberBaseConverter } from './converters/NumberBaseConverter';
+import { CaseConverter } from './converters/CaseConverter';
 
 // Import placeholders for now (we'll replace them as we build them)
 import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
@@ -83,8 +87,9 @@ export const TOOLS: ToolDefinition[] = [
         path: '/json-yaml',
         description: 'Convert between JSON and YAML formats',
         category: 'converters',
-        icon: Braces, // Approximation
-        component: createPlaceholder('JSON <> YAML', 'Convert between JSON and YAML formats'),
+        icon: Braces,
+        component: JsonYamlConverter,
+        keywords: ['json', 'yaml', 'convert', 'transform']
     },
     {
         id: 'base64',
@@ -93,7 +98,28 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Encode and decode Base64 strings',
         category: 'converters',
         icon: Binary,
-        component: createPlaceholder('Base64 Converter', 'Encode and decode Base64 strings'),
+        component: Base64Converter,
+        keywords: ['base64', 'encode', 'decode', 'string']
+    },
+    {
+        id: 'number-base',
+        name: 'Number Base',
+        path: '/number-base',
+        description: 'Convert numbers between Decimal, Hex, Octal and Binary',
+        category: 'converters',
+        icon: Binary,
+        component: NumberBaseConverter,
+        keywords: ['base', 'hex', 'binary', 'decimal', 'octal', 'convert']
+    },
+    {
+        id: 'case-converter',
+        name: 'Case Converter',
+        path: '/case-converter',
+        description: 'Convert between different naming conventions',
+        category: 'converters',
+        icon: Box, // Using Box for now as a generic icon
+        component: CaseConverter,
+        keywords: ['case', 'camel', 'snake', 'kebab', 'pascal', 'upper', 'lower']
     },
 
     // Crypto

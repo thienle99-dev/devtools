@@ -1,0 +1,129 @@
+import React, { useEffect } from 'react';
+import { ToolPane } from '../../components/layout/ToolPane';
+import { useToolStore } from '../../store/toolStore';
+
+const TOOL_ID = 'number-base';
+
+export const NumberBaseConverter: React.FC = () => {
+    const { tools, setToolData, addToHistory } = useToolStore();
+
+    // We store the 'decimal' value as the source of truth, but we also need to store 'current inputs' 
+    // to handle invalid intermediate states (like typing 'A' in hex).
+    // Actually, simplest is to store each field text.
+    const data = tools[TOOL_ID] || {
+        input: '', // we won't strictly use 'input/output' struct for this multi-field, but can map 'input' to decimal
+        options: {
+            decimal: '',
+            hex: '',
+            octal: '',
+            binary: ''
+        }
+    };
+
+    // If first load, ensure options object exists
+    const values = data.options || { decimal: '', hex: '', octal: '', binary: '' };
+
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
+
+    const updateAll = (sourceType: 'decimal' | 'hex' | 'octal' | 'binary', value: string) => {
+        let decimalValue: number | null = null;
+
+        // Remove spaces for processing (except maybe decimal?)
+        const cleanValue = value.trim();
+
+        if (cleanValue === '') {
+            setToolData(TOOL_ID, { options: { decimal: '', hex: '', octal: '', binary: '' } });
+            return;
+        }
+
+        try {
+            switch (sourceType) {
+                case 'decimal':
+                    if (/^-?\d+$/.test(cleanValue)) decimalValue = parseInt(cleanValue, 10);
+                    break;
+                case 'hex':
+                    if (/^[0-9A-Fa-f]+$/.test(cleanValue)) decimalValue = parseInt(cleanValue, 16);
+                    break;
+                case 'octal':
+                    if (/^[0-7]+$/.test(cleanValue)) decimalValue = parseInt(cleanValue, 8);
+                    break;
+                case 'binary':
+                    if (/^[01]+$/.test(cleanValue)) decimalValue = parseInt(cleanValue, 2);
+                    break;
+            }
+        } catch (e) {
+            // ignore parse errors
+        }
+
+        const newValues = { ...values, [sourceType]: value };
+
+        if (decimalValue !== null && !isNaN(decimalValue)) {
+            if (sourceType !== 'decimal') newValues.decimal = decimalValue.toString(10);
+            if (sourceType !== 'hex') newValues.hex = decimalValue.toString(16).toUpperCase();
+            if (sourceType !== 'octal') newValues.octal = decimalValue.toString(8);
+            if (sourceType !== 'binary') newValues.binary = decimalValue.toString(2);
+        }
+
+        setToolData(TOOL_ID, { options: newValues });
+    };
+
+    const handleClear = () => {
+        setToolData(TOOL_ID, { options: { decimal: '', hex: '', octal: '', binary: '' } });
+    };
+
+    return (
+        <ToolPane
+            title="Number Base Converter"
+            description="Convert numbers between Decimal, Hex, Octal and Binary"
+            onClear={handleClear}
+        >
+            <div className="max-w-3xl mx-auto space-y-8 py-8 px-4">
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Decimal (Base 10)</label>
+                    <input
+                        type="text"
+                        value={values.decimal}
+                        onChange={(e) => updateAll('decimal', e.target.value)}
+                        className="glass-input w-full text-lg font-mono tracking-wide"
+                        placeholder="0"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Hexadecimal (Base 16)</label>
+                    <input
+                        type="text"
+                        value={values.hex}
+                        onChange={(e) => updateAll('hex', e.target.value)}
+                        className="glass-input w-full text-lg font-mono tracking-wide"
+                        placeholder="00"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Octal (Base 8)</label>
+                    <input
+                        type="text"
+                        value={values.octal}
+                        onChange={(e) => updateAll('octal', e.target.value)}
+                        className="glass-input w-full text-lg font-mono tracking-wide"
+                        placeholder="0"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Binary (Base 2)</label>
+                    <input
+                        type="text"
+                        value={values.binary}
+                        onChange={(e) => updateAll('binary', e.target.value)}
+                        className="glass-input w-full text-lg font-mono tracking-wide"
+                        placeholder="0000"
+                    />
+                </div>
+            </div>
+        </ToolPane>
+    );
+};
