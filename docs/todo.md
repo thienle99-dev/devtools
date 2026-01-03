@@ -98,11 +98,11 @@
 
 ### 2.5 Tool System Architecture
 
-- [ ] Create tool registry system
-- [ ] Create tool wrapper component
-- [ ] Setup tool routing
-- [ ] Create tool configuration system
-- [ ] Test tool switching
+- [x] Create tool registry system
+- [x] Create tool wrapper component (Integrated directly in registry helpers)
+- [x] Setup tool routing (Dynamic routing in App.tsx)
+- [x] Create tool configuration system (ToolDefinition interface)
+- [x] Test tool switching
 
 ---
 

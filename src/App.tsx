@@ -4,9 +4,7 @@ import { useSettingsStore } from './store/settingsStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { WindowControls } from './components/layout/WindowControls';
 import { DynamicIsland } from './components/layout/DynamicIsland';
-import { ToolPane } from './components/layout/ToolPane';
-import { ToolPlaceholder } from './components/layout/ToolPlaceholder';
-import { JsonFormatter } from './tools/json/JsonFormatter';
+import { TOOLS } from './tools/registry';
 
 // Lazy load pages for better initial load performance
 const SettingsPage = lazy(() => import('./pages/Settings'));
@@ -20,10 +18,6 @@ const PageLoader = () => (
 
 function App() {
   const { theme } = useSettingsStore();
-
-  // ... (keep useEffects same as before, I'm just showing the top part change)
-  // Wait, I need to match the replacement block size. I'll replace the whole file head or just the imports and App definition start.
-  // Let's replace the whole App function to safely wrap Routes in Suspense.
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -70,91 +64,15 @@ function App() {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Navigate to="/json-format" replace />} />
-                  <Route
-                    path="/json-format"
-                    element={<JsonFormatter />}
-                  />
-                  <Route
-                    path="/json-yaml"
-                    element={
-                      <ToolPane
-                        title="JSON to YAML"
-                        description="Convert between JSON and YAML formats"
-                      >
-                        <ToolPlaceholder name="JSON to YAML" />
-                      </ToolPane>
-                    }
-                  />
-                  <Route
-                    path="/base64"
-                    element={
-                      <ToolPane
-                        title="Base64 Converter"
-                        description="Encode and decode Base64 strings"
-                      >
-                        <ToolPlaceholder name="Base64 Converter" />
-                      </ToolPane>
-                    }
-                  />
-                  <Route
-                    path="/hash"
-                    element={
-                      <ToolPane
-                        title="Hash Generator"
-                        description="Generate various cryptographic hashes"
-                      >
-                        <ToolPlaceholder name="Hash Generator" />
-                      </ToolPane>
-                    }
-                  />
-                  <Route
-                    path="/uuid"
-                    element={
-                      <ToolPane
-                        title="UUID Generator"
-                        description="Generate unique identifiers (UUIDs)"
-                      >
-                        <ToolPlaceholder name="UUID Generator" />
-                      </ToolPane>
-                    }
-                  />
 
-                  {/* Formatters */}
-                  <Route
-                    path="/sql-format"
-                    element={
-                      <ToolPane
-                        title="SQL Formatter"
-                        description="Prettify and format SQL queries"
-                      >
-                        <ToolPlaceholder name="SQL Formatter" />
-                      </ToolPane>
-                    }
-                  />
-
-                  {/* Web */}
-                  <Route
-                    path="/url"
-                    element={
-                      <ToolPane
-                        title="URL Encoder/Decoder"
-                        description="Encode and decode URLs"
-                      >
-                        <ToolPlaceholder name="URL Encoder/Decoder" />
-                      </ToolPane>
-                    }
-                  />
-                  <Route
-                    path="/jwt"
-                    element={
-                      <ToolPane
-                        title="JWT Decoder"
-                        description="Parse and inspect JSON Web Tokens"
-                      >
-                        <ToolPlaceholder name="JWT Decoder" />
-                      </ToolPane>
-                    }
-                  />
+                  {/* Dynamic Tool Routes */}
+                  {TOOLS.map((tool) => (
+                    <Route
+                      key={tool.id}
+                      path={tool.path}
+                      element={<tool.component />}
+                    />
+                  ))}
 
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route
