@@ -46,6 +46,11 @@ import { JsonYamlConverter } from './converters/JsonYamlConverter';
 import { Base64Converter } from './converters/Base64Converter';
 import { NumberBaseConverter } from './converters/NumberBaseConverter';
 import { CaseConverter } from './converters/CaseConverter';
+import { JsonXmlConverter } from './converters/JsonXmlConverter';
+import { MarkdownHtmlConverter } from './converters/MarkdownHtmlConverter';
+import { DateConverter } from './converters/DateConverter';
+import { ColorConverter } from './converters/ColorConverter';
+import { Base64FileConverter } from './converters/Base64FileConverter';
 
 // Import placeholders for now (we'll replace them as we build them)
 import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
@@ -92,6 +97,26 @@ export const TOOLS: ToolDefinition[] = [
         keywords: ['json', 'yaml', 'convert', 'transform']
     },
     {
+        id: 'json-xml',
+        name: 'JSON <> XML',
+        path: '/json-xml',
+        description: 'Convert between JSON and XML formats',
+        category: 'converters',
+        icon: Braces,
+        component: JsonXmlConverter,
+        keywords: ['json', 'xml', 'convert', 'transform']
+    },
+    {
+        id: 'markdown-html',
+        name: 'Markdown to HTML',
+        path: '/markdown-html',
+        description: 'Convert Markdown to HTML',
+        category: 'converters',
+        icon: Code2, // Or similar
+        component: MarkdownHtmlConverter,
+        keywords: ['markdown', 'html', 'preview', 'convert']
+    },
+    {
         id: 'base64',
         name: 'Base64',
         path: '/base64',
@@ -100,6 +125,16 @@ export const TOOLS: ToolDefinition[] = [
         icon: Binary,
         component: Base64Converter,
         keywords: ['base64', 'encode', 'decode', 'string']
+    },
+    {
+        id: 'base64-file',
+        name: 'Base64 File',
+        path: '/base64-file',
+        description: 'Convert file to Base64 string',
+        category: 'converters',
+        icon: Binary,
+        component: Base64FileConverter,
+        keywords: ['base64', 'file', 'image', 'upload']
     },
     {
         id: 'number-base',
@@ -120,6 +155,26 @@ export const TOOLS: ToolDefinition[] = [
         icon: Box, // Using Box for now as a generic icon
         component: CaseConverter,
         keywords: ['case', 'camel', 'snake', 'kebab', 'pascal', 'upper', 'lower']
+    },
+    {
+        id: 'color-converter',
+        name: 'Color Converter',
+        path: '/color-converter',
+        description: 'Convert colors (Hex, RGB, HSL)',
+        category: 'converters',
+        icon: Box, // Using Box or Palette if available
+        component: ColorConverter,
+        keywords: ['color', 'hex', 'rgb', 'hsl', 'picker']
+    },
+    {
+        id: 'date-converter',
+        name: 'Date Converter',
+        path: '/date-converter',
+        description: 'Convert Dates (ISO, Unix, UTC)',
+        category: 'converters',
+        icon: History,
+        component: DateConverter,
+        keywords: ['date', 'time', 'timestamp', 'unix', 'iso']
     },
 
     // Crypto

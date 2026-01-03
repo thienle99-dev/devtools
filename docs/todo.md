@@ -111,14 +111,14 @@
 ### 3.1 Converter Tools
 
 - [x] Base64 string encoder/decoder
-- [ ] Base64 file converter
+- [x] Base64 file converter
 - [x] YAML ⇄ JSON converter
-- [ ] JSON ⇄ XML converter
-- [ ] XML ⇄ JSON converter
-- [ ] Markdown to HTML
+- [x] JSON ⇄ XML converter
+- [x] XML ⇄ JSON converter
+- [x] Markdown to HTML
 - [x] Case converter
-- [ ] Color converter (hex, rgb, hsl)
-- [ ] Date-time converter
+- [x] Color converter (hex, rgb, hsl)
+- [x] Date-time converter
 - [x] Integer base converter
 
 ### 3.2 Crypto Tools
