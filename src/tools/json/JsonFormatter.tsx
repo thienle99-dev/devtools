@@ -1,8 +1,8 @@
-import React, { useEffect, useCallback } from 'react';
-import { cn } from '../../utils/cn';
+import React, { useEffect, useCallback, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolStore } from '../../store/toolStore';
+import { Button } from '../../components/ui/Button';
 
 const TOOL_ID = 'json-format';
 
@@ -12,6 +12,8 @@ export const JsonFormatter: React.FC = () => {
     // Get current state or default
     const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
     const { input, output } = data;
+
+    const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
     // Register usage on mount
     useEffect(() => {
@@ -23,38 +25,53 @@ export const JsonFormatter: React.FC = () => {
     }, [setToolData]);
 
     const handleFormat = () => {
-        try {
-            if (!input.trim()) return;
-            const parsed = JSON.parse(input);
-            const formatted = JSON.stringify(parsed, null, 2);
-            setToolData(TOOL_ID, { output: formatted });
-        } catch (error) {
-            setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
-        }
+        setLoadingAction('Format');
+        setTimeout(() => {
+            try {
+                if (!input.trim()) return;
+                const parsed = JSON.parse(input);
+                const formatted = JSON.stringify(parsed, null, 2);
+                setToolData(TOOL_ID, { output: formatted });
+            } catch (error) {
+                setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+            } finally {
+                setLoadingAction(null);
+            }
+        }, 400); // Fake delay for UX
     };
 
     const handleMinify = () => {
-        try {
-            if (!input.trim()) return;
-            const parsed = JSON.parse(input);
-            const minified = JSON.stringify(parsed);
-            setToolData(TOOL_ID, { output: minified });
-        } catch (error) {
-            setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
-        }
+        setLoadingAction('Minify');
+        setTimeout(() => {
+            try {
+                if (!input.trim()) return;
+                const parsed = JSON.parse(input);
+                const minified = JSON.stringify(parsed);
+                setToolData(TOOL_ID, { output: minified });
+            } catch (error) {
+                setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+            } finally {
+                setLoadingAction(null);
+            }
+        }, 400);
     };
 
     const handleValidate = () => {
-        try {
-            if (!input.trim()) {
-                setToolData(TOOL_ID, { output: 'Empty input.' });
-                return;
+        setLoadingAction('Validate');
+        setTimeout(() => {
+            try {
+                if (!input.trim()) {
+                    setToolData(TOOL_ID, { output: 'Empty input.' });
+                    return;
+                }
+                JSON.parse(input);
+                setToolData(TOOL_ID, { output: 'Valid JSON ✔️' });
+            } catch (error) {
+                setToolData(TOOL_ID, { output: `Invalid JSON ❌\n${(error as Error).message}` });
+            } finally {
+                setLoadingAction(null);
             }
-            JSON.parse(input);
-            setToolData(TOOL_ID, { output: 'Valid JSON ✔️' });
-        } catch (error) {
-            setToolData(TOOL_ID, { output: `Invalid JSON ❌\n${(error as Error).message}` });
-        }
+        }, 400);
     };
 
     const handleClear = () => {
@@ -114,27 +131,30 @@ export const JsonFormatter: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                    <button
+                    <Button
+                        variant="primary"
                         onClick={handleFormat}
-                        className={cn(
-                            "glass-button-primary bg-indigo-500/80 hover:bg-indigo-500 text-white shadow-none hover:shadow-indigo-500/20",
-                            "px-8 py-2.5 font-semibold text-xs uppercase tracking-widest transition-all"
-                        )}
+                        loading={loadingAction === 'Format'}
+                        className="uppercase tracking-widest"
                     >
                         Format
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="secondary"
                         onClick={handleMinify}
-                        className="glass-button px-8 py-2.5 font-semibold text-xs uppercase tracking-widest text-foreground-secondary hover:text-foreground"
+                        loading={loadingAction === 'Minify'}
+                        className="uppercase tracking-widest"
                     >
                         Minify
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="success"
                         onClick={handleValidate}
-                        className="glass-button px-8 py-2.5 font-semibold text-xs uppercase tracking-widest text-foreground-secondary hover:text-foreground"
+                        loading={loadingAction === 'Validate'}
+                        className="uppercase tracking-widest"
                     >
                         Validate
-                    </button>
+                    </Button>
                 </div>
             </div>
         </ToolPane>

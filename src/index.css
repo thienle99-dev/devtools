@@ -8,9 +8,9 @@
   --color-glass-panel: rgba(15, 15, 20, 0.6);
   --color-glass-panel-light: rgba(255, 255, 255, 0.03);
   --color-glass-border: rgba(255, 255, 255, 0.1);
-  --color-glass-border-hover: rgba(255, 255, 255, 0.2);
+  --color-glass-border-hover: rgba(255, 255, 255, 0.3);
   --color-glass-button: rgba(255, 255, 255, 0.05);
-  --color-glass-button-hover: rgba(255, 255, 255, 0.08);
+  --color-glass-button-hover: rgba(255, 255, 255, 0.15);
   --color-glass-button-active: rgba(255, 255, 255, 0.03);
   --color-glass-input: rgba(0, 0, 0, 0.2);
   --color-glass-input-focus: rgba(0, 0, 0, 0.4);
@@ -150,21 +150,144 @@ body {
 
   .glass-button:hover {
     background-color: var(--color-glass-button-hover);
+    border-color: var(--color-glass-border-hover);
     color: var(--color-text-primary);
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
   }
 
   .glass-button:active {
     background-color: var(--color-glass-button-active);
+    border-color: var(--color-glass-border-hover);
     transform: scale(0.95);
+  }
+
+  /* Danger Button */
+  .glass-button-danger {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(225, 29, 72, 0.1);
+    border: 1px solid rgba(225, 29, 72, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: rgb(251, 113, 133);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button-danger:hover {
+    background-color: rgba(225, 29, 72, 0.2);
+    border-color: rgba(225, 29, 72, 0.4);
+    color: rgb(255, 228, 230);
+    box-shadow: 0 0 15px rgba(225, 29, 72, 0.1);
+  }
+
+  .glass-button-danger:active {
+    background-color: rgba(225, 29, 72, 0.15);
+    transform: scale(0.95);
+  }
+
+  /* Success Button */
+  .glass-button-success {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: rgb(52, 211, 153);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button-success:hover {
+    background-color: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: rgb(209, 250, 229);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+  }
+
+  .glass-button-success:active {
+    background-color: rgba(16, 185, 129, 0.15);
+    transform: scale(0.95);
+  }
+
+  /* Warning Button */
+  .glass-button-warning {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: rgb(251, 191, 36);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button-warning:hover {
+    background-color: rgba(245, 158, 11, 0.25);
+    border-color: rgba(245, 158, 11, 0.5);
+    color: rgb(253, 230, 138);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+  }
+
+  .glass-button-warning:active {
+    background-color: rgba(245, 158, 11, 0.2);
+    transform: scale(0.95);
+  }
+
+  /* Secondary Button */
+  .glass-button-secondary {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.08);
+    /* Slightly more visible than default */
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: var(--color-text-primary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-button-secondary:active {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(0.95);
+  }
+
+  /* Outline Button */
+  .glass-button-outline {
+    position: relative;
+    overflow: hidden;
+    background-color: transparent;
+    border: 1px solid var(--color-glass-border-hover);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: var(--color-text-secondary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-button-outline:hover {
+    border-color: var(--color-text-primary);
+    color: var(--color-text-primary);
+    background-color: var(--color-glass-50);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+    /* Added glow */
+  }
+
+  .glass-button-outline:active {
+    transform: scale(0.95);
+    background-color: var(--color-glass-100);
   }
 
   /* Keep primary consistent but maybe adjust border */
   .glass-button-primary {
     position: relative;
     overflow: hidden;
-    background-color: rgba(79, 70, 229, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(79, 70, 229, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.5);
     border-radius: 0.75rem;
     padding: 0.625rem 1.5rem;
     color: white;
@@ -174,8 +297,11 @@ body {
   }
 
   .glass-button-primary:hover {
-    background-color: rgb(79, 70, 229);
-    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+    background-color: rgba(99, 102, 241, 0.9);
+    /* Brighter indigo */
+    border-color: rgba(129, 140, 248, 0.8);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4), 0 0 4px rgba(255, 255, 255, 0.5) inset;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
   }
 
   .glass-button-primary:active {
