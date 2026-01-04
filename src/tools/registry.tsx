@@ -10,7 +10,8 @@ import {
     Database,
     Binary,
     Braces,
-    FileImage
+    FileImage,
+    Settings
 } from 'lucide-react';
 
 
@@ -86,6 +87,7 @@ import { RegexTester } from './development/RegexTester';
 import { CrontabGenerator } from './development/CrontabGenerator';
 import { ChmodCalculator } from './development/ChmodCalculator';
 import { DockerConverter } from './development/DockerConverter';
+import SettingsPage from '../pages/Settings';
 
 // Import placeholders for now (we'll replace them as we build them)
 
@@ -470,6 +472,18 @@ export const TOOLS: ToolDefinition[] = [
         icon: Box,
         component: DockerConverter,
         keywords: ['docker', 'compose', 'convert', 'container']
+    },
+
+    // Settings (Special tool - not in any category)
+    {
+        id: 'settings',
+        name: 'Settings',
+        path: '/settings',
+        description: 'Customize your experience and manage application preferences',
+        category: 'development', // Temporary category for display
+        icon: Settings,
+        component: SettingsPage,
+        keywords: ['settings', 'preferences', 'config', 'options']
     },
 ];
 

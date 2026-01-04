@@ -99,16 +99,21 @@ export const Sidebar: React.FC = () => {
 
             {/* Footer - Settings Button - macOS Style */}
             <div className="px-4 py-3 border-t border-border-glass">
-                <NavLink
-                    to="/settings"
-                    className={({ isActive }) => cn(
+                <div
+                    onClick={(e) => {
+                        e.preventDefault();
+                        // Open Settings as a tab
+                        navigate('/settings');
+                        openTab('settings', '/settings', 'Settings', 'Customize your experience and manage application preferences');
+                    }}
+                    className={cn(
                         "sidebar-settings-button flex items-center px-3 py-2.5 rounded-md text-sm transition-all duration-200 cursor-pointer",
-                        isActive && "sidebar-settings-button-active"
+                        activeTab?.toolId === 'settings' && "sidebar-settings-button-active"
                     )}
                 >
                     <Settings className="w-4 h-4 mr-2.5" />
                     <span>Settings</span>
-                </NavLink>
+                </div>
             </div>
         </aside>
     );

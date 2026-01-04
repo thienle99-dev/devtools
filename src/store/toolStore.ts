@@ -76,12 +76,22 @@ export const useToolStore = create<ToolStore>()(
 );
 
 export const useToolState = (id: string) => {
+    // Get data - this will only re-render when this specific tool's data changes
     const data = useToolStore((state) => state.tools[id]);
-    const actions = useToolStore((state) => ({
-        setToolData: state.setToolData,
-        clearToolData: state.clearToolData,
-        addToHistory: state.addToHistory,
-        removeToolData: state.removeToolData
-    }));
-    return { data, ...actions };
+    
+    // Get actions separately - Zustand actions are stable references
+    // This prevents creating a new object on each render which causes infinite loops
+    const setToolData = useToolStore((state) => state.setToolData);
+    const clearToolData = useToolStore((state) => state.clearToolData);
+    const addToHistory = useToolStore((state) => state.addToHistory);
+    const removeToolData = useToolStore((state) => state.removeToolData);
+    
+    // Return object - actions are stable so this won't cause infinite loops
+    return {
+        data,
+        setToolData,
+        clearToolData,
+        addToHistory,
+        removeToolData
+    };
 };

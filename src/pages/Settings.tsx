@@ -5,7 +5,11 @@ import { ToolPane } from '../components/layout/ToolPane';
 import { Card } from '../components/ui/Card';
 import { Monitor, Type, WrapText, History, Trash2, Smartphone } from 'lucide-react';
 
-const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+    tabId?: string;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ tabId }) => {
     const {
         fontSize, setFontSize,
         wordWrap, setWordWrap,

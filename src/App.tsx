@@ -10,9 +10,6 @@ import { TabBar } from './components/layout/TabBar';
 import { TabContent } from './components/layout/TabContent';
 import { TOOLS } from './tools/registry';
 
-// Lazy load pages for better initial load performance
-const SettingsPage = lazy(() => import('./pages/Settings'));
-
 // Loading fallback component
 const PageLoader = () => (
   <div className="flex-1 flex items-center justify-center">
@@ -29,7 +26,7 @@ const MainLayout = () => {
   // This allows bookmarks, tray navigation, and redirects to work
   useEffect(() => {
     // If we are on root, do nothing or open default?
-    // If we are on a tool path, ensure tab is open
+    // If we are on a tool path (including settings), ensure tab is open
     const tool = TOOLS.find(t => t.path === location.pathname);
     if (tool) {
       // "openTab" handles switching if exists
@@ -108,10 +105,7 @@ function App() {
           <main className="flex-1 flex flex-col min-w-0 relative">
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* Settings Page Overlay */}
-                <Route path="/settings" element={<SettingsPage />} />
-
-                {/* Everything else goes to MainLayout (Multi-Tab) */}
+                {/* Everything goes to MainLayout (Multi-Tab including Settings) */}
                 <Route path="*" element={<MainLayout />} />
               </Routes>
             </Suspense>
