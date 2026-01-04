@@ -4,26 +4,35 @@ import { persist } from 'zustand/middleware';
 export interface ClipboardItem {
     id: string;
     content: string;
-    type: 'text' | 'image';
+    type: 'text' | 'image' | 'link' | 'file';
     timestamp: number;
     pinned: boolean;
+    copyCount: number; // Số lần copy
+    sourceApp?: string; // App nguồn (từ Electron)
     metadata?: {
         length?: number;
         mimeType?: string;
         preview?: string;
+        url?: string; // Cho links
+        filePath?: string; // Cho files
     };
 }
 
+export type SearchMode = 'contains' | 'exact' | 'startsWith' | 'fuzzy';
+
 export interface FilterOptions {
-    type: 'all' | 'text' | 'image';
+    type: 'all' | 'text' | 'image' | 'link' | 'file';
     dateRange: 'all' | 'today' | 'week' | 'month';
     pinnedOnly: boolean;
+    searchMode: SearchMode; // Thêm search mode
 }
 
 interface ClipboardSettings {
     autoClearDays: number;
     excludeDuplicates: boolean;
     enableMonitoring: boolean;
+    ignoredApps: string[]; // Danh sách apps để ignore
+    clearOnQuit: boolean; // Xóa clipboard khi quit
 }
 
 interface ClipboardStore {
@@ -32,7 +41,7 @@ interface ClipboardStore {
     settings: ClipboardSettings;
 
     // Actions
-    addItem: (content: string, type: 'text' | 'image', metadata?: any) => void;
+    addItem: (content: string, type: 'text' | 'image' | 'link' | 'file', metadata?: any) => void;
     removeItem: (id: string) => void;
     pinItem: (id: string) => void;
     unpinItem: (id: string) => void;
@@ -40,17 +49,21 @@ interface ClipboardStore {
     updateSettings: (settings: Partial<ClipboardSettings>) => void;
     setMaxItems: (max: number) => void;
     getSortedItems: () => ClipboardItem[];
+    searchItems: (query: string, mode: SearchMode) => ClipboardItem[];
+    incrementCopyCount: (id: string) => void;
 }
 
 export const useClipboardStore = create<ClipboardStore>()(
     persist(
         (set, get) => ({
             items: [],
-            maxItems: 100,
+            maxItems: 200, // Maccy default
             settings: {
                 autoClearDays: 0,
                 excludeDuplicates: true,
-                enableMonitoring: false,
+                enableMonitoring: true, // Bật mặc định để tự động lưu clipboard
+                ignoredApps: [], // Danh sách apps để ignore
+                clearOnQuit: false, // Không xóa clipboard khi quit mặc định
             },
 
             addItem: (content, type, metadata) => set((state) => {
@@ -58,8 +71,27 @@ export const useClipboardStore = create<ClipboardStore>()(
                 if (state.settings.excludeDuplicates) {
                     const lastItem = state.items[0];
                     if (lastItem && lastItem.content === content) {
-                        return state; // Don't add duplicate
+                        // Increment copy count instead of adding duplicate
+                        return {
+                            items: state.items.map(item =>
+                                item.id === lastItem.id
+                                    ? { ...item, copyCount: item.copyCount + 1, timestamp: Date.now() }
+                                    : item
+                            ),
+                        };
                     }
+                }
+
+                // Check if item already exists (for updating copy count)
+                const existingItem = state.items.find(item => item.content === content);
+                if (existingItem) {
+                    return {
+                        items: state.items.map(item =>
+                            item.id === existingItem.id
+                                ? { ...item, copyCount: item.copyCount + 1, timestamp: Date.now() }
+                                : item
+                        ),
+                    };
                 }
 
                 const newItem: ClipboardItem = {
@@ -68,6 +100,8 @@ export const useClipboardStore = create<ClipboardStore>()(
                     type,
                     timestamp: Date.now(),
                     pinned: false,
+                    copyCount: 1,
+                    sourceApp: metadata?.sourceApp,
                     metadata: {
                         length: type === 'text' ? content.length : undefined,
                         ...metadata,
@@ -118,6 +152,43 @@ export const useClipboardStore = create<ClipboardStore>()(
                     return b.timestamp - a.timestamp;
                 });
             },
+
+            // Enhanced search with 4 modes
+            searchItems: (query, mode) => {
+                const { items } = get();
+                if (!query.trim()) return items;
+
+                const queryLower = query.toLowerCase();
+
+                return items.filter(item => {
+                    const content = item.content.toLowerCase();
+
+                    switch (mode) {
+                        case 'exact':
+                            return content === queryLower;
+                        case 'startsWith':
+                            return content.startsWith(queryLower);
+                        case 'fuzzy':
+                            // Fuzzy match: all characters in query must appear in order
+                            let queryIndex = 0;
+                            for (let i = 0; i < content.length && queryIndex < queryLower.length; i++) {
+                                if (content[i] === queryLower[queryIndex]) {
+                                    queryIndex++;
+                                }
+                            }
+                            return queryIndex === queryLower.length;
+                        case 'contains':
+                        default:
+                            return content.includes(queryLower);
+                    }
+                });
+            },
+
+            incrementCopyCount: (id) => set((state) => ({
+                items: state.items.map(item =>
+                    item.id === id ? { ...item, copyCount: item.copyCount + 1 } : item
+                ),
+            })),
         }),
         {
             name: 'clipboard-manager-storage',

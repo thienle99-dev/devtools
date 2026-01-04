@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 
 interface UseClipboardReturn {
     copyToClipboard: (text: string) => Promise<boolean>;
@@ -6,8 +6,6 @@ interface UseClipboardReturn {
 }
 
 export const useClipboard = (): UseClipboardReturn => {
-    const fallbackCopyRef = useRef<HTMLTextAreaElement | null>(null);
-
     const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
         try {
             // Try modern clipboard API first

@@ -153,7 +153,7 @@ export const TabBar: React.FC = React.memo(() => {
     if (tabs.length === 0) return null;
 
     return (
-        <div className="tab-bar-container h-11 flex items-center w-full z-10 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm border-b border-border-glass">
+        <div className="tab-bar-container h-11 flex items-center w-full z-10 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm">
             {/* Left scroll button */}
             {canScrollLeft && (
                 <button
@@ -195,7 +195,7 @@ export const TabBar: React.FC = React.memo(() => {
                                     "tab-item-chrome group flex items-center gap-2 h-9 px-4 cursor-pointer transition-all duration-200 rounded-t-lg",
                                     "min-w-[140px] max-w-[240px] relative",
                                     isActive 
-                                        ? "tab-item-chrome-active bg-[var(--color-glass-panel)] border-t-2 border-indigo-500/60 shadow-sm" 
+                                        ? "tab-item-chrome-active bg-[var(--color-glass-panel)]" 
                                         : "tab-item-chrome-inactive hover:bg-[var(--color-glass-button)]",
                                     isFirst && "tab-item-first",
                                     isLast && "tab-item-last"

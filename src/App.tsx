@@ -8,7 +8,9 @@ import { DynamicIsland } from './components/layout/DynamicIsland';
 import { TrayController } from './components/layout/TrayController';
 import { TabBar } from './components/layout/TabBar';
 import { TabContent } from './components/layout/TabContent';
+import { GlobalClipboardMonitor } from './components/GlobalClipboardMonitor';
 import { TOOLS } from './tools/registry';
+import { useClipboardStore } from './store/clipboardStore';
 
 // Loading fallback component
 const PageLoader = () => (
@@ -23,6 +25,7 @@ const MainLayout = () => {
   const activeTabId = useTabStore(state => state.activeTabId);
   const location = useLocation();
   const navigate = useNavigate();
+  const settings = useClipboardStore(state => state.settings);
 
   // Sync URL -> Tab
   // This allows bookmarks, tray navigation, and redirects to work
@@ -48,6 +51,23 @@ const MainLayout = () => {
       navigate(activeTab.path, { replace: true });
     }
   }, [activeTabId, tabs, location.pathname, navigate]);
+
+  // Handle clear clipboard on quit
+  useEffect(() => {
+    const handleCheckClearClipboard = () => {
+      if (settings.clearOnQuit) {
+        // Clear system clipboard
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText('').catch(() => {});
+        }
+      }
+    };
+
+    const removeListener = (window as any).ipcRenderer?.on('check-clear-clipboard-on-quit', handleCheckClearClipboard);
+    return () => {
+      if (removeListener) removeListener();
+    };
+  }, [settings.clearOnQuit]);
 
   return (
     <div className="flex-1 flex flex-col min-w-0 relative h-full">
@@ -100,6 +120,7 @@ function App() {
 
   return (
     <Router>
+      <GlobalClipboardMonitor />
       <TrayController />
       <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
         <WindowControls />

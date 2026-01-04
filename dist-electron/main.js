@@ -40,6 +40,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 	enumerable: true
 }) : target, mod));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 var isObject = (value) => {
 	const type$10 = typeof value;
 	return value !== null && (type$10 === "object" || type$10 === "function");
@@ -8905,10 +8909,11 @@ function toggleWindow() {
 	}
 }
 var recentTools = [];
+var clipboardItems = [];
 function updateTrayMenu() {
 	if (!tray) return;
 	const template = [{
-		label: win?.isVisible() ? "Hide Window" : "Show Window",
+		label: win?.isVisible() ? "▼ Hide Window" : "▲ Show Window",
 		click: () => {
 			if (win) {
 				if (win.isVisible()) win.hide();
@@ -8917,58 +8922,189 @@ function updateTrayMenu() {
 			}
 		}
 	}, { type: "separator" }];
-	template.push({
-		label: "Quick Actions",
-		submenu: [{
-			label: "Generate UUID",
-			click: () => {
-				const uuid = randomUUID();
-				clipboard.writeText(uuid);
-				new Notification({
-					title: "UUID Generated",
-					body: "Copied to clipboard"
-				}).show();
-			}
-		}, {
-			label: "Format JSON from Clipboard",
-			click: () => {
-				try {
-					const text = clipboard.readText();
-					const json = JSON.parse(text);
-					const formatted = JSON.stringify(json, null, 2);
-					clipboard.writeText(formatted);
-					new Notification({
-						title: "JSON Formatted",
-						body: "Formatted JSON copied to clipboard"
-					}).show();
-				} catch (e) {
-					new Notification({
-						title: "JSON Format Failed",
-						body: "Clipboard does not contain valid JSON"
-					}).show();
-				}
-			}
-		}]
-	});
-	template.push({ type: "separator" });
-	if (recentTools.length > 0) {
+	if (clipboardItems.length > 0) {
 		template.push({
-			label: "Recent Tools",
-			enabled: false
-		});
-		recentTools.forEach((tool) => {
-			template.push({
-				label: tool.name,
-				click: () => {
-					win?.show();
-					win?.webContents.send("navigate-to", tool.id);
+			label: "📋 Clipboard Manager",
+			submenu: [
+				{
+					label: "▸ Open Full Manager",
+					click: () => {
+						win?.show();
+						win?.webContents.send("navigate-to", "clipboard-manager");
+					}
+				},
+				{ type: "separator" },
+				{
+					label: "● Recent Clipboard (9)",
+					enabled: false
+				},
+				...clipboardItems.slice(0, 9).map((item, index) => {
+					const cleanPreview = (item.content.length > 75 ? item.content.substring(0, 75) + "..." : item.content).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+					return {
+						label: `  ${index + 1}. ${cleanPreview}`,
+						click: () => {
+							clipboard.writeText(item.content);
+							new Notification({
+								title: "✓ Copied from History",
+								body: cleanPreview,
+								silent: true
+							}).show();
+						}
+					};
+				}),
+				{ type: "separator" },
+				{
+					label: "✕ Clear All History",
+					click: () => {
+						win?.webContents.send("clipboard-clear-all");
+					}
 				}
-			});
+			]
+		});
+		template.push({ type: "separator" });
+	} else {
+		template.push({
+			label: "📋 Clipboard Manager (Empty)",
+			click: () => {
+				win?.show();
+				win?.webContents.send("navigate-to", "clipboard-manager");
+			}
 		});
 		template.push({ type: "separator" });
 	}
 	template.push({
-		label: "Quit",
+		label: "⚡ Quick Actions",
+		submenu: [
+			{
+				label: "◆ Generate UUID",
+				accelerator: "CmdOrCtrl+Shift+U",
+				click: () => {
+					const uuid = randomUUID();
+					clipboard.writeText(uuid);
+					new Notification({
+						title: "✓ UUID Generated",
+						body: `Copied: ${uuid.substring(0, 20)}...`,
+						silent: true
+					}).show();
+				}
+			},
+			{
+				label: "◇ Format JSON",
+				accelerator: "CmdOrCtrl+Shift+J",
+				click: () => {
+					try {
+						const text = clipboard.readText();
+						const json = JSON.parse(text);
+						const formatted = JSON.stringify(json, null, 2);
+						clipboard.writeText(formatted);
+						new Notification({
+							title: "✓ JSON Formatted",
+							body: "Formatted JSON copied to clipboard",
+							silent: true
+						}).show();
+					} catch (e) {
+						new Notification({
+							title: "✗ Format Failed",
+							body: "Clipboard does not contain valid JSON",
+							silent: true
+						}).show();
+					}
+				}
+			},
+			{
+				label: "# Hash Text (SHA-256)",
+				click: () => {
+					try {
+						const text = clipboard.readText();
+						if (!text) throw new Error("Empty clipboard");
+						const hash = __require("crypto").createHash("sha256").update(text).digest("hex");
+						clipboard.writeText(hash);
+						new Notification({
+							title: "✓ Hash Generated",
+							body: `SHA-256: ${hash.substring(0, 20)}...`,
+							silent: true
+						}).show();
+					} catch (e) {
+						new Notification({
+							title: "✗ Hash Failed",
+							body: "Could not hash clipboard content",
+							silent: true
+						}).show();
+					}
+				}
+			},
+			{ type: "separator" },
+			{
+				label: "↑ Base64 Encode",
+				click: () => {
+					try {
+						const text = clipboard.readText();
+						if (!text) throw new Error("Empty clipboard");
+						const encoded = Buffer.from(text).toString("base64");
+						clipboard.writeText(encoded);
+						new Notification({
+							title: "✓ Base64 Encoded",
+							body: "Encoded text copied to clipboard",
+							silent: true
+						}).show();
+					} catch (e) {
+						new Notification({
+							title: "✗ Encode Failed",
+							body: "Could not encode clipboard content",
+							silent: true
+						}).show();
+					}
+				}
+			},
+			{
+				label: "↓ Base64 Decode",
+				click: () => {
+					try {
+						const text = clipboard.readText();
+						if (!text) throw new Error("Empty clipboard");
+						const decoded = Buffer.from(text, "base64").toString("utf-8");
+						clipboard.writeText(decoded);
+						new Notification({
+							title: "✓ Base64 Decoded",
+							body: "Decoded text copied to clipboard",
+							silent: true
+						}).show();
+					} catch (e) {
+						new Notification({
+							title: "✗ Decode Failed",
+							body: "Invalid Base64 in clipboard",
+							silent: true
+						}).show();
+					}
+				}
+			}
+		]
+	});
+	template.push({ type: "separator" });
+	if (recentTools.length > 0) {
+		template.push({
+			label: "🕐 Recent Tools",
+			submenu: recentTools.map((tool) => ({
+				label: `  • ${tool.name}`,
+				click: () => {
+					win?.show();
+					win?.webContents.send("navigate-to", tool.id);
+				}
+			}))
+		});
+		template.push({ type: "separator" });
+	}
+	template.push({
+		label: "⚙ Settings",
+		click: () => {
+			win?.show();
+			win?.webContents.send("navigate-to", "settings");
+		}
+	});
+	template.push({ type: "separator" });
+	template.push({
+		label: "✕ Quit DevTools",
+		accelerator: "CmdOrCtrl+Q",
 		click: () => {
 			app.isQuitting = true;
 			app.quit();
@@ -8979,8 +9115,8 @@ function updateTrayMenu() {
 }
 function createWindow() {
 	const windowBounds = store.get("windowBounds") || {
-		width: 1200,
-		height: 800
+		width: 1600,
+		height: 900
 	};
 	const startMinimized = store.get("startMinimized") || false;
 	win = new BrowserWindow({
@@ -8991,8 +9127,8 @@ function createWindow() {
 			contextIsolation: true
 		},
 		...windowBounds,
-		minWidth: 900,
-		minHeight: 600,
+		minWidth: 1200,
+		minHeight: 700,
 		show: !startMinimized,
 		frame: false,
 		transparent: true,
@@ -9035,6 +9171,10 @@ function createWindow() {
 		recentTools = items || [];
 		updateTrayMenu();
 	});
+	ipcMain.on("tray-update-clipboard", (_event, items) => {
+		clipboardItems = items || [];
+		updateTrayMenu();
+	});
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
 	});
@@ -9050,11 +9190,16 @@ app.on("activate", () => {
 });
 app.on("before-quit", () => {
 	app.isQuitting = true;
+	if (win) win.webContents.send("check-clear-clipboard-on-quit");
 });
 app.whenReady().then(() => {
 	try {
 		globalShortcut.register("CommandOrControl+Shift+D", () => {
 			toggleWindow();
+		});
+		globalShortcut.register("CommandOrControl+Shift+C", () => {
+			win?.show();
+			win?.webContents.send("open-clipboard-manager");
 		});
 	} catch (e) {
 		console.error("Failed to register global shortcut", e);

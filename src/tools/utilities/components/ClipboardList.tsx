@@ -1,25 +1,32 @@
 import React from 'react';
-import { ClipboardItem } from '../../../store/clipboardStore';
+import type { ClipboardItem } from '../../../store/clipboardStore';
 import { ClipboardItemCard } from './ClipboardItemCard';
 import { Clipboard } from 'lucide-react';
 
 interface ClipboardListProps {
     items: ClipboardItem[];
+    selectedIndex?: number;
     onPin: (id: string) => void;
     onUnpin: (id: string) => void;
     onDelete: (id: string) => void;
     onViewFull: (item: ClipboardItem) => void;
+    onSelect?: (index: number) => void;
 }
 
 export const ClipboardList: React.FC<ClipboardListProps> = ({
     items,
+    selectedIndex = -1,
     onPin,
     onUnpin,
     onDelete,
     onViewFull,
+    onSelect,
 }) => {
     const pinnedItems = items.filter(item => item.pinned);
     const recentItems = items.filter(item => !item.pinned);
+    
+    // Flatten items for index calculation (pinned first, then recent)
+    const allItems = [...pinnedItems, ...recentItems];
 
     if (items.length === 0) {
         return (
@@ -38,23 +45,30 @@ export const ClipboardList: React.FC<ClipboardListProps> = ({
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Pinned Items */}
             {pinnedItems.length > 0 && (
-                <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1 flex items-center gap-2">
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-foreground-muted uppercase tracking-[0.2em] pl-2 flex items-center gap-2">
                         📌 Pinned Items ({pinnedItems.length})
                     </h3>
-                    <div className="space-y-3">
-                        {pinnedItems.map(item => (
-                            <ClipboardItemCard
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        {pinnedItems.map((item, index) => (
+                            <div
                                 key={item.id}
-                                item={item}
-                                onPin={onPin}
-                                onUnpin={onUnpin}
-                                onDelete={onDelete}
-                                onViewFull={onViewFull}
-                            />
+                                data-item-index={index}
+                                onClick={() => onSelect?.(index)}
+                                className="w-full"
+                            >
+                                <ClipboardItemCard
+                                    item={item}
+                                    isSelected={selectedIndex === index}
+                                    onPin={onPin}
+                                    onUnpin={onUnpin}
+                                    onDelete={onDelete}
+                                    onViewFull={onViewFull}
+                                />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -62,21 +76,31 @@ export const ClipboardList: React.FC<ClipboardListProps> = ({
 
             {/* Recent Items */}
             {recentItems.length > 0 && (
-                <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-foreground-muted uppercase tracking-[0.2em] pl-2">
                         Recent Items ({recentItems.length})
                     </h3>
-                    <div className="space-y-3">
-                        {recentItems.map(item => (
-                            <ClipboardItemCard
-                                key={item.id}
-                                item={item}
-                                onPin={onPin}
-                                onUnpin={onUnpin}
-                                onDelete={onDelete}
-                                onViewFull={onViewFull}
-                            />
-                        ))}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        {recentItems.map((item, index) => {
+                            const globalIndex = pinnedItems.length + index;
+                            return (
+                                <div
+                                    key={item.id}
+                                    data-item-index={globalIndex}
+                                    onClick={() => onSelect?.(globalIndex)}
+                                    className="w-full"
+                                >
+                                    <ClipboardItemCard
+                                        item={item}
+                                        isSelected={selectedIndex === globalIndex}
+                                        onPin={onPin}
+                                        onUnpin={onUnpin}
+                                        onDelete={onDelete}
+                                        onViewFull={onViewFull}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

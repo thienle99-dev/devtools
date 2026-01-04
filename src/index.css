@@ -158,6 +158,12 @@ body {
     /* Lighter shadow for broad compatibility */
   }
 
+  /* Override glass-panel inside tab content for seamless design */
+  .tab-content-area .glass-panel {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
   .glass-panel-light {
     background-color: var(--color-glass-panel-light);
     backdrop-filter: blur(24px);
@@ -662,24 +668,36 @@ body {
     background-color: var(--color-glass-panel);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 0.5px solid var(--color-glass-border);
+    border: none;
+    box-shadow: none;
   }
 
   /* Light mode tab bar container */
   :root.light .tab-bar-container {
     background-color: rgba(255, 255, 255, 0.4);
-    border-bottom-color: rgba(0, 0, 0, 0.08);
+    border: none;
+    box-shadow: none;
   }
 
-  /* Tab Content Area - Enhanced Glassmorphism */
+  /* Tab Content Area - Completely Seamless with TabBar */
   .tab-content-area {
     background-color: var(--color-glass-panel);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    border: none !important;
+    box-shadow: none !important;
+    outline: none;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   :root.light .tab-content-area {
-    background-color: rgba(255, 255, 255, 0.6);
+    background-color: rgba(255, 255, 255, 0.8);
+    border: none !important;
+    box-shadow: none !important;
+    outline: none;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Scroll container */
@@ -699,32 +717,19 @@ body {
     align-items: center;
     user-select: none;
     z-index: 1;
-    border: 0.5px solid transparent;
+    border: none;
+    border-bottom: none !important;
     background-color: transparent;
     box-sizing: border-box;
     transition:
       background-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-      border-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
       color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
       box-shadow 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    will-change: background-color, border-color, box-shadow;
+    will-change: background-color, box-shadow;
   }
 
   .tab-item-chrome::before {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: transparent;
-    transition:
-      background-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-      height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-      transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-      opacity 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    will-change: background-color, height, transform, opacity;
-    transform-origin: center;
+    display: none;
   }
 
   /* First tab - left edge */
@@ -746,7 +751,8 @@ body {
 
   .tab-item-chrome-inactive:hover {
     background-color: var(--color-glass-button);
-    border-color: var(--color-glass-border);
+    border: none;
+    border-bottom: none !important;
     color: var(--color-text-primary);
     z-index: 2;
   }
@@ -758,21 +764,25 @@ body {
 
   :root.light .tab-item-chrome-inactive:hover {
     background-color: rgba(0, 0, 0, 0.04);
-    border-color: rgba(0, 0, 0, 0.08);
+    border: none;
+    border-bottom: none !important;
     color: rgba(0, 0, 0, 0.9);
   }
 
-  /* Active Tab - Enhanced Glassmorphism */
+  /* Active Tab - Completely Seamless with content */
   .tab-item-chrome-active {
-    background-color: var(--color-glass-panel);
+    background-color: var(--color-glass-panel) !important;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-color: var(--color-glass-border);
+    border: none !important;
+    border-bottom: none !important;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
     color: var(--color-text-primary);
     z-index: 10;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.1),
-      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
   }
 
   .tab-item-chrome-active::before {
@@ -804,11 +814,12 @@ body {
 
   /* Light mode active */
   :root.light .tab-item-chrome-active {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-color: rgba(0, 0, 0, 0.1);
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.08),
-      0 0 0 0.5px rgba(0, 0, 0, 0.05) inset;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
   }
 
   :root.light .tab-item-chrome-active::before {

@@ -11,7 +11,8 @@ import {
     Binary,
     Braces,
     FileImage,
-    Settings
+    Settings,
+    Clipboard
 } from 'lucide-react';
 
 
@@ -87,6 +88,7 @@ const RegexTester = React.lazy(() => import('./development/RegexTester').then(m 
 const CrontabGenerator = React.lazy(() => import('./development/CrontabGenerator').then(m => ({ default: m.CrontabGenerator })));
 const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
 const DockerConverter = React.lazy(() => import('./development/DockerConverter').then(m => ({ default: m.DockerConverter })));
+const ClipboardManager = React.lazy(() => import('./utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -472,6 +474,16 @@ export const TOOLS: ToolDefinition[] = [
         icon: Box,
         component: DockerConverter,
         keywords: ['docker', 'compose', 'convert', 'container']
+    },
+    {
+        id: 'clipboard-manager',
+        name: 'Clipboard Manager',
+        path: '/clipboard-manager',
+        description: 'Manage and browse clipboard history with search and organization',
+        category: 'development',
+        icon: Clipboard,
+        component: ClipboardManager,
+        keywords: ['clipboard', 'copy', 'paste', 'history', 'manager']
     },
 
     // Settings (Special tool - not in any category)

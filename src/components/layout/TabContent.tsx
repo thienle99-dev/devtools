@@ -17,7 +17,7 @@ export const TabContent: React.FC = React.memo(() => {
 
     if (!activeTab) {
         return (
-            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area bg-[var(--color-glass-panel)]/20">
+            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area">
                 <div className="flex-1 flex flex-col items-center justify-center text-foreground-muted select-none px-8">
                     <div className="relative mb-8">
                         <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-xl border border-white/10 flex items-center justify-center text-5xl mb-6 shadow-2xl">
@@ -42,7 +42,7 @@ export const TabContent: React.FC = React.memo(() => {
 
     if (!toolDef) {
         return (
-            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area bg-[var(--color-glass-panel)]/20">
+            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area">
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center px-8">
                         <div className="w-16 h-16 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 mx-auto">
@@ -59,7 +59,7 @@ export const TabContent: React.FC = React.memo(() => {
     const ToolComponent = toolDef.component;
 
     return (
-        <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area bg-[var(--color-glass-panel)]/10">
+        <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area">
             <Suspense fallback={
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">

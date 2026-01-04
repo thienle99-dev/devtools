@@ -13,7 +13,11 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
     const updateSettings = useClipboardStore((state) => state.updateSettings);
     const setMaxItems = useClipboardStore((state) => state.setMaxItems);
 
-    const [localSettings, setLocalSettings] = useState(settings);
+    const [localSettings, setLocalSettings] = useState({
+        ...settings,
+        ignoredApps: settings.ignoredApps || [],
+        clearOnQuit: settings.clearOnQuit ?? false,
+    });
     const [localMaxItems, setLocalMaxItems] = useState(maxItems);
 
     const handleSave = () => {
@@ -133,6 +137,80 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                                 </p>
                             </div>
                         </label>
+                    </div>
+
+                    {/* Clear on Quit */}
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded border-border text-accent focus:ring-accent/50"
+                                checked={localSettings.clearOnQuit}
+                                onChange={(e) => setLocalSettings({ ...localSettings, clearOnQuit: e.target.checked })}
+                            />
+                            <div>
+                                <div className="text-sm font-medium text-foreground">
+                                    Clear Clipboard on Quit
+                                </div>
+                                <p className="text-xs text-foreground-muted">
+                                    Automatically clear system clipboard when app quits (security feature)
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+
+                    {/* Ignored Apps */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Ignored Apps
+                        </label>
+                        <div className="space-y-2">
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 bg-surface-elevated border border-border rounded-lg 
+                                         text-foreground text-sm focus:outline-none focus:ring-2 
+                                         focus:ring-accent/50 focus:border-accent transition-all"
+                                placeholder="Enter app name (e.g., Safari, Google Sheets)"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                        const appName = e.currentTarget.value.trim();
+                                        if (!localSettings.ignoredApps.includes(appName)) {
+                                            setLocalSettings({
+                                                ...localSettings,
+                                                ignoredApps: [...localSettings.ignoredApps, appName],
+                                            });
+                                            e.currentTarget.value = '';
+                                        }
+                                    }
+                                }}
+                            />
+                            <p className="text-xs text-foreground-muted">
+                                Press Enter to add. Apps in this list will not trigger clipboard saves.
+                            </p>
+                            {localSettings.ignoredApps.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {localSettings.ignoredApps.map((app, index) => (
+                                        <span
+                                            key={index}
+                                            className="inline-flex items-center gap-1 px-2 py-1 bg-surface-elevated border border-border rounded text-xs text-foreground"
+                                        >
+                                            {app}
+                                            <button
+                                                onClick={() => {
+                                                    setLocalSettings({
+                                                        ...localSettings,
+                                                        ignoredApps: localSettings.ignoredApps.filter((_, i) => i !== index),
+                                                    });
+                                                }}
+                                                className="text-foreground-muted hover:text-foreground"
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

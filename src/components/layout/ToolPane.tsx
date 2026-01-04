@@ -22,12 +22,12 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
     onClear
 }) => {
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden glass-panel rounded-3xl m-2 shadow-2xl relative">
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
             {/* Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b border-border-glass backdrop-blur-md sticky top-0 z-10 bg-[var(--color-glass-50)]">
+            <div className="px-8 py-5 flex items-center justify-between backdrop-blur-md sticky top-0 z-10 bg-[var(--color-glass-50)]">
                 <div>
-                    <h2 className="text-xl font-bold text-foreground tracking-tight leading-none">{title}</h2>
-                    {description && <p className="text-[11px] font-medium text-foreground-muted truncate mt-1.5 uppercase tracking-wider">{description}</p>}
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight leading-none">{title}</h2>
+                    {description && <p className="text-xs font-medium text-foreground-muted truncate mt-2 uppercase tracking-wider">{description}</p>}
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -65,7 +65,7 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-6 custom-scrollbar">
+            <div className="flex-1 overflow-auto p-8 custom-scrollbar">
                 {children}
             </div>
         </div>

@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToolStore } from '../../store/toolStore';
+import { useClipboardStore } from '../../store/clipboardStore';
 import { TOOLS } from '../../tools/registry';
 
 export const TrayController = () => {
     const navigate = useNavigate();
     const history = useToolStore((state) => state.history);
+    const clipboardItems = useClipboardStore((state) => state.items);
+    const clearAll = useClipboardStore((state) => state.clearAll);
 
     // Sync history to Tray
     useEffect(() => {
@@ -22,6 +25,22 @@ export const TrayController = () => {
         }
     }, [history]);
 
+    // Sync clipboard items to Tray (9 items like Maccy)
+    useEffect(() => {
+        const recentClipboard = clipboardItems
+            .filter(item => item.type === 'text' || item.type === 'link' || item.type === 'file') // Text, links, and files for tray
+            .slice(0, 9) // Limit to 9 most recent (Maccy style)
+            .map(item => ({
+                id: item.id,
+                content: item.content,
+                timestamp: item.timestamp,
+            }));
+
+        if ((window as any).ipcRenderer?.tray?.updateClipboard) {
+            (window as any).ipcRenderer.tray.updateClipboard(recentClipboard);
+        }
+    }, [clipboardItems]);
+
     // Handle navigation from Tray
     useEffect(() => {
         const handleNavigate = (_event: any, toolId: string) => {
@@ -31,12 +50,27 @@ export const TrayController = () => {
             }
         };
 
-        const removeListener = (window as any).ipcRenderer?.on('navigate-to', handleNavigate);
+        const handleOpenClipboardManager = () => {
+            const tool = TOOLS.find(t => t.id === 'clipboard-manager');
+            if (tool) {
+                navigate(tool.path);
+            }
+        };
+
+        const handleClearClipboard = () => {
+            clearAll();
+        };
+
+        const removeNavigateListener = (window as any).ipcRenderer?.on('navigate-to', handleNavigate);
+        const removeOpenClipboardListener = (window as any).ipcRenderer?.on('open-clipboard-manager', handleOpenClipboardManager);
+        const removeClearListener = (window as any).ipcRenderer?.on('clipboard-clear-all', handleClearClipboard);
 
         return () => {
-            if (removeListener) removeListener();
+            if (removeNavigateListener) removeNavigateListener();
+            if (removeOpenClipboardListener) removeOpenClipboardListener();
+            if (removeClearListener) removeClearListener();
         };
-    }, [navigate]);
+    }, [navigate, clearAll]);
 
     return null;
 };

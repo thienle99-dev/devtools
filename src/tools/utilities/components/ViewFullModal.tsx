@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { ClipboardItem } from '../../../store/clipboardStore';
+import type { ClipboardItem } from '../../../store/clipboardStore';
 import { Button } from '../../../components/ui/Button';
 import { useClipboard } from '../hooks/useClipboard';
 
