@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification } from 'electron'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import Store from 'electron-store'
 
 const store = new Store()
@@ -33,11 +34,16 @@ function createTray() {
   updateTrayMenu()
 
   tray.on('double-click', () => {
-    if (win) {
-      if (win.isVisible()) win.hide()
-      else win.show()
-    }
+    toggleWindow();
   })
+}
+
+function toggleWindow() {
+  if (win) {
+    if (win.isVisible()) win.hide()
+    else win.show()
+    updateTrayMenu()
+  }
 }
 
 // Keep track of tools
@@ -59,6 +65,37 @@ function updateTrayMenu() {
     },
     { type: 'separator' }
   ];
+
+  // Quick Actions
+  template.push({
+    label: 'Quick Actions',
+    submenu: [
+      {
+        label: 'Generate UUID',
+        click: () => {
+          const uuid = randomUUID();
+          clipboard.writeText(uuid);
+          new Notification({ title: 'UUID Generated', body: 'Copied to clipboard' }).show();
+        }
+      },
+      {
+        label: 'Format JSON from Clipboard',
+        click: () => {
+          try {
+            const text = clipboard.readText();
+            const json = JSON.parse(text);
+            const formatted = JSON.stringify(json, null, 2);
+            clipboard.writeText(formatted);
+            new Notification({ title: 'JSON Formatted', body: 'Formatted JSON copied to clipboard' }).show();
+          } catch (e) {
+            new Notification({ title: 'JSON Format Failed', body: 'Clipboard does not contain valid JSON' }).show();
+          }
+        }
+      }
+      // Future: Add more quick actions here
+    ]
+  });
+  template.push({ type: 'separator' });
 
   if (recentTools.length > 0) {
     template.push({ label: 'Recent Tools', enabled: false });
@@ -137,7 +174,16 @@ function createWindow() {
 
   // Handle Store IPC
   ipcMain.handle('store-get', (_event, key) => store.get(key))
-  ipcMain.handle('store-set', (_event, key, value) => store.set(key, value))
+  ipcMain.handle('store-set', (_event, key, value) => {
+    store.set(key, value)
+
+    if (key === 'launchAtLogin') {
+      app.setLoginItemSettings({
+        openAtLogin: value === true,
+        openAsHidden: true // Always launch hidden to tray if auto-launching
+      });
+    }
+  })
   ipcMain.handle('store-delete', (_event, key) => store.delete(key))
 
   // Tray IPC
@@ -183,6 +229,22 @@ app.on('before-quit', () => {
 });
 
 app.whenReady().then(() => {
+  // Register Global Shortcut
+  try {
+    globalShortcut.register('CommandOrControl+Shift+D', () => {
+      toggleWindow();
+    });
+  } catch (e) {
+    console.error('Failed to register global shortcut', e);
+  }
+
+  // Check launch at login status on startup
+  const launchAtLogin = store.get('launchAtLogin') as boolean;
+  app.setLoginItemSettings({
+    openAtLogin: launchAtLogin === true,
+    openAsHidden: true
+  });
+
   createTray();
   createWindow();
 })

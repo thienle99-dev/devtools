@@ -1,10 +1,10 @@
-import electron, { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage } from "electron";
+import electron, { BrowserWindow, Menu, Notification, Tray, app, clipboard, globalShortcut, ipcMain, nativeImage } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto, { randomUUID } from "node:crypto";
 import process$1 from "node:process";
 import { isDeepStrictEqual, promisify } from "node:util";
 import fs from "node:fs";
-import crypto from "node:crypto";
 import assert from "node:assert";
 import os from "node:os";
 import "node:events";
@@ -8877,9 +8877,15 @@ function createTray() {
 	tray.setToolTip("DevTools 2");
 	updateTrayMenu();
 	tray.on("double-click", () => {
-		if (win) if (win.isVisible()) win.hide();
-		else win.show();
+		toggleWindow();
 	});
+}
+function toggleWindow() {
+	if (win) {
+		if (win.isVisible()) win.hide();
+		else win.show();
+		updateTrayMenu();
+	}
 }
 var recentTools = [];
 function updateTrayMenu() {
@@ -8894,6 +8900,40 @@ function updateTrayMenu() {
 			}
 		}
 	}, { type: "separator" }];
+	template.push({
+		label: "Quick Actions",
+		submenu: [{
+			label: "Generate UUID",
+			click: () => {
+				const uuid = randomUUID();
+				clipboard.writeText(uuid);
+				new Notification({
+					title: "UUID Generated",
+					body: "Copied to clipboard"
+				}).show();
+			}
+		}, {
+			label: "Format JSON from Clipboard",
+			click: () => {
+				try {
+					const text = clipboard.readText();
+					const json = JSON.parse(text);
+					const formatted = JSON.stringify(json, null, 2);
+					clipboard.writeText(formatted);
+					new Notification({
+						title: "JSON Formatted",
+						body: "Formatted JSON copied to clipboard"
+					}).show();
+				} catch (e) {
+					new Notification({
+						title: "JSON Format Failed",
+						body: "Clipboard does not contain valid JSON"
+					}).show();
+				}
+			}
+		}]
+	});
+	template.push({ type: "separator" });
 	if (recentTools.length > 0) {
 		template.push({
 			label: "Recent Tools",
@@ -8963,7 +9003,13 @@ function createWindow() {
 	win.on("show", updateTrayMenu);
 	win.on("hide", updateTrayMenu);
 	ipcMain.handle("store-get", (_event, key) => store.get(key));
-	ipcMain.handle("store-set", (_event, key, value) => store.set(key, value));
+	ipcMain.handle("store-set", (_event, key, value) => {
+		store.set(key, value);
+		if (key === "launchAtLogin") app.setLoginItemSettings({
+			openAtLogin: value === true,
+			openAsHidden: true
+		});
+	});
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
 	ipcMain.on("tray-update-menu", (_event, items) => {
 		recentTools = items || [];
@@ -8986,6 +9032,18 @@ app.on("before-quit", () => {
 	app.isQuitting = true;
 });
 app.whenReady().then(() => {
+	try {
+		globalShortcut.register("CommandOrControl+Shift+D", () => {
+			toggleWindow();
+		});
+	} catch (e) {
+		console.error("Failed to register global shortcut", e);
+	}
+	const launchAtLogin = store.get("launchAtLogin");
+	app.setLoginItemSettings({
+		openAtLogin: launchAtLogin === true,
+		openAsHidden: true
+	});
 	createTray();
 	createWindow();
 });

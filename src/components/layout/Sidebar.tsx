@@ -9,19 +9,21 @@ import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 
 export const Sidebar: React.FC = () => {
     return (
-        <aside className="w-64 h-full glass-panel-light border-r-0 flex flex-col transition-all duration-300 z-20">
-            <div className="p-4 flex items-center mb-2 mt-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
+        <aside className="w-64 h-full sidebar-macos flex flex-col transition-all duration-300 z-20">
+            {/* Search Section - macOS Style */}
+            <div className="px-4 pt-4 pb-3">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted pointer-events-none" />
                     <input
                         type="text"
                         placeholder="Search tools..."
-                        className="glass-input w-full pl-10"
+                        className="sidebar-search-input w-full pl-10 pr-3 py-2.5 text-sm"
                     />
                 </div>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-2 space-y-6 custom-scrollbar">
+            {/* Navigation - macOS Style */}
+            <nav className="flex-1 overflow-y-auto px-3 space-y-5 custom-scrollbar">
                 {CATEGORIES.map((category) => {
                     const tools = getToolsByCategory(category.id);
 
@@ -30,26 +32,27 @@ export const Sidebar: React.FC = () => {
                     if (tools.length === 0) return null;
 
                     return (
-                        <div key={category.id} className="space-y-1">
-                            <h3 className="px-3 text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] mb-2 flex items-center">
-                                <category.icon className="w-3 h-3 mr-2" />
+                        <div key={category.id} className="space-y-1.5">
+                            {/* Category Header - macOS Style */}
+                            <h3 className="px-2.5 text-[11px] font-semibold text-foreground-muted uppercase tracking-[0.08em] mb-1.5 flex items-center">
+                                <category.icon className="w-3.5 h-3.5 mr-2 opacity-60" />
                                 {category.name}
                             </h3>
-                            <div className="space-y-[2px]">
+                            
+                            {/* Tool Items - macOS Style */}
+                            <div className="space-y-0.5">
                                 {tools.map((tool) => (
                                     <NavLink
                                         key={tool.id}
                                         to={tool.path}
                                         className={({ isActive }) => cn(
-                                            "flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 group",
+                                            "sidebar-nav-item flex items-center px-2.5 py-2 rounded-md text-sm transition-all duration-200 group cursor-pointer",
                                             isActive
-                                                ? "bg-bg-glass-hover text-foreground shadow-lg shadow-black/5"
-                                                : "text-foreground-secondary hover:bg-[var(--color-glass-button-hover)] hover:text-foreground"
+                                                ? "sidebar-nav-item-active"
+                                                : "sidebar-nav-item-inactive"
                                         )}
                                     >
-                                        {/* Optional: Add tool icon here if we want icons per tool in sidebar */}
-                                        {/* <tool.icon className="w-4 h-4 mr-2 opacity-70" /> */}
-                                        {tool.name}
+                                        <span className="truncate flex-1">{tool.name}</span>
                                     </NavLink>
                                 ))}
                             </div>
@@ -58,16 +61,17 @@ export const Sidebar: React.FC = () => {
                 })}
             </nav>
 
-            <div className="p-4 border-t border-border-glass">
+            {/* Footer - Settings Button - macOS Style */}
+            <div className="px-4 py-3 border-t border-border-glass">
                 <NavLink
                     to="/settings"
                     className={({ isActive }) => cn(
-                        "glass-button w-full flex items-center justify-start border-none bg-transparent hover:bg-[var(--color-glass-button-hover)]",
-                        isActive && "bg-bg-glass-hover text-foreground"
+                        "sidebar-settings-button flex items-center px-3 py-2.5 rounded-md text-sm transition-all duration-200 cursor-pointer",
+                        isActive && "sidebar-settings-button-active"
                     )}
                 >
-                    <Settings className="w-4 h-4 mr-3" />
-                    Settings
+                    <Settings className="w-4 h-4 mr-2.5" />
+                    <span>Settings</span>
                 </NavLink>
             </div>
         </aside>

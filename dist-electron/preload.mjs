@@ -2,7 +2,11 @@ let electron = require("electron");
 electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 	on(...args) {
 		const [channel, listener] = args;
-		return electron.ipcRenderer.on(channel, (event, ...args$1) => listener(event, ...args$1));
+		const wrappedListener = (event, ...args$1) => listener(event, ...args$1);
+		electron.ipcRenderer.on(channel, wrappedListener);
+		return () => {
+			electron.ipcRenderer.removeListener(channel, wrappedListener);
+		};
 	},
 	off(...args) {
 		const [channel, ...omit] = args;

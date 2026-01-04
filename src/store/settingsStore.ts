@@ -8,12 +8,14 @@ interface SettingsStore {
     historyLimit: number;
     minimizeToTray: boolean;
     startMinimized: boolean;
+    launchAtLogin: boolean;
 
     setFontSize: (size: number) => void;
     setWordWrap: (wrap: boolean) => void;
     setTheme: (theme: 'light' | 'dark' | 'system') => void;
     setMinimizeToTray: (value: boolean) => void;
     setStartMinimized: (value: boolean) => void;
+    setLaunchAtLogin: (value: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -25,6 +27,7 @@ export const useSettingsStore = create<SettingsStore>()(
             historyLimit: 50,
             minimizeToTray: true,
             startMinimized: false,
+            launchAtLogin: false,
 
             setFontSize: (fontSize) => set({ fontSize }),
             setWordWrap: (wordWrap) => set({ wordWrap }),
@@ -40,6 +43,10 @@ export const useSettingsStore = create<SettingsStore>()(
             setStartMinimized: (startMinimized) => {
                 set({ startMinimized });
                 (window as any).ipcRenderer?.invoke('store-set', 'startMinimized', startMinimized);
+            },
+            setLaunchAtLogin: (launchAtLogin) => {
+                set({ launchAtLogin });
+                (window as any).ipcRenderer?.invoke('store-set', 'launchAtLogin', launchAtLogin);
             },
         }),
         {

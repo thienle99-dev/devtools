@@ -180,6 +180,29 @@ const SettingsPage: React.FC = () => {
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${startMinimized ? 'left-7' : 'left-1'} shadow-md`} />
                             </button>
                         </div>
+                        <div className="flex items-center justify-between p-4 border-t border-border-glass">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Launch at Login</p>
+                                <p className="text-xs text-foreground-muted">Automatically open app when you log in</p>
+                            </div>
+                            <button
+                                onClick={() => useSettingsStore.getState().setLaunchAtLogin(!useSettingsStore.getState().launchAtLogin)}
+                                className={`w-12 h-6 rounded-full transition-all relative ${useSettingsStore.getState().launchAtLogin ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${useSettingsStore.getState().launchAtLogin ? 'left-7' : 'left-1'} shadow-md`} />
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-border-glass">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Global Shortcut</p>
+                                <p className="text-xs text-foreground-muted">Toggle window visibility</p>
+                            </div>
+                            <div className="flex bg-[var(--color-glass-input)] px-3 py-1.5 rounded-lg border border-border-glass">
+                                <kbd className="text-xs font-mono font-bold text-foreground">
+                                    {(window as any).ipcRenderer?.process?.platform === 'darwin' ? 'Cmd' : 'Ctrl'} + Shift + D
+                                </kbd>
+                            </div>
+                        </div>
                     </Card>
                 </section>
             </div>
