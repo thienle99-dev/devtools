@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolStore } from '../../store/toolStore';
 // @ts-ignore - ip-subnet-calculator may not have types
-import Calculator from 'ip-subnet-calculator';
+import { calculateSubnetMask } from 'ip-subnet-calculator';
 
 // Type definitions for ip-subnet-calculator as it might be missing types
 interface SubnetResult {
@@ -57,11 +57,11 @@ export const Ipv4SubnetCalculator: React.FC = () => {
         if (!cleanIp) return;
 
         try {
-            // Calculator.calculate(ip, mask)
-            const res = Calculator.calculate(cleanIp, cleanMask);
-            if (res && (Array.isArray(res) ? res.length > 0 : res)) {
-                const info = Array.isArray(res) ? res[0] : res;
-                setToolData(TOOL_ID, { meta: { result: info } });
+            // calculateSubnetMask(ip, prefixSize)
+            const prefixSize = parseInt(cleanMask) || 24;
+            const res = calculateSubnetMask(cleanIp, prefixSize);
+            if (res) {
+                setToolData(TOOL_ID, { meta: { result: res } });
             } else {
                 setToolData(TOOL_ID, { meta: { result: null } });
             }
