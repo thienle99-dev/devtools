@@ -51,13 +51,17 @@ const MainLayout = () => {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 relative h-full">
-      <div className="absolute top-0 left-0 w-full z-50 pointer-events-none">
+      {/* Dynamic Island - Enhanced positioning */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none pt-2">
         <DynamicIsland />
       </div>
 
-      <div className="flex-1 flex flex-col pt-8 overflow-hidden">
+      {/* Main content with better spacing */}
+      <div className="flex-1 flex flex-col pt-12 overflow-hidden">
         <TabBar />
-        <TabContent />
+        <div className="flex-1 min-h-0">
+          <TabContent />
+        </div>
       </div>
     </div>
   );
@@ -100,9 +104,11 @@ function App() {
       <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
         <WindowControls />
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* Sidebar with enhanced styling */}
           <Sidebar />
 
+          {/* Main content area */}
           <main className="flex-1 flex flex-col min-w-0 relative">
             <Suspense fallback={<PageLoader />}>
               <Routes>
@@ -113,15 +119,18 @@ function App() {
           </main>
         </div>
 
-        {/* Simple Footer/Status Bar */}
-        <footer className="h-8 px-4 flex items-center justify-between text-[10px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30">
-          <div className="flex items-center space-x-4">
-            <span>Ready</span>
-            <div className="w-1 h-1 rounded-full bg-emerald-500/50" />
-            <span>UTF-8</span>
+        {/* Enhanced Footer/Status Bar */}
+        <footer className="h-9 px-6 flex items-center justify-between text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30 backdrop-blur-xl">
+          <div className="flex items-center space-x-5">
+            <div className="flex items-center space-x-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
+              <span className="font-medium">Ready</span>
+            </div>
+            <div className="w-px h-4 bg-border-glass" />
+            <span className="opacity-70">UTF-8</span>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="hover:text-foreground cursor-pointer transition-colors">v0.2.0-beta</span>
+          <div className="flex items-center space-x-5">
+            <span className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity font-medium">v0.2.0-beta</span>
           </div>
         </footer>
       </div>
