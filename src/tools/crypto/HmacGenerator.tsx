@@ -7,10 +7,16 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'hmac-generator';
 
-export const HmacGenerator: React.FC = () => {
+interface HmacGeneratorProps {
+    tabId?: string;
+}
+
+export const HmacGenerator: React.FC<HmacGeneratorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
         options: {
@@ -27,10 +33,10 @@ export const HmacGenerator: React.FC = () => {
     }, [addToHistory]);
 
     const update = (text: string, key: string, algo: string) => {
-        setToolData(TOOL_ID, { input: text, options: { key, algo } });
+        setToolData(effectiveId, { input: text, options: { key, algo } });
 
         if (!text || !key) {
-            setToolData(TOOL_ID, { output: '' });
+            setToolData(effectiveId, { output: '' });
             return;
         }
 
@@ -45,13 +51,13 @@ export const HmacGenerator: React.FC = () => {
                 case 'RIPEMD160': hash = CryptoJS.HmacRIPEMD160(text, key).toString(); break;
                 default: hash = 'Unknown Algorithm';
             }
-            setToolData(TOOL_ID, { output: hash });
+            setToolData(effectiveId, { output: hash });
         } catch (e) {
-            setToolData(TOOL_ID, { output: 'Error generating HMAC' });
+            setToolData(effectiveId, { output: 'Error generating HMAC' });
         }
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

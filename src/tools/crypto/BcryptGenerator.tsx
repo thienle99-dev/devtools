@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'bcrypt-generator';
 
-export const BcryptGenerator: React.FC = () => {
+interface BcryptGeneratorProps {
+    tabId?: string;
+}
+
+export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
         options: {
@@ -29,7 +35,7 @@ export const BcryptGenerator: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
         // Auto compare if we have hash and text? No, explicit action better for async bcrypt.
     };
 
@@ -42,9 +48,9 @@ export const BcryptGenerator: React.FC = () => {
                 if (!input) return;
                 const salt = await bcrypt.genSalt(options.rounds);
                 const hash = await bcrypt.hash(input, salt);
-                setToolData(TOOL_ID, { output: hash });
+                setToolData(effectiveId, { output: hash });
             } catch (e) {
-                setToolData(TOOL_ID, { output: 'Error generating hash' });
+                setToolData(effectiveId, { output: 'Error generating hash' });
             } finally {
                 setLoadingAction(null);
             }
@@ -56,20 +62,20 @@ export const BcryptGenerator: React.FC = () => {
         setTimeout(async () => {
             try {
                 if (!input || !options.compareHash) {
-                    setToolData(TOOL_ID, { meta: { isMatch: null } });
+                    setToolData(effectiveId, { meta: { isMatch: null } });
                     return;
                 }
                 const match = await bcrypt.compare(input, options.compareHash);
-                setToolData(TOOL_ID, { meta: { isMatch: match } });
+                setToolData(effectiveId, { meta: { isMatch: match } });
             } catch (e) {
-                setToolData(TOOL_ID, { meta: { isMatch: false } }); // or error state
+                setToolData(effectiveId, { meta: { isMatch: false } }); // or error state
             } finally {
                 setLoadingAction(null);
             }
         }, 100);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
@@ -87,7 +93,7 @@ export const BcryptGenerator: React.FC = () => {
                                 type="number"
                                 min="4" max="31"
                                 value={options.rounds}
-                                onChange={(e) => setToolData(TOOL_ID, { options: { ...options, rounds: parseInt(e.target.value) } })}
+                                onChange={(e) => setToolData(effectiveId, { options: { ...options, rounds: parseInt(e.target.value) } })}
                                 className="glass-input w-16 text-center py-1"
                             />
                         </div>
@@ -128,7 +134,7 @@ export const BcryptGenerator: React.FC = () => {
                         <input
                             type="text"
                             value={options.compareHash}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, compareHash: e.target.value }, meta: { isMatch: null } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, compareHash: e.target.value }, meta: { isMatch: null } })}
                             className={`glass-input w-full font-mono text-sm ${meta?.isMatch === true ? 'border-emerald-500/50 bg-emerald-500/10' : meta?.isMatch === false ? 'border-red-500/50 bg-red-500/10' : ''}`}
                             placeholder="Paste hash to compare with input password..."
                         />

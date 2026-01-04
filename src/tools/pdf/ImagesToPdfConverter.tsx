@@ -14,21 +14,37 @@ interface ImageFile {
     name: string;
 }
 
-export const ImagesToPdfConverter: React.FC = () => {
+interface ImagesToPdfConverterProps {
+    tabId?: string;
+}
+
+export const ImagesToPdfConverter: React.FC<ImagesToPdfConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const data = tools[TOOL_ID] || { 
-        images: [] as ImageFile[],
-        options: { 
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
+        options: {
+            images: [] as ImageFile[],
             orientation: 'portrait' as 'portrait' | 'landscape',
             pageSize: 'a4' as 'a4' | 'letter',
-            margin: 0
+            margin: 0,
+            pdfBlob: undefined as Blob | undefined
         }
     };
 
-    const { images, options } = data;
+    const options = data.options || {};
+    const images = (options.images || []) as ImageFile[];
+    // Ensure default options if undefined
+    const currentOptions = {
+        orientation: options.orientation || 'portrait',
+        pageSize: options.pageSize || 'a4',
+        margin: options.margin || 0,
+        pdfBlob: options.pdfBlob as Blob | undefined
+    };
+
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -47,8 +63,11 @@ export const ImagesToPdfConverter: React.FC = () => {
                 name: file.name
             }));
 
-        setToolData(TOOL_ID, {
-            images: [...(images || []), ...imageFiles]
+        setToolData(effectiveId, {
+            options: {
+                ...options,
+                images: [...images, ...imageFiles]
+            }
         });
 
         if (fileInputRef.current) {
@@ -57,44 +76,54 @@ export const ImagesToPdfConverter: React.FC = () => {
     };
 
     const removeImage = (id: string) => {
-        const updatedImages = (images || []).filter(img => {
+        const updatedImages = images.filter((img: ImageFile) => {
             if (img.id === id) {
                 URL.revokeObjectURL(img.preview);
                 return false;
             }
             return true;
         });
-        setToolData(TOOL_ID, { images: updatedImages });
+        setToolData(effectiveId, {
+            options: {
+                ...options,
+                images: updatedImages
+            }
+        });
     };
 
     const moveImage = (index: number, direction: 'up' | 'down') => {
-        const updatedImages = [...(images || [])];
+        const updatedImages = [...images];
         const newIndex = direction === 'up' ? index - 1 : index + 1;
-        
+
         if (newIndex < 0 || newIndex >= updatedImages.length) return;
 
         [updatedImages[index], updatedImages[newIndex]] = [updatedImages[newIndex], updatedImages[index]];
-        setToolData(TOOL_ID, { images: updatedImages });
+        setToolData(effectiveId, {
+            options: {
+                ...options,
+                images: updatedImages
+            }
+        });
     };
 
     const convertToPdf = async () => {
         if (!images || images.length === 0) {
-            setToolData(TOOL_ID, { output: 'Please add at least one image.' });
+            setToolData(effectiveId, { output: 'Please add at least one image.' });
             return;
         }
 
         setLoadingAction('Converting');
-        
+
         try {
             const pdf = new jsPDF({
-                orientation: options.orientation,
+                orientation: currentOptions.orientation as any,
                 unit: 'mm',
-                format: options.pageSize
+                format: currentOptions.pageSize
             });
 
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = options.margin || 0;
+            const margin = currentOptions.margin || 0;
             const contentWidth = pageWidth - (margin * 2);
             const contentHeight = pageHeight - (margin * 2);
 
@@ -105,7 +134,7 @@ export const ImagesToPdfConverter: React.FC = () => {
 
                 const img = images[i];
                 const imgElement = new Image();
-                
+
                 await new Promise<void>((resolve, reject) => {
                     imgElement.onload = () => {
                         try {
@@ -143,14 +172,17 @@ export const ImagesToPdfConverter: React.FC = () => {
             // Generate PDF blob
             const pdfBlob = pdf.output('blob');
             const pdfUrl = URL.createObjectURL(pdfBlob);
-            
-            setToolData(TOOL_ID, { 
+
+            setToolData(effectiveId, {
                 output: pdfUrl,
-                pdfBlob: pdfBlob
+                options: {
+                    ...options,
+                    pdfBlob: pdfBlob
+                }
             });
         } catch (error) {
-            setToolData(TOOL_ID, { 
-                output: `Error converting to PDF: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            setToolData(effectiveId, {
+                output: `Error converting to PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         } finally {
             setLoadingAction(null);
@@ -158,9 +190,9 @@ export const ImagesToPdfConverter: React.FC = () => {
     };
 
     const downloadPdf = () => {
-        if (!data.pdfBlob) return;
-        
-        const url = URL.createObjectURL(data.pdfBlob);
+        if (!currentOptions.pdfBlob) return;
+
+        const url = URL.createObjectURL(currentOptions.pdfBlob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `images-${Date.now()}.pdf`;
@@ -171,13 +203,13 @@ export const ImagesToPdfConverter: React.FC = () => {
     };
 
     const handleClear = () => {
-        (images || []).forEach(img => URL.revokeObjectURL(img.preview));
-        clearToolData(TOOL_ID);
+        images.forEach((img: ImageFile) => URL.revokeObjectURL(img.preview));
+        clearToolData(effectiveId);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const updateOption = (key: string, value: any) => {
-        setToolData(TOOL_ID, { options: { ...options, [key]: value } });
+        setToolData(effectiveId, { options: { ...options, [key]: value } });
     };
 
     return (
@@ -215,7 +247,7 @@ export const ImagesToPdfConverter: React.FC = () => {
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Orientation</label>
                             <select
-                                value={options.orientation}
+                                value={currentOptions.orientation}
                                 onChange={(e) => updateOption('orientation', e.target.value)}
                                 className="glass-input w-full text-sm"
                             >
@@ -226,7 +258,7 @@ export const ImagesToPdfConverter: React.FC = () => {
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Page Size</label>
                             <select
-                                value={options.pageSize}
+                                value={currentOptions.pageSize}
                                 onChange={(e) => updateOption('pageSize', e.target.value)}
                                 className="glass-input w-full text-sm"
                             >
@@ -240,7 +272,7 @@ export const ImagesToPdfConverter: React.FC = () => {
                                 type="number"
                                 min="0"
                                 max="50"
-                                value={options.margin || 0}
+                                value={currentOptions.margin}
                                 onChange={(e) => updateOption('margin', parseInt(e.target.value) || 0)}
                                 className="glass-input w-full text-sm"
                             />
@@ -255,7 +287,7 @@ export const ImagesToPdfConverter: React.FC = () => {
                             Images ({images.length})
                         </label>
                         <div className="space-y-2 overflow-y-auto max-h-[300px]">
-                            {images.map((img, index) => (
+                            {images.map((img: ImageFile, index: number) => (
                                 <div
                                     key={img.id}
                                     className="glass-input p-3 flex items-center space-x-3"
@@ -313,7 +345,7 @@ export const ImagesToPdfConverter: React.FC = () => {
                         >
                             Convert to PDF
                         </Button>
-                        {data.pdfBlob && (
+                        {currentOptions.pdfBlob && (
                             <Button
                                 variant="secondary"
                                 onClick={downloadPdf}

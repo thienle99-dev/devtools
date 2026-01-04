@@ -7,11 +7,17 @@ import he from 'he';
 
 const TOOL_ID = 'html-entity-encoder';
 
-export const HtmlEntityEncoder: React.FC = () => {
+interface HtmlEntityEncoderProps {
+    tabId?: string;
+}
+
+export const HtmlEntityEncoder: React.FC<HtmlEntityEncoderProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -19,7 +25,7 @@ export const HtmlEntityEncoder: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
     };
 
     const handleEncode = () => {
@@ -27,9 +33,9 @@ export const HtmlEntityEncoder: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input) return;
-                setToolData(TOOL_ID, { output: he.encode(input) });
+                setToolData(effectiveId, { output: he.encode(input) });
             } catch (error) {
-                setToolData(TOOL_ID, { output: 'Error encoding HTML entities' });
+                setToolData(effectiveId, { output: 'Error encoding HTML entities' });
             } finally {
                 setLoadingAction(null);
             }
@@ -41,16 +47,16 @@ export const HtmlEntityEncoder: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input) return;
-                setToolData(TOOL_ID, { output: he.decode(input) });
+                setToolData(effectiveId, { output: he.decode(input) });
             } catch (error) {
-                setToolData(TOOL_ID, { output: 'Error decoding HTML entities' });
+                setToolData(effectiveId, { output: 'Error decoding HTML entities' });
             } finally {
                 setLoadingAction(null);
             }
         }, 100);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

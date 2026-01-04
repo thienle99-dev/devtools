@@ -6,10 +6,16 @@ import { Button } from '../../components/ui/Button';
 
 const TOOL_ID = 'date-time';
 
-export const DateConverter: React.FC = () => {
+interface DateConverterProps {
+    tabId?: string;
+}
+
+export const DateConverter: React.FC<DateConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         options: {
             iso: '',
@@ -31,13 +37,13 @@ export const DateConverter: React.FC = () => {
 
     // Auto-detect and convert on input change
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
         convert(val);
     };
 
     const convert = (val: string) => {
         if (!val.trim()) {
-            setToolData(TOOL_ID, { options: {} });
+            setToolData(effectiveId, { options: {} });
             return;
         }
 
@@ -65,7 +71,7 @@ export const DateConverter: React.FC = () => {
         }
 
         if (date && isValid(date)) {
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 options: {
                     iso: date.toISOString(),
                     utc: date.toUTCString(),
@@ -84,7 +90,7 @@ export const DateConverter: React.FC = () => {
         handleInputChange(unix);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

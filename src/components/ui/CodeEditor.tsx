@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import CodeMirror, { type ReactCodeMirrorProps, type Extension } from '@uiw/react-codemirror';
+import CodeMirror, { type ReactCodeMirrorProps } from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
 import { javascript } from '@codemirror/lang-javascript';
 import { html } from '@codemirror/lang-html';

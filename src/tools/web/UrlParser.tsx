@@ -4,10 +4,16 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'url-parser';
 
-export const UrlParser: React.FC = () => {
+interface UrlParserProps {
+    tabId?: string;
+}
+
+export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         options: {
             protocol: '',
@@ -29,14 +35,14 @@ export const UrlParser: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
         parseUrl(val);
     };
 
     const parseUrl = (val: string) => {
         try {
             if (!val) {
-                clearToolData(TOOL_ID);
+                clearToolData(effectiveId);
                 return;
             }
             // Add protocol if missing to try and parse flexible inputs
@@ -51,7 +57,7 @@ export const UrlParser: React.FC = () => {
                 params[key] = value;
             });
 
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 options: {
                     protocol: url.protocol,
                     host: url.host,
@@ -69,7 +75,7 @@ export const UrlParser: React.FC = () => {
         }
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

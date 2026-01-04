@@ -21,11 +21,17 @@ interface SubnetResult {
 
 const TOOL_ID = 'ipv4-subnet-calculator';
 
-export const Ipv4SubnetCalculator: React.FC = () => {
+interface Ipv4SubnetCalculatorProps {
+    tabId?: string;
+}
+
+export const Ipv4SubnetCalculator: React.FC<Ipv4SubnetCalculatorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Default options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '', // IP Address
         options: {
             mask: '24', // CIDR or Mask
@@ -52,7 +58,7 @@ export const Ipv4SubnetCalculator: React.FC = () => {
         const cleanIp = ip.trim();
         const cleanMask = mask.trim().replace('/', '');
 
-        setToolData(TOOL_ID, { input: cleanIp, options: { mask: cleanMask } });
+        setToolData(effectiveId, { input: cleanIp, options: { mask: cleanMask } });
 
         if (!cleanIp) return;
 
@@ -61,17 +67,17 @@ export const Ipv4SubnetCalculator: React.FC = () => {
             const prefixSize = parseInt(cleanMask) || 24;
             const res = calculateSubnetMask(cleanIp, prefixSize);
             if (res) {
-                setToolData(TOOL_ID, { meta: { result: res } });
+                setToolData(effectiveId, { meta: { result: res } });
             } else {
-                setToolData(TOOL_ID, { meta: { result: null } });
+                setToolData(effectiveId, { meta: { result: null } });
             }
         } catch (e) {
-            setToolData(TOOL_ID, { meta: { result: null } });
+            setToolData(effectiveId, { meta: { result: null } });
         }
     };
 
     const handleClear = () => {
-        clearToolData(TOOL_ID);
+        clearToolData(effectiveId);
         handleCalculate('', '24');
     };
 

@@ -13,11 +13,14 @@ interface TabStore {
     tabs: Tab[];
     activeTabId: string | null;
 
-    openTab: (toolId: string, path: string, title: string, description?: string) => void;
+    openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean) => void;
     closeTab: (tabId: string) => void;
     setActiveTab: (tabId: string) => void;
     reorderTabs: (tabs: Tab[]) => void;
     closeAllTabs: () => void;
+    closeOtherTabs: (tabId: string) => void;
+    closeTabsToRight: (tabId: string) => void;
+    closeTabsToLeft: (tabId: string) => void;
 }
 
 export const useTabStore = create<TabStore>()(
@@ -26,24 +29,19 @@ export const useTabStore = create<TabStore>()(
             tabs: [],
             activeTabId: null,
 
-            openTab: (toolId: string, path: string, title: string, description?: string) => {
+            openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean) => {
                 const { tabs } = get();
 
-                // Optional: Check if a tab with this toolId already exists if we want singleton tabs per tool
-                // For now, let's allow multiple tabs of the same tool if the design calls for it,
-                // BUT the plan says "Sidebar Click ... Tab Exists? -> Switch". 
-                // So let's check if the generic tool is already open.
-
-                // NOTE: For a true multi-tab experience (like VS Code), you might want multiple 'Untitled-1', 'Untitled-2'
-                // for the same tool. However, the architecture diagram says "Tab Exists? -> Yes -> Switch".
-                // I will assume for now we switch to existing if found.
-
-                const existingTab = tabs.find(t => t.toolId === toolId);
-                if (existingTab) {
-                    set({ activeTabId: existingTab.id });
-                    return;
+                // Check if a tab with this toolId already exists unless forceNew is true
+                if (!forceNew) {
+                    const existingTab = tabs.find(t => t.toolId === toolId);
+                    if (existingTab) {
+                        set({ activeTabId: existingTab.id });
+                        return;
+                    }
                 }
 
+                // If forceNew is true, or no existing tab found, create a new one
                 const newTab: Tab = {
                     id: crypto.randomUUID(),
                     toolId,
@@ -97,6 +95,53 @@ export const useTabStore = create<TabStore>()(
 
             closeAllTabs: () => {
                 set({ tabs: [], activeTabId: null });
+            },
+
+            closeOtherTabs: (tabId: string) => {
+                const { tabs } = get();
+                const newTabs = tabs.filter(t => t.id === tabId);
+                set({
+                    tabs: newTabs,
+                    activeTabId: tabId
+                });
+            },
+
+            closeTabsToRight: (tabId: string) => {
+                const { tabs, activeTabId } = get();
+                const tabIndex = tabs.findIndex(t => t.id === tabId);
+                if (tabIndex === -1) return;
+
+                const newTabs = tabs.slice(0, tabIndex + 1);
+                let newActiveId = activeTabId;
+
+                // If we closed the active tab or tabs after it, keep the current tab active
+                if (activeTabId && !newTabs.find(t => t.id === activeTabId)) {
+                    newActiveId = tabId;
+                }
+
+                set({
+                    tabs: newTabs,
+                    activeTabId: newActiveId || tabId
+                });
+            },
+
+            closeTabsToLeft: (tabId: string) => {
+                const { tabs, activeTabId } = get();
+                const tabIndex = tabs.findIndex(t => t.id === tabId);
+                if (tabIndex === -1) return;
+
+                const newTabs = tabs.slice(tabIndex);
+                let newActiveId = activeTabId;
+
+                // If we closed the active tab, activate the target tab
+                if (activeTabId && !newTabs.find(t => t.id === activeTabId)) {
+                    newActiveId = tabId;
+                }
+
+                set({
+                    tabs: newTabs,
+                    activeTabId: newActiveId || tabId
+                });
             }
         }),
         {

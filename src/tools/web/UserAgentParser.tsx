@@ -6,10 +6,16 @@ import { Button } from '../../components/ui/Button';
 
 const TOOL_ID = 'user-agent-parser';
 
-export const UserAgentParser: React.FC = () => {
+interface UserAgentParserProps {
+    tabId?: string;
+}
+
+export const UserAgentParser: React.FC<UserAgentParserProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         options: {
             // Parsed results
@@ -32,18 +38,20 @@ export const UserAgentParser: React.FC = () => {
         if (!input) {
             handleInputChange(navigator.userAgent);
         }
-    }, [addToHistory]);
+    }, [addToHistory]); // Removed input from dependency to prevent loop and only init if empty on mount (or history load)
+    // Actually, we should check data existence or effectiveId. 
+    // If we want to set default only once, careful with useEffect deps.
 
     const handleInputChange = (val: string) => {
         const parser = new UAParser(val);
         const res = parser.getResult();
-        setToolData(TOOL_ID, {
+        setToolData(effectiveId, {
             input: val,
             options: res
         });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     const InfoCard = ({ title, data }: { title: string, data: Record<string, any> }) => (
         <div className="space-y-2 p-4 glass-panel rounded-xl">

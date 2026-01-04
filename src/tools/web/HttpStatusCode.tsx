@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolStore } from '../../store/toolStore';
 
@@ -31,9 +31,21 @@ const CODES = [
     { code: 504, title: "Gateway Timeout", desc: "The server was acting as a gateway or proxy and did not receive a timely response from the upstream server." },
 ];
 
-export const HttpStatusCode: React.FC = () => {
-    const { addToHistory } = useToolStore();
-    const [search, setSearch] = useState('');
+interface HttpStatusCodeProps {
+    tabId?: string;
+}
+
+export const HttpStatusCode: React.FC<HttpStatusCodeProps> = ({ tabId }) => {
+    const { tools, setToolData, addToHistory } = useToolStore();
+
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '' }; // We'll use 'input' for search
+    const search = data.input;
+
+    const setSearch = (val: string) => {
+        setToolData(effectiveId, { input: val });
+    }
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -66,16 +78,16 @@ export const HttpStatusCode: React.FC = () => {
                         <div
                             key={code.code}
                             className={`p-4 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors ${code.code >= 500 ? 'border-red-500/20' :
-                                    code.code >= 400 ? 'border-orange-500/20' :
-                                        code.code >= 300 ? 'border-blue-500/20' :
-                                            code.code >= 200 ? 'border-emerald-500/20' : 'border-gray-500/20'
+                                code.code >= 400 ? 'border-orange-500/20' :
+                                    code.code >= 300 ? 'border-blue-500/20' :
+                                        code.code >= 200 ? 'border-emerald-500/20' : 'border-gray-500/20'
                                 }`}
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <span className={`text-2xl font-black ${code.code >= 500 ? 'text-red-400' :
-                                        code.code >= 400 ? 'text-orange-400' :
-                                            code.code >= 300 ? 'text-blue-400' :
-                                                code.code >= 200 ? 'text-emerald-400' : 'text-gray-400'
+                                    code.code >= 400 ? 'text-orange-400' :
+                                        code.code >= 300 ? 'text-blue-400' :
+                                            code.code >= 200 ? 'text-emerald-400' : 'text-gray-400'
                                     }`}>{code.code}</span>
                                 <span className="font-bold text-sm tracking-wide uppercase text-foreground-muted">{code.title}</span>
                             </div>

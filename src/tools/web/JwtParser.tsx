@@ -6,11 +6,17 @@ import { CodeEditor } from '../../components/ui/CodeEditor';
 
 const TOOL_ID = 'jwt-parser';
 
-export const JwtParser: React.FC = () => {
+interface JwtParserProps {
+    tabId?: string;
+}
+
+export const JwtParser: React.FC<JwtParserProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Default options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '',
         options: {
             header: '',
@@ -47,13 +53,13 @@ export const JwtParser: React.FC = () => {
             }
         }
 
-        setToolData(TOOL_ID, {
+        setToolData(effectiveId, {
             input: val,
             options: { header, payload, isValid }
         });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

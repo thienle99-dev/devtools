@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'json-xml';
 
-export const JsonXmlConverter: React.FC = () => {
+interface JsonXmlConverterProps {
+    tabId?: string;
+}
+
+export const JsonXmlConverter: React.FC<JsonXmlConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -19,8 +25,8 @@ export const JsonXmlConverter: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = useCallback((val: string) => {
-        setToolData(TOOL_ID, { input: val });
-    }, [setToolData]);
+        setToolData(effectiveId, { input: val });
+    }, [setToolData, effectiveId]);
 
     const handleToJson = () => {
         setLoadingAction('ToJson');
@@ -33,9 +39,9 @@ export const JsonXmlConverter: React.FC = () => {
                 });
                 const result = parser.parse(input);
                 const formatted = JSON.stringify(result, null, 2);
-                setToolData(TOOL_ID, { output: formatted });
+                setToolData(effectiveId, { output: formatted });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid XML\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid XML\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
@@ -55,16 +61,16 @@ export const JsonXmlConverter: React.FC = () => {
                     indentBy: "  "
                 });
                 const xml = builder.build(parsed);
-                setToolData(TOOL_ID, { output: xml });
+                setToolData(effectiveId, { output: xml });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
         }, 100);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

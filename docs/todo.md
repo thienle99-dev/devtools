@@ -286,12 +286,70 @@
 - [ ] GIF Optimizer
 - [ ] Video Frame Extractor
 
-### 3.9 Data Tools
+### 3.9 Screenshot Tools (Xnapper Clone)
+
+#### Phase 1: Core Capture & Basic Processing
+- [ ] Setup Xnapper tool structure (`src/tools/screenshot/`)
+- [ ] Install dependencies (fabric, tesseract.js)
+- [ ] Create Xnapper store (`src/store/xnapperStore.ts`)
+- [ ] Implement Electron screen capture API integration
+- [ ] Create CaptureSection component (full screen, window, area selection)
+- [ ] Implement basic image preview
+- [ ] Implement auto-balance enhancement
+- [ ] Implement simple export (PNG/JPG)
+- [ ] Implement save to file functionality
+- [ ] Add to tools registry and sidebar
+
+#### Phase 2: Redaction & Background
+- [ ] Integrate Tesseract.js for OCR
+- [ ] Implement regex pattern detection (email, IP, API keys)
+- [ ] Create RedactionPanel component
+- [ ] Implement redaction tools (blur, pixelate, solid overlay)
+- [ ] Implement manual redaction area selection
+- [ ] Create BackgroundPanel component
+- [ ] Implement gradient background generator
+- [ ] Implement image background support with blur effect
+- [ ] Add background preview thumbnails
+
+#### Phase 3: Annotations
+- [ ] Integrate Fabric.js for canvas manipulation
+- [ ] Create PreviewSection with Fabric.js canvas
+- [ ] Implement arrow tool (straight, curved)
+- [ ] Implement text tool with font selection
+- [ ] Implement shape tools (rectangle, circle, ellipse)
+- [ ] Implement blur tool for selective blur
+- [ ] Implement crop tool for manual adjustment
+- [ ] Create AnnotationToolbar component
+- [ ] Implement undo/redo functionality
+- [ ] Add color picker and size controls
+
+#### Phase 4: Export & Share
+- [ ] Create ExportPanel component
+- [ ] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
+- [ ] Implement custom dimensions
+- [ ] Implement quality settings (compression level)
+- [ ] Implement format options (PNG, JPG, WebP)
+- [ ] Implement copy to clipboard functionality
+- [ ] Implement system share sheet integration (macOS)
+- [ ] Create HistoryPanel component
+- [ ] Implement screenshot history storage
+
+#### Phase 5: Advanced Features
+- [ ] Implement templates system
+- [ ] Add preset saving functionality
+- [ ] Implement batch processing (future)
+- [ ] Add cloud upload (Imgur, Cloudinary) - future
+- [ ] Implement AI background suggestions - future
+- [ ] Add keyboard shortcuts
+- [ ] Implement drag & drop image loading
+- [ ] Add image comparison mode
+
+### 3.10 Data Tools
 
 - [ ] Phone parser and formatter
 - [ ] IBAN validator and parser
 
-### 3.10 PDF Tools
+### 3.11 PDF Tools
 
 - [ ] PDF signature checker
 - [ ] PDF to Images (PNG/JPG)

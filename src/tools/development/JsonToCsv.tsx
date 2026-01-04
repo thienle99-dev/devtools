@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import Papa from 'papaparse';
 
 const TOOL_ID = 'json-to-csv';
 
-export const JsonToCsv: React.FC = () => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+interface JsonToCsvProps {
+    tabId?: string;
+}
+
+export const JsonToCsv: React.FC<JsonToCsvProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Default valid options
-    const data = tools[TOOL_ID] || {
+    const data = toolData || {
         input: '',
         output: '',
         options: {
@@ -39,7 +44,7 @@ export const JsonToCsv: React.FC = () => {
                 try {
                     jsonData = JSON.parse(input);
                 } catch (e) {
-                    setToolData(TOOL_ID, { output: 'Error: Invalid JSON input.' });
+                    setToolData(effectiveId, { output: 'Error: Invalid JSON input.' });
                     setLoading(false);
                     return;
                 }
@@ -54,17 +59,17 @@ export const JsonToCsv: React.FC = () => {
                     header: options.header,
                 });
 
-                setToolData(TOOL_ID, { output: csv });
+                setToolData(effectiveId, { output: csv });
 
             } catch (e) {
-                setToolData(TOOL_ID, { output: `Error: ${(e as Error).message}` });
+                setToolData(effectiveId, { output: `Error: ${(e as Error).message}` });
             } finally {
                 setLoading(false);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
@@ -79,7 +84,7 @@ export const JsonToCsv: React.FC = () => {
                         <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Delimiter</label>
                         <select
                             value={options.delimiter}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, delimiter: e.target.value } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, delimiter: e.target.value } })}
                             className="glass-input h-9 text-xs w-24"
                         >
                             <option value=",">Comma (,)</option>
@@ -94,7 +99,7 @@ export const JsonToCsv: React.FC = () => {
                             <input
                                 type="checkbox"
                                 checked={options.header}
-                                onChange={(e) => setToolData(TOOL_ID, { options: { ...options, header: e.target.checked } })}
+                                onChange={(e) => setToolData(effectiveId, { options: { ...options, header: e.target.checked } })}
                                 className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
                             />
                             <span className="text-xs font-bold text-foreground-secondary">Include Header</span>
@@ -106,7 +111,7 @@ export const JsonToCsv: React.FC = () => {
                             <input
                                 type="checkbox"
                                 checked={options.quotes}
-                                onChange={(e) => setToolData(TOOL_ID, { options: { ...options, quotes: e.target.checked } })}
+                                onChange={(e) => setToolData(effectiveId, { options: { ...options, quotes: e.target.checked } })}
                                 className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
                             />
                             <span className="text-xs font-bold text-foreground-secondary">Quote Values</span>
@@ -121,7 +126,7 @@ export const JsonToCsv: React.FC = () => {
                             className="flex-1 min-h-[200px]"
                             language="json"
                             value={input}
-                            onChange={(val) => setToolData(TOOL_ID, { input: val })}
+                            onChange={(val) => setToolData(effectiveId, { input: val })}
                             placeholder='[{"name": "John", "age": 30}, ...]'
                         />
                     </div>

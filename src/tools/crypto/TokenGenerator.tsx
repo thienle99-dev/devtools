@@ -13,11 +13,17 @@ const CHAR_SETS = {
     symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-='
 };
 
-export const TokenGenerator: React.FC = () => {
+interface TokenGeneratorProps {
+    tabId?: string;
+}
+
+export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Default options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         options: {
             length: 16,
             uppercase: true,
@@ -38,7 +44,7 @@ export const TokenGenerator: React.FC = () => {
     }, [addToHistory]);
 
     const updateOption = (key: string, value: any) => {
-        setToolData(TOOL_ID, { options: { ...options, [key]: value } });
+        setToolData(effectiveId, { options: { ...options, [key]: value } });
     };
 
     const generate = () => {
@@ -53,7 +59,7 @@ export const TokenGenerator: React.FC = () => {
         }
 
         if (!chars) {
-            setToolData(TOOL_ID, { output: 'Please select at least one character set.' });
+            setToolData(effectiveId, { output: 'Please select at least one character set.' });
             return;
         }
 
@@ -80,13 +86,13 @@ export const TokenGenerator: React.FC = () => {
             strengthResult = zxcvbn(tokens[0]);
         }
 
-        setToolData(TOOL_ID, {
+        setToolData(effectiveId, {
             output: result,
             meta: { strength: strengthResult }
         });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     // Check if we already have output; generate if empty on first load could be nice, currently manual.

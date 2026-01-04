@@ -7,12 +7,18 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'json-yaml';
 
-export const JsonYamlConverter: React.FC = () => {
+interface JsonYamlConverterProps {
+    tabId?: string;
+}
+
+export const JsonYamlConverter: React.FC<JsonYamlConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Get current state or default
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -20,8 +26,8 @@ export const JsonYamlConverter: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = useCallback((val: string) => {
-        setToolData(TOOL_ID, { input: val });
-    }, [setToolData]);
+        setToolData(effectiveId, { input: val });
+    }, [setToolData, effectiveId]);
 
     const handleToJson = () => {
         setLoadingAction('ToJson');
@@ -30,9 +36,9 @@ export const JsonYamlConverter: React.FC = () => {
                 if (!input.trim()) return;
                 const parsed = yaml.load(input);
                 const formatted = JSON.stringify(parsed, null, 2);
-                setToolData(TOOL_ID, { output: formatted });
+                setToolData(effectiveId, { output: formatted });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid YAML\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid YAML\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
@@ -46,16 +52,16 @@ export const JsonYamlConverter: React.FC = () => {
                 if (!input.trim()) return;
                 const parsed = JSON.parse(input);
                 const formatted = yaml.dump(parsed);
-                setToolData(TOOL_ID, { output: formatted });
+                setToolData(effectiveId, { output: formatted });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     const handleCopy = () => {
         if (output) navigator.clipboard.writeText(output);

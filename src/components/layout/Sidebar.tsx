@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTabStore } from '../../store/tabStore';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
     Settings,
     Search
@@ -10,7 +10,21 @@ import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 
 export const Sidebar: React.FC = () => {
     const { openTab, activeTabId, tabs } = useTabStore();
+    const navigate = useNavigate();
     const activeTab = tabs.find(t => t.id === activeTabId);
+
+    // Global shortcut for Search (Cmd+K)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector<HTMLInputElement>('.sidebar-search-input')?.focus();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
         <aside className="w-64 h-full sidebar-macos flex flex-col transition-all duration-300 z-20">
@@ -20,7 +34,7 @@ export const Sidebar: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted pointer-events-none" />
                     <input
                         type="text"
-                        placeholder="Search tools..."
+                        placeholder="Search tools... (⌘K)"
                         className="sidebar-search-input w-full pl-10 pr-3 py-2.5 text-sm"
                     />
                 </div>
@@ -51,7 +65,21 @@ export const Sidebar: React.FC = () => {
                                     return (
                                         <div
                                             key={tool.id}
-                                            onClick={() => openTab(tool.id, tool.path, tool.name, tool.description)}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Navigate to tool path - MainLayout will automatically open the tab
+                                                // when location.pathname changes (see App.tsx MainLayout useEffect)
+                                                if (e.altKey) {
+                                                    // Alt/Option + Click => Force new tab
+                                                    // We need to open tab first with forceNew, then navigate
+                                                    openTab(tool.id, tool.path, tool.name, tool.description, true);
+                                                    navigate(tool.path);
+                                                } else {
+                                                    // Normal click: just navigate, MainLayout will handle tab opening
+                                                    navigate(tool.path);
+                                                }
+                                            }}
+                                            title={tool.description}
                                             className={cn(
                                                 "sidebar-nav-item flex items-center px-2.5 py-2 rounded-md text-sm transition-all duration-200 group cursor-pointer",
                                                 isActive

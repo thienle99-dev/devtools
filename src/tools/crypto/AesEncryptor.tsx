@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'aes-encryptor';
 
-export const AesEncryptor: React.FC = () => {
+interface AesEncryptorProps {
+    tabId?: string;
+}
+
+export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
         options: {
@@ -26,11 +32,11 @@ export const AesEncryptor: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
     };
 
     const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setToolData(TOOL_ID, { options: { ...options, key: e.target.value } });
+        setToolData(effectiveId, { options: { ...options, key: e.target.value } });
     };
 
     const handleEncrypt = () => {
@@ -38,13 +44,13 @@ export const AesEncryptor: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input || !options.key) {
-                    setToolData(TOOL_ID, { output: 'Please enter both text and a secret key.' });
+                    setToolData(effectiveId, { output: 'Please enter both text and a secret key.' });
                     return;
                 }
                 const ciphertext = CryptoJS.AES.encrypt(input, options.key).toString();
-                setToolData(TOOL_ID, { output: ciphertext });
+                setToolData(effectiveId, { output: ciphertext });
             } catch (e) {
-                setToolData(TOOL_ID, { output: 'Encryption Error' });
+                setToolData(effectiveId, { output: 'Encryption Error' });
             } finally {
                 setLoadingAction(null);
             }
@@ -56,25 +62,25 @@ export const AesEncryptor: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input || !options.key) {
-                    setToolData(TOOL_ID, { output: 'Please enter both ciphertext and a secret key.' });
+                    setToolData(effectiveId, { output: 'Please enter both ciphertext and a secret key.' });
                     return;
                 }
                 const bytes = CryptoJS.AES.decrypt(input, options.key);
                 const originalText = bytes.toString(CryptoJS.enc.Utf8);
                 if (!originalText) {
-                    setToolData(TOOL_ID, { output: 'Error: Could not decrypt. Wrong key or invalid ciphertext.' });
+                    setToolData(effectiveId, { output: 'Error: Could not decrypt. Wrong key or invalid ciphertext.' });
                 } else {
-                    setToolData(TOOL_ID, { output: originalText });
+                    setToolData(effectiveId, { output: originalText });
                 }
             } catch (e) {
-                setToolData(TOOL_ID, { output: 'Decryption Error' });
+                setToolData(effectiveId, { output: 'Decryption Error' });
             } finally {
                 setLoadingAction(null);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

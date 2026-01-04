@@ -4,13 +4,19 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'number-base';
 
-export const NumberBaseConverter: React.FC = () => {
+interface NumberBaseConverterProps {
+    tabId?: string;
+}
+
+export const NumberBaseConverter: React.FC<NumberBaseConverterProps> = ({ tabId }) => {
     const { tools, setToolData, addToHistory } = useToolStore();
+
+    const effectiveId = tabId || TOOL_ID;
 
     // We store the 'decimal' value as the source of truth, but we also need to store 'current inputs' 
     // to handle invalid intermediate states (like typing 'A' in hex).
     // Actually, simplest is to store each field text.
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '', // we won't strictly use 'input/output' struct for this multi-field, but can map 'input' to decimal
         options: {
             decimal: '',
@@ -34,7 +40,7 @@ export const NumberBaseConverter: React.FC = () => {
         const cleanValue = value.trim();
 
         if (cleanValue === '') {
-            setToolData(TOOL_ID, { options: { decimal: '', hex: '', octal: '', binary: '' } });
+            setToolData(effectiveId, { options: { decimal: '', hex: '', octal: '', binary: '' } });
             return;
         }
 
@@ -66,11 +72,11 @@ export const NumberBaseConverter: React.FC = () => {
             if (sourceType !== 'binary') newValues.binary = decimalValue.toString(2);
         }
 
-        setToolData(TOOL_ID, { options: newValues });
+        setToolData(effectiveId, { options: newValues });
     };
 
     const handleClear = () => {
-        setToolData(TOOL_ID, { options: { decimal: '', hex: '', octal: '', binary: '' } });
+        setToolData(effectiveId, { options: { decimal: '', hex: '', octal: '', binary: '' } });
     };
 
     return (

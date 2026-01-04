@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import composerize from 'composerize';
 
@@ -11,13 +11,12 @@ interface DockerConverterProps {
 }
 
 export const DockerConverter: React.FC<DockerConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // input: docker run command
     // output: docker-compose.yml content
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         output: '',
     };

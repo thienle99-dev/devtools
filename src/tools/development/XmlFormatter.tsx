@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import xmlFormatter from 'xml-formatter';
 
@@ -12,12 +12,11 @@ interface XmlFormatterProps {
 }
 
 export const XmlFormatter: React.FC<XmlFormatterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Default valid options
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         output: '',
         options: {

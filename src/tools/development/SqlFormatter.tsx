@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import { format as sqlFormatter } from 'sql-formatter';
 
@@ -12,12 +12,11 @@ interface SqlFormatterProps {
 }
 
 export const SqlFormatter: React.FC<SqlFormatterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Get current state or default
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         output: '',
         options: {

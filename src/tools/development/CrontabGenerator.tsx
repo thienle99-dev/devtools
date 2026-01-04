@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import cronstrue from 'cronstrue';
 
 const TOOL_ID = 'crontab-generator';
@@ -15,10 +15,15 @@ const STANDARD_PRESETS = [
     { label: 'Every month (1st)', value: '0 0 1 * *' },
 ];
 
-export const CrontabGenerator: React.FC = () => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+interface CrontabGeneratorProps {
+    tabId?: string;
+}
 
-    const data = tools[TOOL_ID] || {
+export const CrontabGenerator: React.FC<CrontabGeneratorProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || {
         input: '* * * * *',
         options: {
             minute: '*',
@@ -44,25 +49,26 @@ export const CrontabGenerator: React.FC = () => {
         // Update description when input changes
         try {
             const desc = cronstrue.toString(input, { use24HourTimeFormat: true });
-            setToolData(TOOL_ID, { meta: { ...meta, desc } });
+            setToolData(effectiveId, { meta: { ...meta, desc } });
         } catch (e) {
-            setToolData(TOOL_ID, { meta: { ...meta, desc: 'Invalid cron expression' } });
+            setToolData(effectiveId, { meta: { ...meta, desc: 'Invalid cron expression' } });
         }
-    }, [input]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [input, setToolData, effectiveId]); // meta is unstable dependency
 
     const handlePartChange = (part: string, value: string) => {
         const newOptions = { ...options, [part]: value };
         const newVal = `${newOptions.minute} ${newOptions.hour} ${newOptions.day} ${newOptions.month} ${newOptions.weekday}`;
-        setToolData(TOOL_ID, { options: newOptions, input: newVal });
+        setToolData(effectiveId, { options: newOptions, input: newVal });
     };
 
     const handleInputChange = (val: string) => {
         // Reverse parse is hard, just update input and try to describe
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
         // Optionally try to split back into parts if it matches standard 5-part
         const parts = val.trim().split(/\s+/);
         if (parts.length === 5) {
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 input: val,
                 options: {
                     minute: parts[0],
@@ -76,8 +82,8 @@ export const CrontabGenerator: React.FC = () => {
     };
 
     const handleClear = () => {
-        clearToolData(TOOL_ID);
-        setToolData(TOOL_ID, { input: '* * * * *', options: { minute: '*', hour: '*', day: '*', month: '*', weekday: '*' } });
+        clearToolData(effectiveId);
+        setToolData(effectiveId, { input: '* * * * *', options: { minute: '*', hour: '*', day: '*', month: '*', weekday: '*' } });
     };
 
     return (

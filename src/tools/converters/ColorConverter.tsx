@@ -40,11 +40,17 @@ const rgbToHsl = (r: number, g: number, b: number) => {
     };
 };
 
-export const ColorConverter: React.FC = () => {
+interface ColorConverterProps {
+    tabId?: string;
+}
+
+export const ColorConverter: React.FC<ColorConverterProps> = ({ tabId }) => {
     const { tools, setToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Store all formats in options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         options: { hex: '#000000', rgb: 'rgb(0, 0, 0)', hsl: 'hsl(0, 0%, 0%)', r: '0', g: '0', b: '0' }
     };
     const values = data.options!;
@@ -53,13 +59,14 @@ export const ColorConverter: React.FC = () => {
         addToHistory(TOOL_ID);
         // Set default if empty
         if (!values.hex) updateFromHex('#6366F1'); // Indigo-500 default
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [addToHistory]);
 
     const updateFromHex = (hex: string) => {
         const rgb = hexToRgb(hex);
         if (rgb) {
             const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 options: {
                     hex: hex,
                     rgb: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
@@ -70,7 +77,7 @@ export const ColorConverter: React.FC = () => {
                 }
             });
         } else {
-            setToolData(TOOL_ID, { options: { ...values, hex } });
+            setToolData(effectiveId, { options: { ...values, hex } });
         }
     };
 

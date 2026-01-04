@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'json-diff';
 
-export const JsonDiff: React.FC = () => {
+interface JsonDiffProps {
+    tabId?: string;
+}
+
+export const JsonDiff: React.FC<JsonDiffProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',  // Left side
         output: '', // Diff output
         options: {
@@ -27,11 +33,11 @@ export const JsonDiff: React.FC = () => {
     }, [addToHistory]);
 
     const handleLeftChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
     };
 
     const handleRightChange = (val: string) => {
-        setToolData(TOOL_ID, { options: { ...options, right: val } });
+        setToolData(effectiveId, { options: { ...options, right: val } });
     };
 
     const handleCompare = () => {
@@ -51,16 +57,16 @@ export const JsonDiff: React.FC = () => {
                 } catch (e) { }
 
                 const patch = createPatch('diff', leftText, rightText, 'Left', 'Right');
-                setToolData(TOOL_ID, { output: patch });
+                setToolData(effectiveId, { output: patch });
             } catch (e) {
-                setToolData(TOOL_ID, { output: 'Error comparing inputs' });
+                setToolData(effectiveId, { output: 'Error comparing inputs' });
             } finally {
                 setLoadingAction(null);
             }
         }, 100);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

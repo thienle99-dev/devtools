@@ -6,11 +6,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'case-converter';
 
-export const CaseConverter: React.FC = () => {
+interface CaseConverterProps {
+    tabId?: string;
+}
+
+export const CaseConverter: React.FC<CaseConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -18,13 +24,13 @@ export const CaseConverter: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = useCallback((val: string) => {
-        setToolData(TOOL_ID, { input: val });
-    }, [setToolData]);
+        setToolData(effectiveId, { input: val });
+    }, [setToolData, effectiveId]);
 
     const performConversion = (converter: (s: string) => string, actionName: string) => {
         setLoadingAction(actionName);
         setTimeout(() => {
-            if (input) setToolData(TOOL_ID, { output: converter(input) });
+            if (input) setToolData(effectiveId, { output: converter(input) });
             setLoadingAction(null);
         }, 200);
     };
@@ -64,7 +70,7 @@ export const CaseConverter: React.FC = () => {
     }, 'Constant');
 
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

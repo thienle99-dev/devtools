@@ -6,11 +6,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'url-encoder';
 
-export const UrlEncoder: React.FC = () => {
+interface UrlEncoderProps {
+    tabId?: string;
+}
+
+export const UrlEncoder: React.FC<UrlEncoderProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -18,7 +24,7 @@ export const UrlEncoder: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
     };
 
     const handleEncode = () => {
@@ -26,9 +32,9 @@ export const UrlEncoder: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input) return;
-                setToolData(TOOL_ID, { output: encodeURIComponent(input) });
+                setToolData(effectiveId, { output: encodeURIComponent(input) });
             } catch (error) {
-                setToolData(TOOL_ID, { output: 'Error encoding URL' });
+                setToolData(effectiveId, { output: 'Error encoding URL' });
             } finally {
                 setLoadingAction(null);
             }
@@ -40,16 +46,16 @@ export const UrlEncoder: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input) return;
-                setToolData(TOOL_ID, { output: decodeURIComponent(input) });
+                setToolData(effectiveId, { output: decodeURIComponent(input) });
             } catch (error) {
-                setToolData(TOOL_ID, { output: 'Error: Malformed URI sequence' });
+                setToolData(effectiveId, { output: 'Error: Malformed URI sequence' });
             } finally {
                 setLoadingAction(null);
             }
         }, 100);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

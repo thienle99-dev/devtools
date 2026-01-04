@@ -74,3 +74,14 @@ export const useToolStore = create<ToolStore>()(
         }
     )
 );
+
+export const useToolState = (id: string) => {
+    const data = useToolStore((state) => state.tools[id]);
+    const actions = useToolStore((state) => ({
+        setToolData: state.setToolData,
+        clearToolData: state.clearToolData,
+        addToHistory: state.addToHistory,
+        removeToolData: state.removeToolData
+    }));
+    return { data, ...actions };
+};

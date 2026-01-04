@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 
 const TOOL_ID = 'json-format';
@@ -11,13 +11,12 @@ interface JsonFormatterProps {
 }
 
 export const JsonFormatter: React.FC<JsonFormatterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     // Use tabId if provided, otherwise fallback to singleton TOOL_ID
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Get current state or default
-    const data = tools[effectiveId] || { input: '', output: '', options: {} };
+    const data = toolData || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     const [loadingAction, setLoadingAction] = useState<string | null>(null);

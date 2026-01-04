@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'markdown-html';
 
-export const MarkdownHtmlConverter: React.FC = () => {
+interface MarkdownHtmlConverterProps {
+    tabId?: string;
+}
+
+export const MarkdownHtmlConverter: React.FC<MarkdownHtmlConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -26,9 +32,9 @@ export const MarkdownHtmlConverter: React.FC = () => {
         try {
             if (!input.trim()) return;
             const html = await marked.parse(input);
-            setToolData(TOOL_ID, { output: html });
+            setToolData(effectiveId, { output: html });
         } catch (error) {
-            setToolData(TOOL_ID, { output: `Error: ${(error as Error).message}` });
+            setToolData(effectiveId, { output: `Error: ${(error as Error).message}` });
         } finally {
             setLoadingAction(null);
         }
@@ -37,7 +43,7 @@ export const MarkdownHtmlConverter: React.FC = () => {
     // HTML to Markdown is hard without a library like Turndown.
     // For now we only support MD -> HTML as per basic req.
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     // Preview mode could be cool
@@ -69,7 +75,7 @@ export const MarkdownHtmlConverter: React.FC = () => {
                             language="markdown" // We map text to this in editor usually or use markdown extension if available
                             placeholder="# Hello World"
                             value={input}
-                            onChange={(val) => setToolData(TOOL_ID, { input: val })}
+                            onChange={(val) => setToolData(effectiveId, { input: val })}
                         />
                     </div>
                     <div className="space-y-3 flex flex-col h-full min-h-0">

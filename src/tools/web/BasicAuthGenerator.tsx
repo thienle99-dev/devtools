@@ -1,14 +1,19 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'basic-auth-generator';
 
-export const BasicAuthGenerator: React.FC = () => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+interface BasicAuthGeneratorProps {
+    tabId?: string;
+}
 
-    const data = tools[TOOL_ID] || {
+export const BasicAuthGenerator: React.FC<BasicAuthGeneratorProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || {
         options: { username: '', password: '' },
         output: ''
     };
@@ -22,13 +27,13 @@ export const BasicAuthGenerator: React.FC = () => {
 
     const updateAuth = (u: string, p: string) => {
         const token = btoa(`${u}:${p}`);
-        setToolData(TOOL_ID, {
+        setToolData(effectiveId, {
             options: { username: u, password: p },
             output: `Basic ${token}`
         });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

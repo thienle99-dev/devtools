@@ -1,14 +1,19 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'mac-generator';
 
-export const MacGenerator: React.FC = () => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+interface MacGeneratorProps {
+    tabId?: string;
+}
 
-    const data = tools[TOOL_ID] || {
+export const MacGenerator: React.FC<MacGeneratorProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || {
         input: '',
         output: '',
         options: {
@@ -67,10 +72,10 @@ export const MacGenerator: React.FC = () => {
             lines.push(mac);
         }
 
-        setToolData(TOOL_ID, { output: lines.join('\n') });
+        setToolData(effectiveId, { output: lines.join('\n') });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
@@ -87,7 +92,7 @@ export const MacGenerator: React.FC = () => {
                             type="number"
                             min="1" max="1000"
                             value={options.quantity}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, quantity: parseInt(e.target.value) } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, quantity: parseInt(e.target.value) } })}
                             className="glass-input w-full"
                         />
                     </div>
@@ -97,7 +102,7 @@ export const MacGenerator: React.FC = () => {
                         <input
                             type="text"
                             value={options.prefix}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, prefix: e.target.value } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, prefix: e.target.value } })}
                             className="glass-input w-full"
                             placeholder="00:1A:2B"
                         />
@@ -107,7 +112,7 @@ export const MacGenerator: React.FC = () => {
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Format</label>
                         <select
                             value={options.separator}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, separator: e.target.value } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, separator: e.target.value } })}
                             className="glass-input w-full"
                         >
                             <option value=":">Colon (MM:MM:MM:SS:SS:SS)</option>
@@ -120,7 +125,7 @@ export const MacGenerator: React.FC = () => {
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Casing</label>
                         <select
                             value={options.casing}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, casing: e.target.value } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, casing: e.target.value } })}
                             className="glass-input w-full"
                         >
                             <option value="upper">Uppercase</option>

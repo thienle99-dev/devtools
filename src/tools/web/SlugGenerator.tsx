@@ -5,11 +5,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'slug-generator';
 
-export const SlugGenerator: React.FC = () => {
+interface SlugGeneratorProps {
+    tabId?: string;
+}
+
+export const SlugGenerator: React.FC<SlugGeneratorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Default options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '',
         output: ''
     };
@@ -28,10 +34,10 @@ export const SlugGenerator: React.FC = () => {
             .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with dashes
             .replace(/^-+|-+$/g, ''); // Trim dashes
 
-        setToolData(TOOL_ID, { input: val, output: slug });
+        setToolData(effectiveId, { input: val, output: slug });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

@@ -5,12 +5,18 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'base64-file';
 
-export const Base64FileConverter: React.FC = () => {
+interface Base64FileConverterProps {
+    tabId?: string;
+}
+
+export const Base64FileConverter: React.FC<Base64FileConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: { fileName: '' } };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: { fileName: '' } };
     // We use 'output' to store the Base64 string result. 
     // We don't really use 'input' for text here, but we can store the file name options.
     const { output, options } = data;
@@ -28,7 +34,7 @@ export const Base64FileConverter: React.FC = () => {
 
         reader.onload = () => {
             const result = reader.result as string;
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 output: result,
                 options: { fileName: file.name, fileSize: file.size }
             });
@@ -36,7 +42,7 @@ export const Base64FileConverter: React.FC = () => {
         };
 
         reader.onerror = () => {
-            setToolData(TOOL_ID, { output: 'Error reading file' });
+            setToolData(effectiveId, { output: 'Error reading file' });
             setLoadingAction(null);
         };
 
@@ -45,7 +51,7 @@ export const Base64FileConverter: React.FC = () => {
 
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
     const handleClear = () => {
-        clearToolData(TOOL_ID);
+        clearToolData(effectiveId);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 

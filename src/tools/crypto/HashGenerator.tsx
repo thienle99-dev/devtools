@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'hash-generator';
 
-export const HashGenerator: React.FC = () => {
+interface HashGeneratorProps {
+    tabId?: string;
+}
+
+export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // We'll store the input text and update all hashes automatically
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '',
         options: {
             md5: '',
@@ -31,17 +37,17 @@ export const HashGenerator: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = (val: string) => {
-        setToolData(TOOL_ID, { input: val });
+        setToolData(effectiveId, { input: val });
         generateHashes(val);
     };
 
     const generateHashes = (text: string) => {
         if (!text) {
-            setToolData(TOOL_ID, { options: { md5: '', sha1: '', sha256: '', sha512: '', ripemd160: '', sha3: '' } });
+            setToolData(effectiveId, { options: { md5: '', sha1: '', sha256: '', sha512: '', ripemd160: '', sha3: '' } });
             return;
         }
 
-        setToolData(TOOL_ID, {
+        setToolData(effectiveId, {
             options: {
                 md5: CryptoJS.MD5(text).toString(),
                 sha1: CryptoJS.SHA1(text).toString(),
@@ -53,7 +59,7 @@ export const HashGenerator: React.FC = () => {
         });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
