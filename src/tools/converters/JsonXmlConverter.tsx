@@ -3,7 +3,7 @@ import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'json-xml';
 
@@ -12,12 +12,12 @@ interface JsonXmlConverterProps {
 }
 
 export const JsonXmlConverter: React.FC<JsonXmlConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const effectiveId = tabId || TOOL_ID;
-
-    const data = tools[effectiveId] || { input: '', output: '', options: {} };
+    const data = toolData || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {

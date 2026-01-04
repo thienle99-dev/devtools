@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 
 const TOOL_ID = 'jwt-parser';
@@ -11,12 +11,11 @@ interface JwtParserProps {
 }
 
 export const JwtParser: React.FC<JwtParserProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Default options
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         options: {
             header: '',

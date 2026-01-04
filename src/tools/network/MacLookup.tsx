@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'mac-lookup';
 
@@ -10,12 +10,12 @@ interface MacLookupProps {
 }
 
 export const MacLookup: React.FC<MacLookupProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
     const [loading, setLoading] = useState(false);
 
-    const effectiveId = tabId || TOOL_ID;
-
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         output: '',
         meta: {

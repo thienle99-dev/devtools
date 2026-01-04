@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'slug-generator';
 
@@ -10,12 +10,11 @@ interface SlugGeneratorProps {
 }
 
 export const SlugGenerator: React.FC<SlugGeneratorProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Default options
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         output: ''
     };

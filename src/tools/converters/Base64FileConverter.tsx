@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'base64-file';
 
@@ -10,13 +10,13 @@ interface Base64FileConverterProps {
 }
 
 export const Base64FileConverter: React.FC<Base64FileConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const effectiveId = tabId || TOOL_ID;
-
-    const data = tools[effectiveId] || { input: '', output: '', options: { fileName: '' } };
+    const data = toolData || { input: '', output: '', options: { fileName: '' } };
     // We use 'output' to store the Base64 string result. 
     // We don't really use 'input' for text here, but we can store the file name options.
     const { output, options } = data;

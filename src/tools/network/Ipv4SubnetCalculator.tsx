@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 // @ts-ignore - ip-subnet-calculator may not have types
 import { calculateSubnetMask } from 'ip-subnet-calculator';
 
@@ -26,12 +26,11 @@ interface Ipv4SubnetCalculatorProps {
 }
 
 export const Ipv4SubnetCalculator: React.FC<Ipv4SubnetCalculatorProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Default options
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '', // IP Address
         options: {
             mask: '24', // CIDR or Mask

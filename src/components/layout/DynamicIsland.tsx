@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Zap } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-export const DynamicIsland: React.FC = () => {
+export const DynamicIsland: React.FC = React.memo(() => {
     const [isExpanded, setIsExpanded] = useState(false);
     // Hardcoded status for now since logic isn't connected
     const status = 'idle' as 'idle' | 'processing' | 'success';
@@ -74,4 +74,6 @@ export const DynamicIsland: React.FC = () => {
             </motion.div>
         </div>
     );
-};
+});
+
+DynamicIsland.displayName = 'DynamicIsland';

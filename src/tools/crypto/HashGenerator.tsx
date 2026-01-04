@@ -3,7 +3,7 @@ import CryptoJS from 'crypto-js';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'hash-generator';
 
@@ -12,12 +12,11 @@ interface HashGeneratorProps {
 }
 
 export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // We'll store the input text and update all hashes automatically
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         options: {
             md5: '',

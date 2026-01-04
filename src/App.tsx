@@ -1,4 +1,4 @@
-import { useEffect, Suspense, lazy } from 'react';
+import { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useSettingsStore } from './store/settingsStore';
 import { useTabStore } from './store/tabStore';
@@ -18,7 +18,9 @@ const PageLoader = () => (
 );
 
 const MainLayout = () => {
-  const { openTab, tabs, activeTabId } = useTabStore();
+  const openTab = useTabStore(state => state.openTab);
+  const tabs = useTabStore(state => state.tabs);
+  const activeTabId = useTabStore(state => state.activeTabId);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -29,22 +31,21 @@ const MainLayout = () => {
     // If we are on a tool path (including settings), ensure tab is open
     const tool = TOOLS.find(t => t.path === location.pathname);
     if (tool) {
-      // "openTab" handles switching if exists
-      openTab(tool.id, tool.path, tool.name, tool.description);
+      // Check if tab already exists to avoid unnecessary work
+      const existingTab = tabs.find(t => t.toolId === tool.id);
+      if (!existingTab) {
+        // "openTab" handles switching if exists
+        openTab(tool.id, tool.path, tool.name, tool.description);
+      }
     }
-  }, [location.pathname, openTab]);
+  }, [location.pathname, openTab, tabs]);
 
   // Sync Tab -> URL
   // When active tab changes, update URL to match
   useEffect(() => {
     const activeTab = tabs.find(t => t.id === activeTabId);
-    if (activeTab) {
-      if (location.pathname !== activeTab.path) {
-        navigate(activeTab.path, { replace: true });
-        // We use replace to prevent filling history with tab switches? 
-        // Or push? Push is probably better for browser "Back" button support.
-        // Let's use navigate(path) which defaults to push.
-      }
+    if (activeTab && location.pathname !== activeTab.path) {
+      navigate(activeTab.path, { replace: true });
     }
   }, [activeTabId, tabs, location.pathname, navigate]);
 

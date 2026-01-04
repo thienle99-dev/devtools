@@ -7,20 +7,18 @@ import { TOOLS } from '../../tools/registry';
 import { TabContextMenu } from '../ui/TabContextMenu';
 
 export const TabBar: React.FC = React.memo(() => {
-    const { 
-        tabs, 
-        activeTabId, 
-        setActiveTab, 
-        closeTab, 
-        closeAllTabs, 
-        closeOtherTabs, 
-        closeTabsToRight, 
-        closeTabsToLeft 
-    } = useTabStore();
-    const { removeToolData } = useToolStore();
+    const tabs = useTabStore(state => state.tabs);
+    const activeTabId = useTabStore(state => state.activeTabId);
+    const setActiveTab = useTabStore(state => state.setActiveTab);
+    const closeTab = useTabStore(state => state.closeTab);
+    const closeAllTabs = useTabStore(state => state.closeAllTabs);
+    const closeOtherTabs = useTabStore(state => state.closeOtherTabs);
+    const closeTabsToRight = useTabStore(state => state.closeTabsToRight);
+    const closeTabsToLeft = useTabStore(state => state.closeTabsToLeft);
+    const removeToolData = useToolStore(state => state.removeToolData);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const activeTabRef = useRef<HTMLDivElement>(null);
-    
+
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
     const [contextMenu, setContextMenu] = useState<{
@@ -180,7 +178,7 @@ export const TabBar: React.FC = React.memo(() => {
                         const Icon = getToolIcon(tab.toolId);
                         const isFirst = index === 0;
                         const isLast = index === sortedTabs.length - 1;
-                        
+
                         return (
                             <div
                                 key={tab.id}

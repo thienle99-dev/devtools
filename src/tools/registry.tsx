@@ -24,7 +24,7 @@ export interface ToolDefinition {
     description: string;
     category: ToolCategory;
     icon: React.ElementType;
-    component: React.ComponentType<any>;
+    component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>;
     keywords?: string[];
 }
 
@@ -45,49 +45,49 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'development', name: 'Dev Utils', icon: Code2 },
 ];
 
-// Import existing tools
-import { JsonFormatter } from './json/JsonFormatter';
-import { JsonYamlConverter } from './converters/JsonYamlConverter';
-import { Base64Converter } from './converters/Base64Converter';
-import { NumberBaseConverter } from './converters/NumberBaseConverter';
-import { CaseConverter } from './converters/CaseConverter';
-import { JsonXmlConverter } from './converters/JsonXmlConverter';
-import { MarkdownHtmlConverter } from './converters/MarkdownHtmlConverter';
-import { DateConverter } from './converters/DateConverter';
-import { ColorConverter } from './converters/ColorConverter';
-import { Base64FileConverter } from './converters/Base64FileConverter';
-import { ImagesToPdfConverter } from './pdf/ImagesToPdfConverter';
+// Lazy load all tool components for better performance
+const JsonFormatter = React.lazy(() => import('./json/JsonFormatter').then(m => ({ default: m.JsonFormatter })));
+const JsonYamlConverter = React.lazy(() => import('./converters/JsonYamlConverter').then(m => ({ default: m.JsonYamlConverter })));
+const Base64Converter = React.lazy(() => import('./converters/Base64Converter').then(m => ({ default: m.Base64Converter })));
+const NumberBaseConverter = React.lazy(() => import('./converters/NumberBaseConverter').then(m => ({ default: m.NumberBaseConverter })));
+const CaseConverter = React.lazy(() => import('./converters/CaseConverter').then(m => ({ default: m.CaseConverter })));
+const JsonXmlConverter = React.lazy(() => import('./converters/JsonXmlConverter').then(m => ({ default: m.JsonXmlConverter })));
+const MarkdownHtmlConverter = React.lazy(() => import('./converters/MarkdownHtmlConverter').then(m => ({ default: m.MarkdownHtmlConverter })));
+const DateConverter = React.lazy(() => import('./converters/DateConverter').then(m => ({ default: m.DateConverter })));
+const ColorConverter = React.lazy(() => import('./converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
+const Base64FileConverter = React.lazy(() => import('./converters/Base64FileConverter').then(m => ({ default: m.Base64FileConverter })));
+const ImagesToPdfConverter = React.lazy(() => import('./pdf/ImagesToPdfConverter').then(m => ({ default: m.ImagesToPdfConverter })));
 
-import { HashGenerator } from './crypto/HashGenerator';
-import { UuidGenerator } from './crypto/UuidGenerator';
-import { TokenGenerator } from './crypto/TokenGenerator';
-import { HmacGenerator } from './crypto/HmacGenerator';
-import { AesEncryptor } from './crypto/AesEncryptor';
-import { BcryptGenerator } from './crypto/BcryptGenerator';
+const HashGenerator = React.lazy(() => import('./crypto/HashGenerator').then(m => ({ default: m.HashGenerator })));
+const UuidGenerator = React.lazy(() => import('./crypto/UuidGenerator').then(m => ({ default: m.UuidGenerator })));
+const TokenGenerator = React.lazy(() => import('./crypto/TokenGenerator').then(m => ({ default: m.TokenGenerator })));
+const HmacGenerator = React.lazy(() => import('./crypto/HmacGenerator').then(m => ({ default: m.HmacGenerator })));
+const AesEncryptor = React.lazy(() => import('./crypto/AesEncryptor').then(m => ({ default: m.AesEncryptor })));
+const BcryptGenerator = React.lazy(() => import('./crypto/BcryptGenerator').then(m => ({ default: m.BcryptGenerator })));
 
-import { UrlEncoder } from './web/UrlEncoder';
-import { HtmlEntityEncoder } from './web/HtmlEntityEncoder';
-import { UrlParser } from './web/UrlParser';
-import { BasicAuthGenerator } from './web/BasicAuthGenerator';
-import { SlugGenerator } from './web/SlugGenerator';
-import { UserAgentParser } from './web/UserAgentParser';
-import { JwtParser } from './web/JwtParser';
-import { HttpStatusCode } from './web/HttpStatusCode';
-import { JsonDiff } from './web/JsonDiff';
+const UrlEncoder = React.lazy(() => import('./web/UrlEncoder').then(m => ({ default: m.UrlEncoder })));
+const HtmlEntityEncoder = React.lazy(() => import('./web/HtmlEntityEncoder').then(m => ({ default: m.HtmlEntityEncoder })));
+const UrlParser = React.lazy(() => import('./web/UrlParser').then(m => ({ default: m.UrlParser })));
+const BasicAuthGenerator = React.lazy(() => import('./web/BasicAuthGenerator').then(m => ({ default: m.BasicAuthGenerator })));
+const SlugGenerator = React.lazy(() => import('./web/SlugGenerator').then(m => ({ default: m.SlugGenerator })));
+const UserAgentParser = React.lazy(() => import('./web/UserAgentParser').then(m => ({ default: m.UserAgentParser })));
+const JwtParser = React.lazy(() => import('./web/JwtParser').then(m => ({ default: m.JwtParser })));
+const HttpStatusCode = React.lazy(() => import('./web/HttpStatusCode').then(m => ({ default: m.HttpStatusCode })));
+const JsonDiff = React.lazy(() => import('./web/JsonDiff').then(m => ({ default: m.JsonDiff })));
 
-import { Ipv4SubnetCalculator } from './network/Ipv4SubnetCalculator';
-import { Ipv4Converter } from './network/Ipv4Converter';
-import { MacGenerator } from './network/MacGenerator';
-import { MacLookup } from './network/MacLookup';
+const Ipv4SubnetCalculator = React.lazy(() => import('./network/Ipv4SubnetCalculator').then(m => ({ default: m.Ipv4SubnetCalculator })));
+const Ipv4Converter = React.lazy(() => import('./network/Ipv4Converter').then(m => ({ default: m.Ipv4Converter })));
+const MacGenerator = React.lazy(() => import('./network/MacGenerator').then(m => ({ default: m.MacGenerator })));
+const MacLookup = React.lazy(() => import('./network/MacLookup').then(m => ({ default: m.MacLookup })));
 
-import { SqlFormatter } from './development/SqlFormatter';
-import { JsonToCsv } from './development/JsonToCsv';
-import { XmlFormatter } from './development/XmlFormatter';
-import { RegexTester } from './development/RegexTester';
-import { CrontabGenerator } from './development/CrontabGenerator';
-import { ChmodCalculator } from './development/ChmodCalculator';
-import { DockerConverter } from './development/DockerConverter';
-import SettingsPage from '../pages/Settings';
+const SqlFormatter = React.lazy(() => import('./development/SqlFormatter').then(m => ({ default: m.SqlFormatter })));
+const JsonToCsv = React.lazy(() => import('./development/JsonToCsv').then(m => ({ default: m.JsonToCsv })));
+const XmlFormatter = React.lazy(() => import('./development/XmlFormatter').then(m => ({ default: m.XmlFormatter })));
+const RegexTester = React.lazy(() => import('./development/RegexTester').then(m => ({ default: m.RegexTester })));
+const CrontabGenerator = React.lazy(() => import('./development/CrontabGenerator').then(m => ({ default: m.CrontabGenerator })));
+const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
+const DockerConverter = React.lazy(() => import('./development/DockerConverter').then(m => ({ default: m.DockerConverter })));
+const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
 

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import zxcvbn from 'zxcvbn';
 
 const TOOL_ID = 'token-generator';
@@ -18,12 +18,11 @@ interface TokenGeneratorProps {
 }
 
 export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     // Default options
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         options: {
             length: 16,
             uppercase: true,

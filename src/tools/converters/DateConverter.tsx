@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { format, isValid, parseISO, fromUnixTime } from 'date-fns';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 
 const TOOL_ID = 'date-time';
@@ -11,11 +11,10 @@ interface DateConverterProps {
 }
 
 export const DateConverter: React.FC<DateConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         options: {
             iso: '',

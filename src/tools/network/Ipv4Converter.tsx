@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'ipv4-converter';
 
@@ -9,11 +9,10 @@ interface Ipv4ConverterProps {
 }
 
 export const Ipv4Converter: React.FC<Ipv4ConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         options: {
             decimal: '',

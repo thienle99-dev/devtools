@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 import { X, ArrowUp, ArrowDown, FileImage } from 'lucide-react';
 
 const TOOL_ID = 'images-to-pdf';
@@ -19,13 +19,13 @@ interface ImagesToPdfConverterProps {
 }
 
 export const ImagesToPdfConverter: React.FC<ImagesToPdfConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const effectiveId = tabId || TOOL_ID;
-
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         options: {
             images: [] as ImageFile[],
             orientation: 'portrait' as 'portrait' | 'landscape',

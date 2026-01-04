@@ -9,7 +9,7 @@ interface SettingsPageProps {
     tabId?: string;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ tabId }) => {
+const SettingsPage: React.FC<SettingsPageProps> = () => {
     const {
         fontSize, setFontSize,
         wordWrap, setWordWrap,

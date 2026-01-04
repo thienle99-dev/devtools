@@ -3,7 +3,7 @@ import { v1 as uuidv1, v4 as uuidv4 } from 'uuid';
 import { ulid } from 'ulid';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'uuid-generator';
 
@@ -12,11 +12,10 @@ interface UuidGeneratorProps {
 }
 
 export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         options: {
             count: 1,
             type: 'v4', // v1, v4, ulid

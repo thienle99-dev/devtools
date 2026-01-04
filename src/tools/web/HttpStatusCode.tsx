@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'http-status-codes';
 
@@ -36,11 +36,10 @@ interface HttpStatusCodeProps {
 }
 
 export const HttpStatusCode: React.FC<HttpStatusCodeProps> = ({ tabId }) => {
-    const { tools, setToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
 
-    const data = tools[effectiveId] || { input: '' }; // We'll use 'input' for search
+    const data = toolData || { input: '' }; // We'll use 'input' for search
     const search = data.input;
 
     const setSearch = (val: string) => {

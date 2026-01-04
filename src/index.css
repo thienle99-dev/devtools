@@ -659,7 +659,8 @@ body {
      ============================================ */
   .tab-bar-container {
     position: relative;
-    background-color: #e8eaed; /* Chrome gray background */
+    background-color: #e8eaed;
+    /* Chrome gray background */
     /* No border-bottom - active tab connects directly to content */
   }
 
@@ -695,23 +696,28 @@ body {
     display: flex;
     align-items: center;
     user-select: none;
-    margin-right: -1px; /* Overlap tabs */
+    margin-right: -1px;
+    /* Overlap tabs */
     z-index: 1;
     border: 1px solid transparent;
-    border-bottom: 1px solid transparent; /* Reserve space for border */
+    border-bottom: 1px solid transparent;
+    /* Reserve space for border */
     background-color: #d0d3d6;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
-    box-sizing: border-box; /* Ensure consistent sizing */
-    transition: 
-      background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-      border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-      border-bottom-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-      color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-      transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-      margin-bottom 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: background-color, border-color, transform, margin-bottom;
+    box-sizing: border-box;
+    /* Ensure consistent sizing */
+    /* Smooth transitions with easing for better feel */
+    transition:
+      background-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      border-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      border-bottom-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: background-color, border-color, box-shadow, transform;
+    margin-bottom: -1px;
+    /* Consistent margin to avoid layout shifts */
   }
 
   .tab-item-chrome::before {
@@ -722,10 +728,13 @@ body {
     right: 0;
     height: 1px;
     background-color: transparent;
-    transition: 
-      background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-      height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: background-color, height;
+    transition:
+      background-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      opacity 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: background-color, height, transform, opacity;
+    transform-origin: center;
   }
 
   /* First tab - left edge */
@@ -742,11 +751,21 @@ body {
   .tab-item-chrome-inactive {
     background-color: #d0d3d6;
     border-color: #bdc1c6;
-    border-bottom: 1px solid #dadce0; /* Connect to tab bar */
+    border-bottom: 1px solid #dadce0;
+    /* Connect to tab bar */
     color: #5f6368;
     transform: translateY(0);
-    margin-bottom: 0; /* Same as active tab's -1px + 1px border = 0 net effect */
-    height: 36px; /* Explicit height to match active tab */
+    margin-bottom: 0;
+    /* Same as active tab's -1px + 1px border = 0 net effect */
+    height: 36px;
+    /* Explicit height to match active tab */
+    /* Smooth transitions for state changes */
+    transition:
+      background-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      border-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      border-bottom-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .tab-item-chrome-inactive:hover {
@@ -755,14 +774,16 @@ body {
     border-bottom-color: #dadce0;
     color: #202124;
     z-index: 2;
-    transform: translateY(0); /* Keep same height on hover */
+    transform: translateY(0);
+    /* Keep same height on hover */
   }
 
   /* Dark mode inactive */
   :root.dark .tab-item-chrome-inactive {
     background-color: #3c4043;
     border-color: #5f6368;
-    border-bottom-color: #3c4043; /* Match dark tab bar */
+    border-bottom-color: #3c4043;
+    /* Match dark tab bar */
     color: #9aa0a6;
     margin-bottom: 0;
   }
@@ -772,57 +793,61 @@ body {
     border-color: #5f6368;
     border-bottom-color: #3c4043;
     color: #e8eaed;
-    transform: translateY(0); /* Keep same height */
+    transform: translateY(0);
+    /* Keep same height */
   }
 
   /* Active Tab - Seamless connection to content */
   .tab-item-chrome-active {
     background-color: #ffffff;
     border-color: #dadce0;
-    border-bottom: 1px solid #ffffff; /* Match content background */
+    border-bottom: 1px solid #ffffff;
+    /* Match content background */
     color: #202124;
     z-index: 10;
-    box-shadow: 
+    box-shadow:
       0 -1px 2px rgba(0, 0, 0, 0.05),
       0 1px 3px rgba(0, 0, 0, 0.08);
-    margin-bottom: -1px; /* Overlap with content border */
+    margin-bottom: -1px;
+    /* Overlap with content border */
     transform: translateY(0);
-    height: 36px; /* Explicit height to match inactive tabs */
-    animation: tab-activate 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 36px;
+    /* Explicit height to match inactive tabs */
+    /* Smooth transition for all properties */
+    transition:
+      background-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      border-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      border-bottom-color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      color 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .tab-item-chrome-active::before {
-    background-color: #4285f4; /* Chrome blue accent */
+    background-color: #4285f4;
+    /* Chrome blue accent */
     height: 2px;
-    animation: accent-line-expand 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      background-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     transform-origin: center;
+    /* Smooth scale animation */
+    animation: accent-line-smooth 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  /* Smooth activation animation - no height change */
-  @keyframes tab-activate {
-    0% {
-      opacity: 0.95;
-      box-shadow: 
-        0 -1px 1px rgba(0, 0, 0, 0.03),
-        0 1px 2px rgba(0, 0, 0, 0.05);
-    }
-    100% {
-      opacity: 1;
-      box-shadow: 
-        0 -1px 2px rgba(0, 0, 0, 0.05),
-        0 1px 3px rgba(0, 0, 0, 0.08);
-    }
-  }
-
-  /* Blue accent line expansion animation */
-  @keyframes accent-line-expand {
+  /* Smooth accent line animation */
+  @keyframes accent-line-smooth {
     0% {
       transform: scaleX(0);
-      transform-origin: center;
+      opacity: 0;
     }
+
+    50% {
+      opacity: 1;
+    }
+
     100% {
       transform: scaleX(1);
-      transform-origin: center;
+      opacity: 1;
     }
   }
 
@@ -830,21 +855,23 @@ body {
   :root.dark .tab-item-chrome-active {
     background-color: #1e1e1e;
     border-color: #3c4043;
-    border-bottom-color: #1e1e1e; /* Match dark content background */
+    border-bottom-color: #1e1e1e;
+    /* Match dark content background */
     color: #e8eaed;
-    box-shadow: 
+    box-shadow:
       0 -1px 2px rgba(0, 0, 0, 0.3),
       0 1px 3px rgba(0, 0, 0, 0.4);
   }
 
   :root.dark .tab-item-chrome-active::before {
-    background-color: #8ab4f8; /* Chrome blue accent (lighter for dark) */
+    background-color: #8ab4f8;
+    /* Chrome blue accent (lighter for dark) */
   }
 
   /* Close Button - Chrome Style */
   .tab-close-button-chrome {
     opacity: 0;
-    transition: 
+    transition:
       opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
       background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
       color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
@@ -960,29 +987,29 @@ body {
 
   .tab-scroll-shadow-left {
     left: 0;
-    background: linear-gradient(90deg, 
-      rgba(0, 0, 0, 0.08) 0%, 
-      transparent 100%);
+    background: linear-gradient(90deg,
+        rgba(0, 0, 0, 0.08) 0%,
+        transparent 100%);
   }
 
   .tab-scroll-shadow-right {
     right: 0;
-    background: linear-gradient(270deg, 
-      rgba(0, 0, 0, 0.08) 0%, 
-      transparent 100%);
+    background: linear-gradient(270deg,
+        rgba(0, 0, 0, 0.08) 0%,
+        transparent 100%);
   }
 
   /* Dark mode scroll shadows */
   :root.dark .tab-scroll-shadow-left {
-    background: linear-gradient(90deg, 
-      rgba(0, 0, 0, 0.2) 0%, 
-      transparent 100%);
+    background: linear-gradient(90deg,
+        rgba(0, 0, 0, 0.2) 0%,
+        transparent 100%);
   }
 
   :root.dark .tab-scroll-shadow-right {
-    background: linear-gradient(270deg, 
-      rgba(0, 0, 0, 0.2) 0%, 
-      transparent 100%);
+    background: linear-gradient(270deg,
+        rgba(0, 0, 0, 0.2) 0%,
+        transparent 100%);
   }
 }
 
@@ -997,32 +1024,33 @@ body {
   }
 }
 
-  /* ============================================
+/* ============================================
      Tab Context Menu - Chrome Style
      ============================================ */
-  .tab-context-menu {
-    animation: context-menu-fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 
-      0 2px 8px rgba(0, 0, 0, 0.15),
-      0 0 0 0.5px rgba(0, 0, 0, 0.1);
+.tab-context-menu {
+  animation: context-menu-fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 0 0 0.5px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .tab-context-menu {
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 0 0.5px rgba(255, 255, 255, 0.1);
+}
+
+@keyframes context-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
   }
 
-  :root.dark .tab-context-menu {
-    box-shadow: 
-      0 2px 8px rgba(0, 0, 0, 0.3),
-      0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
-
-  @keyframes context-menu-fade-in {
-    from {
-      opacity: 0;
-      transform: scale(0.95) translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
-  }
+}
 
 /* Respect reduced motion preference - macOS accessibility */
 @media (prefers-reduced-motion: reduce) {

@@ -21,6 +21,34 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 const TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || '', 'tray-icon.png')
 
+/**
+ * Safely set login item settings with error handling
+ * On macOS, this may fail if app is not code-signed or lacks permissions
+ */
+function setLoginItemSettingsSafely(openAtLogin: boolean) {
+  try {
+    app.setLoginItemSettings({
+      openAtLogin,
+      openAsHidden: true // Always launch hidden to tray if auto-launching
+    });
+    return { success: true };
+  } catch (error) {
+    // Handle permission errors gracefully (common on macOS in development)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn('Failed to set login item settings:', errorMessage);
+    
+    // In development mode, this is expected if app is not code-signed
+    if (!app.isPackaged) {
+      console.info('Note: Launch at login requires code signing in production builds');
+    }
+    
+    return { 
+      success: false, 
+      error: errorMessage 
+    };
+  }
+}
+
 function createTray() {
   if (tray) return
 
@@ -178,10 +206,14 @@ function createWindow() {
     store.set(key, value)
 
     if (key === 'launchAtLogin') {
-      app.setLoginItemSettings({
-        openAtLogin: value === true,
-        openAsHidden: true // Always launch hidden to tray if auto-launching
-      });
+      const result = setLoginItemSettingsSafely(value === true);
+      if (!result.success && win) {
+        // Optionally notify renderer process about the error
+        win.webContents.send('login-item-error', {
+          message: 'Unable to set launch at login. This may require additional permissions.',
+          error: result.error
+        });
+      }
     }
   })
   ipcMain.handle('store-delete', (_event, key) => store.delete(key))
@@ -240,10 +272,7 @@ app.whenReady().then(() => {
 
   // Check launch at login status on startup
   const launchAtLogin = store.get('launchAtLogin') as boolean;
-  app.setLoginItemSettings({
-    openAtLogin: launchAtLogin === true,
-    openAsHidden: true
-  });
+  setLoginItemSettingsSafely(launchAtLogin === true);
 
   createTray();
   createWindow();

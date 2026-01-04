@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useTabStore } from '../../store/tabStore';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
     Settings,
     Search
@@ -8,10 +8,12 @@ import {
 import { cn } from '../../utils/cn';
 import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 
-export const Sidebar: React.FC = () => {
-    const { openTab, activeTabId, tabs } = useTabStore();
+export const Sidebar: React.FC = React.memo(() => {
+    const openTab = useTabStore(state => state.openTab);
+    const activeTabId = useTabStore(state => state.activeTabId);
+    const tabs = useTabStore(state => state.tabs);
     const navigate = useNavigate();
-    const activeTab = tabs.find(t => t.id === activeTabId);
+    const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
 
     // Global shortcut for Search (Cmd+K)
     useEffect(() => {
@@ -117,4 +119,6 @@ export const Sidebar: React.FC = () => {
             </div>
         </aside>
     );
-};
+});
+
+Sidebar.displayName = 'Sidebar';

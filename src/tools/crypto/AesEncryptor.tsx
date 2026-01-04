@@ -3,7 +3,7 @@ import CryptoJS from 'crypto-js';
 import { Button } from '../../components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'aes-encryptor';
 
@@ -12,12 +12,12 @@ interface AesEncryptorProps {
 }
 
 export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
-    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const effectiveId = tabId || TOOL_ID;
-
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         input: '',
         output: '',
         options: {

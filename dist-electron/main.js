@@ -8868,6 +8868,23 @@ var win;
 var tray = null;
 var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 var TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || "", "tray-icon.png");
+function setLoginItemSettingsSafely(openAtLogin) {
+	try {
+		app.setLoginItemSettings({
+			openAtLogin,
+			openAsHidden: true
+		});
+		return { success: true };
+	} catch (error$1) {
+		const errorMessage = error$1 instanceof Error ? error$1.message : String(error$1);
+		console.warn("Failed to set login item settings:", errorMessage);
+		if (!app.isPackaged) console.info("Note: Launch at login requires code signing in production builds");
+		return {
+			success: false,
+			error: errorMessage
+		};
+	}
+}
 function createTray() {
 	if (tray) return;
 	tray = new Tray(nativeImage.createFromPath(TRAY_ICON_PATH).resize({
@@ -9005,10 +9022,13 @@ function createWindow() {
 	ipcMain.handle("store-get", (_event, key) => store.get(key));
 	ipcMain.handle("store-set", (_event, key, value) => {
 		store.set(key, value);
-		if (key === "launchAtLogin") app.setLoginItemSettings({
-			openAtLogin: value === true,
-			openAsHidden: true
-		});
+		if (key === "launchAtLogin") {
+			const result = setLoginItemSettingsSafely(value === true);
+			if (!result.success && win) win.webContents.send("login-item-error", {
+				message: "Unable to set launch at login. This may require additional permissions.",
+				error: result.error
+			});
+		}
 	});
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
 	ipcMain.on("tray-update-menu", (_event, items) => {
@@ -9039,11 +9059,7 @@ app.whenReady().then(() => {
 	} catch (e) {
 		console.error("Failed to register global shortcut", e);
 	}
-	const launchAtLogin = store.get("launchAtLogin");
-	app.setLoginItemSettings({
-		openAtLogin: launchAtLogin === true,
-		openAsHidden: true
-	});
+	setLoginItemSettingsSafely(store.get("launchAtLogin") === true);
 	createTray();
 	createWindow();
 });

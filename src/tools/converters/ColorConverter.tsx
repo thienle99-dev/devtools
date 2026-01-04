@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { useToolState } from '../../store/toolStore';
 
 const TOOL_ID = 'color-converter';
 
@@ -45,12 +45,11 @@ interface ColorConverterProps {
 }
 
 export const ColorConverter: React.FC<ColorConverterProps> = ({ tabId }) => {
-    const { tools, setToolData, addToHistory } = useToolStore();
-
     const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
 
     // Store all formats in options
-    const data = tools[effectiveId] || {
+    const data = toolData || {
         options: { hex: '#000000', rgb: 'rgb(0, 0, 0)', hsl: 'hsl(0, 0%, 0%)', r: '0', g: '0', b: '0' }
     };
     const values = data.options!;
