@@ -9,11 +9,12 @@ import {
     FileJson,
     Database,
     Binary,
-    Braces
+    Braces,
+    FileImage
 } from 'lucide-react';
 
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'favorites' | 'recent';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'favorites' | 'recent';
 
 export interface ToolDefinition {
     id: string;
@@ -40,6 +41,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'crypto', name: 'Crypto', icon: Hash },
     { id: 'web', name: 'Web', icon: Globe },
     { id: 'network', name: 'Network', icon: Globe },
+    { id: 'development', name: 'Dev Utils', icon: Code2 },
 ];
 
 // Import existing tools
@@ -53,6 +55,7 @@ import { MarkdownHtmlConverter } from './converters/MarkdownHtmlConverter';
 import { DateConverter } from './converters/DateConverter';
 import { ColorConverter } from './converters/ColorConverter';
 import { Base64FileConverter } from './converters/Base64FileConverter';
+import { ImagesToPdfConverter } from './pdf/ImagesToPdfConverter';
 
 import { HashGenerator } from './crypto/HashGenerator';
 import { UuidGenerator } from './crypto/UuidGenerator';
@@ -76,6 +79,14 @@ import { Ipv4Converter } from './network/Ipv4Converter';
 import { MacGenerator } from './network/MacGenerator';
 import { MacLookup } from './network/MacLookup';
 
+import { SqlFormatter } from './development/SqlFormatter';
+import { JsonToCsv } from './development/JsonToCsv';
+import { XmlFormatter } from './development/XmlFormatter';
+import { RegexTester } from './development/RegexTester';
+import { CrontabGenerator } from './development/CrontabGenerator';
+import { ChmodCalculator } from './development/ChmodCalculator';
+import { DockerConverter } from './development/DockerConverter';
+
 // Import placeholders for now (we'll replace them as we build them)
 import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
 import { ToolPane } from '../components/layout/ToolPane';
@@ -89,6 +100,16 @@ const createPlaceholder = (name: string, description: string) => () => (
 
 export const TOOLS: ToolDefinition[] = [
     // Formatters
+    {
+        id: 'xml-format',
+        name: 'XML Formatter',
+        path: '/xml-format',
+        description: 'Prettify and format XML',
+        category: 'formatters',
+        icon: Code2,
+        component: XmlFormatter,
+        keywords: ['xml', 'format', 'prettify']
+    },
     {
         id: 'json-format',
         name: 'JSON Formatter',
@@ -106,7 +127,8 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Prettify and format SQL queries',
         category: 'formatters',
         icon: Database,
-        component: createPlaceholder('SQL Formatter', 'Prettify and format SQL queries'),
+        component: SqlFormatter,
+        keywords: ['sql', 'format', 'prettify', 'query']
     },
 
     // Converters
@@ -129,6 +151,16 @@ export const TOOLS: ToolDefinition[] = [
         icon: Braces,
         component: JsonXmlConverter,
         keywords: ['json', 'xml', 'convert', 'transform']
+    },
+    {
+        id: 'json-csv',
+        name: 'JSON to CSV',
+        path: '/json-csv',
+        description: 'Convert JSON to CSV',
+        category: 'converters',
+        icon: FileJson,
+        component: JsonToCsv,
+        keywords: ['json', 'csv', 'convert', 'transform']
     },
     {
         id: 'markdown-html',
@@ -159,6 +191,16 @@ export const TOOLS: ToolDefinition[] = [
         icon: Binary,
         component: Base64FileConverter,
         keywords: ['base64', 'file', 'image', 'upload']
+    },
+    {
+        id: 'images-to-pdf',
+        name: 'Images to PDF',
+        path: '/images-to-pdf',
+        description: 'Convert multiple images to PDF, each image as one page',
+        category: 'converters',
+        icon: FileImage,
+        component: ImagesToPdfConverter,
+        keywords: ['pdf', 'image', 'convert', 'merge', 'pages']
     },
     {
         id: 'number-base',
@@ -395,6 +437,48 @@ export const TOOLS: ToolDefinition[] = [
         icon: Globe,
         component: MacLookup,
         keywords: ['mac', 'lookup', 'vendor', 'oui']
+    },
+
+    // Development
+    {
+        id: 'regex-tester',
+        name: 'Regex Tester',
+        path: '/regex-tester',
+        description: 'Test regular expressions',
+        category: 'development',
+        icon: Code2,
+        component: RegexTester,
+        keywords: ['regex', 'test', 'regexp', 'match']
+    },
+    {
+        id: 'crontab',
+        name: 'Crontab Generator',
+        path: '/crontab',
+        description: 'Cron schedule generator',
+        category: 'development',
+        icon: History,
+        component: CrontabGenerator,
+        keywords: ['cron', 'schedule', 'job', 'timer']
+    },
+    {
+        id: 'chmod',
+        name: 'Chmod Calculator',
+        path: '/chmod',
+        description: 'File permissions (chmod)',
+        category: 'development',
+        icon: Binary,
+        component: ChmodCalculator,
+        keywords: ['chmod', 'permission', 'octal', 'linux', 'unix']
+    },
+    {
+        id: 'docker-convert',
+        name: 'Docker > Compose',
+        path: '/docker-convert',
+        description: 'Convert run to compose',
+        category: 'development',
+        icon: Box,
+        component: DockerConverter,
+        keywords: ['docker', 'compose', 'convert', 'container']
     },
 ];
 

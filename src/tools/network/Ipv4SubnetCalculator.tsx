@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolStore } from '../../store/toolStore';
+// @ts-ignore - ip-subnet-calculator may not have types
+import Calculator from 'ip-subnet-calculator';
 
 // Type definitions for ip-subnet-calculator as it might be missing types
 interface SubnetResult {
@@ -16,8 +18,6 @@ interface SubnetResult {
     subnetMask: string;
     subnetMaskStr: string;
 }
-
-const Calculator = require('ip-subnet-calculator');
 
 const TOOL_ID = 'ipv4-subnet-calculator';
 

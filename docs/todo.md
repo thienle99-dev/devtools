@@ -131,6 +131,26 @@
 - [x] HMAC generator
 - [x] Encrypt/decrypt text (AES)
 - [x] Bcrypt hasher
+- [ ] Encrypt/decrypt text (TripleDES, Rabbit, RC4)
+- [ ] BIP39 passphrase generator
+- [ ] RSA key pair generator
+- [ ] RSA encryption/decryption
+- [ ] RSA signature generator/verifier
+- [ ] PBKDF2 key derivation
+- [ ] Argon2 password hashing (Argon2id, Argon2i, Argon2d)
+- [ ] Scrypt key derivation
+- [ ] ECDSA key pair generator
+- [ ] ECDSA signature generator/verifier
+- [ ] Ed25519 key pair generator
+- [ ] Ed25519 signature generator/verifier
+- [ ] X25519 key exchange generator
+- [ ] X.509 certificate parser/validator
+- [ ] CSR (Certificate Signing Request) generator
+- [ ] PEM/DER format converter
+- [ ] ChaCha20 encryption
+- [ ] Twofish encryption
+- [ ] Blowfish encryption
+- [ ] Fernet encryption
 
 ### 3.3 Web Tools
 
@@ -143,19 +163,56 @@
 - [x] User-agent parser
 - [x] HTTP status codes list
 - [x] JSON diff
+- [ ] Device information
+- [ ] Open Graph meta generator
+- [ ] OTP code generator (TOTP)
+- [ ] MIME types lookup
+- [ ] Keycode info
+- [ ] HTML WYSIWYG editor
+- [ ] Outlook Safelink decoder
+- [ ] URL shortener/expander
+- [ ] UTM parameter builder
+- [ ] URL query string parser
+- [ ] HTTP headers parser
+- [ ] HTTP request builder
+- [ ] CORS checker
+- [ ] Content Security Policy (CSP) generator
+- [ ] HSTS checker
+- [ ] Meta tags generator
+- [ ] Robots.txt generator
+- [ ] Sitemap generator
+- [ ] Structured Data (JSON-LD) generator
+- [ ] Canonical URL generator
+- [ ] Bearer token generator
+- [ ] API key generator
+- [ ] Security headers checker
+- [ ] Base64 URL encoder/decoder
+- [ ] Percent encoding
+- [ ] Unicode encoder/decoder
+- [ ] Cookie parser
+- [ ] Set-Cookie header generator
+- [ ] Content-Type parser
+- [ ] Accept header builder
+- [ ] User-Agent switcher
+- [ ] Referrer Policy generator
+- [ ] Feature Policy generator
+- [ ] Favicon generator
+- [ ] Manifest.json generator
+- [ ] Service Worker generator
+- [ ] PWA checklist
 
 ### 3.4 Development Tools
 
 - [ ] JSON prettify and format
 - [ ] JSON minify
-- [ ] JSON to CSV
-- [ ] SQL prettify and format
+- [x] JSON to CSV
+- [x] SQL prettify and format
 - [ ] YAML prettify and format
-- [ ] XML formatter
-- [ ] Regex Tester
-- [ ] Crontab generator
-- [ ] Docker run → docker-compose converter
-- [ ] Chmod calculator
+- [x] XML formatter
+- [x] Regex Tester
+- [x] Crontab generator
+- [x] Docker run → docker-compose converter
+- [x] Chmod calculator
 - [ ] Email normalizer
 
 ### 3.5 Text Tools
@@ -186,11 +243,101 @@
 - [ ] QR Code generator
 - [ ] WiFi QR Code generator
 - [ ] SVG placeholder generator
+- [ ] Camera recorder (capture ảnh/video từ webcam)
+- [ ] Image Format Converter (PNG, JPG, WebP, AVIF, SVG, etc.)
+- [ ] HEIC to JPG Converter
+- [ ] ICO Generator (favicon)
+- [ ] WebP Converter
+- [ ] AVIF Converter
+- [ ] Image Compressor (JPG, PNG, WebP)
+- [ ] Lossless Image Compressor
+- [ ] Lossy Image Compressor (adjustable quality)
+- [ ] Bulk Image Compressor
+- [ ] Image Cropper
+- [ ] Image Resizer (with aspect ratio options)
+- [ ] Image Rotator (90°, 180°, 270°)
+- [ ] Image Flipper (horizontal/vertical)
+- [ ] Image Cropper with Aspect Ratio (16:9, 4:3, 1:1, etc.)
+- [ ] Image Filter Applier (blur, sharpen, grayscale, sepia, etc.)
+- [ ] Image Brightness/Contrast Adjuster
+- [ ] Image Color Adjuster (saturation, hue, etc.)
+- [ ] Image Watermarker (text/image watermark)
+- [ ] Image Metadata Viewer (EXIF, metadata)
+- [ ] Image Metadata Remover (privacy)
+- [ ] Image Color Palette Extractor
+- [ ] Image Dominant Color Extractor
+- [ ] Image Dimension Analyzer
+- [ ] Barcode Generator
+- [ ] Data URI Generator (image to base64)
+- [ ] Base64 Image Encoder/Decoder
+- [ ] Gradient Generator
+- [ ] Pattern Generator (dots, lines, etc.)
+- [ ] Image Merger (horizontal/vertical)
+- [ ] Image Splitter
+- [ ] Image Comparator (side-by-side, diff)
+- [ ] Image Optimizer (auto format, compression)
+- [ ] Responsive Image Generator (multiple sizes)
+- [ ] Image OCR (text recognition)
+- [ ] Image to ASCII Art Converter
+- [ ] Image to SVG Converter (vectorization)
+- [ ] Image Background Remover
+- [ ] Image Upscaler (AI-based)
+- [ ] Video to GIF Converter
+- [ ] GIF Optimizer
+- [ ] Video Frame Extractor
 
 ### 3.9 Data Tools
 
 - [ ] Phone parser and formatter
 - [ ] IBAN validator and parser
+
+### 3.10 PDF Tools
+
+- [ ] PDF signature checker
+- [ ] PDF to Images (PNG/JPG)
+- [ ] Images to PDF
+- [ ] PDF to Text
+- [ ] PDF to HTML
+- [ ] PDF to Markdown
+- [ ] HTML to PDF
+- [ ] Markdown to PDF
+- [ ] Word/DOCX to PDF
+- [ ] PDF to Word/DOCX
+- [ ] PDF Merger
+- [ ] PDF Splitter
+- [ ] PDF Page Extractor
+- [ ] PDF Page Rotator
+- [ ] PDF Page Reorder
+- [ ] PDF Compressor
+- [ ] PDF Optimizer
+- [ ] PDF Watermarker (text/image)
+- [ ] PDF Page Numbering
+- [ ] PDF Password Protector
+- [ ] PDF Password Remover
+- [ ] PDF Encryption
+- [ ] PDF Decryption
+- [ ] PDF Metadata Remover
+- [ ] PDF Metadata Viewer
+- [ ] PDF Metadata Editor
+- [ ] PDF Page Counter
+- [ ] PDF File Size Analyzer
+- [ ] PDF Structure Viewer
+- [ ] PDF Font Extractor
+- [ ] PDF Image Extractor
+- [ ] PDF Form Filler
+- [ ] PDF Form Creator
+- [ ] PDF Form Field Extractor
+- [ ] PDF OCR (text recognition)
+- [ ] PDF Redaction
+- [ ] PDF Annotation
+- [ ] PDF Bookmark Generator
+- [ ] PDF Table Extractor
+- [ ] PDF Comparison (diff)
+- [ ] PDF Preview
+- [ ] PDF Thumbnail Generator
+- [ ] PDF to Base64
+- [ ] Base64 to PDF
+- [ ] PDF Validator
 
 ---
 

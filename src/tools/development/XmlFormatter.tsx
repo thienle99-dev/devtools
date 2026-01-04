@@ -1,0 +1,118 @@
+import React, { useEffect, useState } from 'react';
+import { ToolPane } from '../../components/layout/ToolPane';
+import { CodeEditor } from '../../components/ui/CodeEditor';
+import { useToolStore } from '../../store/toolStore';
+import { Button } from '../../components/ui/Button';
+import xmlFormatter from 'xml-formatter';
+
+const TOOL_ID = 'xml-format';
+
+export const XmlFormatter: React.FC = () => {
+    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+
+    // Default valid options
+    const data = tools[TOOL_ID] || {
+        input: '',
+        output: '',
+        options: {
+            indentation: '  ',
+            collapseContent: true,
+            lineSeparator: '\n',
+        }
+    };
+
+    const { input, output, options } = data;
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
+
+    const handleFormat = () => {
+        if (!input.trim()) return;
+        setLoading(true);
+
+        setTimeout(() => {
+            try {
+                const formatted = xmlFormatter(input, {
+                    indentation: options.indentation,
+                    collapseContent: options.collapseContent,
+                    lineSeparator: options.lineSeparator,
+                });
+                setToolData(TOOL_ID, { output: formatted });
+
+            } catch (e) {
+                setToolData(TOOL_ID, { output: `Error: ${(e as Error).message}` });
+            } finally {
+                setLoading(false);
+            }
+        }, 300);
+    };
+
+    const handleClear = () => clearToolData(TOOL_ID);
+
+    return (
+        <ToolPane
+            title="XML Formatter"
+            description="Prettify and format XML strings"
+            onClear={handleClear}
+        >
+            <div className="space-y-6 h-full flex flex-col">
+                <div className="flex flex-wrap gap-4 p-4 glass-panel rounded-xl items-center">
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Indentation</label>
+                        <select
+                            value={options.indentation}
+                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, indentation: e.target.value } })}
+                            className="glass-input h-9 text-xs w-32"
+                        >
+                            <option value="  ">2 Spaces</option>
+                            <option value="    ">4 Spaces</option>
+                            <option value={'\t'}>Tab</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center space-x-2 pt-4">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={options.collapseContent}
+                                onChange={(e) => setToolData(TOOL_ID, { options: { ...options, collapseContent: e.target.checked } })}
+                                className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
+                            />
+                            <span className="text-xs font-bold text-foreground-secondary">Collapse Content</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 h-full min-h-0">
+                    <div className="space-y-3 flex flex-col h-full min-h-0">
+                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Input XML</label>
+                        <CodeEditor
+                            className="flex-1 min-h-[200px]"
+                            language="html" // xml fallback
+                            value={input}
+                            onChange={(val) => setToolData(TOOL_ID, { input: val })}
+                            placeholder="<root>...</root>"
+                        />
+                    </div>
+                    <div className="space-y-3 flex flex-col h-full min-h-0">
+                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Formatted Output</label>
+                        <CodeEditor
+                            className="flex-1 min-h-[200px]"
+                            language="html"
+                            value={output}
+                            readOnly
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <Button variant="primary" onClick={handleFormat} loading={loading}>
+                        Format XML
+                    </Button>
+                </div>
+            </div>
+        </ToolPane>
+    );
+};
