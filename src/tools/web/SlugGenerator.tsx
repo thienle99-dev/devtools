@@ -1,0 +1,69 @@
+import React, { useEffect } from 'react';
+import { Button } from '../../components/ui/Button';
+import { ToolPane } from '../../components/layout/ToolPane';
+import { useToolStore } from '../../store/toolStore';
+
+const TOOL_ID = 'slug-generator';
+
+export const SlugGenerator: React.FC = () => {
+    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+
+    // Default options
+    const data = tools[TOOL_ID] || {
+        input: '',
+        output: ''
+    };
+
+    const { input, output } = data;
+
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
+
+    const handleInputChange = (val: string) => {
+        const slug = val
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '') // Remove non-word chars (except space and dash)
+            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with dashes
+            .replace(/^-+|-+$/g, ''); // Trim dashes
+
+        setToolData(TOOL_ID, { input: val, output: slug });
+    };
+
+    const handleClear = () => clearToolData(TOOL_ID);
+
+    return (
+        <ToolPane
+            title="Slug Generator"
+            description="Generate URL-friendly slugs from strings"
+            onClear={handleClear}
+        >
+            <div className="max-w-3xl mx-auto space-y-8 py-8 px-4">
+                <div className="space-y-4">
+                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Input Text</label>
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => handleInputChange(e.target.value)}
+                        className="glass-input w-full text-lg"
+                        placeholder="Hello World! This is a Title."
+                    />
+                </div>
+
+                <div className="space-y-4">
+                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Slug Output</label>
+                    <div className="flex space-x-2">
+                        <input
+                            type="text"
+                            readOnly
+                            value={output}
+                            className="glass-input w-full font-mono text-lg text-primary bg-primary/5"
+                        />
+                        <Button variant="glass" onClick={() => navigator.clipboard.writeText(output)}>Copy</Button>
+                    </div>
+                </div>
+            </div>
+        </ToolPane>
+    );
+};

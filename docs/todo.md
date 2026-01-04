@@ -134,15 +134,15 @@
 
 ### 3.3 Web Tools
 
-- [ ] URL encoder/decoder
-- [ ] JWT parser
-- [ ] HTML entities escape/unescape
-- [ ] URL parser
-- [ ] Basic auth generator
-- [ ] Slugify string
-- [ ] User-agent parser
-- [ ] HTTP status codes list
-- [ ] JSON diff
+- [x] URL encoder/decoder
+- [x] JWT parser
+- [x] HTML entities escape/unescape
+- [x] URL parser
+- [x] Basic auth generator
+- [x] Slugify string
+- [x] User-agent parser
+- [x] HTTP status codes list
+- [x] JSON diff
 
 ### 3.4 Development Tools
 

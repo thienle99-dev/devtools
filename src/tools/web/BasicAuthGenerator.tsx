@@ -1,0 +1,85 @@
+import React, { useEffect } from 'react';
+import { Button } from '../../components/ui/Button';
+import { ToolPane } from '../../components/layout/ToolPane';
+import { useToolStore } from '../../store/toolStore';
+
+const TOOL_ID = 'basic-auth-generator';
+
+export const BasicAuthGenerator: React.FC = () => {
+    const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+
+    const data = tools[TOOL_ID] || {
+        options: { username: '', password: '' },
+        output: ''
+    };
+
+    // We update output whenever options change
+    const { options, output } = data;
+
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
+
+    const updateAuth = (u: string, p: string) => {
+        const token = btoa(`${u}:${p}`);
+        setToolData(TOOL_ID, {
+            options: { username: u, password: p },
+            output: `Basic ${token}`
+        });
+    };
+
+    const handleClear = () => clearToolData(TOOL_ID);
+
+    return (
+        <ToolPane
+            title="Basic Auth Generator"
+            description="Generate HTTP Basic Auth headers"
+            onClear={handleClear}
+        >
+            <div className="max-w-2xl mx-auto space-y-8 py-8 px-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Username</label>
+                        <input
+                            type="text"
+                            value={options.username}
+                            onChange={(e) => updateAuth(e.target.value, options.password)}
+                            className="glass-input w-full"
+                            placeholder="user"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Password</label>
+                        <input
+                            type="text"
+                            value={options.password}
+                            onChange={(e) => updateAuth(options.username, e.target.value)}
+                            className="glass-input w-full"
+                            placeholder="password"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Authorization Header</label>
+                    <div className="flex space-x-2">
+                        <input
+                            type="text"
+                            readOnly
+                            value={output}
+                            className="glass-input w-full font-mono text-primary bg-primary/5"
+                        />
+                        <Button variant="glass" onClick={() => navigator.clipboard.writeText(output)}>Copy</Button>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Decoded</label>
+                    <div className="glass-panel p-3 font-mono text-sm text-foreground-secondary">
+                        {options.username}:{options.password}
+                    </div>
+                </div>
+            </div>
+        </ToolPane>
+    );
+};

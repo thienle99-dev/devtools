@@ -59,6 +59,16 @@ import { HmacGenerator } from './crypto/HmacGenerator';
 import { AesEncryptor } from './crypto/AesEncryptor';
 import { BcryptGenerator } from './crypto/BcryptGenerator';
 
+import { UrlEncoder } from './web/UrlEncoder';
+import { HtmlEntityEncoder } from './web/HtmlEntityEncoder';
+import { UrlParser } from './web/UrlParser';
+import { BasicAuthGenerator } from './web/BasicAuthGenerator';
+import { SlugGenerator } from './web/SlugGenerator';
+import { UserAgentParser } from './web/UserAgentParser';
+import { JwtParser } from './web/JwtParser';
+import { HttpStatusCode } from './web/HttpStatusCode';
+import { JsonDiff } from './web/JsonDiff';
+
 // Import placeholders for now (we'll replace them as we build them)
 import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
 import { ToolPane } from '../components/layout/ToolPane';
@@ -248,13 +258,34 @@ export const TOOLS: ToolDefinition[] = [
 
     // Web
     {
-        id: 'url',
+        id: 'url-encoder',
         name: 'URL Encoder',
-        path: '/url',
+        path: '/url-encoder',
         description: 'Encode and decode URLs',
         category: 'web',
         icon: Globe,
-        component: createPlaceholder('URL Encoder/Decoder', 'Encode and decode URLs'),
+        component: UrlEncoder,
+        keywords: ['url', 'encode', 'decode', 'uri']
+    },
+    {
+        id: 'html-entity',
+        name: 'HTML Entity',
+        path: '/html-entity',
+        description: 'Escape/Unescape HTML Entities',
+        category: 'web',
+        icon: Code2,
+        component: HtmlEntityEncoder,
+        keywords: ['html', 'entity', 'escape', 'unescape']
+    },
+    {
+        id: 'url-parser',
+        name: 'URL Parser',
+        path: '/url-parser',
+        description: 'Parse URL parameters and components',
+        category: 'web',
+        icon: Globe,
+        component: UrlParser,
+        keywords: ['url', 'parser', 'params', 'query']
     },
     {
         id: 'jwt',
@@ -262,8 +293,59 @@ export const TOOLS: ToolDefinition[] = [
         path: '/jwt',
         description: 'Parse and inspect JSON Web Tokens',
         category: 'web',
-        icon: Globe, // Or Key icon
-        component: createPlaceholder('JWT Decoder', 'Parse and inspect JSON Web Tokens'),
+        icon: Hash,
+        component: JwtParser,
+        keywords: ['jwt', 'token', 'decode', 'jose']
+    },
+    {
+        id: 'user-agent',
+        name: 'UA Parser',
+        path: '/user-agent',
+        description: 'Parse User-Agent strings',
+        category: 'web',
+        icon: Globe, // or Monitor/Smartphone icon
+        component: UserAgentParser,
+        keywords: ['user', 'agent', 'browser', 'os', 'device']
+    },
+    {
+        id: 'basic-auth',
+        name: 'Basic Auth',
+        path: '/basic-auth',
+        description: 'Generate HTTP Basic Auth header',
+        category: 'web',
+        icon: Hash,
+        component: BasicAuthGenerator,
+        keywords: ['auth', 'basic', 'header', 'http']
+    },
+    {
+        id: 'slug',
+        name: 'Slug Generator',
+        path: '/slug',
+        description: 'Generate URL-friendly slugs',
+        category: 'web',
+        icon: Globe,
+        component: SlugGenerator,
+        keywords: ['slug', 'url', 'seo', 'string']
+    },
+    {
+        id: 'http-status',
+        name: 'HTTP Codes',
+        path: '/http-status',
+        description: 'List of HTTP status codes',
+        category: 'web',
+        icon: Globe,
+        component: HttpStatusCode,
+        keywords: ['http', 'status', 'code', 'error']
+    },
+    {
+        id: 'json-diff',
+        name: 'JSON/Text Diff',
+        path: '/json-diff',
+        description: 'Compare text or JSON',
+        category: 'web',
+        icon: FileJson,
+        component: JsonDiff,
+        keywords: ['diff', 'compare', 'json', 'text']
     },
 ];
 

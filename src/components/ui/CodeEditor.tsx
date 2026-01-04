@@ -11,7 +11,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { cn } from '../../utils/cn';
 
 interface CodeEditorProps extends ReactCodeMirrorProps {
-    language?: 'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'sql' | 'yaml' | 'markdown' | 'text';
+    language?: 'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'sql' | 'yaml' | 'markdown' | 'text' | 'diff';
     className?: string;
 }
 
