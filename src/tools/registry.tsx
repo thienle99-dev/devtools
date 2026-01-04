@@ -88,15 +88,6 @@ import { ChmodCalculator } from './development/ChmodCalculator';
 import { DockerConverter } from './development/DockerConverter';
 
 // Import placeholders for now (we'll replace them as we build them)
-import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
-import { ToolPane } from '../components/layout/ToolPane';
-
-// Helper to create a placeholder component easily
-const createPlaceholder = (name: string, description: string) => () => (
-    <ToolPane title={name} description={description}>
-        <ToolPlaceholder name={name} />
-    </ToolPane>
-);
 
 export const TOOLS: ToolDefinition[] = [
     // Formatters

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -13,15 +13,68 @@ process.env.DIST = join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, '../public')
 
 let win: BrowserWindow | null
+let tray: Tray | null = null
 
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+
+const TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || '', 'tray-icon.png')
+
+function createTray() {
+  if (tray) return
+
+  const icon = nativeImage.createFromPath(TRAY_ICON_PATH)
+  // Resize if needed, 16x16 or 22x22 usually best for tray
+  // icon.resize({ width: 16, height: 16 })
+
+  tray = new Tray(icon.resize({ width: 22, height: 22 }))
+  tray.setToolTip('DevTools 2')
+
+  updateTrayMenu()
+
+  tray.on('double-click', () => {
+    if (win) {
+      if (win.isVisible()) win.hide()
+      else win.show()
+    }
+  })
+}
+
+function updateTrayMenu() {
+  if (!tray) return
+
+  // Basic menu for now. Renderer will send updates if needed.
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: win?.isVisible() ? 'Hide Window' : 'Show Window',
+      click: () => {
+        if (win) {
+          if (win.isVisible()) win.hide()
+          else win.show()
+          updateTrayMenu()
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit', click: () => {
+        // Force quit
+        (app as any).isQuitting = true;
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setContextMenu(contextMenu)
+}
 
 function createWindow() {
   const windowBounds = store.get('windowBounds') as { width: number; height: number; x?: number; y?: number } || {
     width: 1200,
     height: 800,
   };
+
+  const startMinimized = store.get('startMinimized') as boolean || false;
 
   win = new BrowserWindow({
     icon: join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
@@ -33,6 +86,7 @@ function createWindow() {
     ...windowBounds,
     minWidth: 900,
     minHeight: 600,
+    show: !startMinimized, // Respect startMinimized
     // Frameless and transparent for custom UI
     frame: false,
     transparent: true,
@@ -48,10 +102,30 @@ function createWindow() {
   win.on('resize', saveBounds)
   win.on('move', saveBounds)
 
+  win.on('close', (event) => {
+    const minimizeToTray = store.get('minimizeToTray') as boolean ?? true;
+
+    if (!(app as any).isQuitting && minimizeToTray) {
+      event.preventDefault();
+      win?.hide();
+      updateTrayMenu();
+    }
+    return false;
+  });
+
+  win.on('show', updateTrayMenu);
+  win.on('hide', updateTrayMenu);
+
+
   // Handle Store IPC
   ipcMain.handle('store-get', (_event, key) => store.get(key))
   ipcMain.handle('store-set', (_event, key, value) => store.set(key, value))
   ipcMain.handle('store-delete', (_event, key) => store.delete(key))
+
+  // Tray IPC
+  ipcMain.on('tray-update-menu', (_event, _items) => {
+    // Future: Update menu with recent tools from renderer
+  });
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -80,7 +154,16 @@ app.on('activate', () => {
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
+  } else if (win) {
+    win.show();
   }
 })
 
-app.whenReady().then(createWindow)
+app.on('before-quit', () => {
+  (app as any).isQuitting = true;
+});
+
+app.whenReady().then(() => {
+  createTray();
+  createWindow();
+})

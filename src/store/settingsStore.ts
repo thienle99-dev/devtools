@@ -6,10 +6,14 @@ interface SettingsStore {
     wordWrap: boolean;
     theme: 'light' | 'dark' | 'system';
     historyLimit: number;
+    minimizeToTray: boolean;
+    startMinimized: boolean;
 
     setFontSize: (size: number) => void;
     setWordWrap: (wrap: boolean) => void;
     setTheme: (theme: 'light' | 'dark' | 'system') => void;
+    setMinimizeToTray: (value: boolean) => void;
+    setStartMinimized: (value: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -19,10 +23,24 @@ export const useSettingsStore = create<SettingsStore>()(
             wordWrap: true,
             theme: 'dark',
             historyLimit: 50,
+            minimizeToTray: true,
+            startMinimized: false,
 
             setFontSize: (fontSize) => set({ fontSize }),
             setWordWrap: (wordWrap) => set({ wordWrap }),
             setTheme: (theme) => set({ theme }),
+            setMinimizeToTray: (minimizeToTray) => {
+                set({ minimizeToTray });
+                // Sync with electron store if possible, or main process reads from local storage via IPC?
+                // Main process uses 'electron-store', this is 'zustand-persist'.
+                // We need to sync them or just have main process read this value.
+                // Actually, simpler: Use IPC to invoke 'store-set'
+                (window as any).ipcRenderer?.invoke('store-set', 'minimizeToTray', minimizeToTray);
+            },
+            setStartMinimized: (startMinimized) => {
+                set({ startMinimized });
+                (window as any).ipcRenderer?.invoke('store-set', 'startMinimized', startMinimized);
+            },
         }),
         {
             name: 'antigravity-settings',

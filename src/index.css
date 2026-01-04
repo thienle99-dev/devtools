@@ -135,178 +135,278 @@ body {
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
   }
 
-  /* Glass Buttons */
+  /* Glass Buttons - macOS Style */
   .glass-button {
     position: relative;
     overflow: hidden;
     background-color: var(--color-glass-button);
-    border: 1px solid var(--color-glass-border);
-    border-radius: 0.75rem;
-    /* 12px / xl */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid var(--color-glass-border);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: var(--color-text-secondary);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
   }
 
   .glass-button:hover {
     background-color: var(--color-glass-button-hover);
     border-color: var(--color-glass-border-hover);
     color: var(--color-text-primary);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button:active {
     background-color: var(--color-glass-button-active);
     border-color: var(--color-glass-border-hover);
-    transform: scale(0.95);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1) inset,
+      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
+    transform: translateY(0.5px);
   }
 
-  /* Danger Button */
+  /* Danger Button - macOS Style */
   .glass-button-danger {
     position: relative;
     overflow: hidden;
-    background-color: rgba(225, 29, 72, 0.1);
-    border: 1px solid rgba(225, 29, 72, 0.2);
-    border-radius: 0.75rem;
+    background-color: rgba(225, 29, 72, 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid rgba(225, 29, 72, 0.3);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: rgb(251, 113, 133);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 1px 2px rgba(225, 29, 72, 0.15),
+      0 0 0 0.5px rgba(225, 29, 72, 0.1) inset;
   }
 
   .glass-button-danger:hover {
     background-color: rgba(225, 29, 72, 0.2);
-    border-color: rgba(225, 29, 72, 0.4);
+    border-color: rgba(225, 29, 72, 0.45);
     color: rgb(255, 228, 230);
-    box-shadow: 0 0 15px rgba(225, 29, 72, 0.1);
+    box-shadow: 
+      0 2px 8px rgba(225, 29, 72, 0.2),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-danger:active {
-    background-color: rgba(225, 29, 72, 0.15);
-    transform: scale(0.95);
+    background-color: rgba(225, 29, 72, 0.18);
+    box-shadow: 
+      0 1px 2px rgba(225, 29, 72, 0.2) inset,
+      0 0 0 0.5px rgba(225, 29, 72, 0.1) inset;
+    transform: translateY(0.5px);
   }
 
-  /* Success Button */
+  /* Success Button - macOS Style */
   .glass-button-success {
     position: relative;
     overflow: hidden;
-    background-color: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    border-radius: 0.75rem;
+    background-color: rgba(16, 185, 129, 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid rgba(16, 185, 129, 0.3);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: rgb(52, 211, 153);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 1px 2px rgba(16, 185, 129, 0.15),
+      0 0 0 0.5px rgba(16, 185, 129, 0.1) inset;
   }
 
   .glass-button-success:hover {
     background-color: rgba(16, 185, 129, 0.2);
-    border-color: rgba(16, 185, 129, 0.4);
+    border-color: rgba(16, 185, 129, 0.45);
     color: rgb(209, 250, 229);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+    box-shadow: 
+      0 2px 8px rgba(16, 185, 129, 0.2),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-success:active {
-    background-color: rgba(16, 185, 129, 0.15);
-    transform: scale(0.95);
+    background-color: rgba(16, 185, 129, 0.18);
+    box-shadow: 
+      0 1px 2px rgba(16, 185, 129, 0.2) inset,
+      0 0 0 0.5px rgba(16, 185, 129, 0.1) inset;
+    transform: translateY(0.5px);
   }
 
-  /* Warning Button */
+  /* Warning Button - macOS Style */
   .glass-button-warning {
     position: relative;
     overflow: hidden;
-    background-color: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.2);
-    border-radius: 0.75rem;
+    background-color: rgba(245, 158, 11, 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid rgba(245, 158, 11, 0.3);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: rgb(251, 191, 36);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 1px 2px rgba(245, 158, 11, 0.15),
+      0 0 0 0.5px rgba(245, 158, 11, 0.1) inset;
   }
 
   .glass-button-warning:hover {
     background-color: rgba(245, 158, 11, 0.25);
-    border-color: rgba(245, 158, 11, 0.5);
+    border-color: rgba(245, 158, 11, 0.45);
     color: rgb(253, 230, 138);
-    box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+    box-shadow: 
+      0 2px 8px rgba(245, 158, 11, 0.2),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-warning:active {
     background-color: rgba(245, 158, 11, 0.2);
-    transform: scale(0.95);
+    box-shadow: 
+      0 1px 2px rgba(245, 158, 11, 0.2) inset,
+      0 0 0 0.5px rgba(245, 158, 11, 0.1) inset;
+    transform: translateY(0.5px);
   }
 
-  /* Secondary Button */
+  /* Secondary Button - macOS Style */
   .glass-button-secondary {
     position: relative;
     overflow: hidden;
-    background-color: rgba(255, 255, 255, 0.08);
-    /* Slightly more visible than default */
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    border-radius: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: var(--color-text-primary);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-secondary:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 0 0.5px rgba(255, 255, 255, 0.15) inset;
   }
 
   .glass-button-secondary:active {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: scale(0.95);
+    background-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1) inset,
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
+    transform: translateY(0.5px);
   }
 
-  /* Outline Button */
+  /* Light mode for secondary */
+  :root.light .glass-button-secondary {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.08),
+      0 0 0 0.5px rgba(0, 0, 0, 0.05) inset;
+  }
+
+  :root.light .glass-button-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.25);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.1),
+      0 0 0 0.5px rgba(0, 0, 0, 0.08) inset;
+  }
+
+  /* Outline Button - macOS Style (Background transparent → Border nổi bật) */
   .glass-button-outline {
     position: relative;
     overflow: hidden;
     background-color: transparent;
-    border: 1px solid var(--color-glass-border-hover);
-    border-radius: 0.75rem;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: var(--color-text-secondary);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
   }
 
   .glass-button-outline:hover {
-    border-color: var(--color-text-primary);
+    border-color: rgba(255, 255, 255, 0.6);
     color: var(--color-text-primary);
-    background-color: var(--color-glass-50);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
-    /* Added glow */
+    background-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset,
+      0 0 16px rgba(255, 255, 255, 0.08);
   }
 
   .glass-button-outline:active {
-    transform: scale(0.95);
-    background-color: var(--color-glass-100);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1) inset,
+      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
+    transform: translateY(0.5px);
   }
 
-  /* Keep primary consistent but maybe adjust border */
+  /* Light mode for outline */
+  :root.light .glass-button-outline {
+    border-color: rgba(0, 0, 0, 0.25);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.08),
+      0 0 0 0.5px rgba(0, 0, 0, 0.05) inset;
+  }
+
+  :root.light .glass-button-outline:hover {
+    border-color: rgba(0, 0, 0, 0.35);
+    background-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.1),
+      0 0 0 0.5px rgba(0, 0, 0, 0.08) inset;
+  }
+
+  /* Primary Button - macOS Style */
   .glass-button-primary {
     position: relative;
     overflow: hidden;
-    background-color: rgba(79, 70, 229, 0.8);
-    border: 1px solid rgba(99, 102, 241, 0.5);
-    border-radius: 0.75rem;
+    background: linear-gradient(180deg, rgba(0, 122, 255, 0.9) 0%, rgba(0, 122, 255, 0.85) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem; /* 8px - macOS style */
     padding: 0.625rem 1.5rem;
     color: white;
     font-weight: 600;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 
+      0 2px 8px rgba(0, 122, 255, 0.3),
+      0 0 0 0.5px rgba(255, 255, 255, 0.15) inset;
   }
 
   .glass-button-primary:hover {
-    background-color: rgba(99, 102, 241, 0.9);
-    /* Brighter indigo */
-    border-color: rgba(129, 140, 248, 0.8);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4), 0 0 4px rgba(255, 255, 255, 0.5) inset;
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    background: linear-gradient(180deg, rgba(0, 122, 255, 0.95) 0%, rgba(0, 122, 255, 0.9) 100%);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 
+      0 4px 12px rgba(0, 122, 255, 0.4),
+      0 0 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 0 24px rgba(0, 122, 255, 0.2);
   }
 
   .glass-button-primary:active {
-    background-color: rgb(67, 56, 202);
-    transform: scale(0.95);
+    background: linear-gradient(180deg, rgba(0, 98, 204, 0.95) 0%, rgba(0, 98, 204, 0.9) 100%);
+    box-shadow: 
+      0 1px 4px rgba(0, 122, 255, 0.3) inset,
+      0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
+    transform: translateY(0.5px);
   }
 
   /* Glass Inputs */
@@ -344,5 +444,28 @@ body {
 
   .will-change-transform {
     will-change: transform;
+  }
+}
+
+/* Respect reduced motion preference - macOS accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .glass-button,
+  .glass-button-primary,
+  .glass-button-secondary,
+  .glass-button-danger,
+  .glass-button-warning,
+  .glass-button-success,
+  .glass-button-outline {
+    transition: none;
+  }
+  
+  .glass-button:active,
+  .glass-button-primary:active,
+  .glass-button-secondary:active,
+  .glass-button-danger:active,
+  .glass-button-warning:active,
+  .glass-button-success:active,
+  .glass-button-outline:active {
+    transform: none;
   }
 }

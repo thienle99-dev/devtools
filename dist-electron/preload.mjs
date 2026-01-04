@@ -16,5 +16,6 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 		const [channel, ...omit] = args;
 		return electron.ipcRenderer.invoke(channel, ...omit);
 	},
-	process: { platform: process.platform }
+	process: { platform: process.platform },
+	tray: { updateMenu: (items) => electron.ipcRenderer.send("tray-update-menu", items) }
 });

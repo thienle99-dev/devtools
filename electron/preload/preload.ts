@@ -23,4 +23,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   process: {
     platform: process.platform,
   },
+  tray: {
+    updateMenu: (items: any[]) => ipcRenderer.send('tray-update-menu', items),
+  }
 })

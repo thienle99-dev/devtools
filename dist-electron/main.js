@@ -1,4 +1,4 @@
-import electron, { BrowserWindow, app, ipcMain } from "electron";
+import electron, { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process$1 from "node:process";
@@ -8865,12 +8865,52 @@ var __dirname = dirname(fileURLToPath(import.meta.url));
 process.env.DIST = join(__dirname, "../dist");
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, "../public");
 var win;
+var tray = null;
 var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+var TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || "", "tray-icon.png");
+function createTray() {
+	if (tray) return;
+	tray = new Tray(nativeImage.createFromPath(TRAY_ICON_PATH).resize({
+		width: 22,
+		height: 22
+	}));
+	tray.setToolTip("DevTools 2");
+	updateTrayMenu();
+	tray.on("double-click", () => {
+		if (win) if (win.isVisible()) win.hide();
+		else win.show();
+	});
+}
+function updateTrayMenu() {
+	if (!tray) return;
+	const contextMenu = Menu.buildFromTemplate([
+		{
+			label: win?.isVisible() ? "Hide Window" : "Show Window",
+			click: () => {
+				if (win) {
+					if (win.isVisible()) win.hide();
+					else win.show();
+					updateTrayMenu();
+				}
+			}
+		},
+		{ type: "separator" },
+		{
+			label: "Quit",
+			click: () => {
+				app.isQuitting = true;
+				app.quit();
+			}
+		}
+	]);
+	tray.setContextMenu(contextMenu);
+}
 function createWindow() {
 	const windowBounds = store.get("windowBounds") || {
 		width: 1200,
 		height: 800
 	};
+	const startMinimized = store.get("startMinimized") || false;
 	win = new BrowserWindow({
 		icon: join(process.env.VITE_PUBLIC || "", "electron-vite.svg"),
 		webPreferences: {
@@ -8881,6 +8921,7 @@ function createWindow() {
 		...windowBounds,
 		minWidth: 900,
 		minHeight: 600,
+		show: !startMinimized,
 		frame: false,
 		transparent: true,
 		titleBarStyle: "hidden",
@@ -8895,9 +8936,21 @@ function createWindow() {
 	};
 	win.on("resize", saveBounds);
 	win.on("move", saveBounds);
+	win.on("close", (event) => {
+		const minimizeToTray = store.get("minimizeToTray") ?? true;
+		if (!app.isQuitting && minimizeToTray) {
+			event.preventDefault();
+			win?.hide();
+			updateTrayMenu();
+		}
+		return false;
+	});
+	win.on("show", updateTrayMenu);
+	win.on("hide", updateTrayMenu);
 	ipcMain.handle("store-get", (_event, key) => store.get(key));
 	ipcMain.handle("store-set", (_event, key, value) => store.set(key, value));
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
+	ipcMain.on("tray-update-menu", (_event, _items) => {});
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
 	});
@@ -8909,5 +8962,12 @@ app.on("window-all-closed", () => {
 });
 app.on("activate", () => {
 	if (BrowserWindow.getAllWindows().length === 0) createWindow();
+	else if (win) win.show();
 });
-app.whenReady().then(createWindow);
+app.on("before-quit", () => {
+	app.isQuitting = true;
+});
+app.whenReady().then(() => {
+	createTray();
+	createWindow();
+});

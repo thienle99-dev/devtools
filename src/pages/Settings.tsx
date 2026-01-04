@@ -6,7 +6,13 @@ import { Card } from '../components/ui/Card';
 import { Monitor, Type, WrapText, History, Trash2, Smartphone } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
-    const { fontSize, setFontSize, wordWrap, setWordWrap, theme, setTheme } = useSettingsStore();
+    const {
+        fontSize, setFontSize,
+        wordWrap, setWordWrap,
+        theme, setTheme,
+        minimizeToTray, setMinimizeToTray,
+        startMinimized, setStartMinimized
+    } = useSettingsStore();
     const { clearHistory } = useToolStore();
 
     return (
@@ -139,6 +145,40 @@ const SettingsPage: React.FC = () => {
                             <p className="text-sm text-foreground capitalize font-mono">
                                 {(window as any).ipcRenderer?.process?.platform || 'unknown'}
                             </p>
+                        </div>
+                    </Card>
+                </section>
+
+                {/* System Tray Section */}
+                <section className="space-y-4">
+                    <h3 className="text-xs font-black text-foreground-muted uppercase tracking-[0.2em] flex items-center">
+                        <Monitor className="w-3.5 h-3.5 mr-2" />
+                        System Tray
+                    </h3>
+                    <Card className="p-1">
+                        <div className="flex items-center justify-between p-4 border-b border-border-glass">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Minimize to Tray</p>
+                                <p className="text-xs text-foreground-muted">Keep app running in tray when closed</p>
+                            </div>
+                            <button
+                                onClick={() => setMinimizeToTray(!minimizeToTray)}
+                                className={`w-12 h-6 rounded-full transition-all relative ${minimizeToTray ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${minimizeToTray ? 'left-7' : 'left-1'} shadow-md`} />
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between p-4">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Start Minimized</p>
+                                <p className="text-xs text-foreground-muted">Launch app silently to tray</p>
+                            </div>
+                            <button
+                                onClick={() => setStartMinimized(!startMinimized)}
+                                className={`w-12 h-6 rounded-full transition-all relative ${startMinimized ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${startMinimized ? 'left-7' : 'left-1'} shadow-md`} />
+                            </button>
                         </div>
                     </Card>
                 </section>

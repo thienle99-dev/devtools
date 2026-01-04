@@ -22,9 +22,21 @@ export const Button: React.FC<ButtonProps> = ({
     return (
         <button
             className={cn(
-                // Base styles
-                "relative inline-flex items-center justify-center font-semibold transition-all duration-200 select-none overflow-hidden",
+                // Base styles - macOS style
+                "relative inline-flex items-center justify-center font-semibold",
+                "transition-all duration-200 select-none overflow-hidden",
+                "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed",
+                
+                // Focus ring colors by variant (macOS blue focus ring)
+                variant === 'primary' && "focus:ring-blue-500 focus:ring-offset-1",
+                variant === 'secondary' && "focus:ring-blue-500 focus:ring-offset-1",
+                variant === 'glass' && "focus:ring-blue-500/50 focus:ring-offset-1",
+                variant === 'danger' && "focus:ring-rose-500 focus:ring-offset-1",
+                variant === 'warning' && "focus:ring-amber-500 focus:ring-offset-1",
+                variant === 'success' && "focus:ring-emerald-500 focus:ring-offset-1",
+                variant === 'outline' && "focus:ring-blue-500 focus:ring-offset-1",
+                variant === 'ghost' && "focus:ring-blue-500/50 focus:ring-offset-0",
 
                 // Variants
                 variant === 'glass' && "glass-button",
