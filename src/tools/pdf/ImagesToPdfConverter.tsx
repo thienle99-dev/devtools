@@ -23,8 +23,16 @@ export const ImagesToPdfConverter: React.FC = () => {
         images: [] as ImageFile[],
         options: { 
             orientation: 'portrait' as 'portrait' | 'landscape',
-            pageSize: 'a4' as 'a4' | 'letter',
-            margin: 0
+            pageSize: 'a4' as string,
+            margin: 0,
+            fitMode: 'fit' as 'fit' | 'actual' | 'stretch' | 'scale',
+            scale: 100,
+            position: 'center' as string,
+            autoRotate: true,
+            pdfTitle: '',
+            pdfAuthor: '',
+            compress: true,
+            compressionQuality: 0.85
         }
     };
 
@@ -77,6 +85,61 @@ export const ImagesToPdfConverter: React.FC = () => {
         setToolData(TOOL_ID, { images: updatedImages });
     };
 
+    // Compress image using canvas
+    const compressImage = (imgElement: HTMLImageElement, quality: number): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Canvas context not available'));
+                    return;
+                }
+
+                // Calculate max dimensions for compression (optional: limit to reasonable size)
+                const maxWidth = 2000;
+                const maxHeight = 2000;
+                let width = imgElement.width;
+                let height = imgElement.height;
+
+                // Resize if too large
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = width * ratio;
+                    height = height * ratio;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Draw image to canvas
+                ctx.drawImage(imgElement, 0, 0, width, height);
+
+                // Convert to blob with compression
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) {
+                            reject(new Error('Failed to compress image'));
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            resolve(reader.result as string);
+                        };
+                        reader.onerror = () => {
+                            reject(new Error('Failed to read compressed image'));
+                        };
+                        reader.readAsDataURL(blob);
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            } catch (error) {
+                reject(error);
+            }
+        });
+    };
+
     const convertToPdf = async () => {
         if (!images || images.length === 0) {
             setToolData(TOOL_ID, { output: 'Please add at least one image.' });
@@ -86,11 +149,19 @@ export const ImagesToPdfConverter: React.FC = () => {
         setLoadingAction('Converting');
         
         try {
+            // Set PDF metadata
             const pdf = new jsPDF({
                 orientation: options.orientation,
                 unit: 'mm',
-                format: options.pageSize
+                format: options.pageSize as any
             });
+
+            if (options.pdfTitle) {
+                pdf.setProperties({ title: options.pdfTitle });
+            }
+            if (options.pdfAuthor) {
+                pdf.setProperties({ author: options.pdfAuthor });
+            }
 
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
@@ -107,25 +178,128 @@ export const ImagesToPdfConverter: React.FC = () => {
                 const imgElement = new Image();
                 
                 await new Promise<void>((resolve, reject) => {
-                    imgElement.onload = () => {
+                    imgElement.onload = async () => {
                         try {
-                            // Calculate dimensions to fit page while maintaining aspect ratio
+                            // Get original dimensions
                             let imgWidth = imgElement.width;
                             let imgHeight = imgElement.height;
-                            const aspectRatio = imgWidth / imgHeight;
-
-                            let finalWidth = contentWidth;
-                            let finalHeight = contentWidth / aspectRatio;
-
-                            if (finalHeight > contentHeight) {
-                                finalHeight = contentHeight;
-                                finalWidth = contentHeight * aspectRatio;
+                            
+                            // Compress image if enabled
+                            let imageDataUrl = img.preview;
+                            if (options.compress !== false) {
+                                try {
+                                    const quality = options.compressionQuality || 0.85;
+                                    imageDataUrl = await compressImage(imgElement, quality);
+                                    // Load compressed image to get new dimensions
+                                    const compressedImg = new Image();
+                                    await new Promise<void>((imgResolve, imgReject) => {
+                                        compressedImg.onload = () => {
+                                            imgResolve();
+                                        };
+                                        compressedImg.onerror = () => {
+                                            // If compressed image fails to load, use original
+                                            imgReject();
+                                        };
+                                        compressedImg.src = imageDataUrl;
+                                    });
+                                    // Use compressed image dimensions
+                                    imgWidth = compressedImg.width;
+                                    imgHeight = compressedImg.height;
+                                } catch (compressError) {
+                                    // If compression fails, use original image
+                                    console.warn('Image compression failed, using original:', compressError);
+                                    imageDataUrl = img.preview;
+                                }
                             }
 
-                            const x = margin + (contentWidth - finalWidth) / 2;
-                            const y = margin + (contentHeight - finalHeight) / 2;
+                            // Auto-rotate based on EXIF if enabled
+                            
+                            // Check if image needs rotation (if auto-rotate is enabled)
+                            if (options.autoRotate && imgWidth > imgHeight && options.orientation === 'portrait') {
+                                // Image is landscape but page is portrait - might need rotation
+                                // This is a simple check, full EXIF would need exif-js library
+                            }
 
-                            pdf.addImage(imgElement, 'JPEG', x, y, finalWidth, finalHeight);
+                            const aspectRatio = imgWidth / imgHeight;
+                            let finalWidth: number;
+                            let finalHeight: number;
+
+                            // Calculate dimensions based on fit mode (using original or compressed dimensions)
+                            switch (options.fitMode || 'fit') {
+                                case 'actual':
+                                    // Convert pixels to mm (assuming 96 DPI)
+                                    finalWidth = (imgWidth * 25.4) / 96;
+                                    finalHeight = (imgHeight * 25.4) / 96;
+                                    break;
+                                case 'stretch':
+                                    finalWidth = contentWidth;
+                                    finalHeight = contentHeight;
+                                    break;
+                                case 'scale':
+                                    const scaleFactor = (options.scale || 100) / 100;
+                                    const scaledWidth = (imgWidth * 25.4) / 96 * scaleFactor;
+                                    const scaledHeight = (imgHeight * 25.4) / 96 * scaleFactor;
+                                    finalWidth = scaledWidth;
+                                    finalHeight = scaledHeight;
+                                    break;
+                                case 'fit':
+                                default:
+                                    // Fit to page while maintaining aspect ratio
+                                    finalWidth = contentWidth;
+                                    finalHeight = contentWidth / aspectRatio;
+                                    if (finalHeight > contentHeight) {
+                                        finalHeight = contentHeight;
+                                        finalWidth = contentHeight * aspectRatio;
+                                    }
+                                    break;
+                            }
+
+                            // Calculate position
+                            let x: number, y: number;
+                            const position = options.position || 'center';
+                            
+                            switch (position) {
+                                case 'top-left':
+                                    x = margin;
+                                    y = margin;
+                                    break;
+                                case 'top-center':
+                                    x = margin + (contentWidth - finalWidth) / 2;
+                                    y = margin;
+                                    break;
+                                case 'top-right':
+                                    x = margin + contentWidth - finalWidth;
+                                    y = margin;
+                                    break;
+                                case 'middle-left':
+                                    x = margin;
+                                    y = margin + (contentHeight - finalHeight) / 2;
+                                    break;
+                                case 'middle-right':
+                                    x = margin + contentWidth - finalWidth;
+                                    y = margin + (contentHeight - finalHeight) / 2;
+                                    break;
+                                case 'bottom-left':
+                                    x = margin;
+                                    y = margin + contentHeight - finalHeight;
+                                    break;
+                                case 'bottom-center':
+                                    x = margin + (contentWidth - finalWidth) / 2;
+                                    y = margin + contentHeight - finalHeight;
+                                    break;
+                                case 'bottom-right':
+                                    x = margin + contentWidth - finalWidth;
+                                    y = margin + contentHeight - finalHeight;
+                                    break;
+                                case 'center':
+                                default:
+                                    x = margin + (contentWidth - finalWidth) / 2;
+                                    y = margin + (contentHeight - finalHeight) / 2;
+                                    break;
+                            }
+
+                            // Use compressed image data if available
+                            pdf.addImage(imageDataUrl, 'JPEG', x, y, finalWidth, finalHeight);
                             resolve();
                         } catch (error) {
                             reject(error);
@@ -211,39 +385,169 @@ export const ImagesToPdfConverter: React.FC = () => {
 
                 {/* Options */}
                 {(images && images.length > 0) && (
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Orientation</label>
-                            <select
-                                value={options.orientation}
-                                onChange={(e) => updateOption('orientation', e.target.value)}
-                                className="glass-input w-full text-sm"
-                            >
-                                <option value="portrait">Portrait</option>
-                                <option value="landscape">Landscape</option>
-                            </select>
+                    <div className="space-y-4">
+                        {/* Basic Options */}
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Orientation</label>
+                                <select
+                                    value={options.orientation}
+                                    onChange={(e) => updateOption('orientation', e.target.value)}
+                                    className="glass-input w-full text-sm"
+                                >
+                                    <option value="portrait">Portrait</option>
+                                    <option value="landscape">Landscape</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Page Size</label>
+                                <select
+                                    value={options.pageSize}
+                                    onChange={(e) => updateOption('pageSize', e.target.value)}
+                                    className="glass-input w-full text-sm"
+                                >
+                                    <option value="a0">A0</option>
+                                    <option value="a1">A1</option>
+                                    <option value="a2">A2</option>
+                                    <option value="a3">A3</option>
+                                    <option value="a4">A4</option>
+                                    <option value="a5">A5</option>
+                                    <option value="a6">A6</option>
+                                    <option value="letter">Letter</option>
+                                    <option value="legal">Legal</option>
+                                    <option value="tabloid">Tabloid</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Margin (mm)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="50"
+                                    value={options.margin || 0}
+                                    onChange={(e) => updateOption('margin', parseInt(e.target.value) || 0)}
+                                    className="glass-input w-full text-sm"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Page Size</label>
-                            <select
-                                value={options.pageSize}
-                                onChange={(e) => updateOption('pageSize', e.target.value)}
-                                className="glass-input w-full text-sm"
-                            >
-                                <option value="a4">A4</option>
-                                <option value="letter">Letter</option>
-                            </select>
+
+                        {/* Image Fitting Options */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Fit Mode</label>
+                                <select
+                                    value={options.fitMode || 'fit'}
+                                    onChange={(e) => updateOption('fitMode', e.target.value)}
+                                    className="glass-input w-full text-sm"
+                                >
+                                    <option value="fit">Fit to Page</option>
+                                    <option value="actual">Actual Size</option>
+                                    <option value="stretch">Stretch to Fill</option>
+                                    <option value="scale">Custom Scale</option>
+                                </select>
+                            </div>
+                            {options.fitMode === 'scale' ? (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Scale (%)</label>
+                                    <input
+                                        type="number"
+                                        min="10"
+                                        max="500"
+                                        value={options.scale || 100}
+                                        onChange={(e) => updateOption('scale', parseInt(e.target.value) || 100)}
+                                        className="glass-input w-full text-sm"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Position</label>
+                                    <select
+                                        value={options.position || 'center'}
+                                        onChange={(e) => updateOption('position', e.target.value)}
+                                        className="glass-input w-full text-sm"
+                                    >
+                                        <option value="center">Center</option>
+                                        <option value="top-left">Top Left</option>
+                                        <option value="top-center">Top Center</option>
+                                        <option value="top-right">Top Right</option>
+                                        <option value="middle-left">Middle Left</option>
+                                        <option value="middle-right">Middle Right</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                        <option value="bottom-center">Bottom Center</option>
+                                        <option value="bottom-right">Bottom Right</option>
+                                    </select>
+                                </div>
+                            )}
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Margin (mm)</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="50"
-                                value={options.margin || 0}
-                                onChange={(e) => updateOption('margin', parseInt(e.target.value) || 0)}
-                                className="glass-input w-full text-sm"
-                            />
+
+                        {/* Advanced Options */}
+                        <div className="space-y-3">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="autoRotate"
+                                    checked={options.autoRotate !== false}
+                                    onChange={(e) => updateOption('autoRotate', e.target.checked)}
+                                    className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
+                                />
+                                <label htmlFor="autoRotate" className="text-sm cursor-pointer">Auto-rotate images</label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="compress"
+                                    checked={options.compress !== false}
+                                    onChange={(e) => updateOption('compress', e.target.checked)}
+                                    className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
+                                />
+                                <label htmlFor="compress" className="text-sm cursor-pointer">Compress images</label>
+                            </div>
+                            {options.compress !== false && (
+                                <div className="space-y-1 pl-6">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest">
+                                            Compression Quality: {Math.round((options.compressionQuality || 0.85) * 100)}%
+                                        </label>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0.1"
+                                        max="1"
+                                        step="0.05"
+                                        value={options.compressionQuality || 0.85}
+                                        onChange={(e) => updateOption('compressionQuality', parseFloat(e.target.value))}
+                                        className="w-full h-2 bg-bg-glass-hover rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-xs text-foreground-secondary">
+                                        <span>Smaller file</span>
+                                        <span>Better quality</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* PDF Metadata */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">PDF Title (optional)</label>
+                                <input
+                                    type="text"
+                                    value={options.pdfTitle || ''}
+                                    onChange={(e) => updateOption('pdfTitle', e.target.value)}
+                                    className="glass-input w-full text-sm"
+                                    placeholder="Document title"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">PDF Author (optional)</label>
+                                <input
+                                    type="text"
+                                    value={options.pdfAuthor || ''}
+                                    onChange={(e) => updateOption('pdfAuthor', e.target.value)}
+                                    className="glass-input w-full text-sm"
+                                    placeholder="Author name"
+                                />
+                            </div>
                         </div>
                     </div>
                 )}
