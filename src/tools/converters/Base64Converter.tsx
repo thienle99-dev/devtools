@@ -7,11 +7,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'base64';
 
-export const Base64Converter: React.FC = () => {
+interface Base64ConverterProps {
+    tabId?: string;
+}
+
+export const Base64Converter: React.FC<Base64ConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     useEffect(() => {
@@ -19,8 +25,8 @@ export const Base64Converter: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = useCallback((val: string) => {
-        setToolData(TOOL_ID, { input: val });
-    }, [setToolData]);
+        setToolData(effectiveId, { input: val });
+    }, [setToolData, effectiveId]);
 
     const handleEncode = () => {
         setLoadingAction('Encode');
@@ -28,9 +34,9 @@ export const Base64Converter: React.FC = () => {
             try {
                 if (!input) return;
                 const encoded = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(input));
-                setToolData(TOOL_ID, { output: encoded });
+                setToolData(effectiveId, { output: encoded });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: ${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: ${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
@@ -45,19 +51,19 @@ export const Base64Converter: React.FC = () => {
                 const decoded = CryptoJS.enc.Base64.parse(input).toString(CryptoJS.enc.Utf8);
                 // If the resulting string is empty but input wasn't, it might be invalid encoding or binary data
                 if (!decoded && input.trim().length > 0) {
-                    setToolData(TOOL_ID, { output: 'Error: Could not decode to UTF-8 string. Input might be invalid Base64 or binary data.' });
+                    setToolData(effectiveId, { output: 'Error: Could not decode to UTF-8 string. Input might be invalid Base64 or binary data.' });
                 } else {
-                    setToolData(TOOL_ID, { output: decoded });
+                    setToolData(effectiveId, { output: decoded });
                 }
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid Base64 input\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid Base64 input\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     const handleCopy = () => {
         if (output) navigator.clipboard.writeText(output);

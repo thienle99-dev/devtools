@@ -4,11 +4,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'regex-tester';
 
-export const RegexTester: React.FC = () => {
+interface RegexTesterProps {
+    tabId?: string;
+}
+
+export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Default valid options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '', // Test String
         options: {
             regex: '', // The regex pattern
@@ -20,7 +26,7 @@ export const RegexTester: React.FC = () => {
     };
 
     const { input, options, meta } = data;
-    const matches: RegExpMatchArray[] = meta?.matches || [];
+    const matches: Record<string, any>[] = meta?.matches || [];
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -29,7 +35,7 @@ export const RegexTester: React.FC = () => {
     // Calculate matches
     useEffect(() => {
         if (!options.regex) {
-            if (matches.length > 0) setToolData(TOOL_ID, { meta: { matches: [] } });
+            if (matches.length > 0) setToolData(effectiveId, { meta: { matches: [] } });
             return;
         }
 
@@ -66,27 +72,27 @@ export const RegexTester: React.FC = () => {
                 ...Array.from(m).slice(1).reduce((acc, val, i) => ({ ...acc, [i + 1]: val }), {})
             }));
 
-            setToolData(TOOL_ID, { meta: { matches: serializableMatches } });
+            setToolData(effectiveId, { meta: { matches: serializableMatches } });
 
         } catch (e) {
             // Invalid regex
-            setToolData(TOOL_ID, { meta: { matches: [], error: (e as Error).message } });
+            setToolData(effectiveId, { meta: { matches: [], error: (e as Error).message } });
         }
-    }, [input, options.regex, options.flags, setToolData]);
+    }, [input, options.regex, options.flags, setToolData, effectiveId, matches.length]);
 
 
     const handleFlagChange = (flag: string) => {
         const currentFlags = options.flags;
         if (currentFlags.includes(flag)) {
-            setToolData(TOOL_ID, { options: { ...options, flags: currentFlags.replace(flag, '') } });
+            setToolData(effectiveId, { options: { ...options, flags: currentFlags.replace(flag, '') } });
         } else {
-            setToolData(TOOL_ID, { options: { ...options, flags: currentFlags + flag } });
+            setToolData(effectiveId, { options: { ...options, flags: currentFlags + flag } });
         }
     };
 
     const handleClear = () => {
-        clearToolData(TOOL_ID);
-        setToolData(TOOL_ID, { options: { regex: '', flags: 'g' }, input: '' });
+        clearToolData(effectiveId);
+        setToolData(effectiveId, { options: { regex: '', flags: 'g' }, input: '' });
     };
 
     // Highlight matches in text overlay?
@@ -98,10 +104,10 @@ export const RegexTester: React.FC = () => {
 
         // Simple highlighting for non-overlapping global matches
         // If regex is invalid, text is plain.
-        const elements = [];
+        const elements: React.ReactNode[] = [];
         let lastIndex = 0;
 
-        matches.forEach((m: any, i: number) => {
+        matches.forEach((m: Record<string, any>, i: number) => {
             const index = m.index;
             const matchText = m[0];
 
@@ -145,7 +151,7 @@ export const RegexTester: React.FC = () => {
                             <input
                                 type="text"
                                 value={options.regex}
-                                onChange={(e) => setToolData(TOOL_ID, { options: { ...options, regex: e.target.value } })}
+                                onChange={(e) => setToolData(effectiveId, { options: { ...options, regex: e.target.value } })}
                                 className="glass-input pl-6 pr-6 w-full font-mono text-lg"
                                 placeholder="pattern"
                             />
@@ -182,7 +188,7 @@ export const RegexTester: React.FC = () => {
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Test String</label>
                     <textarea
                         value={input}
-                        onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
+                        onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                         className="glass-input w-full h-32 font-mono text-sm leading-relaxed"
                         placeholder="Paste your text here..."
                     />
@@ -201,7 +207,7 @@ export const RegexTester: React.FC = () => {
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Match Details</label>
                         <div className="space-y-2">
-                            {matches.map((m: any, i: number) => (
+                            {matches.map((m: Record<string, any>, i: number) => (
                                 <div key={i} className="glass-panel p-3 rounded-lg text-xs font-mono space-y-1">
                                     <div className="flex justify-between">
                                         <span className="font-bold text-primary">Match {i + 1}</span>

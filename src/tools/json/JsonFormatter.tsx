@@ -6,11 +6,18 @@ import { Button } from '../../components/ui/Button';
 
 const TOOL_ID = 'json-format';
 
-export const JsonFormatter: React.FC = () => {
+interface JsonFormatterProps {
+    tabId?: string;
+}
+
+export const JsonFormatter: React.FC<JsonFormatterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    // Use tabId if provided, otherwise fallback to singleton TOOL_ID
+    const effectiveId = tabId || TOOL_ID;
+
     // Get current state or default
-    const data = tools[TOOL_ID] || { input: '', output: '', options: {} };
+    const data = tools[effectiveId] || { input: '', output: '', options: {} };
     const { input, output } = data;
 
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -21,8 +28,8 @@ export const JsonFormatter: React.FC = () => {
     }, [addToHistory]);
 
     const handleInputChange = useCallback((val: string) => {
-        setToolData(TOOL_ID, { input: val });
-    }, [setToolData]);
+        setToolData(effectiveId, { input: val });
+    }, [setToolData, effectiveId]);
 
     const handleFormat = () => {
         setLoadingAction('Format');
@@ -31,9 +38,9 @@ export const JsonFormatter: React.FC = () => {
                 if (!input.trim()) return;
                 const parsed = JSON.parse(input);
                 const formatted = JSON.stringify(parsed, null, 2);
-                setToolData(TOOL_ID, { output: formatted });
+                setToolData(effectiveId, { output: formatted });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
@@ -47,9 +54,9 @@ export const JsonFormatter: React.FC = () => {
                 if (!input.trim()) return;
                 const parsed = JSON.parse(input);
                 const minified = JSON.stringify(parsed);
-                setToolData(TOOL_ID, { output: minified });
+                setToolData(effectiveId, { output: minified });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
@@ -61,13 +68,13 @@ export const JsonFormatter: React.FC = () => {
         setTimeout(() => {
             try {
                 if (!input.trim()) {
-                    setToolData(TOOL_ID, { output: 'Empty input.' });
+                    setToolData(effectiveId, { output: 'Empty input.' });
                     return;
                 }
                 JSON.parse(input);
-                setToolData(TOOL_ID, { output: 'Valid JSON ✔️' });
+                setToolData(effectiveId, { output: 'Valid JSON ✔️' });
             } catch (error) {
-                setToolData(TOOL_ID, { output: `Invalid JSON ❌\n${(error as Error).message}` });
+                setToolData(effectiveId, { output: `Invalid JSON ❌\n${(error as Error).message}` });
             } finally {
                 setLoadingAction(null);
             }
@@ -75,7 +82,7 @@ export const JsonFormatter: React.FC = () => {
     };
 
     const handleClear = () => {
-        clearToolData(TOOL_ID);
+        clearToolData(effectiveId);
     };
 
     const handleCopy = () => {

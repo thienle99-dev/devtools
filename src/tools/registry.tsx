@@ -23,7 +23,7 @@ export interface ToolDefinition {
     description: string;
     category: ToolCategory;
     icon: React.ElementType;
-    component: React.ComponentType;
+    component: React.ComponentType<any>;
     keywords?: string[];
 }
 

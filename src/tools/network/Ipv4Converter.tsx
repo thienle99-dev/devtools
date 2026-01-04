@@ -4,10 +4,16 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'ipv4-converter';
 
-export const Ipv4Converter: React.FC = () => {
+interface Ipv4ConverterProps {
+    tabId?: string;
+}
+
+export const Ipv4Converter: React.FC<Ipv4ConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         options: {
             decimal: '',
@@ -17,7 +23,7 @@ export const Ipv4Converter: React.FC = () => {
         }
     };
 
-    const { input, options } = data;
+    const { options } = data;
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -46,13 +52,11 @@ export const Ipv4Converter: React.FC = () => {
     };
 
     const handleInputChange = (val: string, type: 'ip' | 'decimal' | 'binary' | 'hex') => {
-        let ip = '';
         let num: number | null = null;
 
         try {
             if (type === 'ip') {
                 num = ipToLong(val);
-                ip = val; // keep original input if valid-ish
             } else if (type === 'decimal') {
                 num = parseInt(val, 10);
             } else if (type === 'binary') {
@@ -63,7 +67,7 @@ export const Ipv4Converter: React.FC = () => {
 
             if (num !== null && !isNaN(num) && num >= 0 && num <= 4294967295) {
                 // Valid 32-bit uint
-                setToolData(TOOL_ID, {
+                setToolData(effectiveId, {
                     input: val, // Just to update UI state derived from last changed field?
                     options: {
                         ipv4: longToIp(num),
@@ -74,7 +78,7 @@ export const Ipv4Converter: React.FC = () => {
                 });
             } else {
                 // Invalid
-                setToolData(TOOL_ID, {
+                setToolData(effectiveId, {
                     input: val,
                     options: { ...options, [type === 'ip' ? 'ipv4' : type]: val } // update field being typed
                 });
@@ -84,7 +88,7 @@ export const Ipv4Converter: React.FC = () => {
         }
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane

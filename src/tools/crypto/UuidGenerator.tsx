@@ -7,10 +7,16 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'uuid-generator';
 
-export const UuidGenerator: React.FC = () => {
+interface UuidGeneratorProps {
+    tabId?: string;
+}
+
+export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         options: {
             count: 1,
             type: 'v4', // v1, v4, ulid
@@ -22,13 +28,24 @@ export const UuidGenerator: React.FC = () => {
 
     const { options, output } = data;
 
+    // We can't immediately generate in useEffect because it might cause infinite loop or double render issues if strict mode.
+    // Also, if we switch tabs, we don't necessarily want to regenerate.
+    // We only want to generate if output is EMPTY and it's a NEW instance?
+    // Actually, persisting output is good.
     useEffect(() => {
         addToHistory(TOOL_ID);
-        if (!output) generate();
-    }, [addToHistory]);
+        if (!output) {
+            // Defer generation to avoid "update during render" if strictly needed, but let's try direct call or wrapped in tiny timeout if issues.
+            // Actually, calling setToolData here is fine in useEffect.
+            generate();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [addToHistory]); // Only run on mount/history add? No, we need effectiveId stability.
+    // If we include effectiveId, and it changes (unlikely for same component instance), it runs again.
+    // If data.output is already there, it won't regen.
 
-    const updateOption = (key: string, value: any) => {
-        setToolData(TOOL_ID, { options: { ...options, [key]: value } });
+    const updateOption = (key: string, value: string | number | boolean) => {
+        setToolData(effectiveId, { options: { ...options, [key]: value } });
     };
 
     const generate = () => {
@@ -51,10 +68,10 @@ export const UuidGenerator: React.FC = () => {
             ids.push(id);
         }
 
-        setToolData(TOOL_ID, { output: ids.join('\n') });
+        setToolData(effectiveId, { output: ids.join('\n') });
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (

@@ -4,11 +4,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'chmod-calculator';
 
-export const ChmodCalculator: React.FC = () => {
+interface ChmodCalculatorProps {
+    tabId?: string;
+}
+
+export const ChmodCalculator: React.FC<ChmodCalculatorProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // permissions: [owner_r, owner_w, owner_x, group_r...]
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '755', // Octal string
         options: {
             // Store bits as booleans
@@ -44,7 +50,7 @@ export const ChmodCalculator: React.FC = () => {
             newOptions.pr ? 'r' : '-', newOptions.pw ? 'w' : '-', newOptions.px ? 'x' : '-'
         ].join('');
 
-        setToolData(TOOL_ID, { input: octal, options: newOptions, output: sym });
+        setToolData(effectiveId, { input: octal, options: newOptions, output: sym });
     };
 
     const handleCheckboxChange = (key: string) => {
@@ -75,21 +81,21 @@ export const ChmodCalculator: React.FC = () => {
                 newOptions.pr ? 'r' : '-', newOptions.pw ? 'w' : '-', newOptions.px ? 'x' : '-'
             ].join('');
 
-            setToolData(TOOL_ID, { input: clean, options: newOptions, output: sym });
+            setToolData(effectiveId, { input: clean, options: newOptions, output: sym });
         } else {
-            setToolData(TOOL_ID, { input: clean });
+            setToolData(effectiveId, { input: clean });
         }
     };
 
     const handleClear = () => {
-        clearToolData(TOOL_ID);
+        clearToolData(effectiveId);
         // Reset to default 755
         const defOpts = {
             or: true, ow: true, ox: true,
             gr: true, gw: false, gx: true,
             pr: true, pw: false, px: true,
         };
-        setToolData(TOOL_ID, { input: '755', options: defOpts, output: '-rwxr-xr-x' });
+        setToolData(effectiveId, { input: '755', options: defOpts, output: '-rwxr-xr-x' });
     };
 
     const PermissionGroup = ({ label, prefix }: { label: string, prefix: string }) => (

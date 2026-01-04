@@ -7,11 +7,17 @@ import { format as sqlFormatter } from 'sql-formatter';
 
 const TOOL_ID = 'sql-format';
 
-export const SqlFormatter: React.FC = () => {
+interface SqlFormatterProps {
+    tabId?: string;
+}
+
+export const SqlFormatter: React.FC<SqlFormatterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Get current state or default
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
         options: {
@@ -42,19 +48,19 @@ export const SqlFormatter: React.FC = () => {
                     keywordCase: options.keywordCase,
                     linesBetweenQueries: options.linesBetweenQueries
                 });
-                setToolData(TOOL_ID, { output: formatted });
+                setToolData(effectiveId, { output: formatted });
             } catch (e) {
-                setToolData(TOOL_ID, { output: `Error: ${(e as Error).message}` });
+                setToolData(effectiveId, { output: `Error: ${(e as Error).message}` });
             } finally {
                 setLoading(false);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     const updateOption = (key: string, value: any) => {
-        setToolData(TOOL_ID, { options: { ...options, [key]: value } });
+        setToolData(effectiveId, { options: { ...options, [key]: value } });
     };
 
     return (
@@ -115,7 +121,7 @@ export const SqlFormatter: React.FC = () => {
                             className="flex-1 min-h-[200px]"
                             language="sql"
                             value={input}
-                            onChange={(val) => setToolData(TOOL_ID, { input: val })}
+                            onChange={(val) => setToolData(effectiveId, { input: val })}
                             placeholder="SELECT * FROM table..."
                         />
                     </div>

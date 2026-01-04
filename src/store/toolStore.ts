@@ -17,6 +17,7 @@ interface ToolStore {
     clearToolData: (id: string) => void;
     addToHistory: (id: string) => void;
     clearHistory: () => void;
+    removeToolData: (id: string) => void;
 }
 
 export const useToolStore = create<ToolStore>()(
@@ -61,6 +62,12 @@ export const useToolStore = create<ToolStore>()(
             })),
 
             clearHistory: () => set({ history: [] }),
+
+            removeToolData: (id) => set((state) => {
+                const newTools = { ...state.tools };
+                delete newTools[id];
+                return { tools: newTools };
+            }),
         }),
         {
             name: 'antigravity-tool-storage',

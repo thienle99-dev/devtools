@@ -174,11 +174,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid var(--color-glass-border);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: var(--color-text-secondary);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
   }
@@ -187,7 +188,7 @@ body {
     background-color: var(--color-glass-button-hover);
     border-color: var(--color-glass-border-hover);
     color: var(--color-text-primary);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.12),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
@@ -195,7 +196,7 @@ body {
   .glass-button:active {
     background-color: var(--color-glass-button-active);
     border-color: var(--color-glass-border-hover);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1) inset,
       0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
     transform: translateY(0.5px);
@@ -209,11 +210,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(225, 29, 72, 0.3);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: rgb(251, 113, 133);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(225, 29, 72, 0.15),
       0 0 0 0.5px rgba(225, 29, 72, 0.1) inset;
   }
@@ -222,14 +224,14 @@ body {
     background-color: rgba(225, 29, 72, 0.2);
     border-color: rgba(225, 29, 72, 0.45);
     color: rgb(255, 228, 230);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(225, 29, 72, 0.2),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-danger:active {
     background-color: rgba(225, 29, 72, 0.18);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(225, 29, 72, 0.2) inset,
       0 0 0 0.5px rgba(225, 29, 72, 0.1) inset;
     transform: translateY(0.5px);
@@ -243,11 +245,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(16, 185, 129, 0.3);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: rgb(52, 211, 153);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(16, 185, 129, 0.15),
       0 0 0 0.5px rgba(16, 185, 129, 0.1) inset;
   }
@@ -256,14 +259,14 @@ body {
     background-color: rgba(16, 185, 129, 0.2);
     border-color: rgba(16, 185, 129, 0.45);
     color: rgb(209, 250, 229);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(16, 185, 129, 0.2),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-success:active {
     background-color: rgba(16, 185, 129, 0.18);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(16, 185, 129, 0.2) inset,
       0 0 0 0.5px rgba(16, 185, 129, 0.1) inset;
     transform: translateY(0.5px);
@@ -277,11 +280,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(245, 158, 11, 0.3);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: rgb(251, 191, 36);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(245, 158, 11, 0.15),
       0 0 0 0.5px rgba(245, 158, 11, 0.1) inset;
   }
@@ -290,14 +294,14 @@ body {
     background-color: rgba(245, 158, 11, 0.25);
     border-color: rgba(245, 158, 11, 0.45);
     color: rgb(253, 230, 138);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(245, 158, 11, 0.2),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
 
   .glass-button-warning:active {
     background-color: rgba(245, 158, 11, 0.2);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(245, 158, 11, 0.2) inset,
       0 0 0 0.5px rgba(245, 158, 11, 0.1) inset;
     transform: translateY(0.5px);
@@ -311,11 +315,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: var(--color-text-primary);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
   }
@@ -323,14 +328,14 @@ body {
   .glass-button-secondary:hover {
     background-color: rgba(255, 255, 255, 0.18);
     border-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.12),
       0 0 0 0.5px rgba(255, 255, 255, 0.15) inset;
   }
 
   .glass-button-secondary:active {
     background-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1) inset,
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
     transform: translateY(0.5px);
@@ -340,7 +345,7 @@ body {
   :root.light .glass-button-secondary {
     background-color: rgba(255, 255, 255, 0.8);
     border-color: rgba(0, 0, 0, 0.2);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.08),
       0 0 0 0.5px rgba(0, 0, 0, 0.05) inset;
   }
@@ -348,7 +353,7 @@ body {
   :root.light .glass-button-secondary:hover {
     background-color: rgba(255, 255, 255, 0.95);
     border-color: rgba(0, 0, 0, 0.25);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(0, 0, 0, 0.08) inset;
   }
@@ -361,11 +366,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1.5px solid rgba(255, 255, 255, 0.4);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.5rem 1rem;
     color: var(--color-text-secondary);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
   }
@@ -374,7 +380,7 @@ body {
     border-color: rgba(255, 255, 255, 0.6);
     color: var(--color-text-primary);
     background-color: rgba(255, 255, 255, 0.06);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.12),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset,
       0 0 16px rgba(255, 255, 255, 0.08);
@@ -383,7 +389,7 @@ body {
   .glass-button-outline:active {
     background-color: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1) inset,
       0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
     transform: translateY(0.5px);
@@ -392,7 +398,7 @@ body {
   /* Light mode for outline */
   :root.light .glass-button-outline {
     border-color: rgba(0, 0, 0, 0.25);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.08),
       0 0 0 0.5px rgba(0, 0, 0, 0.05) inset;
   }
@@ -400,7 +406,7 @@ body {
   :root.light .glass-button-outline:hover {
     border-color: rgba(0, 0, 0, 0.35);
     background-color: rgba(0, 0, 0, 0.04);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(0, 0, 0, 0.08) inset;
   }
@@ -413,12 +419,13 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(255, 255, 255, 0.2);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     padding: 0.625rem 1.5rem;
     color: white;
     font-weight: 600;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 122, 255, 0.3),
       0 0 0 0.5px rgba(255, 255, 255, 0.15) inset;
   }
@@ -426,7 +433,7 @@ body {
   .glass-button-primary:hover {
     background: linear-gradient(180deg, rgba(0, 122, 255, 0.95) 0%, rgba(0, 122, 255, 0.9) 100%);
     border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 
+    box-shadow:
       0 4px 12px rgba(0, 122, 255, 0.4),
       0 0 0 0.5px rgba(255, 255, 255, 0.2) inset,
       0 0 24px rgba(0, 122, 255, 0.2);
@@ -434,7 +441,7 @@ body {
 
   .glass-button-primary:active {
     background: linear-gradient(180deg, rgba(0, 98, 204, 0.95) 0%, rgba(0, 98, 204, 0.9) 100%);
-    box-shadow: 
+    box-shadow:
       0 1px 4px rgba(0, 122, 255, 0.3) inset,
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
     transform: translateY(0.5px);
@@ -474,7 +481,7 @@ body {
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
     border-right: 0.5px solid var(--color-glass-border);
-    box-shadow: 
+    box-shadow:
       2px 0 8px rgba(0, 0, 0, 0.1),
       inset -1px 0 0 rgba(255, 255, 255, 0.05);
   }
@@ -483,7 +490,7 @@ body {
   :root.light .sidebar-macos {
     background-color: rgba(255, 255, 255, 0.7);
     border-right-color: rgba(0, 0, 0, 0.08);
-    box-shadow: 
+    box-shadow:
       2px 0 8px rgba(0, 0, 0, 0.05),
       inset -1px 0 0 rgba(0, 0, 0, 0.03);
   }
@@ -496,11 +503,12 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(255, 255, 255, 0.15);
-    border-radius: 0.5rem; /* 8px - macOS style */
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
     color: var(--color-text-primary);
     font-size: 0.875rem;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
   }
@@ -512,7 +520,7 @@ body {
   .sidebar-search-input:hover {
     background-color: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
+    box-shadow:
       0 2px 4px rgba(0, 0, 0, 0.12),
       0 0 0 0.5px rgba(255, 255, 255, 0.08) inset;
   }
@@ -521,7 +529,7 @@ body {
     outline: none;
     background-color: rgba(255, 255, 255, 0.15);
     border-color: rgba(0, 122, 255, 0.5);
-    box-shadow: 
+    box-shadow:
       0 0 0 3px rgba(0, 122, 255, 0.1),
       0 2px 4px rgba(0, 0, 0, 0.12),
       0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
@@ -531,7 +539,7 @@ body {
   :root.light .sidebar-search-input {
     background-color: rgba(255, 255, 255, 0.8);
     border-color: rgba(0, 0, 0, 0.12);
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.08),
       0 0 0 0.5px rgba(0, 0, 0, 0.05) inset;
   }
@@ -543,7 +551,7 @@ body {
 
   :root.light .sidebar-search-input:focus {
     border-color: rgba(0, 122, 255, 0.4);
-    box-shadow: 
+    box-shadow:
       0 0 0 3px rgba(0, 122, 255, 0.1),
       0 2px 4px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(0, 0, 0, 0.08) inset;
@@ -567,12 +575,12 @@ body {
   }
 
   .sidebar-nav-item-active {
-    background: linear-gradient(90deg, 
-      rgba(0, 122, 255, 0.15) 0%, 
-      rgba(0, 122, 255, 0.1) 100%);
+    background: linear-gradient(90deg,
+        rgba(0, 122, 255, 0.15) 0%,
+        rgba(0, 122, 255, 0.1) 100%);
     color: var(--color-text-primary);
     font-weight: 500;
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1),
       0 0 0 0.5px rgba(0, 122, 255, 0.2) inset;
   }
@@ -585,9 +593,9 @@ body {
     transform: translateY(-50%);
     width: 3px;
     height: 60%;
-    background: linear-gradient(180deg, 
-      rgba(0, 122, 255, 0.8) 0%, 
-      rgba(0, 122, 255, 0.6) 100%);
+    background: linear-gradient(180deg,
+        rgba(0, 122, 255, 0.8) 0%,
+        rgba(0, 122, 255, 0.6) 100%);
     border-radius: 0 2px 2px 0;
     box-shadow: 0 0 8px rgba(0, 122, 255, 0.4);
   }
@@ -598,18 +606,18 @@ body {
   }
 
   :root.light .sidebar-nav-item-active {
-    background: linear-gradient(90deg, 
-      rgba(0, 122, 255, 0.12) 0%, 
-      rgba(0, 122, 255, 0.08) 100%);
-    box-shadow: 
+    background: linear-gradient(90deg,
+        rgba(0, 122, 255, 0.12) 0%,
+        rgba(0, 122, 255, 0.08) 100%);
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.08),
       0 0 0 0.5px rgba(0, 122, 255, 0.15) inset;
   }
 
   :root.light .sidebar-nav-item-active::before {
-    background: linear-gradient(180deg, 
-      rgba(0, 122, 255, 0.6) 0%, 
-      rgba(0, 122, 255, 0.4) 100%);
+    background: linear-gradient(180deg,
+        rgba(0, 122, 255, 0.6) 0%,
+        rgba(0, 122, 255, 0.4) 100%);
     box-shadow: 0 0 6px rgba(0, 122, 255, 0.3);
   }
 
@@ -645,6 +653,100 @@ body {
     background-color: rgba(0, 122, 255, 0.1);
     border-color: rgba(0, 122, 255, 0.15);
   }
+
+  /* ============================================
+     TabBar - macOS Style
+     ============================================ */
+  .tab-bar {
+    background-color: var(--color-glass-panel);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 0.5px solid var(--color-glass-border);
+  }
+
+  /* Light mode tab bar */
+  :root.light .tab-bar {
+    background-color: rgba(255, 255, 255, 0.6);
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .tab-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-radius: 0.5rem;
+    /* 8px - macOS style */
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: 0.5px solid transparent;
+    color: var(--color-text-secondary);
+    user-select: none;
+  }
+
+  .tab-item-inactive:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .tab-item-active {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: var(--color-text-primary);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
+    animation: tab-enter 0.2s ease-out;
+  }
+
+  /* Light mode tabs */
+  :root.light .tab-item-inactive:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.06);
+    color: var(--color-text-primary);
+  }
+
+  :root.light .tab-item-active {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.05),
+      0 0 0 0.5px rgba(255, 255, 255, 0.5) inset;
+  }
+
+  @keyframes tab-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .tab-close-button {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border-radius: 4px;
+    padding: 2px;
+  }
+
+  .tab-item:hover .tab-close-button,
+  .tab-item-active .tab-close-button {
+    opacity: 0.5;
+  }
+
+  .tab-close-button:hover {
+    opacity: 1 !important;
+    background-color: rgba(255, 0, 0, 0.1);
+    color: rgb(255, 100, 100);
+  }
+
+  :root.light .tab-close-button:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    color: rgb(220, 40, 40);
+  }
 }
 
 @layer utilities {
@@ -660,6 +762,7 @@ body {
 
 /* Respect reduced motion preference - macOS accessibility */
 @media (prefers-reduced-motion: reduce) {
+
   .glass-button,
   .glass-button-primary,
   .glass-button-secondary,
@@ -669,7 +772,7 @@ body {
   .glass-button-outline {
     transition: none;
   }
-  
+
   .glass-button:active,
   .glass-button-primary:active,
   .glass-button-secondary:active,

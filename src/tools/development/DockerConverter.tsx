@@ -6,12 +6,18 @@ import composerize from 'composerize';
 
 const TOOL_ID = 'docker-converter';
 
-export const DockerConverter: React.FC = () => {
+interface DockerConverterProps {
+    tabId?: string;
+}
+
+export const DockerConverter: React.FC<DockerConverterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
+
+    const effectiveId = tabId || TOOL_ID;
 
     // input: docker run command
     // output: docker-compose.yml content
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
     };
@@ -32,16 +38,16 @@ export const DockerConverter: React.FC = () => {
             try {
                 // composerize() returns string or throws
                 const yaml = composerize(input.trim());
-                setToolData(TOOL_ID, { output: yaml });
+                setToolData(effectiveId, { output: yaml });
             } catch (e) {
-                setToolData(TOOL_ID, { output: `Error: ${(e as Error).message}\n\nMake sure input is a valid 'docker run' command.` });
+                setToolData(effectiveId, { output: `Error: ${(e as Error).message}\n\nMake sure input is a valid 'docker run' command.` });
             } finally {
                 setLoading(false);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
@@ -55,7 +61,7 @@ export const DockerConverter: React.FC = () => {
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Docker Run Command</label>
                         <textarea
                             value={input}
-                            onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
+                            onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                             className="glass-input flex-1 min-h-[200px] font-mono text-xs leading-relaxed p-4 resize-none"
                             placeholder={"docker run -d -p 80:80 --name web nginx"}
                         />

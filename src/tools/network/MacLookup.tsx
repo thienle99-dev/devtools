@@ -5,11 +5,17 @@ import { useToolStore } from '../../store/toolStore';
 
 const TOOL_ID = 'mac-lookup';
 
-export const MacLookup: React.FC = () => {
+interface MacLookupProps {
+    tabId?: string;
+}
+
+export const MacLookup: React.FC<MacLookupProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
     const [loading, setLoading] = useState(false);
 
-    const data = tools[TOOL_ID] || {
+    const effectiveId = tabId || TOOL_ID;
+
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
         meta: {
@@ -39,18 +45,18 @@ export const MacLookup: React.FC = () => {
             if (response.ok) {
                 const json = await response.json();
                 // json typically { success: true, found: true, company: "Apple, Inc.", ... }
-                setToolData(TOOL_ID, { meta: { result: json } });
+                setToolData(effectiveId, { meta: { result: json } });
             } else {
-                setToolData(TOOL_ID, { meta: { result: { found: false, error: 'Not found or API error' } } });
+                setToolData(effectiveId, { meta: { result: { found: false, error: 'Not found or API error' } } });
             }
         } catch (e) {
-            setToolData(TOOL_ID, { meta: { result: { found: false, error: 'Network error (CORS or Offline)' } } });
+            setToolData(effectiveId, { meta: { result: { found: false, error: 'Network error (CORS or Offline)' } } });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     const getVendorName = () => {
         if (!output) return null;
@@ -73,7 +79,7 @@ export const MacLookup: React.FC = () => {
                     <input
                         type="text"
                         value={input}
-                        onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
+                        onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                         onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
                         className="glass-input w-full text-center text-xl font-mono"
                         placeholder="00:1A:2B:3C:4D:5E"

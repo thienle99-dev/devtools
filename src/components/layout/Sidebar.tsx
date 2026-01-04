@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTabStore } from '../../store/tabStore';
 import { NavLink } from 'react-router-dom';
 import {
     Settings,
@@ -8,6 +9,9 @@ import { cn } from '../../utils/cn';
 import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 
 export const Sidebar: React.FC = () => {
+    const { openTab, activeTabId, tabs } = useTabStore();
+    const activeTab = tabs.find(t => t.id === activeTabId);
+
     return (
         <aside className="w-64 h-full sidebar-macos flex flex-col transition-all duration-300 z-20">
             {/* Search Section - macOS Style */}
@@ -27,7 +31,7 @@ export const Sidebar: React.FC = () => {
                 {CATEGORIES.map((category) => {
                     const tools = getToolsByCategory(category.id);
 
-                    // Skip Favorites/Recent if empty for now, or keep them if you want to implement logic later
+                    // Skip Favorites/Recent if empty for now
                     if (['favorites', 'recent'].includes(category.id) && tools.length === 0) return null;
                     if (tools.length === 0) return null;
 
@@ -38,23 +42,27 @@ export const Sidebar: React.FC = () => {
                                 <category.icon className="w-3.5 h-3.5 mr-2 opacity-60" />
                                 {category.name}
                             </h3>
-                            
+
                             {/* Tool Items - macOS Style */}
                             <div className="space-y-0.5">
-                                {tools.map((tool) => (
-                                    <NavLink
-                                        key={tool.id}
-                                        to={tool.path}
-                                        className={({ isActive }) => cn(
-                                            "sidebar-nav-item flex items-center px-2.5 py-2 rounded-md text-sm transition-all duration-200 group cursor-pointer",
-                                            isActive
-                                                ? "sidebar-nav-item-active"
-                                                : "sidebar-nav-item-inactive"
-                                        )}
-                                    >
-                                        <span className="truncate flex-1">{tool.name}</span>
-                                    </NavLink>
-                                ))}
+                                {tools.map((tool) => {
+                                    const isActive = activeTab?.toolId === tool.id;
+
+                                    return (
+                                        <div
+                                            key={tool.id}
+                                            onClick={() => openTab(tool.id, tool.path, tool.name, tool.description)}
+                                            className={cn(
+                                                "sidebar-nav-item flex items-center px-2.5 py-2 rounded-md text-sm transition-all duration-200 group cursor-pointer",
+                                                isActive
+                                                    ? "sidebar-nav-item-active"
+                                                    : "sidebar-nav-item-inactive"
+                                            )}
+                                        >
+                                            <span className="truncate flex-1">{tool.name}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     );

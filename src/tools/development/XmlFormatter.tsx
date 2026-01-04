@@ -7,11 +7,17 @@ import xmlFormatter from 'xml-formatter';
 
 const TOOL_ID = 'xml-format';
 
-export const XmlFormatter: React.FC = () => {
+interface XmlFormatterProps {
+    tabId?: string;
+}
+
+export const XmlFormatter: React.FC<XmlFormatterProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
+    const effectiveId = tabId || TOOL_ID;
+
     // Default valid options
-    const data = tools[TOOL_ID] || {
+    const data = tools[effectiveId] || {
         input: '',
         output: '',
         options: {
@@ -39,17 +45,17 @@ export const XmlFormatter: React.FC = () => {
                     collapseContent: options.collapseContent,
                     lineSeparator: options.lineSeparator,
                 });
-                setToolData(TOOL_ID, { output: formatted });
+                setToolData(effectiveId, { output: formatted });
 
             } catch (e) {
-                setToolData(TOOL_ID, { output: `Error: ${(e as Error).message}` });
+                setToolData(effectiveId, { output: `Error: ${(e as Error).message}` });
             } finally {
                 setLoading(false);
             }
         }, 300);
     };
 
-    const handleClear = () => clearToolData(TOOL_ID);
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
@@ -63,7 +69,7 @@ export const XmlFormatter: React.FC = () => {
                         <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Indentation</label>
                         <select
                             value={options.indentation}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, indentation: e.target.value } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, indentation: e.target.value } })}
                             className="glass-input h-9 text-xs w-32"
                         >
                             <option value="  ">2 Spaces</option>
@@ -77,7 +83,7 @@ export const XmlFormatter: React.FC = () => {
                             <input
                                 type="checkbox"
                                 checked={options.collapseContent}
-                                onChange={(e) => setToolData(TOOL_ID, { options: { ...options, collapseContent: e.target.checked } })}
+                                onChange={(e) => setToolData(effectiveId, { options: { ...options, collapseContent: e.target.checked } })}
                                 className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
                             />
                             <span className="text-xs font-bold text-foreground-secondary">Collapse Content</span>
@@ -92,7 +98,7 @@ export const XmlFormatter: React.FC = () => {
                             className="flex-1 min-h-[200px]"
                             language="html" // xml fallback
                             value={input}
-                            onChange={(val) => setToolData(TOOL_ID, { input: val })}
+                            onChange={(val) => setToolData(effectiveId, { input: val })}
                             placeholder="<root>...</root>"
                         />
                     </div>
