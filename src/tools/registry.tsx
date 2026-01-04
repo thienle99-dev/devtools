@@ -12,7 +12,8 @@ import {
     Braces
 } from 'lucide-react';
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'favorites' | 'recent';
+
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'favorites' | 'recent';
 
 export interface ToolDefinition {
     id: string;
@@ -38,6 +39,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'formatters', name: 'Formatters', icon: Code2 },
     { id: 'crypto', name: 'Crypto', icon: Hash },
     { id: 'web', name: 'Web', icon: Globe },
+    { id: 'network', name: 'Network', icon: Globe },
 ];
 
 // Import existing tools
@@ -68,6 +70,11 @@ import { UserAgentParser } from './web/UserAgentParser';
 import { JwtParser } from './web/JwtParser';
 import { HttpStatusCode } from './web/HttpStatusCode';
 import { JsonDiff } from './web/JsonDiff';
+
+import { Ipv4SubnetCalculator } from './network/Ipv4SubnetCalculator';
+import { Ipv4Converter } from './network/Ipv4Converter';
+import { MacGenerator } from './network/MacGenerator';
+import { MacLookup } from './network/MacLookup';
 
 // Import placeholders for now (we'll replace them as we build them)
 import { ToolPlaceholder } from '../components/layout/ToolPlaceholder';
@@ -346,6 +353,48 @@ export const TOOLS: ToolDefinition[] = [
         icon: FileJson,
         component: JsonDiff,
         keywords: ['diff', 'compare', 'json', 'text']
+    },
+
+    // Network
+    {
+        id: 'ipv4-subnet',
+        name: 'IPv4 Subnet',
+        path: '/ipv4-subnet',
+        description: 'CIDR calculator and ranges',
+        category: 'network',
+        icon: Globe,
+        component: Ipv4SubnetCalculator,
+        keywords: ['ip', 'subnet', 'cidr', 'network', 'mask']
+    },
+    {
+        id: 'ipv4-converter',
+        name: 'IPv4 Converter',
+        path: '/ipv4-converter',
+        description: 'Decimal, Binary, Hex converter',
+        category: 'network',
+        icon: Binary,
+        component: Ipv4Converter,
+        keywords: ['ip', 'convert', 'decimal', 'binary', 'hex']
+    },
+    {
+        id: 'mac-generator',
+        name: 'MAC Generator',
+        path: '/mac-generator',
+        description: 'Generate Random MAC Addresses',
+        category: 'network',
+        icon: Hash,
+        component: MacGenerator,
+        keywords: ['mac', 'generator', 'address', 'network']
+    },
+    {
+        id: 'mac-lookup',
+        name: 'MAC Lookup',
+        path: '/mac-lookup',
+        description: 'Find vendor by MAC Address',
+        category: 'network',
+        icon: Globe,
+        component: MacLookup,
+        keywords: ['mac', 'lookup', 'vendor', 'oui']
     },
 ];
 

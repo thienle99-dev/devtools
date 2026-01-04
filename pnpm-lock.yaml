@@ -77,6 +77,9 @@ importers:
       he:
         specifier: ^1.2.0
         version: 1.2.0
+      ip-subnet-calculator:
+        specifier: ^2.0.1
+        version: 2.0.1
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -2061,6 +2064,9 @@ packages:
   ip-address@10.1.0:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
     engines: {node: '>= 12'}
+
+  ip-subnet-calculator@2.0.1:
+    resolution: {integrity: sha512-ILUwBIELtMS+gpHjzyNTLks3KtlV7uvSOyzBaIH3lDG/lrfxRQSg8cmShiM959+++01F2LhhIe3ZXn8EIB6ZKw==}
 
   is-ci@3.0.1:
     resolution: {integrity: sha512-ZYvCgrefwqoQ6yTyYUbQu64HsITZ3NfKX1lzaEYdkTDcfKzzCI/wthRRYKkdjHKFVgNiXKAKm65Zo1pk2as/QQ==}
@@ -5303,6 +5309,8 @@ snapshots:
   inherits@2.0.4: {}
 
   ip-address@10.1.0: {}
+
+  ip-subnet-calculator@2.0.1: {}
 
   is-ci@3.0.1:
     dependencies:

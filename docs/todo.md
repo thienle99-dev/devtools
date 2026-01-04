@@ -169,10 +169,10 @@
 
 ### 3.6 Network Tools
 
-- [ ] IPv4 subnet calculator
-- [ ] IPv4 address converter
-- [ ] MAC address generator
-- [ ] MAC address lookup
+- [x] IPv4 subnet calculator
+- [x] IPv4 address converter
+- [x] MAC address generator
+- [x] MAC address lookup
 
 ### 3.7 Math & Measurement Tools
 
