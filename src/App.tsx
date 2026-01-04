@@ -4,6 +4,7 @@ import { useSettingsStore } from './store/settingsStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { WindowControls } from './components/layout/WindowControls';
 import { DynamicIsland } from './components/layout/DynamicIsland';
+import { TrayController } from './components/layout/TrayController';
 import { TOOLS } from './tools/registry';
 
 // Lazy load pages for better initial load performance
@@ -49,6 +50,7 @@ function App() {
 
   return (
     <Router>
+      <TrayController />
       <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
         <WindowControls />
 

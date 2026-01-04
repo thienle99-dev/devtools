@@ -8881,28 +8881,43 @@ function createTray() {
 		else win.show();
 	});
 }
+var recentTools = [];
 function updateTrayMenu() {
 	if (!tray) return;
-	const contextMenu = Menu.buildFromTemplate([
-		{
-			label: win?.isVisible() ? "Hide Window" : "Show Window",
-			click: () => {
-				if (win) {
-					if (win.isVisible()) win.hide();
-					else win.show();
-					updateTrayMenu();
-				}
-			}
-		},
-		{ type: "separator" },
-		{
-			label: "Quit",
-			click: () => {
-				app.isQuitting = true;
-				app.quit();
+	const template = [{
+		label: win?.isVisible() ? "Hide Window" : "Show Window",
+		click: () => {
+			if (win) {
+				if (win.isVisible()) win.hide();
+				else win.show();
+				updateTrayMenu();
 			}
 		}
-	]);
+	}, { type: "separator" }];
+	if (recentTools.length > 0) {
+		template.push({
+			label: "Recent Tools",
+			enabled: false
+		});
+		recentTools.forEach((tool) => {
+			template.push({
+				label: tool.name,
+				click: () => {
+					win?.show();
+					win?.webContents.send("navigate-to", tool.id);
+				}
+			});
+		});
+		template.push({ type: "separator" });
+	}
+	template.push({
+		label: "Quit",
+		click: () => {
+			app.isQuitting = true;
+			app.quit();
+		}
+	});
+	const contextMenu = Menu.buildFromTemplate(template);
 	tray.setContextMenu(contextMenu);
 }
 function createWindow() {
@@ -8950,7 +8965,10 @@ function createWindow() {
 	ipcMain.handle("store-get", (_event, key) => store.get(key));
 	ipcMain.handle("store-set", (_event, key, value) => store.set(key, value));
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
-	ipcMain.on("tray-update-menu", (_event, _items) => {});
+	ipcMain.on("tray-update-menu", (_event, items) => {
+		recentTools = items || [];
+		updateTrayMenu();
+	});
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
 	});

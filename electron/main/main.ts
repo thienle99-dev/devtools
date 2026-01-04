@@ -40,11 +40,13 @@ function createTray() {
   })
 }
 
+// Keep track of tools
+let recentTools: Array<{ id: string; name: string }> = [];
+
 function updateTrayMenu() {
   if (!tray) return
 
-  // Basic menu for now. Renderer will send updates if needed.
-  const contextMenu = Menu.buildFromTemplate([
+  const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: win?.isVisible() ? 'Hide Window' : 'Show Window',
       click: () => {
@@ -55,16 +57,32 @@ function updateTrayMenu() {
         }
       }
     },
-    { type: 'separator' },
-    {
-      label: 'Quit', click: () => {
-        // Force quit
-        (app as any).isQuitting = true;
-        app.quit()
-      }
-    }
-  ])
+    { type: 'separator' }
+  ];
 
+  if (recentTools.length > 0) {
+    template.push({ label: 'Recent Tools', enabled: false });
+    recentTools.forEach(tool => {
+      template.push({
+        label: tool.name,
+        click: () => {
+          win?.show();
+          win?.webContents.send('navigate-to', tool.id);
+        }
+      });
+    });
+    template.push({ type: 'separator' });
+  }
+
+  template.push({
+    label: 'Quit',
+    click: () => {
+      (app as any).isQuitting = true;
+      app.quit()
+    }
+  });
+
+  const contextMenu = Menu.buildFromTemplate(template)
   tray.setContextMenu(contextMenu)
 }
 
@@ -123,8 +141,9 @@ function createWindow() {
   ipcMain.handle('store-delete', (_event, key) => store.delete(key))
 
   // Tray IPC
-  ipcMain.on('tray-update-menu', (_event, _items) => {
-    // Future: Update menu with recent tools from renderer
+  ipcMain.on('tray-update-menu', (_event, items) => {
+    recentTools = items || [];
+    updateTrayMenu();
   });
 
   // Test active push message to Renderer-process.

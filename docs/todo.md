@@ -428,6 +428,14 @@
 - [ ] Add toast for success messages
 - [ ] Style toasts with glassmorphism
 
+### 4.10 System Tray Support
+
+- [x] Basic Tray Icon
+- [x] Minimize to Tray
+- [x] Context Menu (Show/Hide, Quit)
+- [x] Settings (Toggle minimize/start)
+- [x] Quick Access (Recent tools)
+
 ---
 
 ## Phase 5: Performance & Optimization
