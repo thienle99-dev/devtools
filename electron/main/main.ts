@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, c
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -223,8 +223,7 @@ function updateTrayMenu() {
             const text = clipboard.readText();
             if (!text) throw new Error('Empty clipboard');
 
-            const crypto = require('crypto');
-            const hash = crypto.createHash('sha256').update(text).digest('hex');
+            const hash = createHash('sha256').update(text).digest('hex');
             clipboard.writeText(hash);
             new Notification({
               title: '✓ Hash Generated',
@@ -376,6 +375,13 @@ function createWindow() {
   win.on('show', updateTrayMenu);
   win.on('hide', updateTrayMenu);
 
+  win.on('maximize', () => {
+    win?.webContents.send('window-maximized', true);
+  });
+  win.on('unmaximize', () => {
+    win?.webContents.send('window-maximized', false);
+  });
+
 
   // Handle Store IPC
   ipcMain.handle('store-get', (_event, key) => store.get(key))
@@ -438,6 +444,21 @@ function createWindow() {
   ipcMain.on('sync-clipboard-monitoring', (_event, enabled: boolean) => {
     clipboardMonitoringEnabled = enabled;
     updateTrayMenu();
+  });
+
+  // Window Controls IPC
+  ipcMain.on('window-minimize', () => {
+    win?.minimize();
+  });
+  ipcMain.on('window-maximize', () => {
+    if (win?.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win?.maximize();
+    }
+  });
+  ipcMain.on('window-close', () => {
+    win?.close();
   });
 
   // Test active push message to Renderer-process.
@@ -528,6 +549,26 @@ app.whenReady().then(() => {
       si.networkInterfaces()
     ]);
     return { stats, interfaces };
+  });
+
+  ipcMain.handle('get-disk-stats', async () => {
+    const [fsSize, ioStats] = await Promise.all([
+      si.fsSize(),
+      si.disksIO()
+    ]);
+    return { fsSize, ioStats };
+  });
+
+  ipcMain.handle('get-gpu-stats', async () => {
+    return await si.graphics();
+  });
+
+  ipcMain.handle('get-battery-stats', async () => {
+    return await si.battery();
+  });
+
+  ipcMain.handle('get-sensor-stats', async () => {
+    return await si.cpuTemperature();
   });
 
   createTray();

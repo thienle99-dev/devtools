@@ -4,6 +4,10 @@ import { useStatsStore } from './store/statsStore';
 import { CPUModule } from './components/CPUModule';
 import { MemoryModule } from './components/MemoryModule';
 import { NetworkModule } from './components/NetworkModule';
+import { DiskModule } from './components/DiskModule';
+import { GPUModule } from './components/GPUModule';
+import { BatteryModule } from './components/BatteryModule';
+import { SensorsModule } from './components/SensorsModule';
 import { Settings, Activity } from 'lucide-react';
 
 const StatsMonitor: React.FC = () => {
@@ -20,6 +24,8 @@ const StatsMonitor: React.FC = () => {
     );
   }
 
+  const allModules = ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'];
+
   return (
     <div className="h-full flex flex-col p-6 gap-6 overflow-y-auto">
       <div className="flex items-center justify-between">
@@ -32,12 +38,12 @@ const StatsMonitor: React.FC = () => {
         
         <div className="flex gap-2">
             {/* Quick toggles for modules */}
-            <div className="bg-black/20 p-1 rounded-lg flex items-center gap-1 border border-white/5">
-                {['cpu', 'memory', 'network'].map(mod => (
+            <div className="bg-black/20 p-1 rounded-lg flex items-center gap-1 border border-white/5 overflow-x-auto max-w-[400px]">
+                {allModules.map(mod => (
                     <button
                         key={mod}
                         onClick={() => toggleModule(mod)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
                             enabledModules.includes(mod) 
                                 ? 'bg-white/10 text-white shadow-sm' 
                                 : 'text-white/40 hover:text-white/70'
@@ -65,6 +71,22 @@ const StatsMonitor: React.FC = () => {
 
         {enabledModules.includes('network') && metrics.network && (
             <NetworkModule data={metrics.network} />
+        )}
+
+        {enabledModules.includes('disk') && metrics.disk && (
+            <DiskModule data={metrics.disk} />
+        )}
+
+        {enabledModules.includes('gpu') && metrics.gpu && (
+            <GPUModule data={metrics.gpu} />
+        )}
+
+        {enabledModules.includes('battery') && metrics.battery && (
+            <BatteryModule data={metrics.battery} />
+        )}
+
+        {enabledModules.includes('sensors') && metrics.sensors && (
+            <SensorsModule data={metrics.sensors} />
         )}
       </div>
 

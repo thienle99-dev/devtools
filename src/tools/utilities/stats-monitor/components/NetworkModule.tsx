@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NetworkStats } from '../../../../types/stats';
+import type { NetworkStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { Network, ArrowDown, ArrowUp } from 'lucide-react';
 

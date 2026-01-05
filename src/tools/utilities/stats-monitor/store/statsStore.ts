@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { SystemMetrics } from '../../../../types/stats';
+import type { SystemMetrics } from '../../../../types/stats';
 
 interface Widget {
   id: string;
@@ -38,8 +38,8 @@ export const useStatsStore = create<StatsStore>()(
   persist(
     (set) => ({
       metrics: null,
-      enabledModules: ['cpu', 'memory', 'network'],
-      moduleOrder: ['cpu', 'memory', 'network'],
+      enabledModules: ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'],
+      moduleOrder: ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'],
       widgets: [],
       preferences: {
         updateInterval: 2000,

@@ -36,6 +36,11 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   clipboard: {
     readText: () => ipcRenderer.invoke('clipboard-read-text'),
     readImage: () => ipcRenderer.invoke('clipboard-read-image'),
+  },
+  window: {
+    minimize: () => ipcRenderer.send('window-minimize'),
+    maximize: () => ipcRenderer.send('window-maximize'),
+    close: () => ipcRenderer.send('window-close'),
   }
 })
 
@@ -43,4 +48,8 @@ contextBridge.exposeInMainWorld('statsAPI', {
   getCPUStats: () => ipcRenderer.invoke('get-cpu-stats'),
   getMemoryStats: () => ipcRenderer.invoke('get-memory-stats'),
   getNetworkStats: () => ipcRenderer.invoke('get-network-stats'),
+  getDiskStats: () => ipcRenderer.invoke('get-disk-stats'),
+  getGPUStats: () => ipcRenderer.invoke('get-gpu-stats'),
+  getBatteryStats: () => ipcRenderer.invoke('get-battery-stats'),
+  getSensorStats: () => ipcRenderer.invoke('get-sensor-stats'),
 })

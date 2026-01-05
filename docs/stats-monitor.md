@@ -23,6 +23,7 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 ### 1. System Monitoring Modules (9+)
 
 #### CPU Module
+
 - **Real-time CPU utilization** (percentage)
 - **Per-core usage** (multi-core visualization)
 - **Top processes** (CPU usage sorted)
@@ -30,47 +31,55 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 - **Frequency/clock speed**
 
 #### GPU Module
+
 - **GPU utilization** (percentage)
 - **GPU memory usage** (VRAM)
 - **GPU temperature**
 - **Active GPU** (integrated vs discrete)
 
 #### Memory Module
+
 - **RAM usage** (used/total)
 - **Memory pressure** (color-coded)
 - **Swap usage**
 - **Memory breakdown** (wired, active, inactive, free)
 
 #### Disk Module
+
 - **Disk activity** (read/write speeds)
 - **Disk space** (used/free per volume)
 - **Disk I/O** (real-time graphs)
 - **Disk health** (SMART data if available)
 
 #### Network Module
+
 - **Network in/out** (upload/download speeds)
 - **Active connections** (TCP/UDP)
 - **Network interface** (WiFi/Ethernet)
 - **Data usage** (total sent/received)
 
 #### Battery Module (Laptop)
+
 - **Battery level** (percentage)
 - **Battery status** (charging/discharging)
 - **Time remaining** (estimated)
 - **Battery health** (cycle count, capacity)
 
 #### Sensors Module
+
 - **Temperature sensors** (CPU, GPU, SSD, etc.)
 - **Voltage sensors**
 - **Power consumption**
 - **Fan speed** (if available)
 
 #### Bluetooth Module
+
 - **Connected devices** (list)
 - **Device status** (battery level, signal strength)
 - **Device type** (headphones, mouse, keyboard, etc.)
 
 #### Time Zones Module
+
 - **Multiple time zones** (configurable)
 - **World clock** (with city names)
 - **Time zone indicators**
@@ -78,6 +87,7 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 ### 2. Menu Bar Integration
 
 #### Native Menu Bar Dropdown
+
 - **Menu bar icon** (compact, color-coded)
 - **Click to open dropdown** (native macOS style)
 - **Module list** (expandable sections)
@@ -85,6 +95,7 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 - **Real-time graphs** (mini charts in menu)
 
 #### Menu Bar Icon States
+
 - **Color-coded** (green = normal, yellow = warning, red = critical)
 - **Animated** (pulse on high usage)
 - **Customizable** (icon style, position)
@@ -92,6 +103,7 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 ### 3. Customizable Widgets (13+)
 
 #### Widget Types
+
 1. **CPU Widget** - Real-time CPU usage graph
 2. **GPU Widget** - GPU utilization and temperature
 3. **Memory Widget** - RAM usage with breakdown
@@ -107,6 +119,7 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 13. **Combined Widget** - Multiple metrics in one
 
 #### Widget Features
+
 - **Drag-drop positioning** (anywhere on desktop)
 - **Resizable** (small, medium, large)
 - **Customizable appearance** (theme, colors, transparency)
@@ -116,12 +129,14 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 ### 4. Real-time Data Visualization
 
 #### Graph Types
+
 - **Line graphs** (time-series data)
 - **Bar charts** (instantaneous values)
 - **Gauge charts** (percentage indicators)
 - **Sparklines** (mini trends)
 
 #### Update Frequency
+
 - **High priority** (CPU, GPU): 1 second
 - **Medium priority** (Memory, Network): 2-3 seconds
 - **Low priority** (Disk, Battery): 5-10 seconds
@@ -130,18 +145,21 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 ### 5. Preferences & Customization
 
 #### Module Management
+
 - **Enable/disable modules** (reduce CPU usage)
 - **Reorder modules** (drag-drop in menu)
 - **Module settings** (update frequency, thresholds)
 - **Module visibility** (show/hide in menu bar)
 
 #### Appearance
+
 - **Theme** (dark/light/auto)
 - **Color scheme** (custom colors)
 - **Font size** (compact/normal/large)
 - **Graph style** (line/bar/gradient)
 
 #### Widget Configuration
+
 - **Widget placement** (grid/absolute)
 - **Widget size** (presets or custom)
 - **Widget transparency** (0-100%)
@@ -150,6 +168,7 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 ### 6. Advanced Features
 
 #### Stats Remote (Web Dashboard)
+
 - **Enable remote access** (local network)
 - **Web interface** (responsive design)
 - **Access from iPhone/PC** (browser-based)
@@ -157,18 +176,21 @@ A comprehensive system monitoring tool inspired by Stats (34.4k stars on GitHub)
 - **Real-time sync** (WebSocket connection)
 
 #### Fan Control (Legacy Macs)
+
 - **Manual fan control** (if supported)
 - **Fan speed adjustment** (RPM)
 - **Temperature-based auto** (custom curves)
 - **Warning** (use at own risk)
 
 #### External API
+
 - **REST API** (for updates)
 - **Public IP detection** (network info)
 - **System info endpoint** (JSON)
 - **Health check endpoint**
 
 #### Multi-language Support
+
 - **39 languages** (including Vietnamese)
 - **Auto-detect** (system language)
 - **Manual selection** (preferences)
@@ -223,7 +245,7 @@ src/tools/utilities/stats-monitor/
 
 ```typescript
 // System monitoring via Electron/systeminformation
-import si from 'systeminformation';
+import si from "systeminformation";
 
 // Menu bar integration
 let statsTray: Tray | null = null;
@@ -231,33 +253,33 @@ let statsTray: Tray | null = null;
 function createStatsTray() {
   const icon = createStatsIcon(); // Dynamic icon based on CPU usage
   statsTray = new Tray(icon);
-  
+
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'CPU: 45%', enabled: false },
-    { label: 'Memory: 8.2/16 GB', enabled: false },
-    { type: 'separator' },
-    { label: 'Open Stats Monitor', click: () => openStatsWindow() },
-    { label: 'Preferences...', click: () => openPreferences() },
-    { type: 'separator' },
-    { label: 'Quit', click: () => app.quit() }
+    { label: "CPU: 45%", enabled: false },
+    { label: "Memory: 8.2/16 GB", enabled: false },
+    { type: "separator" },
+    { label: "Open Stats Monitor", click: () => openStatsWindow() },
+    { label: "Preferences...", click: () => openPreferences() },
+    { type: "separator" },
+    { label: "Quit", click: () => app.quit() },
   ]);
-  
+
   statsTray.setContextMenu(contextMenu);
-  statsTray.setToolTip('Stats Monitor');
+  statsTray.setToolTip("Stats Monitor");
 }
 
 // IPC handlers for system metrics
-ipcMain.handle('get-cpu-stats', async () => {
+ipcMain.handle("get-cpu-stats", async () => {
   const cpu = await si.cpu();
   const currentLoad = await si.currentLoad();
   return { cpu, load: currentLoad };
 });
 
-ipcMain.handle('get-memory-stats', async () => {
+ipcMain.handle("get-memory-stats", async () => {
   return await si.mem();
 });
 
-ipcMain.handle('get-network-stats', async () => {
+ipcMain.handle("get-network-stats", async () => {
   const networkStats = await si.networkStats();
   const networkInterfaces = await si.networkInterfaces();
   return { stats: networkStats, interfaces: networkInterfaces };
@@ -270,10 +292,10 @@ ipcMain.handle('get-network-stats', async () => {
 
 ```typescript
 // electron/preload/preload.ts
-contextBridge.exposeInMainWorld('statsAPI', {
-  getCPUStats: () => ipcRenderer.invoke('get-cpu-stats'),
-  getMemoryStats: () => ipcRenderer.invoke('get-memory-stats'),
-  getNetworkStats: () => ipcRenderer.invoke('get-network-stats'),
+contextBridge.exposeInMainWorld("statsAPI", {
+  getCPUStats: () => ipcRenderer.invoke("get-cpu-stats"),
+  getMemoryStats: () => ipcRenderer.invoke("get-memory-stats"),
+  getNetworkStats: () => ipcRenderer.invoke("get-network-stats"),
   // ... more methods
 });
 ```
@@ -284,7 +306,7 @@ contextBridge.exposeInMainWorld('statsAPI', {
 
 ```typescript
 // src/tools/utilities/stats-monitor/hooks/useSystemMetrics.ts
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 export const useSystemMetrics = (enabled: boolean, interval: number = 1000) => {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -304,7 +326,7 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 1000) => {
 
         setMetrics({ cpu, memory, network, timestamp: Date.now() });
       } catch (error) {
-        console.error('Failed to fetch metrics:', error);
+        console.error("Failed to fetch metrics:", error);
       }
     };
 
@@ -465,8 +487,8 @@ export const WidgetManager: React.FC = () => {
 
 ```typescript
 // src/tools/utilities/stats-monitor/store/statsStore.ts
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface SystemMetrics {
   cpu: CPUStats;
@@ -496,58 +518,68 @@ interface StatsStore {
   widgets: Widget[];
   preferences: {
     updateInterval: number;
-    theme: 'dark' | 'light' | 'auto';
-    colorScheme: 'default' | 'custom';
+    theme: "dark" | "light" | "auto";
+    colorScheme: "default" | "custom";
     showMenuBar: boolean;
-    menuBarPosition: 'left' | 'right';
+    menuBarPosition: "left" | "right";
   };
 
   // Actions
   updateMetrics: (metrics: SystemMetrics) => void;
   toggleModule: (moduleId: string) => void;
   reorderModules: (order: string[]) => void;
-  addWidget: (widget: Omit<Widget, 'id'>) => void;
+  addWidget: (widget: Omit<Widget, "id">) => void;
   removeWidget: (id: string) => void;
   updateWidget: (id: string, updates: Partial<Widget>) => void;
-  updatePreferences: (prefs: Partial<StatsStore['preferences']>) => void;
+  updatePreferences: (prefs: Partial<StatsStore["preferences"]>) => void;
 }
 
 export const useStatsStore = create<StatsStore>()(
   persist(
     (set) => ({
       metrics: null,
-      enabledModules: ['cpu', 'memory', 'network', 'disk'],
-      moduleOrder: ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery'],
+      enabledModules: ["cpu", "memory", "network", "disk"],
+      moduleOrder: ["cpu", "memory", "network", "disk", "gpu", "battery"],
       widgets: [],
       preferences: {
         updateInterval: 1000,
-        theme: 'auto',
-        colorScheme: 'default',
+        theme: "auto",
+        colorScheme: "default",
         showMenuBar: true,
-        menuBarPosition: 'right',
+        menuBarPosition: "right",
       },
 
       updateMetrics: (metrics) => set({ metrics }),
-      toggleModule: (moduleId) => set((state) => ({
-        enabledModules: state.enabledModules.includes(moduleId)
-          ? state.enabledModules.filter(id => id !== moduleId)
-          : [...state.enabledModules, moduleId]
-      })),
+      toggleModule: (moduleId) =>
+        set((state) => ({
+          enabledModules: state.enabledModules.includes(moduleId)
+            ? state.enabledModules.filter((id) => id !== moduleId)
+            : [...state.enabledModules, moduleId],
+        })),
       reorderModules: (order) => set({ moduleOrder: order }),
-      addWidget: (widget) => set((state) => ({
-        widgets: [...state.widgets, { ...widget, id: `widget-${Date.now()}` }]
-      })),
-      removeWidget: (id) => set((state) => ({
-        widgets: state.widgets.filter(w => w.id !== id)
-      })),
-      updateWidget: (id, updates) => set((state) => ({
-        widgets: state.widgets.map(w => w.id === id ? { ...w, ...updates } : w)
-      })),
-      updatePreferences: (prefs) => set((state) => ({
-        preferences: { ...state.preferences, ...prefs }
-      })),
+      addWidget: (widget) =>
+        set((state) => ({
+          widgets: [
+            ...state.widgets,
+            { ...widget, id: `widget-${Date.now()}` },
+          ],
+        })),
+      removeWidget: (id) =>
+        set((state) => ({
+          widgets: state.widgets.filter((w) => w.id !== id),
+        })),
+      updateWidget: (id, updates) =>
+        set((state) => ({
+          widgets: state.widgets.map((w) =>
+            w.id === id ? { ...w, ...updates } : w
+          ),
+        })),
+      updatePreferences: (prefs) =>
+        set((state) => ({
+          preferences: { ...state.preferences, ...prefs },
+        })),
     }),
-    { name: 'stats-monitor-storage' }
+    { name: "stats-monitor-storage" }
   )
 );
 ```
@@ -616,12 +648,14 @@ export const useStatsStore = create<StatsStore>()(
 ## User Flow
 
 ### Initial Setup
+
 1. **Install** → Open app
 2. **Grant Permissions** → Accessibility, Full Disk Access (if needed)
 3. **Menu bar icon appears** → Click to open
 4. **Onboarding** → Quick tour of features
 
 ### Daily Usage
+
 1. **Click menu bar icon** → View quick stats
 2. **Toggle modules** → Enable/disable as needed
 3. **Open full window** → Detailed view
@@ -629,6 +663,7 @@ export const useStatsStore = create<StatsStore>()(
 5. **Check preferences** → Adjust settings
 
 ### Customization Flow
+
 1. **Open Preferences** → Settings modal
 2. **Reorder modules** → Drag-drop in list
 3. **Configure widgets** → Add/remove/resize
@@ -662,12 +697,14 @@ export const useStatsStore = create<StatsStore>()(
 ## Dependencies
 
 ### Core
+
 - `systeminformation` - System metrics (Electron main process)
 - `chart.js` + `react-chartjs-2` - Graph visualization
 - `zustand` - State management
 - `date-fns` - Time formatting
 
 ### Optional
+
 - `react-draggable` - Widget dragging
 - `react-resizable` - Widget resizing
 - `express` - Stats Remote web server
@@ -676,6 +713,7 @@ export const useStatsStore = create<StatsStore>()(
 ## Implementation Checklist
 
 ### Phase 1: Core Monitoring
+
 - [x] Setup Electron IPC for system metrics
 - [x] Implement CPU module
 - [x] Implement Memory module
@@ -684,14 +722,16 @@ export const useStatsStore = create<StatsStore>()(
 - [x] Real-time graph visualization
 
 ### Phase 2: Additional Modules
-- [ ] Disk module
-- [ ] GPU module
-- [ ] Battery module
-- [ ] Sensors module
+
+- [x] Disk module
+- [x] GPU module
+- [x] Battery module
+- [x] Sensors module
 - [ ] Bluetooth module
 - [ ] Time zones module
 
 ### Phase 3: Widgets & Customization
+
 - [ ] Widget system architecture
 - [ ] Drag-drop widget positioning
 - [ ] Widget resizing
@@ -700,6 +740,7 @@ export const useStatsStore = create<StatsStore>()(
 - [ ] Preferences UI
 
 ### Phase 4: Advanced Features
+
 - [ ] Stats Remote (web dashboard)
 - [ ] Multi-language support
 - [ ] Fan control (if supported)
@@ -707,6 +748,7 @@ export const useStatsStore = create<StatsStore>()(
 - [ ] Auto-update mechanism
 
 ### Phase 5: Polish
+
 - [ ] Keyboard shortcuts
 - [ ] Onboarding flow
 - [ ] Performance optimization
@@ -729,4 +771,3 @@ export const useStatsStore = create<StatsStore>()(
 - **Alerts** - Threshold-based notifications
 - **Historical Data** - Long-term trends
 - **Mobile App** - Companion app for remote monitoring
-

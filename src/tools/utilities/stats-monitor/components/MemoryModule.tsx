@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MemoryStats } from '../../../../types/stats';
+import {type MemoryStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { BrainCircuit } from 'lucide-react';
 

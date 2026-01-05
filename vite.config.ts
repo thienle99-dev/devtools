@@ -11,6 +11,13 @@ export default defineConfig({
       main: {
         // Synonym for `entry`
         entry: 'electron/main/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['systeminformation', 'electron-store'],
+            },
+          },
+        },
       },
       preload: {
         // Synonym for `input`

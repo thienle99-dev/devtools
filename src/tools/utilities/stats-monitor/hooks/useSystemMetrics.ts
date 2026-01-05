@@ -17,16 +17,24 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
         }
 
         // Batch requests to reduce IPC overhead
-        const [cpu, memory, network] = await Promise.all([
+        const [cpu, memory, network, disk, gpu, battery, sensors] = await Promise.all([
           window.statsAPI.getCPUStats(),
           window.statsAPI.getMemoryStats(),
           window.statsAPI.getNetworkStats(),
+          window.statsAPI.getDiskStats(),
+          window.statsAPI.getGPUStats(),
+          window.statsAPI.getBatteryStats(),
+          window.statsAPI.getSensorStats(),
         ]);
 
         setMetrics({ 
           cpu, 
           memory, 
-          network, 
+          network,
+          disk,
+          gpu,
+          battery,
+          sensors, 
           timestamp: Date.now() 
         });
       } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CPUStats } from '../../../../types/stats';
+import type { CPUStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { Cpu } from 'lucide-react';
 

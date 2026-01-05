@@ -31,6 +31,65 @@ export interface MemoryStats {
   swapfree: number;
 }
 
+export interface DiskStats {
+  fsSize: {
+    fs: string;
+    type: string;
+    size: number;
+    used: number;
+    available: number;
+    use: number;
+    mount: string;
+  }[];
+  ioStats: {
+    rIO: number;
+    wIO: number;
+    tIO: number;
+    rIO_sec: number;
+    wIO_sec: number;
+    tIO_sec: number;
+  };
+}
+
+export interface GPUStats {
+  controllers: {
+    vendor: string;
+    model: string;
+    bus: string;
+    vram: number;
+    vramDynamic: boolean;
+    utilizationGpu: number;
+    utilizationMemory: number; 
+    temperatureGpu: number;
+  }[];
+}
+
+export interface BatteryStats {
+  hasBattery: boolean;
+  cycleCount: number;
+  isCharging: boolean;
+  designedCapacity: number;
+  maxCapacity: number;
+  currentCapacity: number;
+  voltage: number;
+  capacityUnit: string;
+  percent: number;
+  timeRemaining: number;
+  acConnected: boolean;
+  type: string;
+  model: string;
+  manufacturer: string;
+  serial: string;
+}
+
+export interface SensorStats {
+  cpuTemperature: {
+    main: number;
+    cores: number[];
+    max: number;
+  };
+}
+
 export interface NetworkStats {
   stats: {
     iface: string;
@@ -56,6 +115,10 @@ export interface SystemMetrics {
   cpu: CPUStats;
   memory: MemoryStats;
   network: NetworkStats;
+  disk?: DiskStats;
+  gpu?: GPUStats;
+  battery?: BatteryStats;
+  sensors?: SensorStats;
   timestamp: number;
 }
 
@@ -65,6 +128,10 @@ declare global {
       getCPUStats: () => Promise<CPUStats>;
       getMemoryStats: () => Promise<MemoryStats>;
       getNetworkStats: () => Promise<NetworkStats>;
+      getDiskStats: () => Promise<DiskStats>;
+      getGPUStats: () => Promise<GPUStats>;
+      getBatteryStats: () => Promise<BatteryStats>;
+      getSensorStats: () => Promise<SensorStats>;
     }
   }
 }

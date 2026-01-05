@@ -12,7 +12,8 @@ import {
     Braces,
     FileImage,
     Settings,
-    Clipboard
+    Clipboard,
+    Activity
 } from 'lucide-react';
 
 
@@ -486,6 +487,16 @@ export const TOOLS: ToolDefinition[] = [
         icon: Clipboard,
         component: ClipboardManager,
         keywords: ['clipboard', 'copy', 'paste', 'history', 'manager']
+    },
+    {
+        id: 'stats-monitor',
+        name: 'Process Monitor',
+        path: '/stats-monitor',
+        description: 'Real-time system resource monitoring',
+        category: 'utilities',
+        icon: Activity,
+        component: StatsMonitor,
+        keywords: ['cpu', 'memory', 'disk', 'network', 'battery', 'gpu', 'stats', 'monitor']
     },
 
     // Settings (Special tool - not in any category)
