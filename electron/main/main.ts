@@ -77,6 +77,7 @@ function toggleWindow() {
 // Keep track of tools
 let recentTools: Array<{ id: string; name: string }> = [];
 let clipboardItems: Array<{ id: string; content: string; timestamp: number }> = [];
+let clipboardMonitoringEnabled = true;
 
 function updateTrayMenu() {
   if (!tray) return
@@ -135,6 +136,24 @@ function updateTrayMenu() {
             }
           };
         }),
+        { type: 'separator' },
+        {
+          label: clipboardMonitoringEnabled ? '▶ Monitoring Active' : '⏸ Monitoring Paused',
+          type: 'checkbox',
+          checked: clipboardMonitoringEnabled,
+          click: () => {
+            clipboardMonitoringEnabled = !clipboardMonitoringEnabled;
+            win?.webContents.send('toggle-clipboard-monitoring', clipboardMonitoringEnabled);
+            updateTrayMenu();
+            new Notification({
+              title: clipboardMonitoringEnabled ? '✓ Monitoring Enabled' : '⏸ Monitoring Paused',
+              body: clipboardMonitoringEnabled
+                ? 'Clipboard will be monitored automatically'
+                : 'Clipboard monitoring paused',
+              silent: true
+            }).show();
+          }
+        },
         { type: 'separator' },
         {
           label: '✕ Clear All History',
@@ -286,7 +305,7 @@ function updateTrayMenu() {
 
   // === SETTINGS & QUIT ===
   template.push({
-    label: '⚙ Settings',
+    label: '⚙️ Settings',
     click: () => {
       win?.show();
       win?.webContents.send('navigate-to', 'settings');
@@ -414,6 +433,12 @@ function createWindow() {
     }
   });
 
+  // Sync clipboard monitoring state from renderer
+  ipcMain.on('sync-clipboard-monitoring', (_event, enabled: boolean) => {
+    clipboardMonitoringEnabled = enabled;
+    updateTrayMenu();
+  });
+
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
@@ -448,7 +473,7 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   (app as any).isQuitting = true;
-  
+
   // Clear clipboard on quit if setting is enabled
   if (win) {
     win.webContents.send('check-clear-clipboard-on-quit');
@@ -462,7 +487,7 @@ app.whenReady().then(() => {
     globalShortcut.register('CommandOrControl+Shift+D', () => {
       toggleWindow();
     });
-    
+
     // Clipboard manager shortcut (Maccy style)
     globalShortcut.register('CommandOrControl+Shift+C', () => {
       win?.show();

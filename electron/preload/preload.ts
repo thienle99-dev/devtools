@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   tray: {
     updateMenu: (items: any[]) => ipcRenderer.send('tray-update-menu', items),
     updateClipboard: (items: any[]) => ipcRenderer.send('tray-update-clipboard', items),
+    syncMonitoring: (enabled: boolean) => ipcRenderer.send('sync-clipboard-monitoring', enabled),
   },
   clipboard: {
     readText: () => ipcRenderer.invoke('clipboard-read-text'),

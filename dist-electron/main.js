@@ -8910,6 +8910,7 @@ function toggleWindow() {
 }
 var recentTools = [];
 var clipboardItems = [];
+var clipboardMonitoringEnabled = true;
 function updateTrayMenu() {
 	if (!tray) return;
 	const template = [{
@@ -8956,6 +8957,22 @@ function updateTrayMenu() {
 						}
 					};
 				}),
+				{ type: "separator" },
+				{
+					label: clipboardMonitoringEnabled ? "▶ Monitoring Active" : "⏸ Monitoring Paused",
+					type: "checkbox",
+					checked: clipboardMonitoringEnabled,
+					click: () => {
+						clipboardMonitoringEnabled = !clipboardMonitoringEnabled;
+						win?.webContents.send("toggle-clipboard-monitoring", clipboardMonitoringEnabled);
+						updateTrayMenu();
+						new Notification({
+							title: clipboardMonitoringEnabled ? "✓ Monitoring Enabled" : "⏸ Monitoring Paused",
+							body: clipboardMonitoringEnabled ? "Clipboard will be monitored automatically" : "Clipboard monitoring paused",
+							silent: true
+						}).show();
+					}
+				},
 				{ type: "separator" },
 				{
 					label: "✕ Clear All History",
@@ -9099,7 +9116,7 @@ function updateTrayMenu() {
 		template.push({ type: "separator" });
 	}
 	template.push({
-		label: "⚙ Settings",
+		label: "⚙️ Settings",
 		click: () => {
 			win?.show();
 			win?.webContents.send("navigate-to", "settings");
@@ -9196,6 +9213,10 @@ function createWindow() {
 			console.error("Failed to read clipboard image:", error$1);
 			return null;
 		}
+	});
+	ipcMain.on("sync-clipboard-monitoring", (_event, enabled) => {
+		clipboardMonitoringEnabled = enabled;
+		updateTrayMenu();
 	});
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());

@@ -52,6 +52,30 @@ export const ClipboardManager: React.FC = () => {
         addToHistory(TOOL_ID);
     }, [addToHistory]);
 
+    // Sync monitoring state with tray
+    useEffect(() => {
+        if ((window as any).ipcRenderer?.tray?.syncMonitoring) {
+            (window as any).ipcRenderer.tray.syncMonitoring(settings.enableMonitoring);
+        }
+    }, [settings.enableMonitoring]);
+
+    // Listen for tray toggle events
+    useEffect(() => {
+        const handleTrayToggle = (_event: any, enabled: boolean) => {
+            updateSettings({ enableMonitoring: enabled });
+        };
+
+        if ((window as any).ipcRenderer?.on) {
+            (window as any).ipcRenderer.on('toggle-clipboard-monitoring', handleTrayToggle);
+
+            return () => {
+                if ((window as any).ipcRenderer?.removeAllListeners) {
+                    (window as any).ipcRenderer.removeAllListeners('toggle-clipboard-monitoring');
+                }
+            };
+        }
+    }, [updateSettings]);
+
     // Toggle monitoring
     const handleToggleMonitoring = () => {
         updateSettings({ enableMonitoring: !settings.enableMonitoring });
