@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiskStats } from '../../../../types/stats';
-import { Graph } from './Graph';
+import { LightweightGraph } from './LightweightGraph';
 import { HardDrive } from 'lucide-react';
 
 interface DiskModuleProps {
   data: DiskStats;
 }
 
-const MAX_POINTS = 30;
-const LABELS = Array(MAX_POINTS).fill('');
+const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
   const [readHistory, setReadHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
@@ -74,9 +73,8 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
        <div className="grid grid-cols-2 gap-2">
         {/* Read Graph */}
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
-            <Graph 
+            <LightweightGraph 
                 data={readHistory} 
-                labels={LABELS} 
                 color="#10b981" 
                 height={64}
                 min={0}
@@ -86,9 +84,8 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
         
         {/* Write Graph */}
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
-            <Graph 
+            <LightweightGraph 
                 data={writeHistory} 
-                labels={LABELS} 
                 color="#f43f5e" 
                 height={64}
                 min={0}
@@ -115,3 +112,5 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
 });
 
 DiskModule.displayName = 'DiskModule';
+
+export default DiskModule;

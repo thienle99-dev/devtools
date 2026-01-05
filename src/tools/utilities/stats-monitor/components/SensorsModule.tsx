@@ -63,3 +63,5 @@ export const SensorsModule: React.FC<SensorsModuleProps> = ({ data }) => {
     </div>
   );
 };
+
+export default SensorsModule;

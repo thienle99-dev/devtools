@@ -105,3 +105,5 @@ export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
     </div>
   );
 };
+
+export default BatteryModule;

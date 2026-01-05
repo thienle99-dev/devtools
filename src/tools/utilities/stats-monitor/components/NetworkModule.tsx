@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { NetworkStats } from '../../../../types/stats';
-import { Graph } from './Graph';
+import { LightweightGraph } from './LightweightGraph';
 import { Network, ArrowDown, ArrowUp } from 'lucide-react';
 
 interface NetworkModuleProps {
   data: NetworkStats;
 }
 
-const MAX_POINTS = 30;
-const LABELS = Array(MAX_POINTS).fill('');
+const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data }) => {
   const [rxHistory, setRxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
@@ -74,9 +73,8 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
       <div className="grid grid-cols-2 gap-2">
         {/* Download Graph */}
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
-            <Graph 
+            <LightweightGraph 
                 data={rxHistory} 
-                labels={LABELS} 
                 color="#10b981" 
                 height={64}
                 min={0}
@@ -86,9 +84,8 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
         
         {/* Upload Graph */}
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
-            <Graph 
+            <LightweightGraph 
                 data={txHistory} 
-                labels={LABELS} 
                 color="#3b82f6" 
                 height={64}
                 min={0}
@@ -106,3 +103,5 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
 });
 
 NetworkModule.displayName = 'NetworkModule';
+
+export default NetworkModule;

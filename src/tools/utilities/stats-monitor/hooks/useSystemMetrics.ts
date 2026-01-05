@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SystemMetrics } from '../../../../types/stats';
 
-export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+export const useSystemMetrics = (enabledModules: string[], interval: number = 2000) => {
+  const [metrics, setMetrics] = useState<Partial<SystemMetrics> | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
@@ -14,7 +14,7 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
+    if (enabledModules.length === 0) {
       setMetrics(null);
       return;
     }
@@ -27,29 +27,52 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
           return;
         }
 
-        // Batch requests to reduce IPC overhead
-        const [cpu, memory, network, disk, gpu, battery, sensors] = await Promise.all([
-          window.statsAPI.getCPUStats(),
-          window.statsAPI.getMemoryStats(),
-          window.statsAPI.getNetworkStats(),
-          window.statsAPI.getDiskStats(),
-          window.statsAPI.getGPUStats(),
-          window.statsAPI.getBatteryStats(),
-          window.statsAPI.getSensorStats(),
-        ]);
+        // Chỉ fetch metrics cho modules được bật để giảm IPC overhead
+        const promises: Promise<any>[] = [];
+        const keys: (keyof SystemMetrics)[] = [];
 
+        if (enabledModules.includes('cpu')) {
+          promises.push(window.statsAPI.getCPUStats());
+          keys.push('cpu');
+        }
+        if (enabledModules.includes('memory')) {
+          promises.push(window.statsAPI.getMemoryStats());
+          keys.push('memory');
+        }
+        if (enabledModules.includes('network')) {
+          promises.push(window.statsAPI.getNetworkStats());
+          keys.push('network');
+        }
+        if (enabledModules.includes('disk')) {
+          promises.push(window.statsAPI.getDiskStats());
+          keys.push('disk');
+        }
+        if (enabledModules.includes('gpu')) {
+          promises.push(window.statsAPI.getGPUStats());
+          keys.push('gpu');
+        }
+        if (enabledModules.includes('battery')) {
+          promises.push(window.statsAPI.getBatteryStats());
+          keys.push('battery');
+        }
+        if (enabledModules.includes('sensors')) {
+          promises.push(window.statsAPI.getSensorStats());
+          keys.push('sensors');
+        }
+
+        const results = await Promise.all(promises);
+        
         // Only update if component is still mounted
         if (isMountedRef.current) {
-          setMetrics({ 
-            cpu, 
-            memory, 
-            network,
-            disk,
-            gpu,
-            battery,
-            sensors, 
-            timestamp: Date.now() 
+          const newMetrics: Partial<SystemMetrics> = {
+            timestamp: Date.now()
+          };
+          
+          keys.forEach((key, index) => {
+            newMetrics[key] = results[index];
           });
+          
+          setMetrics(newMetrics);
         }
       } catch (error) {
         console.error('Failed to fetch metrics:', error);
@@ -74,7 +97,7 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
         intervalRef.current = null;
       }
     };
-  }, [enabled, interval]);
+  }, [enabledModules, interval]);
 
   return metrics;
 };

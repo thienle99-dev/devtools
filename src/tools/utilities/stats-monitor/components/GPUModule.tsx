@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import type { GPUStats } from '../../../../types/stats';
-import { Graph } from './Graph';
+import { LightweightGraph } from './LightweightGraph';
 import { MonitorPlay } from 'lucide-react';
 
 interface GPUModuleProps {
   data: GPUStats;
 }
 
-const MAX_POINTS = 30;
-const LABELS = Array(MAX_POINTS).fill('');
+const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const GPUModule: React.FC<GPUModuleProps> = React.memo(({ data }) => {
     const [history, setHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
@@ -58,9 +57,8 @@ export const GPUModule: React.FC<GPUModuleProps> = React.memo(({ data }) => {
       </div>
 
       <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
-         <Graph 
+         <LightweightGraph 
             data={history} 
-            labels={LABELS} 
             color={color} 
             height={64}
             max={100}
@@ -82,3 +80,5 @@ export const GPUModule: React.FC<GPUModuleProps> = React.memo(({ data }) => {
 });
 
 GPUModule.displayName = 'GPUModule';
+
+export default GPUModule;

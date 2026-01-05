@@ -1,14 +1,25 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense } from 'react';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import { useStatsStore } from './store/statsStore';
-import { CPUModule } from './components/CPUModule';
-import { MemoryModule } from './components/MemoryModule';
-import { NetworkModule } from './components/NetworkModule';
-import { DiskModule } from './components/DiskModule';
-import { GPUModule } from './components/GPUModule';
-import { BatteryModule } from './components/BatteryModule';
-import { SensorsModule } from './components/SensorsModule';
+import { getModuleColors } from './constants/moduleColors';
 import { Settings, Activity, RefreshCw, ChevronDown } from 'lucide-react';
+
+// Lazy load modules để code splitting
+const CPUModule = React.lazy(() => import('./components/CPUModule'));
+const MemoryModule = React.lazy(() => import('./components/MemoryModule'));
+const NetworkModule = React.lazy(() => import('./components/NetworkModule'));
+const DiskModule = React.lazy(() => import('./components/DiskModule'));
+const GPUModule = React.lazy(() => import('./components/GPUModule'));
+const BatteryModule = React.lazy(() => import('./components/BatteryModule'));
+const SensorsModule = React.lazy(() => import('./components/SensorsModule'));
+
+// Loading skeleton cho modules
+const ModuleSkeleton = () => (
+  <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] animate-pulse">
+    <div className="h-20 bg-[var(--color-glass-input)] rounded-lg mb-4" />
+    <div className="h-4 bg-[var(--color-glass-input)] rounded w-3/4" />
+  </div>
+);
 
 const INTERVAL_PRESETS = [
   { label: '1s', value: 1000 },
@@ -20,9 +31,9 @@ const INTERVAL_PRESETS = [
 
 const StatsMonitor: React.FC = () => {
   const { enabledModules, preferences, toggleModule, updatePreferences } = useStatsStore();
-  // Chỉ bắt đầu đọc metrics khi có ít nhất một module được bật
+  // Chỉ fetch metrics cho modules được bật
+  const metrics = useSystemMetrics(enabledModules, preferences.updateInterval);
   const hasEnabledModules = enabledModules.length > 0;
-  const metrics = useSystemMetrics(hasEnabledModules, preferences.updateInterval);
 
   const allModules = React.useMemo(() => ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'], []);
 
@@ -56,16 +67,7 @@ const StatsMonitor: React.FC = () => {
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
             {allModules.map(mod => {
               const isEnabled = enabledModules.includes(mod);
-              const moduleColors: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-                cpu: { bg: 'bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
-                memory: { bg: 'bg-blue-500/15', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/30', dot: 'bg-blue-500' },
-                network: { bg: 'bg-purple-500/15', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/30', dot: 'bg-purple-500' },
-                disk: { bg: 'bg-violet-500/15', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-500/30', dot: 'bg-violet-500' },
-                gpu: { bg: 'bg-pink-500/15', text: 'text-pink-600 dark:text-pink-400', border: 'border-pink-500/30', dot: 'bg-pink-500' },
-                battery: { bg: 'bg-green-500/15', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/30', dot: 'bg-green-500' },
-                sensors: { bg: 'bg-orange-500/15', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-500/30', dot: 'bg-orange-500' },
-              };
-              const colors = moduleColors[mod] || { bg: 'bg-gray-500/15', text: 'text-gray-600 dark:text-gray-400', border: 'border-gray-500/30', dot: 'bg-gray-500' };
+              const colors = getModuleColors(mod);
               
               return (
                 <button
@@ -213,31 +215,45 @@ const StatsMonitor: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {enabledModules.includes('cpu') && metrics.cpu && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <CPUModule data={metrics.cpu} />
+          </Suspense>
         )}
         
         {enabledModules.includes('memory') && metrics.memory && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <MemoryModule data={metrics.memory} />
+          </Suspense>
         )}
 
         {enabledModules.includes('network') && metrics.network && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <NetworkModule data={metrics.network} />
+          </Suspense>
         )}
 
         {enabledModules.includes('disk') && metrics.disk && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <DiskModule data={metrics.disk} />
+          </Suspense>
         )}
 
         {enabledModules.includes('gpu') && metrics.gpu && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <GPUModule data={metrics.gpu} />
+          </Suspense>
         )}
 
         {enabledModules.includes('battery') && metrics.battery && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <BatteryModule data={metrics.battery} />
+          </Suspense>
         )}
 
         {enabledModules.includes('sensors') && metrics.sensors && (
+          <Suspense fallback={<ModuleSkeleton />}>
             <SensorsModule data={metrics.sensors} />
+          </Suspense>
         )}
       </div>
 
