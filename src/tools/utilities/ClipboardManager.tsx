@@ -21,6 +21,7 @@ export const ClipboardManager: React.FC = () => {
     // Clipboard store
     const items = useClipboardStore((state) => state.items);
     const settings = useClipboardStore((state) => state.settings);
+    const updateSettings = useClipboardStore((state) => state.updateSettings);
     const isLoading = useClipboardStore((state) => state.isLoading);
     const pinItem = useClipboardStore((state) => state.pinItem);
     const unpinItem = useClipboardStore((state) => state.unpinItem);
@@ -50,6 +51,11 @@ export const ClipboardManager: React.FC = () => {
     useEffect(() => {
         addToHistory(TOOL_ID);
     }, [addToHistory]);
+
+    // Toggle monitoring
+    const handleToggleMonitoring = () => {
+        updateSettings({ enableMonitoring: !settings.enableMonitoring });
+    };
 
     // Filter and search items with enhanced search
     const filteredItems = useMemo(() => {
@@ -209,6 +215,8 @@ export const ClipboardManager: React.FC = () => {
                         onOpenSettings={() => setShowSettings(true)}
                         onOpenStatistics={() => setShowStatistics(true)}
                         onOpenCategories={() => setShowCategoryManager(true)}
+                        monitoringEnabled={settings.enableMonitoring}
+                        onToggleMonitoring={handleToggleMonitoring}
                         searchInputRef={searchInputRef}
                     />
 

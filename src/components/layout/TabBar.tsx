@@ -158,10 +158,10 @@ export const TabBar: React.FC = React.memo(() => {
             {canScrollLeft && (
                 <button
                     onClick={scrollLeft}
-                    className="tab-scroll-button tab-scroll-button-left absolute left-0 z-30 h-full px-2 flex items-center hover:bg-[var(--color-glass-button-hover)] transition-colors"
+                    className="tab-scroll-button tab-scroll-button-left absolute left-0 z-30 h-full w-8 flex items-center justify-center backdrop-blur-sm bg-gradient-to-r from-[var(--color-glass-panel)]/90 to-transparent hover:from-[var(--color-glass-button-hover)] transition-all duration-200 group"
                     aria-label="Scroll left"
                 >
-                    <ChevronLeft className="w-4 h-4 text-foreground-muted hover:text-foreground" />
+                    <ChevronLeft className="w-3.5 h-3.5 text-foreground-muted/60 group-hover:text-foreground/80 transition-all duration-200" strokeWidth={2.5} />
                 </button>
             )}
 
@@ -239,10 +239,10 @@ export const TabBar: React.FC = React.memo(() => {
             {canScrollRight && (
                 <button
                     onClick={scrollRight}
-                    className="tab-scroll-button tab-scroll-button-right absolute right-0 z-30 h-full px-2 flex items-center hover:bg-[var(--color-glass-button-hover)] transition-colors"
+                    className="tab-scroll-button tab-scroll-button-right absolute right-0 z-30 h-full w-8 flex items-center justify-center backdrop-blur-sm bg-gradient-to-l from-[var(--color-glass-panel)]/90 to-transparent hover:from-[var(--color-glass-button-hover)] transition-all duration-200 group"
                     aria-label="Scroll right"
                 >
-                    <ChevronRight className="w-4 h-4 text-foreground-muted hover:text-foreground" />
+                    <ChevronRight className="w-3.5 h-3.5 text-foreground-muted/60 group-hover:text-foreground/80 transition-all duration-200" strokeWidth={2.5} />
                 </button>
             )}
 

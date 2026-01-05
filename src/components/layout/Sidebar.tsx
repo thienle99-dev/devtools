@@ -71,9 +71,12 @@ export const Sidebar: React.FC = React.memo(() => {
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 if (e.altKey) {
+                                                    // Alt+Click: Force new tab
                                                     openTab(tool.id, tool.path, tool.name, tool.description, true);
                                                     navigate(tool.path);
                                                 } else {
+                                                    // Normal click: Open or switch to existing tab
+                                                    openTab(tool.id, tool.path, tool.name, tool.description, false);
                                                     navigate(tool.path);
                                                 }
                                             }}
@@ -106,8 +109,8 @@ export const Sidebar: React.FC = React.memo(() => {
                 <div
                     onClick={(e) => {
                         e.preventDefault();
+                        openTab('settings', '/settings', 'Settings', 'Customize your experience and manage application preferences', false);
                         navigate('/settings');
-                        openTab('settings', '/settings', 'Settings', 'Customize your experience and manage application preferences');
                     }}
                     className={cn(
                         "sidebar-settings-button flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm transition-all duration-200 cursor-pointer font-medium",

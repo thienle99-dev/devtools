@@ -1,5 +1,5 @@
 import React, { useState, RefObject } from 'react';
-import { Search, Filter, Settings, Trash2, TrendingUp, Tag } from 'lucide-react';
+import { Search, Filter, Settings, Trash2, TrendingUp, Tag, Play, Pause } from 'lucide-react';
 import type { FilterOptions, SearchMode } from '../../../store/clipboardStore';
 
 interface SearchAndFilterProps {
@@ -11,6 +11,8 @@ interface SearchAndFilterProps {
     onOpenSettings: () => void;
     onOpenStatistics?: () => void;
     onOpenCategories?: () => void;
+    monitoringEnabled?: boolean;
+    onToggleMonitoring?: () => void;
     searchInputRef?: RefObject<HTMLInputElement | null>;
 }
 
@@ -23,6 +25,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     onOpenSettings,
     onOpenStatistics,
     onOpenCategories,
+    monitoringEnabled = false,
+    onToggleMonitoring,
     searchInputRef,
 }) => {
     const [showFilters, setShowFilters] = useState(false);
@@ -45,6 +49,24 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                         onChange={(e) => onSearchChange(e.target.value)}
                     />
                 </div>
+
+                {/* Monitoring Toggle */}
+                {onToggleMonitoring && (
+                    <button
+                        onClick={onToggleMonitoring}
+                        className={`p-3 rounded-xl border transition-all duration-200 ${monitoringEnabled
+                                ? 'bg-green-500/10 border-green-500 text-green-500'
+                                : 'bg-surface-elevated border-border text-foreground-muted hover:text-foreground hover:border-accent/50'
+                            }`}
+                        title={monitoringEnabled ? 'Monitoring Active (Click to Pause)' : 'Monitoring Paused (Click to Resume)'}
+                    >
+                        {monitoringEnabled ? (
+                            <Play className="w-5 h-5" />
+                        ) : (
+                            <Pause className="w-5 h-5" />
+                        )}
+                    </button>
+                )}
 
                 {/* Filter Toggle */}
                 <button
