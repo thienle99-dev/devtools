@@ -21,17 +21,26 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
     onDelete,
     onViewFull,
 }) => {
-    const { copyToClipboard } = useClipboard();
+    const { copyToClipboard, copyImageToClipboard } = useClipboard();
     const [copied, setCopied] = useState(false);
     const [showPlainTextOption, setShowPlainTextOption] = useState(false);
 
     const handleCopy = async (asPlainText = false) => {
-        let content = item.content;
-        if (asPlainText) {
-            // Remove all formatting - convert to plain text
-            content = content.replace(/[\r\n]+/g, ' ').trim();
+        let success = false;
+
+        if (item.type === 'image') {
+            // Copy image as actual image to clipboard
+            success = await copyImageToClipboard(item.content, item.metadata?.mimeType);
+        } else {
+            // Copy text/link/file content
+            let content = item.content;
+            if (asPlainText) {
+                // Remove all formatting - convert to plain text
+                content = content.replace(/[\r\n]+/g, ' ').trim();
+            }
+            success = await copyToClipboard(content);
         }
-        const success = await copyToClipboard(content);
+
         if (success) {
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
@@ -98,33 +107,71 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
         >
             {/* Header */}
             <div className="flex items-start gap-4 mb-3">
-                {/* Type Icon */}
-                <div className={`flex-shrink-0 p-2.5 rounded-lg ${item.pinned ? 'bg-accent/10' : 'bg-surface'}`}>
-                    {getTypeIcon()}
-                </div>
+                {/* Type Icon or Image Thumbnail */}
+                {item.type === 'image' ? (
+                    <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-surface border border-border">
+                        <img
+                            src={item.content}
+                            alt="Clipboard image"
+                            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => onViewFull(item)}
+                            onError={(e) => {
+                                // Fallback if image fails to load
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-foreground-muted"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                            }}
+                        />
+                    </div>
+                ) : (
+                    <div className={`flex-shrink-0 p-2.5 rounded-lg ${item.pinned ? 'bg-accent/10' : 'bg-surface'}`}>
+                        {getTypeIcon()}
+                    </div>
+                )}
 
                 {/* Content Preview */}
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm leading-relaxed text-foreground break-words whitespace-pre-wrap line-clamp-4">
-                        {getPreview()}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                        {item.metadata?.length && (
-                            <p className="text-xs text-foreground-muted">
-                                {item.metadata.length.toLocaleString()} characters
+                    {item.type === 'image' ? (
+                        <>
+                            <p className="text-sm font-medium text-foreground mb-1">
+                                Image Clipboard
                             </p>
-                        )}
-                        {item.copyCount > 1 && (
-                            <span className="text-xs text-foreground-muted">
-                                • {item.copyCount}x
-                            </span>
-                        )}
-                        {item.sourceApp && (
-                            <span className="text-xs text-foreground-muted">
-                                • {item.sourceApp}
-                            </span>
-                        )}
-                    </div>
+                            <div className="flex items-center gap-2 text-xs text-foreground-muted">
+                                {item.metadata?.mimeType && (
+                                    <span className="px-2 py-0.5 bg-surface rounded">
+                                        {item.metadata.mimeType.split('/')[1]?.toUpperCase() || 'IMAGE'}
+                                    </span>
+                                )}
+                                {item.metadata?.length && (
+                                    <span>
+                                        {(item.metadata.length / 1024).toFixed(1)} KB
+                                    </span>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-sm leading-relaxed text-foreground break-words whitespace-pre-wrap line-clamp-4">
+                                {getPreview()}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                                {item.metadata?.length && item.type === 'text' && (
+                                    <p className="text-xs text-foreground-muted">
+                                        {item.metadata.length.toLocaleString()} characters
+                                    </p>
+                                )}
+                                {item.copyCount > 1 && (
+                                    <span className="text-xs text-foreground-muted">
+                                        • {item.copyCount}x
+                                    </span>
+                                )}
+                                {item.sourceApp && (
+                                    <span className="text-xs text-foreground-muted">
+                                        • {item.sourceApp}
+                                    </span>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Pinned Badge */}

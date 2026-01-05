@@ -4,7 +4,6 @@ import { useSettingsStore } from './store/settingsStore';
 import { useTabStore } from './store/tabStore';
 import { Sidebar } from './components/layout/Sidebar';
 import { WindowControls } from './components/layout/WindowControls';
-import { DynamicIsland } from './components/layout/DynamicIsland';
 import { TrayController } from './components/layout/TrayController';
 import { TabBar } from './components/layout/TabBar';
 import { TabContent } from './components/layout/TabContent';
@@ -71,13 +70,8 @@ const MainLayout = () => {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 relative h-full">
-      {/* Dynamic Island - Enhanced positioning */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none pt-2">
-        <DynamicIsland />
-      </div>
-
-      {/* Main content with better spacing */}
-      <div className="flex-1 flex flex-col pt-12 overflow-hidden">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <TabBar />
         <div className="flex-1 min-h-0">
           <TabContent />

@@ -24,5 +24,9 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 	tray: {
 		updateMenu: (items) => electron.ipcRenderer.send("tray-update-menu", items),
 		updateClipboard: (items) => electron.ipcRenderer.send("tray-update-clipboard", items)
+	},
+	clipboard: {
+		readText: () => electron.ipcRenderer.invoke("clipboard-read-text"),
+		readImage: () => electron.ipcRenderer.invoke("clipboard-read-image")
 	}
 });

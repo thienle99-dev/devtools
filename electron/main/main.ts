@@ -97,6 +97,7 @@ function updateTrayMenu() {
 
   // === CLIPBOARD MANAGER ===
   if (clipboardItems.length > 0) {
+    const displayCount = Math.min(clipboardItems.length, 9);
     template.push({
       label: '📋 Clipboard Manager',
       submenu: [
@@ -109,24 +110,28 @@ function updateTrayMenu() {
         },
         { type: 'separator' },
         {
-          label: '● Recent Clipboard (9)',
+          label: `● Recent Clipboard (${displayCount})`,
           enabled: false
         },
         ...clipboardItems.slice(0, 9).map((item, index) => {
-          const preview = item.content.length > 75
-            ? item.content.substring(0, 75) + '...'
-            : item.content;
+          // Ensure content is a string and handle edge cases
+          const content = String(item.content || '');
+          const preview = content.length > 75
+            ? content.substring(0, 75) + '...'
+            : content;
           const cleanPreview = preview.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
 
           return {
-            label: `  ${index + 1}. ${cleanPreview}`,
+            label: `  ${index + 1}. ${cleanPreview || '(Empty)'}`,
             click: () => {
-              clipboard.writeText(item.content);
-              new Notification({
-                title: '✓ Copied from History',
-                body: cleanPreview,
-                silent: true
-              }).show();
+              if (content) {
+                clipboard.writeText(content);
+                new Notification({
+                  title: '✓ Copied from History',
+                  body: cleanPreview || 'Copied to clipboard',
+                  silent: true
+                }).show();
+              }
             }
           };
         }),
@@ -376,10 +381,37 @@ function createWindow() {
     updateTrayMenu();
   });
 
-  // Clipboard IPC
+  // Clipboard IPC - Ensure items are sorted and synced
   ipcMain.on('tray-update-clipboard', (_event, items) => {
-    clipboardItems = items || [];
-    updateTrayMenu();
+    // Ensure items are sorted by timestamp (newest first) for consistency
+    const sortedItems = (items || []).sort((a: any, b: any) => b.timestamp - a.timestamp);
+    clipboardItems = sortedItems;
+    updateTrayMenu(); // This will rebuild the menu with updated items
+  });
+
+  // Clipboard read IPC - Use Electron's clipboard API (no permission needed)
+  ipcMain.handle('clipboard-read-text', () => {
+    try {
+      return clipboard.readText();
+    } catch (error) {
+      console.error('Failed to read clipboard:', error);
+      return '';
+    }
+  });
+
+  // Clipboard read images IPC
+  ipcMain.handle('clipboard-read-image', async () => {
+    try {
+      const image = clipboard.readImage();
+      if (image.isEmpty()) {
+        return null;
+      }
+      // Convert to base64
+      return image.toDataURL();
+    } catch (error) {
+      console.error('Failed to read clipboard image:', error);
+      return null;
+    }
   });
 
   // Test active push message to Renderer-process.

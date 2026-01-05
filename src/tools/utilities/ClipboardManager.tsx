@@ -185,7 +185,7 @@ export const ClipboardManager: React.FC = () => {
                 title="Clipboard Manager"
                 description="Manage and browse clipboard history with search and organization"
             >
-                <div className="space-y-8 h-full flex flex-col">
+                <div className="space-y-8">
                     {/* Quick Copy Section */}
                     <QuickCopySection />
 
@@ -213,7 +213,10 @@ export const ClipboardManager: React.FC = () => {
                     )}
 
                     {/* Clipboard List */}
-                    <div className="flex-1 overflow-auto" ref={listContainerRef}>
+                    <div
+                        ref={listContainerRef}
+                        className="max-h-[calc(100vh-500px)] overflow-y-auto custom-scrollbar"
+                    >
                         <ClipboardList
                             items={filteredItems}
                             selectedIndex={selectedIndex}

@@ -9,7 +9,7 @@ interface SearchAndFilterProps {
     onFilterChange: (filters: FilterOptions) => void;
     onClearAll: () => void;
     onOpenSettings: () => void;
-    searchInputRef?: RefObject<HTMLInputElement>;
+    searchInputRef?: RefObject<HTMLInputElement | null>;
 }
 
 export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({

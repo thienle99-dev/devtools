@@ -26,9 +26,10 @@ export const TrayController = () => {
     }, [history]);
 
     // Sync clipboard items to Tray (9 items like Maccy)
+    // Exclude images since tray can't display them
     useEffect(() => {
         const recentClipboard = clipboardItems
-            .filter(item => item.type === 'text' || item.type === 'link' || item.type === 'file') // Text, links, and files for tray
+            .filter(item => item.type === 'text' || item.type === 'link') // Only text and links for tray (no images)
             .slice(0, 9) // Limit to 9 most recent (Maccy style)
             .map(item => ({
                 id: item.id,

@@ -8923,6 +8923,7 @@ function updateTrayMenu() {
 		}
 	}, { type: "separator" }];
 	if (clipboardItems.length > 0) {
+		const displayCount = Math.min(clipboardItems.length, 9);
 		template.push({
 			label: "📋 Clipboard Manager",
 			submenu: [
@@ -8935,20 +8936,23 @@ function updateTrayMenu() {
 				},
 				{ type: "separator" },
 				{
-					label: "● Recent Clipboard (9)",
+					label: `● Recent Clipboard (${displayCount})`,
 					enabled: false
 				},
 				...clipboardItems.slice(0, 9).map((item, index) => {
-					const cleanPreview = (item.content.length > 75 ? item.content.substring(0, 75) + "..." : item.content).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+					const content$1 = String(item.content || "");
+					const cleanPreview = (content$1.length > 75 ? content$1.substring(0, 75) + "..." : content$1).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 					return {
-						label: `  ${index + 1}. ${cleanPreview}`,
+						label: `  ${index + 1}. ${cleanPreview || "(Empty)"}`,
 						click: () => {
-							clipboard.writeText(item.content);
-							new Notification({
-								title: "✓ Copied from History",
-								body: cleanPreview,
-								silent: true
-							}).show();
+							if (content$1) {
+								clipboard.writeText(content$1);
+								new Notification({
+									title: "✓ Copied from History",
+									body: cleanPreview || "Copied to clipboard",
+									silent: true
+								}).show();
+							}
 						}
 					};
 				}),
@@ -9172,8 +9176,26 @@ function createWindow() {
 		updateTrayMenu();
 	});
 	ipcMain.on("tray-update-clipboard", (_event, items) => {
-		clipboardItems = items || [];
+		clipboardItems = (items || []).sort((a, b) => b.timestamp - a.timestamp);
 		updateTrayMenu();
+	});
+	ipcMain.handle("clipboard-read-text", () => {
+		try {
+			return clipboard.readText();
+		} catch (error$1) {
+			console.error("Failed to read clipboard:", error$1);
+			return "";
+		}
+	});
+	ipcMain.handle("clipboard-read-image", async () => {
+		try {
+			const image = clipboard.readImage();
+			if (image.isEmpty()) return null;
+			return image.toDataURL();
+		} catch (error$1) {
+			console.error("Failed to read clipboard image:", error$1);
+			return null;
+		}
 	});
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
