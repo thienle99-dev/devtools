@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { BatteryStats } from '../../../../types/stats';
-import { Battery, BatteryCharging, Plug, Zap } from 'lucide-react';
+import { Battery, BatteryCharging, Plug, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import { LightweightGraph } from './LightweightGraph';
 
 interface BatteryModuleProps {
@@ -12,6 +12,7 @@ const MAX_POINTS = 20;
 export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data }) => {
   const [consumptionHistory, setConsumptionHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [chargingHistory, setChargingHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const [showDetails, setShowDetails] = useState(false);
 
   const powerConsumption = data.powerConsumptionRate ?? 0; // mW
   const chargingPower = data.chargingPower ?? 0; // mW
@@ -35,6 +36,29 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
       return `${(mW / 1000).toFixed(2)} W`;
     }
     return `${mW.toFixed(0)} mW`;
+  }, []);
+
+  const formatCycles = useCallback((cycles: number) => {
+    if (cycles === -1 || cycles === null || cycles === undefined) return 'N/A';
+    return cycles.toLocaleString('en-US');
+  }, []);
+
+  const getCycleHealth = useCallback((cycles: number) => {
+    if (cycles === -1 || cycles === null || cycles === undefined) return { status: 'Unknown', color: '#6b7280', percent: 0 };
+    
+    // Typical laptop battery: 300-1000 cycles before significant degradation
+    const maxCycles = 1000;
+    const percent = Math.min((cycles / maxCycles) * 100, 100);
+    
+    if (cycles < 300) {
+      return { status: 'Excellent', color: '#22c55e', percent }; // green
+    } else if (cycles < 500) {
+      return { status: 'Good', color: '#10b981', percent }; // emerald
+    } else if (cycles < 800) {
+      return { status: 'Fair', color: '#f59e0b', percent }; // amber
+    } else {
+      return { status: 'Poor', color: '#ef4444', percent }; // red
+    }
   }, []);
   if (!data.hasBattery) {
       return (
@@ -94,15 +118,28 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
             <p className="text-xs text-foreground-muted">{isCharging ? 'Charging' : 'Discharging'}</p>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold font-mono" style={{ color }}>{percent}%</div>
-          <div className="text-xs text-foreground-muted">
-            {isCharging ? 'AC Connected' : (data.timeRemaining > 0 ? formatTime(data.timeRemaining) : '...')}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-2xl font-bold font-mono" style={{ color }}>{percent}%</div>
+            <div className="text-xs text-foreground-muted">
+              {isCharging ? 'AC Connected' : (data.timeRemaining > 0 ? formatTime(data.timeRemaining) : '...')}
+            </div>
           </div>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="p-1.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground"
+            aria-label="Toggle details"
+          >
+            {showDetails ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Power Consumption & Charging Graphs */}
+      {/* Power Consumption & Charging Graphs - Always visible */}
       <div className="grid grid-cols-2 gap-2">
         {/* Power Consumption Graph */}
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
@@ -117,11 +154,11 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
             <Zap className="w-3 h-3 text-foreground-muted" />
             <span className="text-[10px] text-foreground-muted">Consumption</span>
           </div>
-          <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted font-mono">
-            {data.powerConsumptionRate !== undefined && data.powerConsumptionRate > 0 
-              ? formatPower(powerConsumption) 
-              : 'N/A'}
-          </div>
+          {data.powerConsumptionRate !== undefined && data.powerConsumptionRate > 0 && (
+            <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted font-mono">
+              {formatPower(powerConsumption)}
+            </div>
+          )}
         </div>
         
         {/* Charging Power Graph */}
@@ -137,11 +174,11 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
             <BatteryCharging className="w-3 h-3 text-foreground-muted" />
             <span className="text-[10px] text-foreground-muted">Charging</span>
           </div>
-          <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted font-mono">
-            {isCharging && data.chargingPower !== undefined && data.chargingPower > 0 
-              ? formatPower(chargingPower) 
-              : 'N/A'}
-          </div>
+          {isCharging && data.chargingPower !== undefined && data.chargingPower > 0 && (
+            <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted font-mono">
+              {formatPower(chargingPower)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -161,22 +198,113 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
          )}
       </div>
 
+      {/* Basic Info - Always visible */}
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-[var(--color-glass-input)] p-2 rounded flex justify-between">
+        {data.cycleCount !== -1 && data.cycleCount !== null && data.cycleCount !== undefined && (
+          <div className="bg-[var(--color-glass-input)] p-2 rounded flex justify-between items-center">
             <span className="text-foreground-muted">Cycles</span>
-            <span className="text-foreground">{data.cycleCount}</span>
-        </div>
-        <div className="bg-[var(--color-glass-input)] p-2 rounded flex justify-between">
+            <span className="text-foreground font-medium">{formatCycles(data.cycleCount)}</span>
+          </div>
+        )}
+        {data.maxCapacity && data.designedCapacity && data.maxCapacity > 0 && data.designedCapacity > 0 && (
+          <div className="bg-[var(--color-glass-input)] p-2 rounded flex justify-between items-center">
             <span className="text-foreground-muted">Health</span>
-             {/* Simple health calc if maxCapacity and designedCapacity exist */}
-            <span className="text-foreground">
-                {data.maxCapacity && data.designedCapacity 
-                    ? Math.round((data.maxCapacity / data.designedCapacity) * 100) + '%'
-                    : 'N/A'
-                }
+            <span className="text-foreground font-medium">
+              {Math.round((data.maxCapacity / data.designedCapacity) * 100)}%
             </span>
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Detailed Info - Toggleable */}
+      {showDetails && (
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Cycles Details - Only show if cycleCount is available */}
+          {data.cycleCount !== -1 && data.cycleCount !== null && data.cycleCount !== undefined && (
+            <div className="bg-[var(--color-glass-input)] p-3 rounded-lg flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-foreground-muted">Charge Cycles</span>
+                <span className="text-sm font-bold text-foreground">{formatCycles(data.cycleCount)}</span>
+              </div>
+              <div className="w-full bg-[var(--color-glass-panel)] rounded-full h-2 overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ 
+                    width: `${getCycleHealth(data.cycleCount).percent}%`, 
+                    backgroundColor: getCycleHealth(data.cycleCount).color 
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-foreground-muted">Status</span>
+                <span 
+                  className="font-medium"
+                  style={{ color: getCycleHealth(data.cycleCount).color }}
+                >
+                  {getCycleHealth(data.cycleCount).status}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Battery Specifications */}
+          {(data.type || data.voltage || data.manufacturer || data.model || data.designedCapacity || data.maxCapacity || data.currentCapacity) && (
+            <div className="bg-[var(--color-glass-input)] p-3 rounded-lg space-y-2">
+              <div className="text-xs font-medium text-foreground mb-2">Specifications</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {data.type && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Type</span>
+                    <span className="text-foreground">{data.type}</span>
+                  </div>
+                )}
+                {data.voltage && data.voltage > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Voltage</span>
+                    <span className="text-foreground">{data.voltage.toFixed(2)} V</span>
+                  </div>
+                )}
+                {data.manufacturer && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Manufacturer</span>
+                    <span className="text-foreground">{data.manufacturer}</span>
+                  </div>
+                )}
+                {data.model && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Model</span>
+                    <span className="text-foreground">{data.model}</span>
+                  </div>
+                )}
+                {data.designedCapacity && data.designedCapacity > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Designed Capacity</span>
+                    <span className="text-foreground">
+                      {(data.designedCapacity / 1000).toFixed(0)} {data.capacityUnit || 'mAh'}
+                    </span>
+                  </div>
+                )}
+                {data.maxCapacity && data.maxCapacity > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Max Capacity</span>
+                    <span className="text-foreground">
+                      {(data.maxCapacity / 1000).toFixed(0)} {data.capacityUnit || 'mAh'}
+                    </span>
+                  </div>
+                )}
+                {data.currentCapacity && data.currentCapacity > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground-muted">Current Capacity</span>
+                    <span className="text-foreground">
+                      {(data.currentCapacity / 1000).toFixed(0)} {data.capacityUnit || 'mAh'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 });
