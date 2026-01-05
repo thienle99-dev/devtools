@@ -14,11 +14,15 @@ import {
     Settings,
     Clipboard,
     Activity,
-    Trash2
+    Trash2,
+    FileText,
+    RotateCw,
+    Archive,
+    CheckCircle2
 } from 'lucide-react';
 
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'favorites' | 'recent';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent';
 
 export interface ToolDefinition {
     id: string;
@@ -46,6 +50,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'crypto', name: 'Crypto', icon: Hash },
     { id: 'web', name: 'Web', icon: Globe },
     { id: 'network', name: 'Network', icon: Globe },
+    { id: 'pdf', name: 'PDF Tools', icon: FileText },
     { id: 'utilities', name: 'Utilities', icon: Box },
     { id: 'development', name: 'Dev Utils', icon: Code2 },
 ];
@@ -62,6 +67,14 @@ const DateConverter = React.lazy(() => import('./converters/DateConverter').then
 const ColorConverter = React.lazy(() => import('./converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
 const Base64FileConverter = React.lazy(() => import('./converters/Base64FileConverter').then(m => ({ default: m.Base64FileConverter })));
 const ImagesToPdfConverter = React.lazy(() => import('./pdf/ImagesToPdfConverter').then(m => ({ default: m.ImagesToPdfConverter })));
+const PdfMerger = React.lazy(() => import('./pdf/PdfMerger').then(m => ({ default: m.PdfMerger })));
+const PdfSplitter = React.lazy(() => import('./pdf/PdfSplitter').then(m => ({ default: m.PdfSplitter })));
+const PdfPageExtractor = React.lazy(() => import('./pdf/PdfPageExtractor').then(m => ({ default: m.PdfPageExtractor })));
+const PdfPageRotator = React.lazy(() => import('./pdf/PdfPageRotator').then(m => ({ default: m.PdfPageRotator })));
+const PdfMetadata = React.lazy(() => import('./pdf/PdfMetadata').then(m => ({ default: m.PdfMetadata })));
+const PdfBase64 = React.lazy(() => import('./pdf/PdfBase64').then(m => ({ default: m.PdfBase64 })));
+const PdfCompressor = React.lazy(() => import('./pdf/PdfCompressor').then(m => ({ default: m.PdfCompressor })));
+const PdfValidator = React.lazy(() => import('./pdf/PdfValidator').then(m => ({ default: m.PdfValidator })));
 
 const HashGenerator = React.lazy(() => import('./crypto/HashGenerator').then(m => ({ default: m.HashGenerator })));
 const UuidGenerator = React.lazy(() => import('./crypto/UuidGenerator').then(m => ({ default: m.UuidGenerator })));
@@ -206,16 +219,6 @@ export const TOOLS: ToolDefinition[] = [
         keywords: ['base64', 'file', 'image', 'upload']
     },
     {
-        id: 'images-to-pdf',
-        name: 'Images to PDF',
-        path: '/images-to-pdf',
-        description: 'Convert multiple images to PDF, each image as one page',
-        category: 'converters',
-        icon: FileImage,
-        component: ImagesToPdfConverter,
-        keywords: ['pdf', 'image', 'convert', 'merge', 'pages']
-    },
-    {
         id: 'number-base',
         name: 'Number Base',
         path: '/number-base',
@@ -254,6 +257,98 @@ export const TOOLS: ToolDefinition[] = [
         icon: History,
         component: DateConverter,
         keywords: ['date', 'time', 'timestamp', 'unix', 'iso']
+    },
+
+    // PDF Tools
+    {
+        id: 'images-to-pdf',
+        name: 'Images to PDF',
+        path: '/images-to-pdf',
+        description: 'Convert multiple images to PDF, each image as one page',
+        category: 'pdf',
+        icon: FileImage,
+        component: ImagesToPdfConverter,
+        keywords: ['pdf', 'image', 'convert', 'merge', 'pages']
+    },
+    {
+        id: 'pdf-merger',
+        name: 'PDF Merger',
+        path: '/pdf-merger',
+        description: 'Merge multiple PDF files into one',
+        category: 'pdf',
+        icon: FileText,
+        component: PdfMerger,
+        keywords: ['pdf', 'merge', 'combine', 'join']
+    },
+    {
+        id: 'pdf-splitter',
+        name: 'PDF Splitter',
+        path: '/pdf-splitter',
+        description: 'Split PDF into multiple files',
+        category: 'pdf',
+        icon: FileText,
+        component: PdfSplitter,
+        keywords: ['pdf', 'split', 'divide', 'separate']
+    },
+    {
+        id: 'pdf-page-extractor',
+        name: 'PDF Page Extractor',
+        path: '/pdf-page-extractor',
+        description: 'Extract specific pages from a PDF',
+        category: 'pdf',
+        icon: FileText,
+        component: PdfPageExtractor,
+        keywords: ['pdf', 'extract', 'pages', 'select']
+    },
+    {
+        id: 'pdf-page-rotator',
+        name: 'PDF Page Rotator',
+        path: '/pdf-page-rotator',
+        description: 'Rotate pages in a PDF',
+        category: 'pdf',
+        icon: RotateCw,
+        component: PdfPageRotator,
+        keywords: ['pdf', 'rotate', 'pages', 'orientation']
+    },
+    {
+        id: 'pdf-base64',
+        name: 'PDF Base64',
+        path: '/pdf-base64',
+        description: 'Convert PDF to Base64 or decode Base64 to PDF',
+        category: 'pdf',
+        icon: Binary,
+        component: PdfBase64,
+        keywords: ['pdf', 'base64', 'encode', 'decode']
+    },
+    {
+        id: 'pdf-metadata',
+        name: 'PDF Metadata',
+        path: '/pdf-metadata',
+        description: 'View and edit PDF metadata',
+        category: 'pdf',
+        icon: FileText,
+        component: PdfMetadata,
+        keywords: ['pdf', 'metadata', 'info', 'properties', 'edit']
+    },
+    {
+        id: 'pdf-compressor',
+        name: 'PDF Compressor',
+        path: '/pdf-compressor',
+        description: 'Compress PDF file size',
+        category: 'pdf',
+        icon: Archive,
+        component: PdfCompressor,
+        keywords: ['pdf', 'compress', 'reduce', 'size', 'optimize']
+    },
+    {
+        id: 'pdf-validator',
+        name: 'PDF Validator',
+        path: '/pdf-validator',
+        description: 'Validate PDF file structure and metadata',
+        category: 'pdf',
+        icon: CheckCircle2,
+        component: PdfValidator,
+        keywords: ['pdf', 'validate', 'check', 'verify', 'test']
     },
 
     // Crypto

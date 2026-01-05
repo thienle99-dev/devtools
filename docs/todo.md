@@ -359,7 +359,7 @@
 
 - [ ] PDF signature checker
 - [ ] PDF to Images (PNG/JPG)
-- [ ] Images to PDF
+- [x] Images to PDF
 - [ ] PDF to Text
 - [ ] PDF to HTML
 - [ ] PDF to Markdown
@@ -367,12 +367,12 @@
 - [ ] Markdown to PDF
 - [ ] Word/DOCX to PDF
 - [ ] PDF to Word/DOCX
-- [ ] PDF Merger
-- [ ] PDF Splitter
-- [ ] PDF Page Extractor
-- [ ] PDF Page Rotator
+- [x] PDF Merger
+- [x] PDF Splitter
+- [x] PDF Page Extractor
+- [x] PDF Page Rotator
 - [ ] PDF Page Reorder
-- [ ] PDF Compressor
+- [x] PDF Compressor
 - [ ] PDF Optimizer
 - [ ] PDF Watermarker (text/image)
 - [ ] PDF Page Numbering
@@ -381,8 +381,8 @@
 - [ ] PDF Encryption
 - [ ] PDF Decryption
 - [ ] PDF Metadata Remover
-- [ ] PDF Metadata Viewer
-- [ ] PDF Metadata Editor
+- [x] PDF Metadata Viewer
+- [x] PDF Metadata Editor
 - [ ] PDF Page Counter
 - [ ] PDF File Size Analyzer
 - [ ] PDF Structure Viewer
@@ -399,9 +399,9 @@
 - [ ] PDF Comparison (diff)
 - [ ] PDF Preview
 - [ ] PDF Thumbnail Generator
-- [ ] PDF to Base64
-- [ ] Base64 to PDF
-- [ ] PDF Validator
+- [x] PDF to Base64
+- [x] Base64 to PDF
+- [x] PDF Validator
 
 ---
 
