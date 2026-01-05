@@ -40,11 +40,40 @@ export const Button: React.FC<ButtonProps> = ({
 
                 // Variants
                 variant === 'glass' && "glass-button",
-                variant === 'primary' && "glass-button-primary",
-                variant === 'secondary' && "glass-button-secondary",
-                variant === 'danger' && "glass-button-danger",
-                variant === 'warning' && "glass-button-warning",
-                variant === 'success' && "glass-button-success",
+                variant === 'primary' && cn(
+                    "glass-button-primary",
+                    // Ocean Deep: Sky → Blue → Indigo
+                    "bg-gradient-to-r from-[#0EA5E9] via-[#3B82F6] to-[#6366F1] text-white",
+                    "shadow-[0_10px_30px_rgba(14,165,233,0.35)] hover:shadow-[0_12px_40px_rgba(14,165,233,0.5)]",
+                    "hover:brightness-110 active:scale-[0.98]",
+                    "border border-white/15 rounded-lg"
+                ),
+                variant === 'secondary' && cn(
+                    "glass-button-secondary",
+                    // Sunset Warm: Amber → Red → Pink
+                    "bg-gradient-to-r from-[#F59E0B] via-[#EF4444] to-[#EC4899] text-white",
+                    "shadow-[0_8px_26px_rgba(248,113,113,0.45)] hover:shadow-[0_10px_32px_rgba(248,113,113,0.6)]",
+                    "hover:brightness-110 active:scale-[0.98]",
+                    "border border-amber-300/70 rounded-lg"
+                ),
+                variant === 'danger' && cn(
+                    "glass-button-danger",
+                    "bg-gradient-to-r from-rose-500 to-amber-500 text-white",
+                    "shadow-md hover:shadow-lg hover:brightness-110 active:scale-[0.98]",
+                    "border border-rose-500/60"
+                ),
+                variant === 'warning' && cn(
+                    "glass-button-warning",
+                    "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900",
+                    "shadow-md hover:shadow-lg hover:brightness-110 active:scale-[0.98]",
+                    "border border-amber-400/70"
+                ),
+                variant === 'success' && cn(
+                    "glass-button-success",
+                    "bg-gradient-to-r from-emerald-400 to-teal-500 text-white",
+                    "shadow-md hover:shadow-lg hover:brightness-110 active:scale-[0.98]",
+                    "border border-emerald-400/70"
+                ),
                 variant === 'outline' && "glass-button-outline",
                 variant === 'ghost' && "text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover rounded-lg",
 
