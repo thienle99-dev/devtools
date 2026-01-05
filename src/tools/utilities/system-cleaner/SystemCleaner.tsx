@@ -33,7 +33,17 @@ import {
     Database,
     History,
     Eye,
-    EyeOff
+    EyeOff,
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    Wifi,
+    Mail,
+    Search as SearchIcon,
+    Server,
+    Activity as ActivityIcon,
+    Battery,
+    AlertCircle
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import type { SpaceLensNode, HeavyApp, PrivacyItem } from './store/systemCleanerStore';
@@ -980,9 +990,11 @@ const JunkCleanupView = () => {
             if (cleanupResult.success) {
                 toast.success(`Cleaned ${formatSize(cleanupResult.freedSize)} successfully!`);
                 runSmartScan(); 
+            } else {
+                toast.error(`Failed to run cleanup: ${cleanupResult.error || 'Unknown error'}`);
             }
         } catch (e) {
-            toast.error('Failed to run cleanup.');
+            toast.error(`Failed to run cleanup: ${(e as Error).message || 'Unknown error'}`);
         } finally {
             setIsCleaning(false);
         }
@@ -1267,6 +1279,440 @@ const DuplicatesView = () => {
     );
 };
 
+// --- Maintenance View ---
+
+const MaintenanceView = () => {
+    const { platformInfo } = useSystemCleanerStore();
+    const [runningTasks, setRunningTasks] = useState<Set<string>>(new Set());
+    const [taskHistory, setTaskHistory] = useState<any[]>([]);
+
+    const platform = platformInfo?.platform;
+
+    const windowsTasks = [
+        {
+            id: 'sfc',
+            name: 'System File Checker',
+            description: 'Scan and repair corrupted system files',
+            category: 'sfc',
+            icon: ShieldCheck,
+            estimatedTime: '5-10 minutes',
+            requiresSudo: true
+        },
+        {
+            id: 'dism',
+            name: 'DISM Health Restore',
+            description: 'Restore Windows image health',
+            category: 'dism',
+            icon: Server,
+            estimatedTime: '10-15 minutes',
+            requiresSudo: true
+        },
+        {
+            id: 'disk-cleanup',
+            name: 'Disk Cleanup',
+            description: 'Automated disk cleanup using Windows built-in tool',
+            category: 'disk-cleanup',
+            icon: HardDrive,
+            estimatedTime: '2-5 minutes',
+            requiresSudo: false
+        },
+        {
+            id: 'dns-flush',
+            name: 'Flush DNS Cache',
+            description: 'Clear DNS resolver cache',
+            category: 'dns-flush',
+            icon: Wifi,
+            estimatedTime: '< 1 minute',
+            requiresSudo: false
+        },
+        {
+            id: 'winsock-reset',
+            name: 'Reset Winsock',
+            description: 'Reset Windows network stack',
+            category: 'winsock-reset',
+            icon: Wifi,
+            estimatedTime: '< 1 minute',
+            requiresSudo: true
+        },
+        {
+            id: 'windows-search-rebuild',
+            name: 'Rebuild Windows Search Index',
+            description: 'Rebuild Windows Search index for better performance',
+            category: 'windows-search-rebuild',
+            icon: SearchIcon,
+            estimatedTime: '5-10 minutes',
+            requiresSudo: true
+        }
+    ];
+
+    const macosTasks = [
+        {
+            id: 'spotlight-reindex',
+            name: 'Rebuild Spotlight Index',
+            description: 'Rebuild macOS Spotlight search index',
+            category: 'spotlight-reindex',
+            icon: SearchIcon,
+            estimatedTime: '10-30 minutes',
+            requiresSudo: true
+        },
+        {
+            id: 'disk-permissions',
+            name: 'Verify Disk Permissions',
+            description: 'Verify disk permissions (limited on macOS Big Sur+)',
+            category: 'disk-permissions',
+            icon: HardDrive,
+            estimatedTime: '2-5 minutes',
+            requiresSudo: true
+        },
+        {
+            id: 'dns-flush',
+            name: 'Flush DNS Cache',
+            description: 'Clear DNS resolver cache',
+            category: 'dns-flush',
+            icon: Wifi,
+            estimatedTime: '< 1 minute',
+            requiresSudo: false
+        },
+        {
+            id: 'mail-rebuild',
+            name: 'Rebuild Mail Database',
+            description: 'Rebuild Mail.app database (requires Mail.app to be closed)',
+            category: 'mail-rebuild',
+            icon: Mail,
+            estimatedTime: '5-10 minutes',
+            requiresSudo: false
+        }
+    ];
+
+    const tasks = platform === 'windows' ? windowsTasks : platform === 'macos' ? macosTasks : [];
+
+    const runTask = async (task: typeof tasks[0]) => {
+        if (runningTasks.has(task.id)) return;
+        
+        setRunningTasks(new Set([...runningTasks, task.id]));
+        
+        try {
+            const result = await (window as any).cleanerAPI.runMaintenance(task);
+            
+            const historyItem = {
+                ...task,
+                result,
+                timestamp: new Date()
+            };
+            
+            setTaskHistory([historyItem, ...taskHistory].slice(0, 20)); // Keep last 20
+            
+            if (result.success) {
+                toast.success(`${task.name} completed successfully`);
+            } else {
+                toast.error(`${task.name} failed: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            toast.error(`Failed to run ${task.name}: ${(error as Error).message}`);
+        } finally {
+            setRunningTasks(new Set([...runningTasks].filter(id => id !== task.id)));
+        }
+    };
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">Maintenance</h2>
+                    <p className="text-sm text-foreground-muted">System repair and upkeep tools for {platform === 'windows' ? 'Windows' : platform === 'macos' ? 'macOS' : 'your system'}</p>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-auto space-y-4 pr-2 custom-scrollbar">
+                {tasks.map((task) => {
+                    const Icon = task.icon;
+                    const isRunning = runningTasks.has(task.id);
+                    const lastRun = taskHistory.find(h => h.id === task.id);
+                    
+                    return (
+                        <Card key={task.id} className="p-6 space-y-4 border-border-glass bg-white/5">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-4 flex-1">
+                                    <div className={cn(
+                                        "p-3 rounded-xl transition-colors",
+                                        isRunning ? "bg-indigo-500/20" : "bg-indigo-500/10"
+                                    )}>
+                                        <Icon className={cn(
+                                            "w-6 h-6",
+                                            isRunning ? "text-indigo-400 animate-pulse" : "text-indigo-400"
+                                        )} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-lg font-bold">{task.name}</h3>
+                                            {task.requiresSudo && (
+                                                <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded">
+                                                    Admin Required
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-foreground-muted mb-2">{task.description}</p>
+                                        <div className="flex items-center gap-4 text-xs text-foreground-muted">
+                                            <div className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                <span>{task.estimatedTime}</span>
+                                            </div>
+                                            {lastRun && (
+                                                <div className={cn(
+                                                    "flex items-center gap-1",
+                                                    lastRun.result.success ? "text-emerald-400" : "text-red-400"
+                                                )}>
+                                                    {lastRun.result.success ? (
+                                                        <CheckCircle className="w-3 h-3" />
+                                                    ) : (
+                                                        <XCircle className="w-3 h-3" />
+                                                    )}
+                                                    <span>
+                                                        {lastRun.result.success ? 'Completed' : 'Failed'} {formatTimeAgo(lastRun.timestamp)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {lastRun && lastRun.result.output && (
+                                            <div className="mt-2 p-2 bg-white/5 rounded text-xs font-mono text-foreground-muted max-h-20 overflow-auto">
+                                                {lastRun.result.output.substring(0, 200)}
+                                                {lastRun.result.output.length > 200 && '...'}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => runTask(task)}
+                                    disabled={isRunning}
+                                    loading={isRunning}
+                                >
+                                    {isRunning ? 'Running...' : 'Run'}
+                                </Button>
+                            </div>
+                        </Card>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// Helper function for time ago
+const formatTimeAgo = (date: Date) => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+};
+
+// --- Health Monitor View ---
+
+const HealthMonitorView = () => {
+    const [healthStatus, setHealthStatus] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+
+    const refreshHealth = async () => {
+        setIsLoading(true);
+        try {
+            const status = await (window as any).cleanerAPI.getHealthStatus();
+            setHealthStatus(status);
+        } catch (error) {
+            toast.error('Failed to get health status');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        refreshHealth();
+        
+        if (autoRefresh) {
+            const interval = setInterval(refreshHealth, 5000); // Refresh every 5 seconds
+            return () => clearInterval(interval);
+        }
+    }, [autoRefresh]);
+
+    if (!healthStatus && !isLoading) {
+        return (
+            <ScanPlaceholder
+                title="Health Monitor"
+                icon={ActivityIcon}
+                description="Monitor your system health in real-time"
+                onScan={refreshHealth}
+                isScanning={isLoading}
+                progress={0}
+            />
+        );
+    }
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">Health Monitor</h2>
+                    <p className="text-sm text-foreground-muted">Real-time system health monitoring</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAutoRefresh(!autoRefresh)}
+                    >
+                        {autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={refreshHealth} disabled={isLoading}>
+                        <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
+                        Refresh
+                    </Button>
+                </div>
+            </div>
+
+            {healthStatus && (
+                <>
+                    {/* Health Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="p-4 bg-white/5 border-border-glass">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Cpu className="w-5 h-5 text-indigo-400" />
+                                <h4 className="font-bold text-sm">CPU Usage</h4>
+                            </div>
+                            <div className="text-2xl font-bold">{healthStatus.cpu?.toFixed(1) || 0}%</div>
+                            <div className="h-1.5 w-full bg-white/5 rounded-full mt-2 overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-indigo-500"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${healthStatus.cpu || 0}%` }}
+                                />
+                            </div>
+                        </Card>
+
+                        <Card className="p-4 bg-white/5 border-border-glass">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Activity className="w-5 h-5 text-emerald-400" />
+                                <h4 className="font-bold text-sm">Memory Usage</h4>
+                            </div>
+                            <div className="text-2xl font-bold">{healthStatus.ram?.percentage?.toFixed(1) || 0}%</div>
+                            <div className="text-[10px] text-foreground-muted">
+                                {formatSize(healthStatus.ram?.used || 0)} / {formatSize(healthStatus.ram?.total || 0)}
+                            </div>
+                            <div className="h-1.5 w-full bg-white/5 rounded-full mt-2 overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-emerald-500"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${healthStatus.ram?.percentage || 0}%` }}
+                                />
+                            </div>
+                        </Card>
+
+                        {healthStatus.disk && (
+                            <Card className="p-4 bg-white/5 border-border-glass">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <HardDrive className="w-5 h-5 text-amber-400" />
+                                    <h4 className="font-bold text-sm">Disk Usage</h4>
+                                </div>
+                                <div className="text-2xl font-bold">{healthStatus.disk.percentage?.toFixed(1) || 0}%</div>
+                                <div className="text-[10px] text-foreground-muted">
+                                    {formatSize(healthStatus.disk.free || 0)} free
+                                </div>
+                                <div className="h-1.5 w-full bg-white/5 rounded-full mt-2 overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-amber-500"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${healthStatus.disk.percentage || 0}%` }}
+                                    />
+                                </div>
+                            </Card>
+                        )}
+
+                        {healthStatus.battery && (
+                            <Card className="p-4 bg-white/5 border-border-glass">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Battery className="w-5 h-5 text-emerald-400" />
+                                    <h4 className="font-bold text-sm">Battery</h4>
+                                </div>
+                                <div className="text-2xl font-bold">{healthStatus.battery.level?.toFixed(0) || 0}%</div>
+                                <div className="text-[10px] text-foreground-muted">
+                                    {healthStatus.battery.charging ? 'Charging' : 'Not charging'}
+                                </div>
+                            </Card>
+                        )}
+                    </div>
+
+                    {/* Alerts */}
+                    {healthStatus.alerts && healthStatus.alerts.length > 0 && (
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-amber-400" />
+                                Alerts ({healthStatus.alerts.length})
+                            </h3>
+                            {healthStatus.alerts.map((alert: any, i: number) => (
+                                <Card
+                                    key={i}
+                                    className={cn(
+                                        "p-4 border",
+                                        alert.severity === 'critical' && "bg-red-500/10 border-red-500/30",
+                                        alert.severity === 'warning' && "bg-amber-500/10 border-amber-500/30",
+                                        alert.severity === 'info' && "bg-blue-500/10 border-blue-500/30"
+                                    )}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <AlertTriangle className={cn(
+                                            "w-5 h-5 mt-0.5",
+                                            alert.severity === 'critical' && "text-red-400",
+                                            alert.severity === 'warning' && "text-amber-400",
+                                            alert.severity === 'info' && "text-blue-400"
+                                        )} />
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-sm">{alert.message}</span>
+                                                <span className={cn(
+                                                    "text-xs px-2 py-0.5 rounded uppercase",
+                                                    alert.severity === 'critical' && "bg-red-500/20 text-red-400",
+                                                    alert.severity === 'warning' && "bg-amber-500/20 text-amber-400",
+                                                    alert.severity === 'info' && "bg-blue-500/20 text-blue-400"
+                                                )}>
+                                                    {alert.severity}
+                                                </span>
+                                            </div>
+                                            {alert.action && (
+                                                <p className="text-xs text-foreground-muted">{alert.action}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+
+                    {(!healthStatus.alerts || healthStatus.alerts.length === 0) && (
+                        <Card className="p-6 bg-gradient-to-br from-emerald-500/10 to-green-500/10 border-emerald-500/30">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-lg font-bold flex items-center gap-2">
+                                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                                        System Health: Good
+                                    </h3>
+                                    <p className="text-sm text-foreground-muted mt-1">
+                                        All systems operating normally. No issues detected.
+                                    </p>
+                                </div>
+                                <CheckCircle className="w-12 h-12 text-emerald-400" />
+                            </div>
+                        </Card>
+                    )}
+                </>
+            )}
+        </div>
+    );
+};
+
 // --- Protection View ---
 
 const ProtectionView = () => {
@@ -1530,6 +1976,7 @@ export const SystemCleaner: React.FC = () => {
         { id: 'uninstaller', name: 'Uninstaller', icon: AppWindow },
         { id: 'protection', name: 'Protection', icon: ShieldCheck },
         { id: 'maintenance', name: 'Maintenance', icon: Wrench },
+        { id: 'health', name: 'Health', icon: ActivityIcon },
     ];
 
     return (
@@ -1592,7 +2039,24 @@ export const SystemCleaner: React.FC = () => {
                     ))}
 
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Protection</div>
-                    {tabs.slice(8).map((tab) => (
+                    {tabs.slice(8, 10).map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
+                                activeTab === tab.id 
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                    : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
+                            )}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            <span>{tab.name}</span>
+                        </button>
+                    ))}
+
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Monitoring</div>
+                    {tabs.slice(10).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -1630,13 +2094,8 @@ export const SystemCleaner: React.FC = () => {
                                 {activeTab === 'startup' && <StartupView />}
                                 {activeTab === 'uninstaller' && <UninstallerView />}
                                 {activeTab === 'protection' && <ProtectionView />}
-                                {activeTab === 'maintenance' && (
-                                    <div className="h-full flex flex-col items-center justify-center space-y-4">
-                                        <Wrench className="w-16 h-16 text-foreground-muted opacity-20" />
-                                        <h3 className="text-xl font-bold">Maintenance Module</h3>
-                                        <p className="text-foreground-muted">System repair and upkeep tools.</p>
-                                    </div>
-                                )}
+                                {activeTab === 'maintenance' && <MaintenanceView />}
+                                {activeTab === 'health' && <HealthMonitorView />}
                             </motion.div>
                         </AnimatePresence>
                     </div>

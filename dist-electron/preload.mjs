@@ -67,5 +67,7 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("cleaner:space-lens-progress", listener);
 		return () => electron.ipcRenderer.removeListener("cleaner:space-lens-progress", listener);
-	}
+	},
+	runMaintenance: (task) => electron.ipcRenderer.invoke("cleaner:run-maintenance", task),
+	getHealthStatus: () => electron.ipcRenderer.invoke("cleaner:get-health-status")
 });

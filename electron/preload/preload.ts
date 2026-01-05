@@ -77,4 +77,6 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
     ipcRenderer.on('cleaner:space-lens-progress', listener);
     return () => ipcRenderer.removeListener('cleaner:space-lens-progress', listener);
   },
+  runMaintenance: (task: any) => ipcRenderer.invoke('cleaner:run-maintenance', task),
+  getHealthStatus: () => ipcRenderer.invoke('cleaner:get-health-status'),
 })

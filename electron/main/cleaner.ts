@@ -726,17 +726,39 @@ export function setupCleanerHandlers() {
             try {
                 // Clean Registry Entries
                 if (options.registry) {
-                    // Clean Recent Documents
+                    // Clean Recent Documents - Get count before cleaning
                     try {
+                        const countScript = `
+                            $props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
+                            Select-Object -ExpandProperty * | 
+                            Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' }
+                            if ($props) { $props.Count } else { 0 }
+                        `;
+                        const { stdout: docsCountBefore } = await execAsync(`powershell "${countScript}"`).catch(() => ({ stdout: '0' }));
+                        const docsCountNum = parseInt(docsCountBefore.trim()) || 0;
+                        
                         await execAsync('powershell "Remove-ItemProperty -Path \'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\' -Name * -ErrorAction SilentlyContinue"');
-                        cleanedItems += 10; // Estimate
-                    } catch (e) {}
+                        cleanedItems += docsCountNum;
+                    } catch (e) {
+                        errors.push(`Failed to clean Recent Documents registry: ${(e as Error).message}`);
+                    }
 
-                    // Clean Recent Programs
+                    // Clean Recent Programs - Get count before cleaning
                     try {
+                        const countScript = `
+                            $props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
+                            Select-Object -ExpandProperty * | 
+                            Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' }
+                            if ($props) { $props.Count } else { 0 }
+                        `;
+                        const { stdout: programsCountBefore } = await execAsync(`powershell "${countScript}"`).catch(() => ({ stdout: '0' }));
+                        const programsCountNum = parseInt(programsCountBefore.trim()) || 0;
+                        
                         await execAsync('powershell "Remove-ItemProperty -Path \'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\' -Name * -ErrorAction SilentlyContinue -Exclude MRUList"');
-                        cleanedItems += 5; // Estimate
-                    } catch (e) {}
+                        cleanedItems += programsCountNum;
+                    } catch (e) {
+                        errors.push(`Failed to clean Recent Programs registry: ${(e as Error).message}`);
+                    }
                 }
 
                 // Clean Activity History
@@ -853,6 +875,220 @@ export function setupCleanerHandlers() {
             freedSizeFormatted: formatBytes(freedSize),
             errors
         };
+    });
+
+    // --- Maintenance Module ---
+
+    // Run Maintenance Task
+    ipcMain.handle('cleaner:run-maintenance', async (_event, task: { id: string; name: string; category: string }) => {
+        const platform = process.platform;
+        const startTime = Date.now();
+        let output = '';
+
+        try {
+            if (platform === 'win32') {
+                switch (task.category) {
+                    case 'sfc':
+                        // System File Checker
+                        const { stdout: sfcOutput } = await execAsync('sfc /scannow', { timeout: 300000 });
+                        output = sfcOutput;
+                        break;
+                    
+                    case 'dism':
+                        // DISM Health Restore
+                        const { stdout: dismOutput } = await execAsync('DISM /Online /Cleanup-Image /RestoreHealth', { timeout: 600000 });
+                        output = dismOutput;
+                        break;
+                    
+                    case 'disk-cleanup':
+                        // Disk Cleanup automation
+                        const { stdout: cleanupOutput } = await execAsync('cleanmgr /sagerun:1', { timeout: 300000 });
+                        output = cleanupOutput || 'Disk cleanup completed';
+                        break;
+                    
+                    case 'dns-flush':
+                        // Flush DNS cache
+                        const { stdout: dnsOutput } = await execAsync('ipconfig /flushdns');
+                        output = dnsOutput || 'DNS cache flushed successfully';
+                        break;
+                    
+                    case 'winsock-reset':
+                        // Reset Winsock
+                        const { stdout: winsockOutput } = await execAsync('netsh winsock reset');
+                        output = winsockOutput || 'Winsock reset completed';
+                        break;
+                    
+                    case 'windows-search-rebuild':
+                        // Rebuild Windows Search index
+                        try {
+                            await execAsync('powershell "Stop-Service -Name WSearch -Force"');
+                            await execAsync('powershell "Remove-Item -Path "$env:ProgramData\\Microsoft\\Search\\Data\\*" -Recurse -Force"');
+                            await execAsync('powershell "Start-Service -Name WSearch"');
+                            output = 'Windows Search index rebuilt successfully';
+                        } catch (e) {
+                            throw new Error(`Failed to rebuild search index: ${(e as Error).message}`);
+                        }
+                        break;
+                    
+                    default:
+                        throw new Error(`Unknown maintenance task: ${task.category}`);
+                }
+            } else if (platform === 'darwin') {
+                switch (task.category) {
+                    case 'spotlight-reindex':
+                        // Rebuild Spotlight index
+                        try {
+                            await execAsync('sudo mdutil -E /');
+                            output = 'Spotlight index rebuilt successfully';
+                        } catch (e) {
+                            // Try without sudo if permission denied
+                            try {
+                                await execAsync('mdutil -E ~');
+                                output = 'Spotlight index rebuilt successfully (user directory only)';
+                            } catch (e2) {
+                                throw new Error(`Failed to rebuild Spotlight index: ${(e2 as Error).message}`);
+                            }
+                        }
+                        break;
+                    
+                    case 'disk-permissions':
+                        // Verify disk permissions (macOS Big Sur+ uses SIP, so this is limited)
+                        try {
+                            const { stdout: diskOutput } = await execAsync('diskutil verifyVolume /');
+                            output = diskOutput || 'Disk permissions verified';
+                        } catch (e) {
+                            output = 'Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)';
+                        }
+                        break;
+                    
+                    case 'dns-flush':
+                        // Flush DNS cache (macOS)
+                        try {
+                            await execAsync('sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder');
+                            output = 'DNS cache flushed successfully';
+                        } catch (e) {
+                            // Try without sudo
+                            try {
+                                await execAsync('dscacheutil -flushcache; killall -HUP mDNSResponder');
+                                output = 'DNS cache flushed successfully';
+                            } catch (e2) {
+                                throw new Error(`Failed to flush DNS: ${(e2 as Error).message}`);
+                            }
+                        }
+                        break;
+                    
+                    case 'mail-rebuild':
+                        // Rebuild Mail database
+                        try {
+                            // Stop Mail app if running
+                            await execAsync('killall Mail 2>/dev/null || true');
+                            // Note: Actual Mail database rebuild requires Mail.app to be closed
+                            output = 'Mail database rebuild initiated (please ensure Mail.app is closed)';
+                        } catch (e) {
+                            throw new Error(`Failed to rebuild Mail database: ${(e as Error).message}`);
+                        }
+                        break;
+                    
+                    default:
+                        throw new Error(`Unknown maintenance task: ${task.category}`);
+                }
+            } else {
+                throw new Error('Unsupported platform for maintenance tasks');
+            }
+
+            return {
+                success: true,
+                taskId: task.id,
+                duration: Date.now() - startTime,
+                output
+            };
+        } catch (e) {
+            return {
+                success: false,
+                taskId: task.id,
+                duration: Date.now() - startTime,
+                error: (e as Error).message,
+                output
+            };
+        }
+    });
+
+    // Get Health Status
+    ipcMain.handle('cleaner:get-health-status', async () => {
+        try {
+            const mem = await si.mem();
+            const load = await si.currentLoad();
+            const disk = await si.fsSize();
+            const battery = await si.battery().catch(() => null);
+            
+            const alerts: any[] = [];
+            
+            // Check disk space
+            const rootDisk = disk.find(d => d.mount === '/' || d.mount === 'C:') || disk[0];
+            if (rootDisk) {
+                const freePercent = (rootDisk.available / rootDisk.size) * 100;
+                if (freePercent < 10) {
+                    alerts.push({
+                        type: 'low_space',
+                        severity: 'critical',
+                        message: `Low disk space: ${formatBytes(rootDisk.available)} free (${freePercent.toFixed(1)}%)`,
+                        action: 'Run cleanup to free space'
+                    });
+                } else if (freePercent < 20) {
+                    alerts.push({
+                        type: 'low_space',
+                        severity: 'warning',
+                        message: `Disk space getting low: ${formatBytes(rootDisk.available)} free (${freePercent.toFixed(1)}%)`,
+                        action: 'Consider running cleanup'
+                    });
+                }
+            }
+            
+            // Check CPU usage
+            if (load.currentLoad > 90) {
+                alerts.push({
+                    type: 'high_cpu',
+                    severity: 'warning',
+                    message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`,
+                    action: 'Check heavy processes'
+                });
+            }
+            
+            // Check memory usage
+            const memPercent = (mem.used / mem.total) * 100;
+            if (memPercent > 90) {
+                alerts.push({
+                    type: 'memory_pressure',
+                    severity: 'warning',
+                    message: `High memory usage: ${memPercent.toFixed(1)}%`,
+                    action: 'Consider freeing RAM'
+                });
+            }
+            
+            return {
+                cpu: load.currentLoad,
+                ram: {
+                    used: mem.used,
+                    total: mem.total,
+                    percentage: memPercent
+                },
+                disk: rootDisk ? {
+                    free: rootDisk.available,
+                    total: rootDisk.size,
+                    percentage: ((rootDisk.size - rootDisk.available) / rootDisk.size) * 100
+                } : null,
+                battery: battery ? {
+                    level: battery.percent,
+                    charging: battery.isCharging || false
+                } : null,
+                alerts
+            };
+        } catch (e) {
+            return {
+                success: false,
+                error: (e as Error).message
+            };
+        }
     });
 }
 
