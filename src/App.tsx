@@ -123,7 +123,57 @@ function App() {
       // Let's rely on modifiers being present.
 
       const { toolShortcuts } = useSettingsStore.getState();
-      const openTab = useTabStore.getState().openTab;
+      const { openTab, tabs, activeTabId, setActiveTab, closeTab } = useTabStore.getState();
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const eventHasPrimary = isMac ? e.metaKey : e.ctrlKey;
+
+      // --- Navigation Shortcuts ---
+
+      // Close Tab: Ctrl+W (Win) or Cmd+W (Mac)
+      if (eventHasPrimary && e.key.toLowerCase() === 'w' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (activeTabId && tabs.length > 0) {
+            closeTab(activeTabId);
+        }
+        return;
+      }
+
+      // Cycle Tabs: Ctrl+Tab (Next) or Ctrl+Shift+Tab (Prev)
+      // Note: Browsers might trap Ctrl+Tab. In Electron renderer it usually bubbles if not handled by menu.
+      if (e.ctrlKey && e.key === 'Tab') { // Standard is Ctrl+Tab even on Mac often, or Cmd+Option+Right? Let's stick to Control+Tab for now like VSCode
+         // Actually on Mac VSCode uses Ctrl+Tab too.
+         e.preventDefault();
+         const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+         if (currentIndex === -1) return;
+
+         if (e.shiftKey) {
+            // Previous
+            const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+            setActiveTab(tabs[prevIndex].id);
+         } else {
+            // Next
+            const nextIndex = (currentIndex + 1) % tabs.length;
+            setActiveTab(tabs[nextIndex].id);
+         }
+         return;
+      }
+
+      // Switch by Number: Ctrl+1..9
+      if (eventHasPrimary && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '9') {
+         e.preventDefault();
+         const index = parseInt(e.key) - 1;
+         if (index < tabs.length) {
+             setActiveTab(tabs[index].id);
+         } else if (e.key === '9' && tabs.length > 0) {
+             // Ctrl+9 often goes to last tab
+             setActiveTab(tabs[tabs.length - 1].id);
+         }
+         return;
+      }
+
+      // --- Tool Shortcuts ---
 
       for (const tool of TOOLS) {
         const shortcut = toolShortcuts[tool.id] || tool.shortcut;
@@ -145,8 +195,8 @@ function App() {
         const configHasAlt = modifiers.includes('alt') || modifiers.includes('option');
         // We generally ignore specific Meta unless it's the primary modifier on Mac
 
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const eventHasPrimary = isMac ? e.metaKey : e.ctrlKey;
+        // const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0; // Moved up
+        // const eventHasPrimary = isMac ? e.metaKey : e.ctrlKey; // Moved up
         
         if (configHasCtrl !== eventHasPrimary) continue;
         if (configHasShift !== e.shiftKey) continue;

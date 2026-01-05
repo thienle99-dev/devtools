@@ -78,6 +78,7 @@
 - [x] Test editor functionality
 
 ### 2.3 Tool Pane Implementation
+
 - [x] Complete ToolPane component
 - [x] Add input pane with CodeEditor
 - [x] Add output pane with display area
@@ -289,6 +290,7 @@
 ### 3.9 Screenshot Tools (Xnapper Clone)
 
 #### Phase 1: Core Capture & Basic Processing
+
 - [ ] Setup Xnapper tool structure (`src/tools/screenshot/`)
 - [ ] Install dependencies (fabric, tesseract.js)
 - [ ] Create Xnapper store (`src/store/xnapperStore.ts`)
@@ -301,6 +303,7 @@
 - [ ] Add to tools registry and sidebar
 
 #### Phase 2: Redaction & Background
+
 - [ ] Integrate Tesseract.js for OCR
 - [ ] Implement regex pattern detection (email, IP, API keys)
 - [ ] Create RedactionPanel component
@@ -312,6 +315,7 @@
 - [ ] Add background preview thumbnails
 
 #### Phase 3: Annotations
+
 - [ ] Integrate Fabric.js for canvas manipulation
 - [ ] Create PreviewSection with Fabric.js canvas
 - [ ] Implement arrow tool (straight, curved)
@@ -324,6 +328,7 @@
 - [ ] Add color picker and size controls
 
 #### Phase 4: Export & Share
+
 - [ ] Create ExportPanel component
 - [ ] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
 - [ ] Implement custom dimensions
@@ -335,6 +340,7 @@
 - [ ] Implement screenshot history storage
 
 #### Phase 5: Advanced Features
+
 - [ ] Implement templates system
 - [ ] Add preset saving functionality
 - [ ] Implement batch processing (future)
@@ -421,11 +427,15 @@
 
 ### 4.3 Keyboard Shortcuts
 
-- [ ] Implement Cmd/Ctrl + K for search
-- [ ] Add tool-specific shortcuts
+- [x] Implement Cmd/Ctrl + K for search
+- [x] Add tool-specific shortcuts
+- [x] Add navigation shortcuts
+- [x] Create shortcuts help modal
+- [x] Store shortcuts in settings
+- [x] Add tool-specific shortcuts
 - [ ] Add navigation shortcuts
 - [ ] Create shortcuts help modal
-- [ ] Store shortcuts in settings
+- [x] Store shortcuts in settings
 
 ### 4.4 Settings & Persistence
 
@@ -438,6 +448,7 @@
 - [x] Test persistence across app restarts
 
 ## 5. Performance Improvements
+
 - [x] Optimize Dynamic Island animations (GPU acceleration, remove expensive blur)
 - [x] Implement Lazy Loading for routes (SettingsPage)
 - [ ] Implement virtualization for large data outputs (future)
