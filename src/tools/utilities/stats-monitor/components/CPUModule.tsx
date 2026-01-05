@@ -164,6 +164,7 @@ export const CPUModule: React.FC<CPUModuleProps> = React.memo(({ data }) => {
   const [history, setHistory] = useState<number[]>(chartHistory.cpu || Array(MAX_POINTS).fill(0));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const historyRef = useRef<number[]>(chartHistory.cpu || Array(MAX_POINTS).fill(0));
 
   const currentLoad = data.load.currentLoad;
 
