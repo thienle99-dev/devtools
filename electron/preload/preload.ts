@@ -115,3 +115,13 @@ contextBridge.exposeInMainWorld('screenshotAPI', {
   saveFile: (dataUrl: string, options: { filename?: string; format?: string }) =>
     ipcRenderer.invoke('screenshot:save-file', dataUrl, options),
 })
+
+contextBridge.exposeInMainWorld('permissionsAPI', {
+  checkAll: () => ipcRenderer.invoke('permissions:check-all'),
+  checkAccessibility: () => ipcRenderer.invoke('permissions:check-accessibility'),
+  checkFullDiskAccess: () => ipcRenderer.invoke('permissions:check-full-disk-access'),
+  checkScreenRecording: () => ipcRenderer.invoke('permissions:check-screen-recording'),
+  testClipboard: () => ipcRenderer.invoke('permissions:test-clipboard'),
+  testFileAccess: () => ipcRenderer.invoke('permissions:test-file-access'),
+  openSystemPreferences: (permissionType?: string) => ipcRenderer.invoke('permissions:open-system-preferences', permissionType),
+})

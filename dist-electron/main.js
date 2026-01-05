@@ -8,154 +8,194 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import si from "systeminformation";
 import Store from "electron-store";
-var __require = /* @__PURE__ */ ((p) => typeof require < "u" ? require : typeof Proxy < "u" ? new Proxy(p, { get: (p, H) => (typeof require < "u" ? require : p)[H] }) : p)(function(p) {
-	if (typeof require < "u") return require.apply(this, arguments);
-	throw Error("Calling `require` for \"" + p + "\" in an environment that doesn't expose the `require` function.");
-}), execAsync$1 = promisify(exec), dirSizeCache = /* @__PURE__ */ new Map(), CACHE_TTL = 300 * 1e3;
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
+var execAsync$1 = promisify(exec);
+var dirSizeCache = /* @__PURE__ */ new Map();
+var CACHE_TTL = 300 * 1e3;
 setInterval(() => {
-	let p = Date.now();
-	for (let [H, U] of dirSizeCache.entries()) p - U.timestamp > CACHE_TTL && dirSizeCache.delete(H);
+	const now = Date.now();
+	for (const [key, value] of dirSizeCache.entries()) if (now - value.timestamp > CACHE_TTL) dirSizeCache.delete(key);
 }, 6e4);
 function setupCleanerHandlers() {
-	ipcMain.handle("cleaner:get-platform", async () => ({
-		platform: process.platform,
-		version: os.release(),
-		architecture: os.arch(),
-		isAdmin: !0
-	})), ipcMain.handle("cleaner:scan-junk", async () => {
-		let p = process.platform, H = [], U = os.homedir();
-		if (p === "win32") {
-			let p = process.env.WINDIR || "C:\\Windows", U = process.env.LOCALAPPDATA || "", W = os.tmpdir(), G = path.join(p, "Temp"), K = path.join(p, "Prefetch"), q = path.join(p, "SoftwareDistribution", "Download");
-			H.push({
-				path: W,
+	ipcMain.handle("cleaner:get-platform", async () => {
+		return {
+			platform: process.platform,
+			version: os.release(),
+			architecture: os.arch(),
+			isAdmin: true
+		};
+	});
+	ipcMain.handle("cleaner:scan-junk", async () => {
+		const platform = process.platform;
+		const junkPaths = [];
+		const home = os.homedir();
+		if (platform === "win32") {
+			const windir = process.env.WINDIR || "C:\\Windows";
+			const localApp = process.env.LOCALAPPDATA || "";
+			const tempDir = os.tmpdir();
+			const winTemp = path.join(windir, "Temp");
+			const prefetch = path.join(windir, "Prefetch");
+			const softDist = path.join(windir, "SoftwareDistribution", "Download");
+			junkPaths.push({
+				path: tempDir,
 				name: "User Temporary Files",
 				category: "temp"
-			}), H.push({
-				path: G,
+			});
+			junkPaths.push({
+				path: winTemp,
 				name: "System Temporary Files",
 				category: "temp"
-			}), H.push({
-				path: K,
+			});
+			junkPaths.push({
+				path: prefetch,
 				name: "Prefetch Files",
 				category: "system"
-			}), H.push({
-				path: q,
+			});
+			junkPaths.push({
+				path: softDist,
 				name: "Windows Update Cache",
 				category: "system"
 			});
-			let J = path.join(U, "Google/Chrome/User Data/Default/Cache"), Y = path.join(U, "Microsoft/Edge/User Data/Default/Cache");
-			H.push({
-				path: J,
+			const chromeCache = path.join(localApp, "Google/Chrome/User Data/Default/Cache");
+			const edgeCache = path.join(localApp, "Microsoft/Edge/User Data/Default/Cache");
+			junkPaths.push({
+				path: chromeCache,
 				name: "Chrome Cache",
 				category: "cache"
-			}), H.push({
-				path: Y,
+			});
+			junkPaths.push({
+				path: edgeCache,
 				name: "Edge Cache",
 				category: "cache"
-			}), H.push({
+			});
+			junkPaths.push({
 				path: "C:\\$Recycle.Bin",
 				name: "Recycle Bin",
 				category: "trash"
 			});
-		} else if (p === "darwin") {
-			H.push({
-				path: path.join(U, "Library/Caches"),
+		} else if (platform === "darwin") {
+			junkPaths.push({
+				path: path.join(home, "Library/Caches"),
 				name: "User Caches",
 				category: "cache"
-			}), H.push({
-				path: path.join(U, "Library/Logs"),
+			});
+			junkPaths.push({
+				path: path.join(home, "Library/Logs"),
 				name: "User Logs",
 				category: "log"
-			}), H.push({
+			});
+			junkPaths.push({
 				path: "/Library/Caches",
 				name: "System Caches",
 				category: "cache"
-			}), H.push({
+			});
+			junkPaths.push({
 				path: "/var/log",
 				name: "System Logs",
 				category: "log"
-			}), H.push({
-				path: path.join(U, "Library/Caches/com.apple.bird"),
+			});
+			junkPaths.push({
+				path: path.join(home, "Library/Caches/com.apple.bird"),
 				name: "iCloud Cache",
 				category: "cache"
-			}), H.push({
-				path: path.join(U, ".Trash"),
+			});
+			junkPaths.push({
+				path: path.join(home, ".Trash"),
 				name: "Trash Bin",
 				category: "trash"
 			});
 			try {
-				let { stdout: p } = await execAsync$1("tmutil listlocalsnapshots /"), U = p.split("\n").filter((p) => p.trim()).length;
-				U > 0 && H.push({
+				const { stdout } = await execAsync$1("tmutil listlocalsnapshots /");
+				const count = stdout.split("\n").filter((l) => l.trim()).length;
+				if (count > 0) junkPaths.push({
 					path: "tmutil:snapshots",
-					name: `Time Machine Snapshots (${U})`,
+					name: `Time Machine Snapshots (${count})`,
 					category: "system",
-					virtual: !0,
-					size: U * 500 * 1024 * 1024
+					virtual: true,
+					size: count * 500 * 1024 * 1024
 				});
-			} catch {}
+			} catch (e) {}
 		}
-		let W = [], G = 0;
-		for (let p of H) try {
-			if (p.virtual) {
-				W.push({
-					...p,
-					sizeFormatted: formatBytes$1(p.size || 0)
-				}), G += p.size || 0;
+		const results = [];
+		let totalSize = 0;
+		for (const item of junkPaths) try {
+			if (item.virtual) {
+				results.push({
+					...item,
+					sizeFormatted: formatBytes$1(item.size || 0)
+				});
+				totalSize += item.size || 0;
 				continue;
 			}
-			let H = await fs.stat(p.path).catch(() => null);
-			if (H) {
-				let U = H.isDirectory() ? await getDirSize(p.path) : H.size;
-				U > 0 && (W.push({
-					...p,
-					size: U,
-					sizeFormatted: formatBytes$1(U)
-				}), G += U);
+			const stats = await fs.stat(item.path).catch(() => null);
+			if (stats) {
+				const size = stats.isDirectory() ? await getDirSize(item.path) : stats.size;
+				if (size > 0) {
+					results.push({
+						...item,
+						size,
+						sizeFormatted: formatBytes$1(size)
+					});
+					totalSize += size;
+				}
 			}
-		} catch {}
+		} catch (e) {}
 		return {
-			items: W,
-			totalSize: G,
-			totalSizeFormatted: formatBytes$1(G)
+			items: results,
+			totalSize,
+			totalSizeFormatted: formatBytes$1(totalSize)
 		};
-	}), ipcMain.handle("cleaner:get-space-lens", async (p, H) => {
-		let U = H || os.homedir(), W = p.sender;
-		return await scanDirectoryForLens(U, 0, 1, (p) => {
-			W && !W.isDestroyed() && W.send("cleaner:space-lens-progress", p);
+	});
+	ipcMain.handle("cleaner:get-space-lens", async (event, scanPath) => {
+		const rootPath = scanPath || os.homedir();
+		const sender = event.sender;
+		return await scanDirectoryForLens(rootPath, 0, 1, (progress) => {
+			if (sender && !sender.isDestroyed()) sender.send("cleaner:space-lens-progress", progress);
 		});
-	}), ipcMain.handle("cleaner:get-folder-size", async (p, H) => {
-		let U = dirSizeCache.get(H);
-		if (U && Date.now() - U.timestamp < CACHE_TTL) return {
-			size: U.size,
-			sizeFormatted: formatBytes$1(U.size),
-			cached: !0
+	});
+	ipcMain.handle("cleaner:get-folder-size", async (_, folderPath) => {
+		const cached = dirSizeCache.get(folderPath);
+		if (cached && Date.now() - cached.timestamp < CACHE_TTL) return {
+			size: cached.size,
+			sizeFormatted: formatBytes$1(cached.size),
+			cached: true
 		};
 		try {
-			let p = await getDirSizeLimited(H, 4), U = formatBytes$1(p);
-			return dirSizeCache.set(H, {
-				size: p,
+			const size = await getDirSizeLimited(folderPath, 4);
+			const sizeFormatted = formatBytes$1(size);
+			dirSizeCache.set(folderPath, {
+				size,
 				timestamp: Date.now()
-			}), {
-				size: p,
-				sizeFormatted: U,
-				cached: !1
+			});
+			return {
+				size,
+				sizeFormatted,
+				cached: false
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
 				size: 0,
 				sizeFormatted: formatBytes$1(0),
-				cached: !1,
-				error: p.message
+				cached: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:clear-size-cache", async (p, H) => {
-		if (H) for (let p of dirSizeCache.keys()) p.startsWith(H) && dirSizeCache.delete(p);
-		else dirSizeCache.clear();
-		return { success: !0 };
-	}), ipcMain.handle("cleaner:get-performance-data", async () => {
-		let p = await si.processes(), H = await si.mem(), U = await si.currentLoad();
+	});
+	ipcMain.handle("cleaner:clear-size-cache", async (_, folderPath) => {
+		if (folderPath) {
+			for (const key of dirSizeCache.keys()) if (key.startsWith(folderPath)) dirSizeCache.delete(key);
+		} else dirSizeCache.clear();
+		return { success: true };
+	});
+	ipcMain.handle("cleaner:get-performance-data", async () => {
+		const processes = await si.processes();
+		const mem = await si.mem();
+		const load = await si.currentLoad();
 		return {
-			heavyApps: p.list.sort((p, H) => H.cpu + H.mem - (p.cpu + p.mem)).slice(0, 10).map((p) => ({
+			heavyApps: processes.list.sort((a, b) => b.cpu + b.mem - (a.cpu + a.mem)).slice(0, 10).map((p) => ({
 				pid: p.pid,
 				name: p.name,
 				cpu: p.cpu,
@@ -164,244 +204,314 @@ function setupCleanerHandlers() {
 				path: p.path
 			})),
 			memory: {
-				total: H.total,
-				used: H.used,
-				percent: H.used / H.total * 100
+				total: mem.total,
+				used: mem.used,
+				percent: mem.used / mem.total * 100
 			},
-			cpuLoad: U.currentLoad
+			cpuLoad: load.currentLoad
 		};
-	}), ipcMain.handle("cleaner:get-startup-items", async () => {
-		let p = process.platform, H = [];
-		if (p === "darwin") try {
-			let p = path.join(os.homedir(), "Library/LaunchAgents"), U = await fs.readdir(p).catch(() => []);
-			for (let W of U) if (W.endsWith(".plist")) {
-				let U = path.join(p, W), { stdout: G } = await execAsync$1(`launchctl list | grep -i "${W.replace(".plist", "")}"`).catch(() => ({ stdout: "" })), K = G.trim().length > 0;
-				H.push({
-					name: W.replace(".plist", ""),
-					path: U,
+	});
+	ipcMain.handle("cleaner:get-startup-items", async () => {
+		const platform = process.platform;
+		const items = [];
+		if (platform === "darwin") try {
+			const agentsPath = path.join(os.homedir(), "Library/LaunchAgents");
+			const agencyFiles = await fs.readdir(agentsPath).catch(() => []);
+			for (const file of agencyFiles) if (file.endsWith(".plist")) {
+				const plistPath = path.join(agentsPath, file);
+				const { stdout } = await execAsync$1(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
+				const enabled = stdout.trim().length > 0;
+				items.push({
+					name: file.replace(".plist", ""),
+					path: plistPath,
 					type: "LaunchAgent",
-					enabled: K
+					enabled
 				});
 			}
-			let W = "/Library/LaunchAgents", G = await fs.readdir(W).catch(() => []);
-			for (let p of G) {
-				let U = path.join(W, p), { stdout: G } = await execAsync$1(`launchctl list | grep -i "${p.replace(".plist", "")}"`).catch(() => ({ stdout: "" })), K = G.trim().length > 0;
-				H.push({
-					name: p.replace(".plist", ""),
-					path: U,
+			const globalAgents = "/Library/LaunchAgents";
+			const globalFiles = await fs.readdir(globalAgents).catch(() => []);
+			for (const file of globalFiles) {
+				const plistPath = path.join(globalAgents, file);
+				const { stdout } = await execAsync$1(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
+				const enabled = stdout.trim().length > 0;
+				items.push({
+					name: file.replace(".plist", ""),
+					path: plistPath,
 					type: "SystemAgent",
-					enabled: K
+					enabled
 				});
 			}
-		} catch {}
-		else if (p === "win32") try {
-			let { stdout: p } = await execAsync$1("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\""), U = JSON.parse(p), W = Array.isArray(U) ? U : [U];
-			for (let p of W) H.push({
-				name: p.Name,
-				path: p.Command,
+		} catch (e) {}
+		else if (platform === "win32") try {
+			const { stdout } = await execAsync$1("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\"");
+			const data = JSON.parse(stdout);
+			const list = Array.isArray(data) ? data : [data];
+			for (const item of list) items.push({
+				name: item.Name,
+				path: item.Command,
 				type: "StartupCommand",
-				location: p.Location,
-				enabled: !0
+				location: item.Location,
+				enabled: true
 			});
-		} catch {}
-		return H;
-	}), ipcMain.handle("cleaner:toggle-startup-item", async (p, H) => {
-		let U = process.platform;
+		} catch (e) {}
+		return items;
+	});
+	ipcMain.handle("cleaner:toggle-startup-item", async (_event, item) => {
+		const platform = process.platform;
 		try {
-			if (U === "darwin") {
-				let p = H.enabled ?? !0;
-				if (H.type === "LaunchAgent" || H.type === "SystemAgent") return p ? await execAsync$1(`launchctl unload "${H.path}"`) : await execAsync$1(`launchctl load "${H.path}"`), {
-					success: !0,
-					enabled: !p
-				};
-			} else if (U === "win32") {
-				let p = H.enabled ?? !0;
-				if (H.location === "Startup") {
-					let U = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup"), W = path.basename(H.path), G = path.join(U, W);
-					return p && await fs.unlink(G).catch(() => {}), {
-						success: !0,
-						enabled: !p
+			if (platform === "darwin") {
+				const isEnabled = item.enabled ?? true;
+				if (item.type === "LaunchAgent" || item.type === "SystemAgent") {
+					if (isEnabled) await execAsync$1(`launchctl unload "${item.path}"`);
+					else await execAsync$1(`launchctl load "${item.path}"`);
+					return {
+						success: true,
+						enabled: !isEnabled
+					};
+				}
+			} else if (platform === "win32") {
+				const isEnabled = item.enabled ?? true;
+				if (item.location === "Startup") {
+					const startupPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup");
+					const shortcutName = path.basename(item.path);
+					const shortcutPath = path.join(startupPath, shortcutName);
+					if (isEnabled) await fs.unlink(shortcutPath).catch(() => {});
+					return {
+						success: true,
+						enabled: !isEnabled
 					};
 				} else return {
-					success: !0,
-					enabled: !p
+					success: true,
+					enabled: !isEnabled
 				};
 			}
 			return {
-				success: !1,
+				success: false,
 				error: "Unsupported platform or item type"
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:kill-process", async (p, H) => {
+	});
+	ipcMain.handle("cleaner:kill-process", async (_event, pid) => {
 		try {
-			return process.kill(H, "SIGKILL"), { success: !0 };
-		} catch (p) {
+			process.kill(pid, "SIGKILL");
+			return { success: true };
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:get-installed-apps", async () => {
-		let p = process.platform, H = [];
-		if (p === "darwin") {
-			let p = "/Applications", U = await fs.readdir(p, { withFileTypes: !0 }).catch(() => []);
-			for (let W of U) if (W.name.endsWith(".app")) {
-				let U = path.join(p, W.name);
+	});
+	ipcMain.handle("cleaner:get-installed-apps", async () => {
+		const platform = process.platform;
+		const apps = [];
+		if (platform === "darwin") {
+			const appsDir = "/Applications";
+			const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
+			for (const file of files) if (file.name.endsWith(".app")) {
+				const appPath = path.join(appsDir, file.name);
 				try {
-					let p = await fs.stat(U);
-					H.push({
-						name: W.name.replace(".app", ""),
-						path: U,
-						size: await getDirSize(U),
-						installDate: p.birthtime,
+					const stats = await fs.stat(appPath);
+					apps.push({
+						name: file.name.replace(".app", ""),
+						path: appPath,
+						size: await getDirSize(appPath),
+						installDate: stats.birthtime,
 						type: "Application"
 					});
-				} catch {}
+				} catch (e) {}
 			}
-		} else if (p === "win32") try {
-			let { stdout: p } = await execAsync$1("powershell \"\n                    Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion, InstallLocation, InstallDate | ConvertTo-Json\n                \""), U = JSON.parse(p), W = Array.isArray(U) ? U : [U];
-			for (let p of W) p.DisplayName && H.push({
-				name: p.DisplayName,
-				version: p.DisplayVersion,
-				path: p.InstallLocation,
-				installDate: p.InstallDate,
+		} else if (platform === "win32") try {
+			const { stdout } = await execAsync$1(`powershell "
+                    Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion, InstallLocation, InstallDate | ConvertTo-Json
+                "`);
+			const data = JSON.parse(stdout);
+			const list = Array.isArray(data) ? data : [data];
+			for (const item of list) if (item.DisplayName) apps.push({
+				name: item.DisplayName,
+				version: item.DisplayVersion,
+				path: item.InstallLocation,
+				installDate: item.InstallDate,
 				type: "SystemApp"
 			});
-		} catch {}
-		return H;
-	}), ipcMain.handle("cleaner:get-large-files", async (p, H) => {
-		let U = H.minSize || 100 * 1024 * 1024, W = H.scanPaths || [os.homedir()], G = [];
-		for (let p of W) await findLargeFiles(p, U, G);
-		return G.sort((p, H) => H.size - p.size), G.slice(0, 50);
-	}), ipcMain.handle("cleaner:get-duplicates", async (p, H) => {
-		let U = H || os.homedir(), W = /* @__PURE__ */ new Map(), G = [];
-		await findDuplicates(U, W);
-		for (let [p, H] of W.entries()) if (H.length > 1) try {
-			let U = await fs.stat(H[0]);
-			G.push({
-				hash: p,
-				size: U.size,
-				sizeFormatted: formatBytes$1(U.size),
-				totalWasted: U.size * (H.length - 1),
-				totalWastedFormatted: formatBytes$1(U.size * (H.length - 1)),
-				files: H
+		} catch (e) {}
+		return apps;
+	});
+	ipcMain.handle("cleaner:get-large-files", async (_event, options) => {
+		const minSize = options.minSize || 100 * 1024 * 1024;
+		const scanPaths = options.scanPaths || [os.homedir()];
+		const largeFiles = [];
+		for (const scanPath of scanPaths) await findLargeFiles(scanPath, minSize, largeFiles);
+		largeFiles.sort((a, b) => b.size - a.size);
+		return largeFiles.slice(0, 50);
+	});
+	ipcMain.handle("cleaner:get-duplicates", async (_event, scanPath) => {
+		const rootPath = scanPath || os.homedir();
+		const fileHashes = /* @__PURE__ */ new Map();
+		const duplicates = [];
+		await findDuplicates(rootPath, fileHashes);
+		for (const [hash, paths] of fileHashes.entries()) if (paths.length > 1) try {
+			const stats = await fs.stat(paths[0]);
+			duplicates.push({
+				hash,
+				size: stats.size,
+				sizeFormatted: formatBytes$1(stats.size),
+				totalWasted: stats.size * (paths.length - 1),
+				totalWastedFormatted: formatBytes$1(stats.size * (paths.length - 1)),
+				files: paths
 			});
-		} catch {}
-		return G.sort((p, H) => H.totalWasted - p.totalWasted);
-	}), ipcMain.handle("cleaner:run-cleanup", async (p, H) => {
-		let U = 0, W = [], G = process.platform, K = checkFilesSafety(H, G);
-		if (!K.safe && K.blocked.length > 0) return {
-			success: !1,
-			error: `Cannot delete ${K.blocked.length} protected file(s)`,
+		} catch (e) {}
+		return duplicates.sort((a, b) => b.totalWasted - a.totalWasted);
+	});
+	ipcMain.handle("cleaner:run-cleanup", async (_event, files) => {
+		let freedSize = 0;
+		const failed = [];
+		const platform = process.platform;
+		const safetyResult = checkFilesSafety(files, platform);
+		if (!safetyResult.safe && safetyResult.blocked.length > 0) return {
+			success: false,
+			error: `Cannot delete ${safetyResult.blocked.length} protected file(s)`,
 			freedSize: 0,
 			freedSizeFormatted: formatBytes$1(0),
-			failed: K.blocked
+			failed: safetyResult.blocked
 		};
-		for (let p = 0; p < H.length; p += 50) {
-			let G = H.slice(p, p + 50);
-			for (let p of G) try {
-				if (p === "tmutil:snapshots") {
-					process.platform === "darwin" && (await execAsync$1("tmutil deletelocalsnapshots /"), U += 2 * 1024 * 1024 * 1024);
+		const chunkSize = 50;
+		for (let i = 0; i < files.length; i += chunkSize) {
+			const chunk = files.slice(i, i + chunkSize);
+			for (const filePath of chunk) try {
+				if (filePath === "tmutil:snapshots") {
+					if (process.platform === "darwin") {
+						await execAsync$1("tmutil deletelocalsnapshots /");
+						freedSize += 2 * 1024 * 1024 * 1024;
+					}
 					continue;
 				}
-				let H = await fs.stat(p).catch(() => null);
-				if (!H) continue;
-				let W = H.isDirectory() ? await getDirSize(p) : H.size;
-				H.isDirectory() ? await fs.rm(p, {
-					recursive: !0,
-					force: !0
-				}) : await fs.unlink(p), U += W;
-			} catch {
-				W.push(p);
+				const stats = await fs.stat(filePath).catch(() => null);
+				if (!stats) continue;
+				const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
+				if (stats.isDirectory()) await fs.rm(filePath, {
+					recursive: true,
+					force: true
+				});
+				else await fs.unlink(filePath);
+				freedSize += size;
+			} catch (e) {
+				failed.push(filePath);
 			}
 		}
 		return {
-			success: W.length === 0,
-			freedSize: U,
-			freedSizeFormatted: formatBytes$1(U),
-			failed: W
+			success: failed.length === 0,
+			freedSize,
+			freedSizeFormatted: formatBytes$1(freedSize),
+			failed
 		};
-	}), ipcMain.handle("cleaner:free-ram", async () => {
+	});
+	ipcMain.handle("cleaner:free-ram", async () => {
 		if (process.platform === "darwin") try {
 			await execAsync$1("purge");
-		} catch {}
+		} catch (e) {}
 		return {
-			success: !0,
+			success: true,
 			ramFreed: Math.random() * 500 * 1024 * 1024
 		};
-	}), ipcMain.handle("cleaner:uninstall-app", async (p, H) => {
-		let U = process.platform;
+	});
+	ipcMain.handle("cleaner:uninstall-app", async (_event, app$1) => {
+		const platform = process.platform;
 		try {
-			if (U === "darwin") {
-				let p = H.path, U = H.name;
-				await execAsync$1(`osascript -e 'tell application "Finder" to move POSIX file "${p}" to trash'`);
-				let W = os.homedir(), G = [
-					path.join(W, "Library/Preferences", `*${U}*`),
-					path.join(W, "Library/Application Support", U),
-					path.join(W, "Library/Caches", U),
-					path.join(W, "Library/Logs", U),
-					path.join(W, "Library/Saved Application State", `*${U}*`),
-					path.join(W, "Library/LaunchAgents", `*${U}*`)
-				], K = 0;
-				for (let p of G) try {
-					let H = await fs.readdir(path.dirname(p)).catch(() => []);
-					for (let W of H) if (W.includes(U)) {
-						let H = path.join(path.dirname(p), W), U = await fs.stat(H).catch(() => null);
-						U && (U.isDirectory() ? (K += await getDirSize(H), await fs.rm(H, {
-							recursive: !0,
-							force: !0
-						})) : (K += U.size, await fs.unlink(H)));
+			if (platform === "darwin") {
+				const appPath = app$1.path;
+				const appName = app$1.name;
+				await execAsync$1(`osascript -e 'tell application "Finder" to move POSIX file "${appPath}" to trash'`);
+				const home = os.homedir();
+				const associatedPaths = [
+					path.join(home, "Library/Preferences", `*${appName}*`),
+					path.join(home, "Library/Application Support", appName),
+					path.join(home, "Library/Caches", appName),
+					path.join(home, "Library/Logs", appName),
+					path.join(home, "Library/Saved Application State", `*${appName}*`),
+					path.join(home, "Library/LaunchAgents", `*${appName}*`)
+				];
+				let freedSize = 0;
+				for (const pattern of associatedPaths) try {
+					const files = await fs.readdir(path.dirname(pattern)).catch(() => []);
+					for (const file of files) if (file.includes(appName)) {
+						const filePath = path.join(path.dirname(pattern), file);
+						const stats = await fs.stat(filePath).catch(() => null);
+						if (stats) if (stats.isDirectory()) {
+							freedSize += await getDirSize(filePath);
+							await fs.rm(filePath, {
+								recursive: true,
+								force: true
+							});
+						} else {
+							freedSize += stats.size;
+							await fs.unlink(filePath);
+						}
 					}
-				} catch {}
+				} catch (e) {}
 				return {
-					success: !0,
-					freedSize: K,
-					freedSizeFormatted: formatBytes$1(K)
+					success: true,
+					freedSize,
+					freedSizeFormatted: formatBytes$1(freedSize)
 				};
-			} else if (U === "win32") {
-				let p = H.name, U = 0;
+			} else if (platform === "win32") {
+				const appName = app$1.name;
+				let freedSize = 0;
 				try {
-					let { stdout: W } = await execAsync$1(`wmic product where name="${p.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`), G = W.match(/IdentifyingNumber=(\{[^}]+\})/);
-					if (G) {
-						let p = G[1];
-						await execAsync$1(`msiexec /x ${p} /quiet /norestart`), U = await getDirSize(H.path).catch(() => 0);
-					} else await execAsync$1(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${p}*'} | Remove-AppxPackage"`).catch(() => {}), U = await getDirSize(H.path).catch(() => 0);
-				} catch {
-					U = await getDirSize(H.path).catch(() => 0), await fs.rm(H.path, {
-						recursive: !0,
-						force: !0
+					const { stdout } = await execAsync$1(`wmic product where name="${appName.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`);
+					const match = stdout.match(/IdentifyingNumber=(\{[^}]+\})/);
+					if (match) {
+						const guid = match[1];
+						await execAsync$1(`msiexec /x ${guid} /quiet /norestart`);
+						freedSize = await getDirSize(app$1.path).catch(() => 0);
+					} else {
+						await execAsync$1(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => {});
+						freedSize = await getDirSize(app$1.path).catch(() => 0);
+					}
+				} catch (e) {
+					freedSize = await getDirSize(app$1.path).catch(() => 0);
+					await fs.rm(app$1.path, {
+						recursive: true,
+						force: true
 					}).catch(() => {});
 				}
-				let W = process.env.LOCALAPPDATA || "", G = process.env.APPDATA || "", K = [path.join(W, p), path.join(G, p)];
-				for (let p of K) try {
-					await fs.stat(p).catch(() => null) && (U += await getDirSize(p).catch(() => 0), await fs.rm(p, {
-						recursive: !0,
-						force: !0
-					}));
-				} catch {}
+				const localApp = process.env.LOCALAPPDATA || "";
+				const appData = process.env.APPDATA || "";
+				const associatedPaths = [path.join(localApp, appName), path.join(appData, appName)];
+				for (const assocPath of associatedPaths) try {
+					if (await fs.stat(assocPath).catch(() => null)) {
+						freedSize += await getDirSize(assocPath).catch(() => 0);
+						await fs.rm(assocPath, {
+							recursive: true,
+							force: true
+						});
+					}
+				} catch (e) {}
 				return {
-					success: !0,
-					freedSize: U,
-					freedSizeFormatted: formatBytes$1(U)
+					success: true,
+					freedSize,
+					freedSizeFormatted: formatBytes$1(freedSize)
 				};
 			}
 			return {
-				success: !1,
+				success: false,
 				error: "Unsupported platform"
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:scan-privacy", async () => {
-		let p = process.platform, H = {
+	});
+	ipcMain.handle("cleaner:scan-privacy", async () => {
+		const platform = process.platform;
+		const results = {
 			registryEntries: [],
 			activityHistory: [],
 			spotlightHistory: [],
@@ -409,320 +519,427 @@ function setupCleanerHandlers() {
 			totalItems: 0,
 			totalSize: 0
 		};
-		if (p === "win32") try {
-			let { stdout: p } = await execAsync$1("powershell \"\n                    Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\" -ErrorAction SilentlyContinue | \n                    Select-Object -ExpandProperty * | \n                    Where-Object { $_ -ne $null } | \n                    Measure-Object | \n                    Select-Object -ExpandProperty Count\n                \"").catch(() => ({ stdout: "0" })), U = parseInt(p.trim()) || 0;
-			U > 0 && (H.registryEntries.push({
-				name: "Recent Documents",
-				path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs",
-				type: "registry",
-				count: U,
-				size: 0,
-				description: "Recently opened documents registry entries"
-			}), H.totalItems += U);
-			let { stdout: W } = await execAsync$1("powershell \"\n                    Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" -ErrorAction SilentlyContinue | \n                    Select-Object -ExpandProperty * | \n                    Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' } | \n                    Measure-Object | \n                    Select-Object -ExpandProperty Count\n                \"").catch(() => ({ stdout: "0" })), G = parseInt(W.trim()) || 0;
-			G > 0 && (H.registryEntries.push({
-				name: "Recent Programs",
-				path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU",
-				type: "registry",
-				count: G,
-				size: 0,
-				description: "Recently run programs registry entries"
-			}), H.totalItems += G);
-			let K = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
+		if (platform === "win32") try {
+			const { stdout: docsCount } = await execAsync$1(`powershell "
+                    Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
+                    Select-Object -ExpandProperty * | 
+                    Where-Object { \$_ -ne \$null } | 
+                    Measure-Object | 
+                    Select-Object -ExpandProperty Count
+                "`).catch(() => ({ stdout: "0" }));
+			const docsCountNum = parseInt(docsCount.trim()) || 0;
+			if (docsCountNum > 0) {
+				results.registryEntries.push({
+					name: "Recent Documents",
+					path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs",
+					type: "registry",
+					count: docsCountNum,
+					size: 0,
+					description: "Recently opened documents registry entries"
+				});
+				results.totalItems += docsCountNum;
+			}
+			const { stdout: programsCount } = await execAsync$1(`powershell "
+                    Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
+                    Select-Object -ExpandProperty * | 
+                    Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' } | 
+                    Measure-Object | 
+                    Select-Object -ExpandProperty Count
+                "`).catch(() => ({ stdout: "0" }));
+			const programsCountNum = parseInt(programsCount.trim()) || 0;
+			if (programsCountNum > 0) {
+				results.registryEntries.push({
+					name: "Recent Programs",
+					path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU",
+					type: "registry",
+					count: programsCountNum,
+					size: 0,
+					description: "Recently run programs registry entries"
+				});
+				results.totalItems += programsCountNum;
+			}
+			const activityHistoryPath = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
 			try {
-				let p = await fs.readdir(K, { recursive: !0 }).catch(() => []), U = [], W = 0;
-				for (let H of p) {
-					let p = path.join(K, H);
+				const activityFiles = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
+				const activityFilesList = [];
+				let activitySize = 0;
+				for (const file of activityFiles) {
+					const filePath = path.join(activityHistoryPath, file);
 					try {
-						let H = await fs.stat(p);
-						H.isFile() && (U.push(p), W += H.size);
-					} catch {}
+						const stats = await fs.stat(filePath);
+						if (stats.isFile()) {
+							activityFilesList.push(filePath);
+							activitySize += stats.size;
+						}
+					} catch (e) {}
 				}
-				U.length > 0 && (H.activityHistory.push({
-					name: "Activity History",
-					path: K,
-					type: "files",
-					count: U.length,
-					size: W,
-					sizeFormatted: formatBytes$1(W),
-					files: U,
-					description: "Windows activity history files"
-				}), H.totalItems += U.length, H.totalSize += W);
-			} catch {}
-			let q = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
+				if (activityFilesList.length > 0) {
+					results.activityHistory.push({
+						name: "Activity History",
+						path: activityHistoryPath,
+						type: "files",
+						count: activityFilesList.length,
+						size: activitySize,
+						sizeFormatted: formatBytes$1(activitySize),
+						files: activityFilesList,
+						description: "Windows activity history files"
+					});
+					results.totalItems += activityFilesList.length;
+					results.totalSize += activitySize;
+				}
+			} catch (e) {}
+			const searchHistoryPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
 			try {
-				let p = await fs.readdir(q).catch(() => []), U = [], W = 0;
-				for (let H of p) {
-					let p = path.join(q, H);
+				const searchFiles = await fs.readdir(searchHistoryPath).catch(() => []);
+				const searchFilesList = [];
+				let searchSize = 0;
+				for (const file of searchFiles) {
+					const filePath = path.join(searchHistoryPath, file);
 					try {
-						let H = await fs.stat(p);
-						U.push(p), W += H.size;
-					} catch {}
+						const stats = await fs.stat(filePath);
+						searchFilesList.push(filePath);
+						searchSize += stats.size;
+					} catch (e) {}
 				}
-				U.length > 0 && (H.activityHistory.push({
-					name: "Windows Search History",
-					path: q,
-					type: "files",
-					count: U.length,
-					size: W,
-					sizeFormatted: formatBytes$1(W),
-					files: U,
-					description: "Windows search history files"
-				}), H.totalItems += U.length, H.totalSize += W);
-			} catch {}
-		} catch (p) {
+				if (searchFilesList.length > 0) {
+					results.activityHistory.push({
+						name: "Windows Search History",
+						path: searchHistoryPath,
+						type: "files",
+						count: searchFilesList.length,
+						size: searchSize,
+						sizeFormatted: formatBytes$1(searchSize),
+						files: searchFilesList,
+						description: "Windows search history files"
+					});
+					results.totalItems += searchFilesList.length;
+					results.totalSize += searchSize;
+				}
+			} catch (e) {}
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message,
-				results: H
+				success: false,
+				error: e.message,
+				results
 			};
 		}
-		else if (p === "darwin") try {
-			let p = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
+		else if (platform === "darwin") try {
+			const spotlightHistoryPath = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
 			try {
-				let U = await fs.readdir(p, { recursive: !0 }).catch(() => []), W = [], G = 0;
-				for (let H of U) {
-					let U = path.join(p, H);
+				const spotlightFiles = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
+				const spotlightFilesList = [];
+				let spotlightSize = 0;
+				for (const file of spotlightFiles) {
+					const filePath = path.join(spotlightHistoryPath, file);
 					try {
-						let p = await fs.stat(U);
-						p.isFile() && (W.push(U), G += p.size);
-					} catch {}
+						const stats = await fs.stat(filePath);
+						if (stats.isFile()) {
+							spotlightFilesList.push(filePath);
+							spotlightSize += stats.size;
+						}
+					} catch (e) {}
 				}
-				W.length > 0 && (H.spotlightHistory.push({
-					name: "Spotlight Search History",
-					path: p,
-					type: "files",
-					count: W.length,
-					size: G,
-					sizeFormatted: formatBytes$1(G),
-					files: W,
-					description: "macOS Spotlight search history"
-				}), H.totalItems += W.length, H.totalSize += G);
-			} catch {}
-			let U = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
+				if (spotlightFilesList.length > 0) {
+					results.spotlightHistory.push({
+						name: "Spotlight Search History",
+						path: spotlightHistoryPath,
+						type: "files",
+						count: spotlightFilesList.length,
+						size: spotlightSize,
+						sizeFormatted: formatBytes$1(spotlightSize),
+						files: spotlightFilesList,
+						description: "macOS Spotlight search history"
+					});
+					results.totalItems += spotlightFilesList.length;
+					results.totalSize += spotlightSize;
+				}
+			} catch (e) {}
+			const quickLookCachePath = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
 			try {
-				let p = await fs.readdir(U, { recursive: !0 }).catch(() => []), W = [], G = 0;
-				for (let H of p) {
-					let p = path.join(U, H);
+				const quickLookFiles = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
+				const quickLookFilesList = [];
+				let quickLookSize = 0;
+				for (const file of quickLookFiles) {
+					const filePath = path.join(quickLookCachePath, file);
 					try {
-						let H = await fs.stat(p);
-						H.isFile() && (W.push(p), G += H.size);
-					} catch {}
+						const stats = await fs.stat(filePath);
+						if (stats.isFile()) {
+							quickLookFilesList.push(filePath);
+							quickLookSize += stats.size;
+						}
+					} catch (e) {}
 				}
-				W.length > 0 && (H.quickLookCache.push({
-					name: "Quick Look Cache",
-					path: U,
-					type: "files",
-					count: W.length,
-					size: G,
-					sizeFormatted: formatBytes$1(G),
-					files: W,
-					description: "macOS Quick Look thumbnail cache"
-				}), H.totalItems += W.length, H.totalSize += G);
-			} catch {}
-			let W = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
+				if (quickLookFilesList.length > 0) {
+					results.quickLookCache.push({
+						name: "Quick Look Cache",
+						path: quickLookCachePath,
+						type: "files",
+						count: quickLookFilesList.length,
+						size: quickLookSize,
+						sizeFormatted: formatBytes$1(quickLookSize),
+						files: quickLookFilesList,
+						description: "macOS Quick Look thumbnail cache"
+					});
+					results.totalItems += quickLookFilesList.length;
+					results.totalSize += quickLookSize;
+				}
+			} catch (e) {}
+			const recentItemsPath = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
 			try {
-				let p = await fs.readdir(W).catch(() => []), U = [], G = 0;
-				for (let H of p) if (H.includes("RecentItems")) {
-					let p = path.join(W, H);
+				const recentFiles = await fs.readdir(recentItemsPath).catch(() => []);
+				const recentFilesList = [];
+				let recentSize = 0;
+				for (const file of recentFiles) if (file.includes("RecentItems")) {
+					const filePath = path.join(recentItemsPath, file);
 					try {
-						let H = await fs.stat(p);
-						U.push(p), G += H.size;
-					} catch {}
+						const stats = await fs.stat(filePath);
+						recentFilesList.push(filePath);
+						recentSize += stats.size;
+					} catch (e) {}
 				}
-				U.length > 0 && (H.spotlightHistory.push({
-					name: "Recently Opened Files",
-					path: W,
-					type: "files",
-					count: U.length,
-					size: G,
-					sizeFormatted: formatBytes$1(G),
-					files: U,
-					description: "macOS recently opened files list"
-				}), H.totalItems += U.length, H.totalSize += G);
-			} catch {}
-		} catch (p) {
+				if (recentFilesList.length > 0) {
+					results.spotlightHistory.push({
+						name: "Recently Opened Files",
+						path: recentItemsPath,
+						type: "files",
+						count: recentFilesList.length,
+						size: recentSize,
+						sizeFormatted: formatBytes$1(recentSize),
+						files: recentFilesList,
+						description: "macOS recently opened files list"
+					});
+					results.totalItems += recentFilesList.length;
+					results.totalSize += recentSize;
+				}
+			} catch (e) {}
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message,
-				results: H
+				success: false,
+				error: e.message,
+				results
 			};
 		}
 		return {
-			success: !0,
-			results: H
+			success: true,
+			results
 		};
-	}), ipcMain.handle("cleaner:clean-privacy", async (p, H) => {
-		let U = process.platform, W = 0, G = 0, K = [];
-		if (U === "win32") try {
-			if (H.registry) {
+	});
+	ipcMain.handle("cleaner:clean-privacy", async (_event, options) => {
+		const platform = process.platform;
+		let cleanedItems = 0;
+		let freedSize = 0;
+		const errors = [];
+		if (platform === "win32") try {
+			if (options.registry) {
 				try {
-					let { stdout: p } = await execAsync$1("powershell \"\n                            $props = Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\" -ErrorAction SilentlyContinue | \n                            Select-Object -ExpandProperty * | \n                            Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' }\n                            if ($props) { $props.Count } else { 0 }\n                        \"").catch(() => ({ stdout: "0" })), H = parseInt(p.trim()) || 0;
-					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\""), W += H;
-				} catch (p) {
-					K.push(`Failed to clean Recent Documents registry: ${p.message}`);
+					const { stdout: docsCountBefore } = await execAsync$1(`powershell "
+                            \$props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
+                            Select-Object -ExpandProperty * | 
+                            Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' }
+                            if (\$props) { \$props.Count } else { 0 }
+                        "`).catch(() => ({ stdout: "0" }));
+					const docsCountNum = parseInt(docsCountBefore.trim()) || 0;
+					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\"");
+					cleanedItems += docsCountNum;
+				} catch (e) {
+					errors.push(`Failed to clean Recent Documents registry: ${e.message}`);
 				}
 				try {
-					let { stdout: p } = await execAsync$1("powershell \"\n                            $props = Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" -ErrorAction SilentlyContinue | \n                            Select-Object -ExpandProperty * | \n                            Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' }\n                            if ($props) { $props.Count } else { 0 }\n                        \"").catch(() => ({ stdout: "0" })), H = parseInt(p.trim()) || 0;
-					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\""), W += H;
-				} catch (p) {
-					K.push(`Failed to clean Recent Programs registry: ${p.message}`);
-				}
-			}
-			if (H.activityHistory) {
-				let p = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
-				try {
-					let H = await fs.readdir(p, { recursive: !0 }).catch(() => []);
-					for (let U of H) {
-						let H = path.join(p, U);
-						try {
-							let p = await fs.stat(H);
-							p.isFile() && (G += p.size, await fs.unlink(H), W++);
-						} catch {}
-					}
-				} catch (p) {
-					K.push(`Failed to clean activity history: ${p.message}`);
-				}
-				let H = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
-				try {
-					let p = await fs.readdir(H).catch(() => []);
-					for (let U of p) {
-						let p = path.join(H, U);
-						try {
-							let H = await fs.stat(p);
-							G += H.size, await fs.unlink(p), W++;
-						} catch {}
-					}
-				} catch (p) {
-					K.push(`Failed to clean search history: ${p.message}`);
+					const { stdout: programsCountBefore } = await execAsync$1(`powershell "
+                            \$props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
+                            Select-Object -ExpandProperty * | 
+                            Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' }
+                            if (\$props) { \$props.Count } else { 0 }
+                        "`).catch(() => ({ stdout: "0" }));
+					const programsCountNum = parseInt(programsCountBefore.trim()) || 0;
+					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\"");
+					cleanedItems += programsCountNum;
+				} catch (e) {
+					errors.push(`Failed to clean Recent Programs registry: ${e.message}`);
 				}
 			}
-		} catch (p) {
-			K.push(`Windows privacy cleanup failed: ${p.message}`);
+			if (options.activityHistory) {
+				const activityHistoryPath = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
+				try {
+					const files = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(activityHistoryPath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							if (stats.isFile()) {
+								freedSize += stats.size;
+								await fs.unlink(filePath);
+								cleanedItems++;
+							}
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean activity history: ${e.message}`);
+				}
+				const searchHistoryPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
+				try {
+					const files = await fs.readdir(searchHistoryPath).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(searchHistoryPath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							freedSize += stats.size;
+							await fs.unlink(filePath);
+							cleanedItems++;
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean search history: ${e.message}`);
+				}
+			}
+		} catch (e) {
+			errors.push(`Windows privacy cleanup failed: ${e.message}`);
 		}
-		else if (U === "darwin") try {
-			if (H.spotlightHistory) {
-				let p = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
+		else if (platform === "darwin") try {
+			if (options.spotlightHistory) {
+				const spotlightHistoryPath = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
 				try {
-					let H = await fs.readdir(p, { recursive: !0 }).catch(() => []);
-					for (let U of H) {
-						let H = path.join(p, U);
+					const files = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(spotlightHistoryPath, file);
 						try {
-							let p = await fs.stat(H);
-							p.isFile() && (G += p.size, await fs.unlink(H), W++);
-						} catch {}
+							const stats = await fs.stat(filePath);
+							if (stats.isFile()) {
+								freedSize += stats.size;
+								await fs.unlink(filePath);
+								cleanedItems++;
+							}
+						} catch (e) {}
 					}
-				} catch (p) {
-					K.push(`Failed to clean Spotlight history: ${p.message}`);
+				} catch (e) {
+					errors.push(`Failed to clean Spotlight history: ${e.message}`);
 				}
-				let H = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
+				const recentItemsPath = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
 				try {
-					let p = await fs.readdir(H).catch(() => []);
-					for (let U of p) if (U.includes("RecentItems")) {
-						let p = path.join(H, U);
+					const files = await fs.readdir(recentItemsPath).catch(() => []);
+					for (const file of files) if (file.includes("RecentItems")) {
+						const filePath = path.join(recentItemsPath, file);
 						try {
-							let H = await fs.stat(p);
-							G += H.size, await fs.unlink(p), W++;
-						} catch {}
+							const stats = await fs.stat(filePath);
+							freedSize += stats.size;
+							await fs.unlink(filePath);
+							cleanedItems++;
+						} catch (e) {}
 					}
-				} catch (p) {
-					K.push(`Failed to clean recent items: ${p.message}`);
-				}
-			}
-			if (H.quickLookCache) {
-				let p = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
-				try {
-					let H = await fs.readdir(p, { recursive: !0 }).catch(() => []);
-					for (let U of H) {
-						let H = path.join(p, U);
-						try {
-							let p = await fs.stat(H);
-							p.isFile() && (G += p.size, await fs.unlink(H), W++);
-						} catch {}
-					}
-				} catch (p) {
-					K.push(`Failed to clean Quick Look cache: ${p.message}`);
+				} catch (e) {
+					errors.push(`Failed to clean recent items: ${e.message}`);
 				}
 			}
-		} catch (p) {
-			K.push(`macOS privacy cleanup failed: ${p.message}`);
+			if (options.quickLookCache) {
+				const quickLookCachePath = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
+				try {
+					const files = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(quickLookCachePath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							if (stats.isFile()) {
+								freedSize += stats.size;
+								await fs.unlink(filePath);
+								cleanedItems++;
+							}
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean Quick Look cache: ${e.message}`);
+				}
+			}
+		} catch (e) {
+			errors.push(`macOS privacy cleanup failed: ${e.message}`);
 		}
 		return {
-			success: K.length === 0,
-			cleanedItems: W,
-			freedSize: G,
-			freedSizeFormatted: formatBytes$1(G),
-			errors: K
+			success: errors.length === 0,
+			cleanedItems,
+			freedSize,
+			freedSizeFormatted: formatBytes$1(freedSize),
+			errors
 		};
-	}), ipcMain.handle("cleaner:scan-browser-data", async () => {
-		let p = process.platform, H = os.homedir(), U = {
+	});
+	ipcMain.handle("cleaner:scan-browser-data", async () => {
+		const platform = process.platform;
+		const home = os.homedir();
+		const results = {
 			browsers: [],
 			totalSize: 0,
 			totalItems: 0
-		}, W = [];
-		if (p === "win32") {
-			let p = process.env.LOCALAPPDATA || "", H = process.env.APPDATA || "";
-			W.push({
+		};
+		const browserPaths = [];
+		if (platform === "win32") {
+			const localApp = process.env.LOCALAPPDATA || "";
+			const appData = process.env.APPDATA || "";
+			browserPaths.push({
 				name: "Chrome",
 				paths: {
-					history: [path.join(p, "Google/Chrome/User Data/Default/History")],
-					cookies: [path.join(p, "Google/Chrome/User Data/Default/Cookies")],
-					cache: [path.join(p, "Google/Chrome/User Data/Default/Cache")],
-					downloads: [path.join(p, "Google/Chrome/User Data/Default/History")]
-				}
-			}), W.push({
-				name: "Edge",
-				paths: {
-					history: [path.join(p, "Microsoft/Edge/User Data/Default/History")],
-					cookies: [path.join(p, "Microsoft/Edge/User Data/Default/Cookies")],
-					cache: [path.join(p, "Microsoft/Edge/User Data/Default/Cache")],
-					downloads: [path.join(p, "Microsoft/Edge/User Data/Default/History")]
-				}
-			}), W.push({
-				name: "Firefox",
-				paths: {
-					history: [path.join(H, "Mozilla/Firefox/Profiles")],
-					cookies: [path.join(H, "Mozilla/Firefox/Profiles")],
-					cache: [path.join(p, "Mozilla/Firefox/Profiles")],
-					downloads: [path.join(H, "Mozilla/Firefox/Profiles")]
+					history: [path.join(localApp, "Google/Chrome/User Data/Default/History")],
+					cookies: [path.join(localApp, "Google/Chrome/User Data/Default/Cookies")],
+					cache: [path.join(localApp, "Google/Chrome/User Data/Default/Cache")],
+					downloads: [path.join(localApp, "Google/Chrome/User Data/Default/History")]
 				}
 			});
-		} else p === "darwin" && (W.push({
-			name: "Safari",
-			paths: {
-				history: [path.join(H, "Library/Safari/History.db")],
-				cookies: [path.join(H, "Library/Cookies/Cookies.binarycookies")],
-				cache: [path.join(H, "Library/Caches/com.apple.Safari")],
-				downloads: [path.join(H, "Library/Safari/Downloads.plist")]
-			}
-		}), W.push({
-			name: "Chrome",
-			paths: {
-				history: [path.join(H, "Library/Application Support/Google/Chrome/Default/History")],
-				cookies: [path.join(H, "Library/Application Support/Google/Chrome/Default/Cookies")],
-				cache: [path.join(H, "Library/Caches/Google/Chrome")],
-				downloads: [path.join(H, "Library/Application Support/Google/Chrome/Default/History")]
-			}
-		}), W.push({
-			name: "Firefox",
-			paths: {
-				history: [path.join(H, "Library/Application Support/Firefox/Profiles")],
-				cookies: [path.join(H, "Library/Application Support/Firefox/Profiles")],
-				cache: [path.join(H, "Library/Caches/Firefox")],
-				downloads: [path.join(H, "Library/Application Support/Firefox/Profiles")]
-			}
-		}), W.push({
-			name: "Edge",
-			paths: {
-				history: [path.join(H, "Library/Application Support/Microsoft Edge/Default/History")],
-				cookies: [path.join(H, "Library/Application Support/Microsoft Edge/Default/Cookies")],
-				cache: [path.join(H, "Library/Caches/com.microsoft.edgemac")],
-				downloads: [path.join(H, "Library/Application Support/Microsoft Edge/Default/History")]
-			}
-		}));
-		for (let H of W) {
-			let W = {
-				name: H.name,
+			browserPaths.push({
+				name: "Edge",
+				paths: {
+					history: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")],
+					cookies: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cookies")],
+					cache: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cache")],
+					downloads: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")]
+				}
+			});
+			browserPaths.push({
+				name: "Firefox",
+				paths: {
+					history: [path.join(appData, "Mozilla/Firefox/Profiles")],
+					cookies: [path.join(appData, "Mozilla/Firefox/Profiles")],
+					cache: [path.join(localApp, "Mozilla/Firefox/Profiles")],
+					downloads: [path.join(appData, "Mozilla/Firefox/Profiles")]
+				}
+			});
+		} else if (platform === "darwin") {
+			browserPaths.push({
+				name: "Safari",
+				paths: {
+					history: [path.join(home, "Library/Safari/History.db")],
+					cookies: [path.join(home, "Library/Cookies/Cookies.binarycookies")],
+					cache: [path.join(home, "Library/Caches/com.apple.Safari")],
+					downloads: [path.join(home, "Library/Safari/Downloads.plist")]
+				}
+			});
+			browserPaths.push({
+				name: "Chrome",
+				paths: {
+					history: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")],
+					cookies: [path.join(home, "Library/Application Support/Google/Chrome/Default/Cookies")],
+					cache: [path.join(home, "Library/Caches/Google/Chrome")],
+					downloads: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")]
+				}
+			});
+			browserPaths.push({
+				name: "Firefox",
+				paths: {
+					history: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+					cookies: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+					cache: [path.join(home, "Library/Caches/Firefox")],
+					downloads: [path.join(home, "Library/Application Support/Firefox/Profiles")]
+				}
+			});
+			browserPaths.push({
+				name: "Edge",
+				paths: {
+					history: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")],
+					cookies: [path.join(home, "Library/Application Support/Microsoft Edge/Default/Cookies")],
+					cache: [path.join(home, "Library/Caches/com.microsoft.edgemac")],
+					downloads: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")]
+				}
+			});
+		}
+		for (const browser of browserPaths) {
+			const browserData = {
+				name: browser.name,
 				history: {
 					size: 0,
 					count: 0,
@@ -744,588 +961,697 @@ function setupCleanerHandlers() {
 					paths: []
 				}
 			};
-			for (let [U, G] of Object.entries(H.paths)) for (let K of G) try {
-				if (U === "cache" && p === "darwin" && H.name === "Safari") {
-					let p = await fs.stat(K).catch(() => null);
-					if (p && p.isDirectory()) {
-						let p = await getDirSize(K);
-						W[U].size += p, W[U].paths.push(K), W[U].count += 1;
+			for (const [type, paths] of Object.entries(browser.paths)) for (const dataPath of paths) try {
+				if (type === "cache" && platform === "darwin" && browser.name === "Safari") {
+					const stats = await fs.stat(dataPath).catch(() => null);
+					if (stats && stats.isDirectory()) {
+						const size = await getDirSize(dataPath);
+						browserData[type].size += size;
+						browserData[type].paths.push(dataPath);
+						browserData[type].count += 1;
 					}
 				} else {
-					let p = await fs.stat(K).catch(() => null);
-					if (p) if (p.isDirectory()) {
-						let p = await getDirSize(K);
-						W[U].size += p, W[U].paths.push(K), W[U].count += 1;
-					} else p.isFile() && (W[U].size += p.size, W[U].paths.push(K), W[U].count += 1);
+					const stats = await fs.stat(dataPath).catch(() => null);
+					if (stats) {
+						if (stats.isDirectory()) {
+							const size = await getDirSize(dataPath);
+							browserData[type].size += size;
+							browserData[type].paths.push(dataPath);
+							browserData[type].count += 1;
+						} else if (stats.isFile()) {
+							browserData[type].size += stats.size;
+							browserData[type].paths.push(dataPath);
+							browserData[type].count += 1;
+						}
+					}
 				}
-			} catch {}
-			let G = Object.values(W).reduce((p, H) => p + (typeof H == "object" && H.size ? H.size : 0), 0);
-			G > 0 && (W.totalSize = G, W.totalSizeFormatted = formatBytes$1(G), U.browsers.push(W), U.totalSize += G, U.totalItems += Object.values(W).reduce((p, H) => p + (typeof H == "object" && H.count ? H.count : 0), 0));
+			} catch (e) {}
+			const browserTotalSize = Object.values(browserData).reduce((sum, item) => {
+				return sum + (typeof item === "object" && item.size ? item.size : 0);
+			}, 0);
+			if (browserTotalSize > 0) {
+				browserData.totalSize = browserTotalSize;
+				browserData.totalSizeFormatted = formatBytes$1(browserTotalSize);
+				results.browsers.push(browserData);
+				results.totalSize += browserTotalSize;
+				results.totalItems += Object.values(browserData).reduce((sum, item) => {
+					return sum + (typeof item === "object" && item.count ? item.count : 0);
+				}, 0);
+			}
 		}
 		return {
-			success: !0,
-			results: U
+			success: true,
+			results
 		};
-	}), ipcMain.handle("cleaner:clean-browser-data", async (p, H) => {
-		let U = process.platform, W = os.homedir(), G = 0, K = 0, q = [], J = {};
-		if (U === "win32") {
-			let p = process.env.LOCALAPPDATA || "", H = process.env.APPDATA || "";
-			J.Chrome = {
-				history: [path.join(p, "Google/Chrome/User Data/Default/History")],
-				cookies: [path.join(p, "Google/Chrome/User Data/Default/Cookies")],
-				cache: [path.join(p, "Google/Chrome/User Data/Default/Cache")],
-				downloads: [path.join(p, "Google/Chrome/User Data/Default/History")]
-			}, J.Edge = {
-				history: [path.join(p, "Microsoft/Edge/User Data/Default/History")],
-				cookies: [path.join(p, "Microsoft/Edge/User Data/Default/Cookies")],
-				cache: [path.join(p, "Microsoft/Edge/User Data/Default/Cache")],
-				downloads: [path.join(p, "Microsoft/Edge/User Data/Default/History")]
-			}, J.Firefox = {
-				history: [path.join(H, "Mozilla/Firefox/Profiles")],
-				cookies: [path.join(H, "Mozilla/Firefox/Profiles")],
-				cache: [path.join(p, "Mozilla/Firefox/Profiles")],
-				downloads: [path.join(H, "Mozilla/Firefox/Profiles")]
+	});
+	ipcMain.handle("cleaner:clean-browser-data", async (_event, options) => {
+		const platform = process.platform;
+		const home = os.homedir();
+		let cleanedItems = 0;
+		let freedSize = 0;
+		const errors = [];
+		const browserPaths = {};
+		if (platform === "win32") {
+			const localApp = process.env.LOCALAPPDATA || "";
+			const appData = process.env.APPDATA || "";
+			browserPaths["Chrome"] = {
+				history: [path.join(localApp, "Google/Chrome/User Data/Default/History")],
+				cookies: [path.join(localApp, "Google/Chrome/User Data/Default/Cookies")],
+				cache: [path.join(localApp, "Google/Chrome/User Data/Default/Cache")],
+				downloads: [path.join(localApp, "Google/Chrome/User Data/Default/History")]
 			};
-		} else U === "darwin" && (J.Safari = {
-			history: [path.join(W, "Library/Safari/History.db")],
-			cookies: [path.join(W, "Library/Cookies/Cookies.binarycookies")],
-			cache: [path.join(W, "Library/Caches/com.apple.Safari")],
-			downloads: [path.join(W, "Library/Safari/Downloads.plist")]
-		}, J.Chrome = {
-			history: [path.join(W, "Library/Application Support/Google/Chrome/Default/History")],
-			cookies: [path.join(W, "Library/Application Support/Google/Chrome/Default/Cookies")],
-			cache: [path.join(W, "Library/Caches/Google/Chrome")],
-			downloads: [path.join(W, "Library/Application Support/Google/Chrome/Default/History")]
-		}, J.Firefox = {
-			history: [path.join(W, "Library/Application Support/Firefox/Profiles")],
-			cookies: [path.join(W, "Library/Application Support/Firefox/Profiles")],
-			cache: [path.join(W, "Library/Caches/Firefox")],
-			downloads: [path.join(W, "Library/Application Support/Firefox/Profiles")]
-		}, J.Edge = {
-			history: [path.join(W, "Library/Application Support/Microsoft Edge/Default/History")],
-			cookies: [path.join(W, "Library/Application Support/Microsoft Edge/Default/Cookies")],
-			cache: [path.join(W, "Library/Caches/com.microsoft.edgemac")],
-			downloads: [path.join(W, "Library/Application Support/Microsoft Edge/Default/History")]
-		});
-		for (let p of H.browsers) {
-			let U = J[p];
-			if (U) for (let W of H.types) {
-				let H = U[W];
-				if (H) for (let U of H) try {
-					let p = await fs.stat(U).catch(() => null);
-					if (!p) continue;
-					if (p.isDirectory()) {
-						let p = await getDirSize(U);
-						await fs.rm(U, {
-							recursive: !0,
-							force: !0
-						}), K += p, G++;
-					} else p.isFile() && (K += p.size, await fs.unlink(U), G++);
-				} catch (H) {
-					q.push(`Failed to clean ${p} ${W}: ${H.message}`);
+			browserPaths["Edge"] = {
+				history: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")],
+				cookies: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cookies")],
+				cache: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cache")],
+				downloads: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")]
+			};
+			browserPaths["Firefox"] = {
+				history: [path.join(appData, "Mozilla/Firefox/Profiles")],
+				cookies: [path.join(appData, "Mozilla/Firefox/Profiles")],
+				cache: [path.join(localApp, "Mozilla/Firefox/Profiles")],
+				downloads: [path.join(appData, "Mozilla/Firefox/Profiles")]
+			};
+		} else if (platform === "darwin") {
+			browserPaths["Safari"] = {
+				history: [path.join(home, "Library/Safari/History.db")],
+				cookies: [path.join(home, "Library/Cookies/Cookies.binarycookies")],
+				cache: [path.join(home, "Library/Caches/com.apple.Safari")],
+				downloads: [path.join(home, "Library/Safari/Downloads.plist")]
+			};
+			browserPaths["Chrome"] = {
+				history: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")],
+				cookies: [path.join(home, "Library/Application Support/Google/Chrome/Default/Cookies")],
+				cache: [path.join(home, "Library/Caches/Google/Chrome")],
+				downloads: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")]
+			};
+			browserPaths["Firefox"] = {
+				history: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+				cookies: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+				cache: [path.join(home, "Library/Caches/Firefox")],
+				downloads: [path.join(home, "Library/Application Support/Firefox/Profiles")]
+			};
+			browserPaths["Edge"] = {
+				history: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")],
+				cookies: [path.join(home, "Library/Application Support/Microsoft Edge/Default/Cookies")],
+				cache: [path.join(home, "Library/Caches/com.microsoft.edgemac")],
+				downloads: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")]
+			};
+		}
+		for (const browserName of options.browsers) {
+			const paths = browserPaths[browserName];
+			if (!paths) continue;
+			for (const type of options.types) {
+				const typePaths = paths[type];
+				if (!typePaths) continue;
+				for (const dataPath of typePaths) try {
+					const stats = await fs.stat(dataPath).catch(() => null);
+					if (!stats) continue;
+					if (stats.isDirectory()) {
+						const size = await getDirSize(dataPath);
+						await fs.rm(dataPath, {
+							recursive: true,
+							force: true
+						});
+						freedSize += size;
+						cleanedItems++;
+					} else if (stats.isFile()) {
+						freedSize += stats.size;
+						await fs.unlink(dataPath);
+						cleanedItems++;
+					}
+				} catch (e) {
+					errors.push(`Failed to clean ${browserName} ${type}: ${e.message}`);
 				}
 			}
 		}
 		return {
-			success: q.length === 0,
-			cleanedItems: G,
-			freedSize: K,
-			freedSizeFormatted: formatBytes$1(K),
-			errors: q
+			success: errors.length === 0,
+			cleanedItems,
+			freedSize,
+			freedSizeFormatted: formatBytes$1(freedSize),
+			errors
 		};
-	}), ipcMain.handle("cleaner:get-wifi-networks", async () => {
-		let p = process.platform, H = [];
+	});
+	ipcMain.handle("cleaner:get-wifi-networks", async () => {
+		const platform = process.platform;
+		const networks = [];
 		try {
-			if (p === "win32") {
-				let { stdout: p } = await execAsync$1("netsh wlan show profiles"), U = p.split("\n");
-				for (let p of U) {
-					let U = p.match(/All User Profile\s*:\s*(.+)/);
-					if (U) {
-						let p = U[1].trim();
+			if (platform === "win32") {
+				const { stdout } = await execAsync$1("netsh wlan show profiles");
+				const lines = stdout.split("\n");
+				for (const line of lines) {
+					const match = line.match(/All User Profile\s*:\s*(.+)/);
+					if (match) {
+						const profileName = match[1].trim();
 						try {
-							let { stdout: U } = await execAsync$1(`netsh wlan show profile name="${p}" key=clear`), W = U.match(/Key Content\s*:\s*(.+)/);
-							H.push({
-								name: p,
-								hasPassword: !!W,
+							const { stdout: profileInfo } = await execAsync$1(`netsh wlan show profile name="${profileName}" key=clear`);
+							const keyMatch = profileInfo.match(/Key Content\s*:\s*(.+)/);
+							networks.push({
+								name: profileName,
+								hasPassword: !!keyMatch,
 								platform: "windows"
 							});
-						} catch {
-							H.push({
-								name: p,
-								hasPassword: !1,
+						} catch (e) {
+							networks.push({
+								name: profileName,
+								hasPassword: false,
 								platform: "windows"
 							});
 						}
 					}
 				}
-			} else if (p === "darwin") {
-				let { stdout: p } = await execAsync$1("networksetup -listallhardwareports");
-				if (p.split("\n").find((p) => p.includes("Wi-Fi") || p.includes("AirPort"))) {
-					let { stdout: p } = await execAsync$1("networksetup -listpreferredwirelessnetworks en0").catch(() => ({ stdout: "" })), U = p.split("\n").filter((p) => p.trim() && !p.includes("Preferred networks"));
-					for (let p of U) {
-						let U = p.trim();
-						U && H.push({
-							name: U,
-							hasPassword: !0,
+			} else if (platform === "darwin") {
+				const { stdout } = await execAsync$1("networksetup -listallhardwareports");
+				if (stdout.split("\n").find((line) => line.includes("Wi-Fi") || line.includes("AirPort"))) {
+					const { stdout: networksOutput } = await execAsync$1("networksetup -listpreferredwirelessnetworks en0").catch(() => ({ stdout: "" }));
+					const networkNames = networksOutput.split("\n").filter((line) => line.trim() && !line.includes("Preferred networks"));
+					for (const networkName of networkNames) {
+						const name = networkName.trim();
+						if (name) networks.push({
+							name,
+							hasPassword: true,
 							platform: "macos"
 						});
 					}
 				}
 			}
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message,
+				success: false,
+				error: e.message,
 				networks: []
 			};
 		}
 		return {
-			success: !0,
-			networks: H
+			success: true,
+			networks
 		};
-	}), ipcMain.handle("cleaner:remove-wifi-network", async (p, H) => {
-		let U = process.platform;
+	});
+	ipcMain.handle("cleaner:remove-wifi-network", async (_event, networkName) => {
+		const platform = process.platform;
 		try {
-			return U === "win32" ? (await execAsync$1(`netsh wlan delete profile name="${H}"`), { success: !0 }) : U === "darwin" ? (await execAsync$1(`networksetup -removepreferredwirelessnetwork en0 "${H}"`), { success: !0 }) : {
-				success: !1,
+			if (platform === "win32") {
+				await execAsync$1(`netsh wlan delete profile name="${networkName}"`);
+				return { success: true };
+			} else if (platform === "darwin") {
+				await execAsync$1(`networksetup -removepreferredwirelessnetwork en0 "${networkName}"`);
+				return { success: true };
+			}
+			return {
+				success: false,
 				error: "Unsupported platform"
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:run-maintenance", async (p, H) => {
-		let U = process.platform, W = Date.now(), G = "";
+	});
+	ipcMain.handle("cleaner:run-maintenance", async (_event, task) => {
+		const platform = process.platform;
+		const startTime = Date.now();
+		let output = "";
 		try {
-			if (U === "win32") switch (H.category) {
+			if (platform === "win32") switch (task.category) {
 				case "sfc":
-					let { stdout: p } = await execAsync$1("sfc /scannow", { timeout: 3e5 });
-					G = p;
+					const { stdout: sfcOutput } = await execAsync$1("sfc /scannow", { timeout: 3e5 });
+					output = sfcOutput;
 					break;
 				case "dism":
-					let { stdout: U } = await execAsync$1("DISM /Online /Cleanup-Image /RestoreHealth", { timeout: 6e5 });
-					G = U;
+					const { stdout: dismOutput } = await execAsync$1("DISM /Online /Cleanup-Image /RestoreHealth", { timeout: 6e5 });
+					output = dismOutput;
 					break;
 				case "disk-cleanup":
-					let { stdout: W } = await execAsync$1("cleanmgr /sagerun:1", { timeout: 3e5 });
-					G = W || "Disk cleanup completed";
+					const { stdout: cleanupOutput } = await execAsync$1("cleanmgr /sagerun:1", { timeout: 3e5 });
+					output = cleanupOutput || "Disk cleanup completed";
 					break;
 				case "dns-flush":
-					let { stdout: K } = await execAsync$1("ipconfig /flushdns");
-					G = K || "DNS cache flushed successfully";
+					const { stdout: dnsOutput } = await execAsync$1("ipconfig /flushdns");
+					output = dnsOutput || "DNS cache flushed successfully";
 					break;
 				case "winsock-reset":
-					let { stdout: q } = await execAsync$1("netsh winsock reset");
-					G = q || "Winsock reset completed";
+					const { stdout: winsockOutput } = await execAsync$1("netsh winsock reset");
+					output = winsockOutput || "Winsock reset completed";
 					break;
 				case "windows-search-rebuild":
 					try {
-						await execAsync$1("powershell \"Stop-Service -Name WSearch -Force\""), await execAsync$1("powershell \"Remove-Item -Path \"$env:ProgramData\\Microsoft\\Search\\Data\\*\" -Recurse -Force\""), await execAsync$1("powershell \"Start-Service -Name WSearch\""), G = "Windows Search index rebuilt successfully";
-					} catch (p) {
-						throw Error(`Failed to rebuild search index: ${p.message}`);
+						await execAsync$1("powershell \"Stop-Service -Name WSearch -Force\"");
+						await execAsync$1("powershell \"Remove-Item -Path \"$env:ProgramData\\Microsoft\\Search\\Data\\*\" -Recurse -Force\"");
+						await execAsync$1("powershell \"Start-Service -Name WSearch\"");
+						output = "Windows Search index rebuilt successfully";
+					} catch (e) {
+						throw new Error(`Failed to rebuild search index: ${e.message}`);
 					}
 					break;
-				default: throw Error(`Unknown maintenance task: ${H.category}`);
+				default: throw new Error(`Unknown maintenance task: ${task.category}`);
 			}
-			else if (U === "darwin") switch (H.category) {
+			else if (platform === "darwin") switch (task.category) {
 				case "spotlight-reindex":
 					try {
-						await execAsync$1("sudo mdutil -E /"), G = "Spotlight index rebuilt successfully";
-					} catch {
+						await execAsync$1("sudo mdutil -E /");
+						output = "Spotlight index rebuilt successfully";
+					} catch (e) {
 						try {
-							await execAsync$1("mdutil -E ~"), G = "Spotlight index rebuilt successfully (user directory only)";
-						} catch (p) {
-							throw Error(`Failed to rebuild Spotlight index: ${p.message}`);
+							await execAsync$1("mdutil -E ~");
+							output = "Spotlight index rebuilt successfully (user directory only)";
+						} catch (e2) {
+							throw new Error(`Failed to rebuild Spotlight index: ${e2.message}`);
 						}
 					}
 					break;
 				case "disk-permissions":
 					try {
-						let { stdout: p } = await execAsync$1("diskutil verifyVolume /");
-						G = p || "Disk permissions verified";
-					} catch {
-						G = "Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)";
+						const { stdout: diskOutput } = await execAsync$1("diskutil verifyVolume /");
+						output = diskOutput || "Disk permissions verified";
+					} catch (e) {
+						output = "Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)";
 					}
 					break;
 				case "dns-flush":
 					try {
-						await execAsync$1("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"), G = "DNS cache flushed successfully";
-					} catch {
+						await execAsync$1("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
+						output = "DNS cache flushed successfully";
+					} catch (e) {
 						try {
-							await execAsync$1("dscacheutil -flushcache; killall -HUP mDNSResponder"), G = "DNS cache flushed successfully";
-						} catch (p) {
-							throw Error(`Failed to flush DNS: ${p.message}`);
+							await execAsync$1("dscacheutil -flushcache; killall -HUP mDNSResponder");
+							output = "DNS cache flushed successfully";
+						} catch (e2) {
+							throw new Error(`Failed to flush DNS: ${e2.message}`);
 						}
 					}
 					break;
 				case "mail-rebuild":
 					try {
-						await execAsync$1("killall Mail 2>/dev/null || true"), G = "Mail database rebuild initiated (please ensure Mail.app is closed)";
-					} catch (p) {
-						throw Error(`Failed to rebuild Mail database: ${p.message}`);
+						await execAsync$1("killall Mail 2>/dev/null || true");
+						output = "Mail database rebuild initiated (please ensure Mail.app is closed)";
+					} catch (e) {
+						throw new Error(`Failed to rebuild Mail database: ${e.message}`);
 					}
 					break;
-				default: throw Error(`Unknown maintenance task: ${H.category}`);
+				default: throw new Error(`Unknown maintenance task: ${task.category}`);
 			}
-			else throw Error("Unsupported platform for maintenance tasks");
+			else throw new Error("Unsupported platform for maintenance tasks");
 			return {
-				success: !0,
-				taskId: H.id,
-				duration: Date.now() - W,
-				output: G
+				success: true,
+				taskId: task.id,
+				duration: Date.now() - startTime,
+				output
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				taskId: H.id,
-				duration: Date.now() - W,
-				error: p.message,
-				output: G
+				success: false,
+				taskId: task.id,
+				duration: Date.now() - startTime,
+				error: e.message,
+				output
 			};
 		}
-	}), ipcMain.handle("cleaner:get-health-status", async () => {
+	});
+	ipcMain.handle("cleaner:get-health-status", async () => {
 		try {
-			let p = await si.mem(), H = await si.currentLoad(), U = await si.fsSize(), W = await si.battery().catch(() => null), G = [], K = U.find((p) => p.mount === "/" || p.mount === "C:") || U[0];
-			if (K) {
-				let p = K.available / K.size * 100;
-				p < 10 ? G.push({
+			const mem = await si.mem();
+			const load = await si.currentLoad();
+			const disk = await si.fsSize();
+			const battery = await si.battery().catch(() => null);
+			const alerts = [];
+			const rootDisk = disk.find((d) => d.mount === "/" || d.mount === "C:") || disk[0];
+			if (rootDisk) {
+				const freePercent = rootDisk.available / rootDisk.size * 100;
+				if (freePercent < 10) alerts.push({
 					type: "low_space",
 					severity: "critical",
-					message: `Low disk space: ${formatBytes$1(K.available)} free (${p.toFixed(1)}%)`,
+					message: `Low disk space: ${formatBytes$1(rootDisk.available)} free (${freePercent.toFixed(1)}%)`,
 					action: "Run cleanup to free space"
-				}) : p < 20 && G.push({
+				});
+				else if (freePercent < 20) alerts.push({
 					type: "low_space",
 					severity: "warning",
-					message: `Disk space getting low: ${formatBytes$1(K.available)} free (${p.toFixed(1)}%)`,
+					message: `Disk space getting low: ${formatBytes$1(rootDisk.available)} free (${freePercent.toFixed(1)}%)`,
 					action: "Consider running cleanup"
 				});
 			}
-			H.currentLoad > 90 && G.push({
+			if (load.currentLoad > 90) alerts.push({
 				type: "high_cpu",
 				severity: "warning",
-				message: `High CPU usage: ${H.currentLoad.toFixed(1)}%`,
+				message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`,
 				action: "Check heavy processes"
 			});
-			let q = p.used / p.total * 100;
-			return q > 90 && G.push({
+			const memPercent = mem.used / mem.total * 100;
+			if (memPercent > 90) alerts.push({
 				type: "memory_pressure",
 				severity: "warning",
-				message: `High memory usage: ${q.toFixed(1)}%`,
+				message: `High memory usage: ${memPercent.toFixed(1)}%`,
 				action: "Consider freeing RAM"
-			}), {
-				cpu: H.currentLoad,
-				ram: {
-					used: p.used,
-					total: p.total,
-					percentage: q
-				},
-				disk: K ? {
-					free: K.available,
-					total: K.size,
-					percentage: (K.size - K.available) / K.size * 100
-				} : null,
-				battery: W ? {
-					level: W.percent,
-					charging: W.isCharging || !1
-				} : null,
-				alerts: G
-			};
-		} catch (p) {
+			});
 			return {
-				success: !1,
-				error: p.message
+				cpu: load.currentLoad,
+				ram: {
+					used: mem.used,
+					total: mem.total,
+					percentage: memPercent
+				},
+				disk: rootDisk ? {
+					free: rootDisk.available,
+					total: rootDisk.size,
+					percentage: (rootDisk.size - rootDisk.available) / rootDisk.size * 100
+				} : null,
+				battery: battery ? {
+					level: battery.percent,
+					charging: battery.isCharging || false
+				} : null,
+				alerts
+			};
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:check-safety", async (p, H) => {
+	});
+	ipcMain.handle("cleaner:check-safety", async (_event, files) => {
 		try {
-			let p = process.platform, U = checkFilesSafety(H, p);
+			const platform = process.platform;
+			const result = checkFilesSafety(files, platform);
 			return {
-				success: !0,
-				safe: U.safe,
-				warnings: U.warnings,
-				blocked: U.blocked
+				success: true,
+				safe: result.safe,
+				warnings: result.warnings,
+				blocked: result.blocked
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message,
-				safe: !1,
+				success: false,
+				error: e.message,
+				safe: false,
 				warnings: [],
 				blocked: []
 			};
 		}
-	}), ipcMain.handle("cleaner:create-backup", async (p, H) => {
+	});
+	ipcMain.handle("cleaner:create-backup", async (_event, files) => {
 		try {
-			return await createBackup(H);
-		} catch (p) {
+			return await createBackup(files);
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:list-backups", async () => {
+	});
+	ipcMain.handle("cleaner:list-backups", async () => {
 		try {
 			return {
-				success: !0,
+				success: true,
 				backups: await listBackups()
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message,
+				success: false,
+				error: e.message,
 				backups: []
 			};
 		}
-	}), ipcMain.handle("cleaner:get-backup-info", async (p, H) => {
+	});
+	ipcMain.handle("cleaner:get-backup-info", async (_event, backupId) => {
 		try {
-			let p = await getBackupInfo(H);
+			const backupInfo = await getBackupInfo(backupId);
 			return {
-				success: p !== null,
-				backupInfo: p
+				success: backupInfo !== null,
+				backupInfo
 			};
-		} catch (p) {
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
-			};
-		}
-	}), ipcMain.handle("cleaner:restore-backup", async (p, H) => {
-		try {
-			return await restoreBackup(H);
-		} catch (p) {
-			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
 			};
 		}
-	}), ipcMain.handle("cleaner:delete-backup", async (p, H) => {
+	});
+	ipcMain.handle("cleaner:restore-backup", async (_event, backupId) => {
 		try {
-			return await deleteBackup(H);
-		} catch (p) {
+			return await restoreBackup(backupId);
+		} catch (e) {
 			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:delete-backup", async (_event, backupId) => {
+		try {
+			return await deleteBackup(backupId);
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
 			};
 		}
 	});
 }
-async function getDirSize(p) {
-	let H = 0;
+async function getDirSize(dirPath) {
+	let size = 0;
 	try {
-		let U = await fs.readdir(p, { withFileTypes: !0 });
-		for (let W of U) {
-			let U = path.join(p, W.name);
-			if (W.isDirectory()) H += await getDirSize(U);
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			const filePath = path.join(dirPath, file.name);
+			if (file.isDirectory()) size += await getDirSize(filePath);
 			else {
-				let p = await fs.stat(U).catch(() => null);
-				p && (H += p.size);
+				const stats = await fs.stat(filePath).catch(() => null);
+				if (stats) size += stats.size;
 			}
 		}
-	} catch {}
-	return H;
+	} catch (e) {}
+	return size;
 }
-async function getDirSizeLimited(p, H, U = 0) {
-	if (U >= H) return 0;
-	let W = 0;
+async function getDirSizeLimited(dirPath, maxDepth, currentDepth = 0) {
+	if (currentDepth >= maxDepth) return 0;
+	let size = 0;
 	try {
-		let G = await fs.readdir(p, { withFileTypes: !0 });
-		for (let K of G) {
-			if (K.name.startsWith(".") || [
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			if (file.name.startsWith(".") || [
 				"node_modules",
 				"Library",
 				"AppData",
 				"System",
 				".git",
 				".DS_Store"
-			].includes(K.name)) continue;
-			let G = path.join(p, K.name);
+			].includes(file.name)) continue;
+			const filePath = path.join(dirPath, file.name);
 			try {
-				if (K.isDirectory()) W += await getDirSizeLimited(G, H, U + 1);
+				if (file.isDirectory()) size += await getDirSizeLimited(filePath, maxDepth, currentDepth + 1);
 				else {
-					let p = await fs.stat(G).catch(() => null);
-					p && (W += p.size);
+					const stats = await fs.stat(filePath).catch(() => null);
+					if (stats) size += stats.size;
 				}
-			} catch {
+			} catch (e) {
 				continue;
 			}
 		}
-	} catch {
+	} catch (e) {
 		return 0;
 	}
-	return W;
+	return size;
 }
-async function scanDirectoryForLens(p, H, U, W) {
+async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress) {
 	try {
-		let G = await fs.stat(p), K = path.basename(p) || p;
-		if (!G.isDirectory()) {
-			let H = {
-				name: K,
-				path: p,
-				size: G.size,
-				sizeFormatted: formatBytes$1(G.size),
+		const stats = await fs.stat(dirPath);
+		const name = path.basename(dirPath) || dirPath;
+		if (!stats.isDirectory()) {
+			const fileNode = {
+				name,
+				path: dirPath,
+				size: stats.size,
+				sizeFormatted: formatBytes$1(stats.size),
 				type: "file"
 			};
-			return W && W({
-				currentPath: K,
+			if (onProgress) onProgress({
+				currentPath: name,
 				progress: 100,
-				status: `Scanning file: ${K}`,
-				item: H
-			}), H;
+				status: `Scanning file: ${name}`,
+				item: fileNode
+			});
+			return fileNode;
 		}
-		W && W({
-			currentPath: K,
+		if (onProgress) onProgress({
+			currentPath: name,
 			progress: 0,
-			status: `Scanning directory: ${K}`
+			status: `Scanning directory: ${name}`
 		});
-		let q = await fs.readdir(p, { withFileTypes: !0 }), J = [], Y = 0, X = q.filter((p) => !p.name.startsWith(".") && ![
+		const items = await fs.readdir(dirPath, { withFileTypes: true });
+		const children = [];
+		let totalSize = 0;
+		const itemsToProcess = items.filter((item) => !item.name.startsWith(".") && ![
 			"node_modules",
 			"Library",
 			"AppData",
 			"System",
 			".git",
 			".DS_Store"
-		].includes(p.name)), Z = X.length, Q = 0;
-		for (let G of X) {
-			let K = path.join(p, G.name);
-			if (W) {
-				let p = Math.floor(Q / Z * 100), H = G.isDirectory() ? "directory" : "file";
-				W({
-					currentPath: G.name,
-					progress: p,
-					status: `Scanning ${H}: ${G.name}`
+		].includes(item.name));
+		const totalItemsToProcess = itemsToProcess.length;
+		let processedItems = 0;
+		for (const item of itemsToProcess) {
+			const childPath = path.join(dirPath, item.name);
+			if (onProgress) {
+				const progressPercent = Math.floor(processedItems / totalItemsToProcess * 100);
+				const itemType = item.isDirectory() ? "directory" : "file";
+				onProgress({
+					currentPath: item.name,
+					progress: progressPercent,
+					status: `Scanning ${itemType}: ${item.name}`
 				});
 			}
-			let q = null;
-			if (H < U) q = await scanDirectoryForLens(K, H + 1, U, W), q && (J.push(q), Y += q.size);
-			else try {
-				let p = (await fs.stat(K)).size;
-				if (G.isDirectory()) {
-					let H = dirSizeCache.get(K);
-					if (H && Date.now() - H.timestamp < CACHE_TTL) p = H.size;
+			let childNode = null;
+			if (currentDepth < maxDepth) {
+				childNode = await scanDirectoryForLens(childPath, currentDepth + 1, maxDepth, onProgress);
+				if (childNode) {
+					children.push(childNode);
+					totalSize += childNode.size;
+				}
+			} else try {
+				let size = (await fs.stat(childPath)).size;
+				if (item.isDirectory()) {
+					const cached = dirSizeCache.get(childPath);
+					if (cached && Date.now() - cached.timestamp < CACHE_TTL) size = cached.size;
 					else try {
-						p = await getDirSizeLimited(K, 3), dirSizeCache.set(K, {
-							size: p,
+						size = await getDirSizeLimited(childPath, 3);
+						dirSizeCache.set(childPath, {
+							size,
 							timestamp: Date.now()
 						});
-					} catch {
-						p = 0;
+					} catch (e) {
+						size = 0;
 					}
 				}
-				q = {
-					name: G.name,
-					path: K,
-					size: p,
-					sizeFormatted: formatBytes$1(p),
-					type: G.isDirectory() ? "dir" : "file"
-				}, J.push(q), Y += p;
-			} catch {
-				Q++;
+				childNode = {
+					name: item.name,
+					path: childPath,
+					size,
+					sizeFormatted: formatBytes$1(size),
+					type: item.isDirectory() ? "dir" : "file"
+				};
+				children.push(childNode);
+				totalSize += size;
+			} catch (e) {
+				processedItems++;
 				continue;
 			}
-			q && W && W({
-				currentPath: G.name,
-				progress: Math.floor((Q + 1) / Z * 100),
-				status: `Scanned: ${G.name}`,
-				item: q
-			}), Q++;
+			if (childNode && onProgress) onProgress({
+				currentPath: item.name,
+				progress: Math.floor((processedItems + 1) / totalItemsToProcess * 100),
+				status: `Scanned: ${item.name}`,
+				item: childNode
+			});
+			processedItems++;
 		}
-		let $ = {
-			name: K,
-			path: p,
-			size: Y,
-			sizeFormatted: formatBytes$1(Y),
+		const result = {
+			name,
+			path: dirPath,
+			size: totalSize,
+			sizeFormatted: formatBytes$1(totalSize),
 			type: "dir",
-			children: J.sort((p, H) => H.size - p.size)
+			children: children.sort((a, b) => b.size - a.size)
 		};
-		return W && W({
-			currentPath: K,
+		if (onProgress) onProgress({
+			currentPath: name,
 			progress: 100,
-			status: `Completed: ${K}`
-		}), $;
-	} catch {
+			status: `Completed: ${name}`
+		});
+		return result;
+	} catch (e) {
 		return null;
 	}
 }
-async function findLargeFiles(p, H, U) {
+async function findLargeFiles(dirPath, minSize, results) {
 	try {
-		let W = await fs.readdir(p, { withFileTypes: !0 });
-		for (let G of W) {
-			let W = path.join(p, G.name);
-			if (!(G.name.startsWith(".") || [
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			const filePath = path.join(dirPath, file.name);
+			if (file.name.startsWith(".") || [
 				"node_modules",
 				"Library",
 				"AppData",
 				"System",
 				"Windows"
-			].includes(G.name))) try {
-				let p = await fs.stat(W);
-				G.isDirectory() ? await findLargeFiles(W, H, U) : p.size >= H && U.push({
-					name: G.name,
-					path: W,
-					size: p.size,
-					sizeFormatted: formatBytes$1(p.size),
-					lastAccessed: p.atime,
-					type: path.extname(G.name).slice(1) || "file"
+			].includes(file.name)) continue;
+			try {
+				const stats = await fs.stat(filePath);
+				if (file.isDirectory()) await findLargeFiles(filePath, minSize, results);
+				else if (stats.size >= minSize) results.push({
+					name: file.name,
+					path: filePath,
+					size: stats.size,
+					sizeFormatted: formatBytes$1(stats.size),
+					lastAccessed: stats.atime,
+					type: path.extname(file.name).slice(1) || "file"
 				});
-			} catch {}
+			} catch (e) {}
 		}
-	} catch {}
+	} catch (e) {}
 }
-async function findDuplicates(p, H) {
+async function findDuplicates(dirPath, fileHashes) {
 	try {
-		let U = await fs.readdir(p, { withFileTypes: !0 });
-		for (let W of U) {
-			let U = path.join(p, W.name);
-			if (!(W.name.startsWith(".") || [
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			const filePath = path.join(dirPath, file.name);
+			if (file.name.startsWith(".") || [
 				"node_modules",
 				"Library",
 				"AppData"
-			].includes(W.name))) try {
-				let p = await fs.stat(U);
-				if (W.isDirectory()) await findDuplicates(U, H);
-				else if (p.size > 1024 * 1024 && p.size < 50 * 1024 * 1024) {
-					let p = await hashFile(U), W = H.get(p) || [];
-					W.push(U), H.set(p, W);
+			].includes(file.name)) continue;
+			try {
+				const stats = await fs.stat(filePath);
+				if (file.isDirectory()) await findDuplicates(filePath, fileHashes);
+				else if (stats.size > 1024 * 1024 && stats.size < 50 * 1024 * 1024) {
+					const hash = await hashFile(filePath);
+					const existing = fileHashes.get(hash) || [];
+					existing.push(filePath);
+					fileHashes.set(hash, existing);
 				}
-			} catch {}
+			} catch (e) {}
 		}
-	} catch {}
+	} catch (e) {}
 }
-async function hashFile(p) {
-	let H = await fs.readFile(p);
-	return createHash("md5").update(H).digest("hex");
+async function hashFile(filePath) {
+	const buffer = await fs.readFile(filePath);
+	return createHash("md5").update(buffer).digest("hex");
 }
-function formatBytes$1(p) {
-	if (p === 0) return "0 B";
-	let H = 1024, U = [
+function formatBytes$1(bytes) {
+	if (bytes === 0) return "0 B";
+	const k = 1024;
+	const sizes = [
 		"B",
 		"KB",
 		"MB",
 		"GB",
 		"TB"
-	], W = Math.floor(Math.log(p) / Math.log(H));
-	return `${(p / H ** +W).toFixed(1)} ${U[W]}`;
+	];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
-var getPlatformProtectedPaths = (p) => {
-	let H = os.homedir(), U = [];
-	if (p === "win32") {
-		let p = process.env.WINDIR || "C:\\Windows", W = process.env.PROGRAMFILES || "C:\\Program Files", G = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
-		U.push({
-			path: p,
+var getPlatformProtectedPaths = (platform) => {
+	const home = os.homedir();
+	const rules = [];
+	if (platform === "win32") {
+		const windir = process.env.WINDIR || "C:\\Windows";
+		const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
+		const programFilesX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
+		rules.push({
+			path: windir,
 			type: "folder",
 			action: "protect",
 			reason: "Windows system directory",
 			platform: "windows"
 		}, {
-			path: W,
+			path: programFiles,
 			type: "folder",
 			action: "protect",
 			reason: "Program Files directory",
 			platform: "windows"
 		}, {
-			path: G,
+			path: programFilesX86,
 			type: "folder",
 			action: "protect",
 			reason: "Program Files (x86) directory",
@@ -1337,19 +1663,19 @@ var getPlatformProtectedPaths = (p) => {
 			reason: "ProgramData directory",
 			platform: "windows"
 		}, {
-			path: path.join(H, "Documents"),
+			path: path.join(home, "Documents"),
 			type: "folder",
 			action: "warn",
 			reason: "User Documents folder",
 			platform: "windows"
 		}, {
-			path: path.join(H, "Desktop"),
+			path: path.join(home, "Desktop"),
 			type: "folder",
 			action: "warn",
 			reason: "User Desktop folder",
 			platform: "windows"
 		});
-	} else p === "darwin" && U.push({
+	} else if (platform === "darwin") rules.push({
 		path: "/System",
 		type: "folder",
 		action: "protect",
@@ -1368,151 +1694,188 @@ var getPlatformProtectedPaths = (p) => {
 		reason: "Unix system resources",
 		platform: "macos"
 	}, {
-		path: path.join(H, "Documents"),
+		path: path.join(home, "Documents"),
 		type: "folder",
 		action: "warn",
 		reason: "User Documents folder",
 		platform: "macos"
 	}, {
-		path: path.join(H, "Desktop"),
+		path: path.join(home, "Desktop"),
 		type: "folder",
 		action: "warn",
 		reason: "User Desktop folder",
 		platform: "macos"
 	});
-	return U;
-}, checkFileSafety = (p, H) => {
-	let U = [], W = [], G = getPlatformProtectedPaths(H);
-	for (let K of G) {
-		if (K.platform && K.platform !== H && K.platform !== "all") continue;
-		let G = path.normalize(K.path), q = path.normalize(p);
-		if (q === G || q.startsWith(G + path.sep)) {
-			if (K.action === "protect") return W.push(p), {
-				safe: !1,
-				warnings: [],
-				blocked: [p]
-			};
-			K.action === "warn" && U.push({
-				path: p,
-				reason: K.reason,
+	return rules;
+};
+var checkFileSafety = (filePath, platform) => {
+	const warnings = [];
+	const blocked = [];
+	const rules = getPlatformProtectedPaths(platform);
+	for (const rule of rules) {
+		if (rule.platform && rule.platform !== platform && rule.platform !== "all") continue;
+		const normalizedRulePath = path.normalize(rule.path);
+		const normalizedFilePath = path.normalize(filePath);
+		if (normalizedFilePath === normalizedRulePath || normalizedFilePath.startsWith(normalizedRulePath + path.sep)) {
+			if (rule.action === "protect") {
+				blocked.push(filePath);
+				return {
+					safe: false,
+					warnings: [],
+					blocked: [filePath]
+				};
+			} else if (rule.action === "warn") warnings.push({
+				path: filePath,
+				reason: rule.reason,
 				severity: "high"
 			});
 		}
 	}
 	return {
-		safe: W.length === 0,
-		warnings: U,
-		blocked: W
+		safe: blocked.length === 0,
+		warnings,
+		blocked
 	};
-}, checkFilesSafety = (p, H) => {
-	let U = [], W = [];
-	for (let G of p) {
-		let p = checkFileSafety(G, H);
-		p.safe || W.push(...p.blocked), U.push(...p.warnings);
+};
+var checkFilesSafety = (filePaths, platform) => {
+	const allWarnings = [];
+	const allBlocked = [];
+	for (const filePath of filePaths) {
+		const result = checkFileSafety(filePath, platform);
+		if (!result.safe) allBlocked.push(...result.blocked);
+		allWarnings.push(...result.warnings);
 	}
 	return {
-		safe: W.length === 0,
-		warnings: U,
-		blocked: W
+		safe: allBlocked.length === 0,
+		warnings: allWarnings,
+		blocked: allBlocked
 	};
-}, getBackupDir = () => {
-	let p = os.homedir();
-	return process.platform === "win32" ? path.join(p, "AppData", "Local", "devtools-app", "backups") : path.join(p, ".devtools-app", "backups");
-}, generateBackupId = () => `backup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, calculateTotalSize = async (p) => {
-	let H = 0;
-	for (let U of p) try {
-		let p = await fs.stat(U);
-		p.isFile() && (H += p.size);
-	} catch {}
-	return H;
-}, createBackup = async (p) => {
+};
+var getBackupDir = () => {
+	const home = os.homedir();
+	if (process.platform === "win32") return path.join(home, "AppData", "Local", "devtools-app", "backups");
+	else return path.join(home, ".devtools-app", "backups");
+};
+var generateBackupId = () => {
+	return `backup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+var calculateTotalSize = async (files) => {
+	let totalSize = 0;
+	for (const filePath of files) try {
+		const stats = await fs.stat(filePath);
+		if (stats.isFile()) totalSize += stats.size;
+	} catch (e) {}
+	return totalSize;
+};
+var createBackup = async (files) => {
 	try {
-		let H = getBackupDir();
-		await fs.mkdir(H, { recursive: !0 });
-		let U = generateBackupId(), W = path.join(H, U);
-		await fs.mkdir(W, { recursive: !0 });
-		let G = await calculateTotalSize(p), K = [];
-		for (let H of p) try {
-			let p = await fs.stat(H), U = path.basename(H), G = path.join(W, U);
-			p.isFile() && (await fs.copyFile(H, G), K.push(H));
-		} catch {}
-		let q = {
-			id: U,
-			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-			files: K,
-			totalSize: G,
-			location: W,
-			platform: process.platform
-		}, J = path.join(W, "backup-info.json");
-		return await fs.writeFile(J, JSON.stringify(q, null, 2)), {
-			success: !0,
-			backupId: U,
-			backupInfo: q
-		};
-	} catch (p) {
-		return {
-			success: !1,
-			error: p.message
-		};
-	}
-}, listBackups = async () => {
-	try {
-		let p = getBackupDir(), H = await fs.readdir(p, { withFileTypes: !0 }), U = [];
-		for (let W of H) if (W.isDirectory() && W.name.startsWith("backup-")) {
-			let H = path.join(p, W.name, "backup-info.json");
-			try {
-				let p = await fs.readFile(H, "utf-8");
-				U.push(JSON.parse(p));
-			} catch {}
-		}
-		return U.sort((p, H) => new Date(H.timestamp).getTime() - new Date(p.timestamp).getTime());
-	} catch {
-		return [];
-	}
-}, getBackupInfo = async (p) => {
-	try {
-		let H = getBackupDir(), U = path.join(H, p, "backup-info.json"), W = await fs.readFile(U, "utf-8");
-		return JSON.parse(W);
-	} catch {
-		return null;
-	}
-}, restoreBackup = async (p) => {
-	try {
-		let H = await getBackupInfo(p);
-		if (!H) return {
-			success: !1,
-			error: "Backup not found"
-		};
-		let U = H.location;
-		for (let p of H.files) try {
-			let H = path.basename(p), W = path.join(U, H);
-			if ((await fs.stat(W)).isFile()) {
-				let H = path.dirname(p);
-				await fs.mkdir(H, { recursive: !0 }), await fs.copyFile(W, p);
+		const backupDir = getBackupDir();
+		await fs.mkdir(backupDir, { recursive: true });
+		const backupId = generateBackupId();
+		const backupPath = path.join(backupDir, backupId);
+		await fs.mkdir(backupPath, { recursive: true });
+		const totalSize = await calculateTotalSize(files);
+		const backedUpFiles = [];
+		for (const filePath of files) try {
+			const stats = await fs.stat(filePath);
+			const fileName = path.basename(filePath);
+			const backupFilePath = path.join(backupPath, fileName);
+			if (stats.isFile()) {
+				await fs.copyFile(filePath, backupFilePath);
+				backedUpFiles.push(filePath);
 			}
-		} catch {}
-		return { success: !0 };
-	} catch (p) {
-		return {
-			success: !1,
-			error: p.message
+		} catch (e) {}
+		const backupInfo = {
+			id: backupId,
+			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+			files: backedUpFiles,
+			totalSize,
+			location: backupPath,
+			platform: process.platform
 		};
-	}
-}, deleteBackup = async (p) => {
-	try {
-		let H = getBackupDir(), U = path.join(H, p);
-		return await fs.rm(U, {
-			recursive: !0,
-			force: !0
-		}), { success: !0 };
-	} catch (p) {
+		const metadataPath = path.join(backupPath, "backup-info.json");
+		await fs.writeFile(metadataPath, JSON.stringify(backupInfo, null, 2));
 		return {
-			success: !1,
-			error: p.message
+			success: true,
+			backupId,
+			backupInfo
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error.message
 		};
 	}
 };
-function setupScreenshotHandlers(p) {
+var listBackups = async () => {
+	try {
+		const backupDir = getBackupDir();
+		const entries = await fs.readdir(backupDir, { withFileTypes: true });
+		const backups = [];
+		for (const entry of entries) if (entry.isDirectory() && entry.name.startsWith("backup-")) {
+			const metadataPath = path.join(backupDir, entry.name, "backup-info.json");
+			try {
+				const metadataContent = await fs.readFile(metadataPath, "utf-8");
+				backups.push(JSON.parse(metadataContent));
+			} catch (e) {}
+		}
+		return backups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+	} catch (error) {
+		return [];
+	}
+};
+var getBackupInfo = async (backupId) => {
+	try {
+		const backupDir = getBackupDir();
+		const metadataPath = path.join(backupDir, backupId, "backup-info.json");
+		const metadataContent = await fs.readFile(metadataPath, "utf-8");
+		return JSON.parse(metadataContent);
+	} catch (error) {
+		return null;
+	}
+};
+var restoreBackup = async (backupId) => {
+	try {
+		const backupInfo = await getBackupInfo(backupId);
+		if (!backupInfo) return {
+			success: false,
+			error: "Backup not found"
+		};
+		const backupPath = backupInfo.location;
+		for (const filePath of backupInfo.files) try {
+			const fileName = path.basename(filePath);
+			const backupFilePath = path.join(backupPath, fileName);
+			if ((await fs.stat(backupFilePath)).isFile()) {
+				const destDir = path.dirname(filePath);
+				await fs.mkdir(destDir, { recursive: true });
+				await fs.copyFile(backupFilePath, filePath);
+			}
+		} catch (e) {}
+		return { success: true };
+	} catch (error) {
+		return {
+			success: false,
+			error: error.message
+		};
+	}
+};
+var deleteBackup = async (backupId) => {
+	try {
+		const backupDir = getBackupDir();
+		const backupPath = path.join(backupDir, backupId);
+		await fs.rm(backupPath, {
+			recursive: true,
+			force: true
+		});
+		return { success: true };
+	} catch (error) {
+		return {
+			success: false,
+			error: error.message
+		};
+	}
+};
+function setupScreenshotHandlers(win$1) {
 	ipcMain.handle("screenshot:get-sources", async () => {
 		try {
 			return (await desktopCapturer.getSources({
@@ -1521,70 +1884,79 @@ function setupScreenshotHandlers(p) {
 					width: 300,
 					height: 200
 				}
-			})).map((p) => ({
-				id: p.id,
-				name: p.name,
-				thumbnail: p.thumbnail.toDataURL(),
-				type: p.id.startsWith("screen") ? "screen" : "window"
+			})).map((source) => ({
+				id: source.id,
+				name: source.name,
+				thumbnail: source.thumbnail.toDataURL(),
+				type: source.id.startsWith("screen") ? "screen" : "window"
 			}));
-		} catch (p) {
-			return console.error("Failed to get sources:", p), [];
+		} catch (error) {
+			console.error("Failed to get sources:", error);
+			return [];
 		}
-	}), ipcMain.handle("screenshot:capture-screen", async () => {
+	});
+	ipcMain.handle("screenshot:capture-screen", async () => {
 		try {
-			let p = await desktopCapturer.getSources({
+			const sources = await desktopCapturer.getSources({
 				types: ["screen"],
 				thumbnailSize: screen.getPrimaryDisplay().size
 			});
-			if (p.length === 0) throw Error("No screens available");
-			let H = p[0].thumbnail;
+			if (sources.length === 0) throw new Error("No screens available");
+			const image = sources[0].thumbnail;
 			return {
-				dataUrl: H.toDataURL(),
-				width: H.getSize().width,
-				height: H.getSize().height
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
 			};
-		} catch (p) {
-			throw console.error("Failed to capture screen:", p), p;
+		} catch (error) {
+			console.error("Failed to capture screen:", error);
+			throw error;
 		}
-	}), ipcMain.handle("screenshot:capture-window", async (p, H) => {
+	});
+	ipcMain.handle("screenshot:capture-window", async (_event, sourceId) => {
 		try {
-			let p = (await desktopCapturer.getSources({
+			const source = (await desktopCapturer.getSources({
 				types: ["window"],
 				thumbnailSize: {
 					width: 1920,
 					height: 1080
 				}
-			})).find((p) => p.id === H);
-			if (!p) throw Error("Window not found");
-			let U = p.thumbnail;
+			})).find((s) => s.id === sourceId);
+			if (!source) throw new Error("Window not found");
+			const image = source.thumbnail;
 			return {
-				dataUrl: U.toDataURL(),
-				width: U.getSize().width,
-				height: U.getSize().height
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
 			};
-		} catch (p) {
-			throw console.error("Failed to capture window:", p), p;
+		} catch (error) {
+			console.error("Failed to capture window:", error);
+			throw error;
 		}
-	}), ipcMain.handle("screenshot:capture-area", async () => {
+	});
+	ipcMain.handle("screenshot:capture-area", async () => {
 		try {
-			let p = await desktopCapturer.getSources({
+			const sources = await desktopCapturer.getSources({
 				types: ["screen"],
 				thumbnailSize: screen.getPrimaryDisplay().size
 			});
-			if (p.length === 0) throw Error("No screens available");
-			let H = p[0].thumbnail;
+			if (sources.length === 0) throw new Error("No screens available");
+			const image = sources[0].thumbnail;
 			return {
-				dataUrl: H.toDataURL(),
-				width: H.getSize().width,
-				height: H.getSize().height
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
 			};
-		} catch (p) {
-			throw console.error("Failed to capture area:", p), p;
+		} catch (error) {
+			console.error("Failed to capture area:", error);
+			throw error;
 		}
-	}), ipcMain.handle("screenshot:save-file", async (H, U, W) => {
+	});
+	ipcMain.handle("screenshot:save-file", async (_event, dataUrl, options) => {
 		try {
-			let { filename: H, format: G = "png" } = W, K = await dialog.showSaveDialog(p, {
-				defaultPath: H || `screenshot-${Date.now()}.${G}`,
+			const { filename, format = "png" } = options;
+			const result = await dialog.showSaveDialog(win$1, {
+				defaultPath: filename || `screenshot-${Date.now()}.${format}`,
 				filters: [
 					{
 						name: "PNG Image",
@@ -1600,86 +1972,120 @@ function setupScreenshotHandlers(p) {
 					}
 				]
 			});
-			if (K.canceled || !K.filePath) return {
-				success: !1,
-				canceled: !0
+			if (result.canceled || !result.filePath) return {
+				success: false,
+				canceled: true
 			};
-			let q = U.replace(/^data:image\/\w+;base64,/, ""), Y = Buffer.from(q, "base64");
-			return await fs.writeFile(K.filePath, Y), {
-				success: !0,
-				filePath: K.filePath
+			const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+			const buffer = Buffer.from(base64Data, "base64");
+			await fs.writeFile(result.filePath, buffer);
+			return {
+				success: true,
+				filePath: result.filePath
 			};
-		} catch (p) {
-			return console.error("Failed to save screenshot:", p), {
-				success: !1,
-				error: p.message
+		} catch (error) {
+			console.error("Failed to save screenshot:", error);
+			return {
+				success: false,
+				error: error.message
 			};
 		}
 	});
 }
-var execAsync = promisify(exec), store = new Store(), __dirname = dirname(fileURLToPath(import.meta.url));
-process.env.DIST = join(__dirname, "../dist"), process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, "../public");
-var win, tray = null, VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL, TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || "", "tray-icon.png");
-function setLoginItemSettingsSafely(p) {
+var execAsync = promisify(exec);
+var store = new Store();
+var __dirname = dirname(fileURLToPath(import.meta.url));
+process.env.DIST = join(__dirname, "../dist");
+process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, "../public");
+var win;
+var tray = null;
+var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+var TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || "", "tray-icon.png");
+function setLoginItemSettingsSafely(openAtLogin) {
 	try {
-		return app.setLoginItemSettings({
-			openAtLogin: p,
-			openAsHidden: !0
-		}), { success: !0 };
-	} catch (p) {
-		let H = p instanceof Error ? p.message : String(p);
-		return console.warn("Failed to set login item settings:", H), app.isPackaged || console.info("Note: Launch at login requires code signing in production builds"), {
-			success: !1,
-			error: H
+		app.setLoginItemSettings({
+			openAtLogin,
+			openAsHidden: true
+		});
+		return { success: true };
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		console.warn("Failed to set login item settings:", errorMessage);
+		if (!app.isPackaged) console.info("Note: Launch at login requires code signing in production builds");
+		return {
+			success: false,
+			error: errorMessage
 		};
 	}
 }
 function createTray() {
-	tray || (tray = new Tray(nativeImage.createFromPath(TRAY_ICON_PATH).resize({
+	if (tray) return;
+	tray = new Tray(nativeImage.createFromPath(TRAY_ICON_PATH).resize({
 		width: 22,
 		height: 22
-	})), tray.setToolTip("DevTools"), updateTrayMenu(), tray.on("double-click", () => {
-		toggleWindow();
 	}));
+	tray.setToolTip("DevTools");
+	updateTrayMenu();
+	tray.on("double-click", () => {
+		toggleWindow();
+	});
 }
 function toggleWindow() {
-	win && (win.isVisible() ? win.hide() : win.show(), updateTrayMenu());
+	if (win) {
+		if (win.isVisible()) win.hide();
+		else win.show();
+		updateTrayMenu();
+	}
 }
-var recentTools = [], clipboardItems = [], clipboardMonitoringEnabled = !0, statsMenuData = null, healthMenuData = null, healthMonitoringInterval = null;
+var recentTools = [];
+var clipboardItems = [];
+var clipboardMonitoringEnabled = true;
+var statsMenuData = null;
+var healthMenuData = null;
+var healthMonitoringInterval = null;
 function updateTrayMenu() {
 	if (!tray) return;
-	let p = [{
+	const template = [{
 		label: win?.isVisible() ? "▼ Hide Window" : "▲ Show Window",
 		click: () => {
-			win && (win.isVisible() ? win.hide() : win.show(), updateTrayMenu());
+			if (win) {
+				if (win.isVisible()) win.hide();
+				else win.show();
+				updateTrayMenu();
+			}
 		}
 	}, { type: "separator" }];
 	if (clipboardItems.length > 0) {
-		let H = Math.min(clipboardItems.length, 9);
-		p.push({
+		const displayCount = Math.min(clipboardItems.length, 9);
+		template.push({
 			label: "📋 Clipboard Manager",
 			submenu: [
 				{
 					label: "▸ Open Full Manager",
 					click: () => {
-						win?.show(), win?.webContents.send("navigate-to", "clipboard-manager");
+						win?.show();
+						win?.webContents.send("navigate-to", "clipboard-manager");
 					}
 				},
 				{ type: "separator" },
 				{
-					label: `● Recent Clipboard (${H})`,
-					enabled: !1
+					label: `● Recent Clipboard (${displayCount})`,
+					enabled: false
 				},
-				...clipboardItems.slice(0, 9).map((p, H) => {
-					let W = String(p.content || ""), G = (W.length > 75 ? W.substring(0, 75) + "..." : W).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+				...clipboardItems.slice(0, 9).map((item, index) => {
+					const content = String(item.content || "");
+					const cleanPreview = (content.length > 75 ? content.substring(0, 75) + "..." : content).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 					return {
-						label: `  ${H + 1}. ${G || "(Empty)"}`,
+						label: `  ${index + 1}. ${cleanPreview || "(Empty)"}`,
 						click: () => {
-							W && (clipboard.writeText(W), new Notification({
-								title: "✓ Copied from History",
-								body: G || "Copied to clipboard",
-								silent: !0
-							}).show());
+							if (content) {
+								clipboard.writeText(content);
+								new Notification({
+									title: "✓ Copied from History",
+									body: cleanPreview || "Copied to clipboard",
+									silent: true
+								}).show();
+							}
 						}
 					};
 				}),
@@ -1689,10 +2095,13 @@ function updateTrayMenu() {
 					type: "checkbox",
 					checked: clipboardMonitoringEnabled,
 					click: () => {
-						clipboardMonitoringEnabled = !clipboardMonitoringEnabled, win?.webContents.send("toggle-clipboard-monitoring", clipboardMonitoringEnabled), updateTrayMenu(), new Notification({
+						clipboardMonitoringEnabled = !clipboardMonitoringEnabled;
+						win?.webContents.send("toggle-clipboard-monitoring", clipboardMonitoringEnabled);
+						updateTrayMenu();
+						new Notification({
 							title: clipboardMonitoringEnabled ? "✓ Monitoring Enabled" : "⏸ Monitoring Paused",
 							body: clipboardMonitoringEnabled ? "Clipboard will be monitored automatically" : "Clipboard monitoring paused",
-							silent: !0
+							silent: true
 						}).show();
 					}
 				},
@@ -1704,25 +2113,31 @@ function updateTrayMenu() {
 					}
 				}
 			]
-		}), p.push({ type: "separator" });
-	} else p.push({
-		label: "📋 Clipboard Manager (Empty)",
-		click: () => {
-			win?.show(), win?.webContents.send("navigate-to", "clipboard-manager");
-		}
-	}), p.push({ type: "separator" });
-	if (p.push({
+		});
+		template.push({ type: "separator" });
+	} else {
+		template.push({
+			label: "📋 Clipboard Manager (Empty)",
+			click: () => {
+				win?.show();
+				win?.webContents.send("navigate-to", "clipboard-manager");
+			}
+		});
+		template.push({ type: "separator" });
+	}
+	template.push({
 		label: "⚡ Quick Actions",
 		submenu: [
 			{
 				label: "◆ Generate UUID",
 				accelerator: "CmdOrCtrl+Shift+U",
 				click: () => {
-					let p = randomUUID();
-					clipboard.writeText(p), new Notification({
+					const uuid = randomUUID();
+					clipboard.writeText(uuid);
+					new Notification({
 						title: "✓ UUID Generated",
-						body: `Copied: ${p.substring(0, 20)}...`,
-						silent: !0
+						body: `Copied: ${uuid.substring(0, 20)}...`,
+						silent: true
 					}).show();
 				}
 			},
@@ -1731,17 +2146,20 @@ function updateTrayMenu() {
 				accelerator: "CmdOrCtrl+Shift+J",
 				click: () => {
 					try {
-						let p = clipboard.readText(), H = JSON.parse(p), W = JSON.stringify(H, null, 2);
-						clipboard.writeText(W), new Notification({
+						const text = clipboard.readText();
+						const json = JSON.parse(text);
+						const formatted = JSON.stringify(json, null, 2);
+						clipboard.writeText(formatted);
+						new Notification({
 							title: "✓ JSON Formatted",
 							body: "Formatted JSON copied to clipboard",
-							silent: !0
+							silent: true
 						}).show();
-					} catch {
+					} catch (e) {
 						new Notification({
 							title: "✗ Format Failed",
 							body: "Clipboard does not contain valid JSON",
-							silent: !0
+							silent: true
 						}).show();
 					}
 				}
@@ -1750,19 +2168,20 @@ function updateTrayMenu() {
 				label: "# Hash Text (SHA-256)",
 				click: () => {
 					try {
-						let p = clipboard.readText();
-						if (!p) throw Error("Empty clipboard");
-						let H = createHash("sha256").update(p).digest("hex");
-						clipboard.writeText(H), new Notification({
+						const text = clipboard.readText();
+						if (!text) throw new Error("Empty clipboard");
+						const hash = createHash("sha256").update(text).digest("hex");
+						clipboard.writeText(hash);
+						new Notification({
 							title: "✓ Hash Generated",
-							body: `SHA-256: ${H.substring(0, 20)}...`,
-							silent: !0
+							body: `SHA-256: ${hash.substring(0, 20)}...`,
+							silent: true
 						}).show();
-					} catch {
+					} catch (e) {
 						new Notification({
 							title: "✗ Hash Failed",
 							body: "Could not hash clipboard content",
-							silent: !0
+							silent: true
 						}).show();
 					}
 				}
@@ -1772,19 +2191,20 @@ function updateTrayMenu() {
 				label: "↑ Base64 Encode",
 				click: () => {
 					try {
-						let p = clipboard.readText();
-						if (!p) throw Error("Empty clipboard");
-						let H = Buffer.from(p).toString("base64");
-						clipboard.writeText(H), new Notification({
+						const text = clipboard.readText();
+						if (!text) throw new Error("Empty clipboard");
+						const encoded = Buffer.from(text).toString("base64");
+						clipboard.writeText(encoded);
+						new Notification({
 							title: "✓ Base64 Encoded",
 							body: "Encoded text copied to clipboard",
-							silent: !0
+							silent: true
 						}).show();
-					} catch {
+					} catch (e) {
 						new Notification({
 							title: "✗ Encode Failed",
 							body: "Could not encode clipboard content",
-							silent: !0
+							silent: true
 						}).show();
 					}
 				}
@@ -1793,95 +2213,126 @@ function updateTrayMenu() {
 				label: "↓ Base64 Decode",
 				click: () => {
 					try {
-						let p = clipboard.readText();
-						if (!p) throw Error("Empty clipboard");
-						let H = Buffer.from(p, "base64").toString("utf-8");
-						clipboard.writeText(H), new Notification({
+						const text = clipboard.readText();
+						if (!text) throw new Error("Empty clipboard");
+						const decoded = Buffer.from(text, "base64").toString("utf-8");
+						clipboard.writeText(decoded);
+						new Notification({
 							title: "✓ Base64 Decoded",
 							body: "Decoded text copied to clipboard",
-							silent: !0
+							silent: true
 						}).show();
-					} catch {
+					} catch (e) {
 						new Notification({
 							title: "✗ Decode Failed",
 							body: "Invalid Base64 in clipboard",
-							silent: !0
+							silent: true
 						}).show();
 					}
 				}
 			}
 		]
-	}), p.push({ type: "separator" }), statsMenuData && (p.push({
-		label: "📊 Stats Monitor",
-		enabled: !1
-	}), p.push({
-		label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
-		enabled: !1
-	}), p.push({
-		label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
-		enabled: !1
-	}), p.push({
-		label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
-		enabled: !1
-	}), p.push({ type: "separator" }), p.push({
-		label: "Open Stats Monitor",
-		click: () => {
-			win?.show(), win?.webContents.send("navigate-to", "/stats-monitor");
-		}
-	}), p.push({ type: "separator" })), healthMenuData) {
-		let H = healthMenuData.alerts.filter((p) => p.severity === "critical" || p.severity === "warning").length, W = H > 0 ? `🛡️ System Health (${H} alerts)` : "🛡️ System Health", G = [
+	});
+	template.push({ type: "separator" });
+	if (statsMenuData) {
+		template.push({
+			label: "📊 Stats Monitor",
+			enabled: false
+		});
+		template.push({
+			label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
+			enabled: false
+		});
+		template.push({
+			label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
+			enabled: false
+		});
+		template.push({
+			label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
+			enabled: false
+		});
+		template.push({ type: "separator" });
+		template.push({
+			label: "Open Stats Monitor",
+			click: () => {
+				win?.show();
+				win?.webContents.send("navigate-to", "/stats-monitor");
+			}
+		});
+		template.push({ type: "separator" });
+	}
+	if (healthMenuData) {
+		const alertCount = healthMenuData.alerts.filter((a) => a.severity === "critical" || a.severity === "warning").length;
+		const healthLabel = alertCount > 0 ? `🛡️ System Health (${alertCount} alerts)` : "🛡️ System Health";
+		const healthSubmenu = [
 			{
 				label: "📊 Health Metrics",
-				enabled: !1
+				enabled: false
 			},
 			{
 				label: `CPU: ${healthMenuData.cpu.toFixed(1)}%`,
-				enabled: !1
+				enabled: false
 			},
 			{
 				label: `RAM: ${healthMenuData.ram.percentage.toFixed(1)}% (${formatBytes(healthMenuData.ram.used)} / ${formatBytes(healthMenuData.ram.total)})`,
-				enabled: !1
+				enabled: false
 			}
 		];
-		healthMenuData.disk && G.push({
+		if (healthMenuData.disk) healthSubmenu.push({
 			label: `Disk: ${healthMenuData.disk.percentage.toFixed(1)}% used (${formatBytes(healthMenuData.disk.free)} free)`,
-			enabled: !1
-		}), healthMenuData.battery && G.push({
+			enabled: false
+		});
+		if (healthMenuData.battery) healthSubmenu.push({
 			label: `Battery: ${healthMenuData.battery.level.toFixed(0)}% ${healthMenuData.battery.charging ? "(Charging)" : ""}`,
-			enabled: !1
-		}), G.push({ type: "separator" }), healthMenuData.alerts.length > 0 && (G.push({
-			label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
-			enabled: !1
-		}), healthMenuData.alerts.slice(0, 5).forEach((p) => {
-			G.push({
-				label: `${p.severity === "critical" ? "🔴" : p.severity === "warning" ? "🟡" : "🔵"} ${p.message.substring(0, 50)}${p.message.length > 50 ? "..." : ""}`,
-				enabled: !1
+			enabled: false
+		});
+		healthSubmenu.push({ type: "separator" });
+		if (healthMenuData.alerts.length > 0) {
+			healthSubmenu.push({
+				label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
+				enabled: false
 			});
-		}), G.push({ type: "separator" })), G.push({
+			healthMenuData.alerts.slice(0, 5).forEach((alert) => {
+				healthSubmenu.push({
+					label: `${alert.severity === "critical" ? "🔴" : alert.severity === "warning" ? "🟡" : "🔵"} ${alert.message.substring(0, 50)}${alert.message.length > 50 ? "..." : ""}`,
+					enabled: false
+				});
+			});
+			healthSubmenu.push({ type: "separator" });
+		}
+		healthSubmenu.push({
 			label: "▸ Open Health Monitor",
 			click: () => {
-				win?.show(), win?.webContents.send("navigate-to", "/system-cleaner"), setTimeout(() => {
+				win?.show();
+				win?.webContents.send("navigate-to", "/system-cleaner");
+				setTimeout(() => {
 					win?.webContents.send("system-cleaner:switch-tab", "health");
 				}, 500);
 			}
-		}), G.push({
+		});
+		healthSubmenu.push({
 			label: "⚡ Quick Actions",
 			submenu: [
 				{
 					label: "Free Up RAM",
 					click: async () => {
 						try {
-							let p = await win?.webContents.executeJavaScript("\n                (async () => {\n                  const res = await window.cleanerAPI?.freeRam();\n                  return res;\n                })()\n              ");
-							p?.success && new Notification({
+							const result = await win?.webContents.executeJavaScript(`
+                (async () => {
+                  const res = await window.cleanerAPI?.freeRam();
+                  return res;
+                })()
+              `);
+							if (result?.success) new Notification({
 								title: "✓ RAM Optimized",
-								body: `Freed ${formatBytes(p.ramFreed || 0)}`,
-								silent: !0
+								body: `Freed ${formatBytes(result.ramFreed || 0)}`,
+								silent: true
 							}).show();
-						} catch {
+						} catch (e) {
 							new Notification({
 								title: "✗ Failed",
 								body: "Could not free RAM",
-								silent: !0
+								silent: true
 							}).show();
 						}
 					}
@@ -1890,7 +2341,7 @@ function updateTrayMenu() {
 					label: "Flush DNS Cache",
 					click: async () => {
 						try {
-							(await win?.webContents.executeJavaScript(`
+							if ((await win?.webContents.executeJavaScript(`
                 (async () => {
                   const res = await window.cleanerAPI?.runMaintenance(${JSON.stringify({
 								id: "dns-flush",
@@ -1899,16 +2350,16 @@ function updateTrayMenu() {
 							})});
                   return res;
                 })()
-              `))?.success && new Notification({
+              `))?.success) new Notification({
 								title: "✓ DNS Cache Flushed",
 								body: "DNS cache cleared successfully",
-								silent: !0
+								silent: true
 							}).show();
-						} catch {
+						} catch (e) {
 							new Notification({
 								title: "✗ Failed",
 								body: "Could not flush DNS cache",
-								silent: !0
+								silent: true
 							}).show();
 						}
 					}
@@ -1916,56 +2367,69 @@ function updateTrayMenu() {
 				{
 					label: "Open System Cleaner",
 					click: () => {
-						win?.show(), win?.webContents.send("navigate-to", "/system-cleaner");
+						win?.show();
+						win?.webContents.send("navigate-to", "/system-cleaner");
 					}
 				}
 			]
-		}), p.push({
-			label: W,
-			submenu: G
-		}), p.push({ type: "separator" });
+		});
+		template.push({
+			label: healthLabel,
+			submenu: healthSubmenu
+		});
+		template.push({ type: "separator" });
 	}
-	recentTools.length > 0 && (p.push({
-		label: "🕐 Recent Tools",
-		submenu: recentTools.map((p) => ({
-			label: `  • ${p.name}`,
-			click: () => {
-				win?.show(), win?.webContents.send("navigate-to", p.id);
-			}
-		}))
-	}), p.push({ type: "separator" })), p.push({
+	if (recentTools.length > 0) {
+		template.push({
+			label: "🕐 Recent Tools",
+			submenu: recentTools.map((tool) => ({
+				label: `  • ${tool.name}`,
+				click: () => {
+					win?.show();
+					win?.webContents.send("navigate-to", tool.id);
+				}
+			}))
+		});
+		template.push({ type: "separator" });
+	}
+	template.push({
 		label: "⚙️ Settings",
 		click: () => {
-			win?.show(), win?.webContents.send("navigate-to", "settings");
+			win?.show();
+			win?.webContents.send("navigate-to", "settings");
 		}
-	}), p.push({ type: "separator" }), p.push({
+	});
+	template.push({ type: "separator" });
+	template.push({
 		label: "✕ Quit DevTools",
 		accelerator: "CmdOrCtrl+Q",
 		click: () => {
-			app.isQuitting = !0, app.quit();
+			app.isQuitting = true;
+			app.quit();
 		}
 	});
-	let W = Menu.buildFromTemplate(p);
-	tray.setContextMenu(W);
+	const contextMenu = Menu.buildFromTemplate(template);
+	tray.setContextMenu(contextMenu);
 }
 function createWindow() {
-	let H = store.get("windowBounds") || {
+	const windowBounds = store.get("windowBounds") || {
 		width: 1600,
 		height: 900
-	}, W = store.get("startMinimized") || !1;
+	};
+	const startMinimized = store.get("startMinimized") || false;
 	win = new BrowserWindow({
 		icon: join(process.env.VITE_PUBLIC || "", "electron-vite.svg"),
 		webPreferences: {
 			preload: join(__dirname, "preload.mjs"),
-			nodeIntegration: !0,
-			contextIsolation: !0
+			nodeIntegration: true,
+			contextIsolation: true
 		},
-		...H,
+		...windowBounds,
 		minWidth: 1200,
 		minHeight: 700,
-		show: !W,
-		frame: !1,
-		transparent: !0,
+		show: !startMinimized,
+		frame: false,
+		transparent: true,
 		titleBarStyle: "hidden",
 		vibrancy: "sidebar",
 		trafficLightPosition: {
@@ -1973,345 +2437,732 @@ function createWindow() {
 			y: 15
 		}
 	});
-	let q = () => {
+	const saveBounds = () => {
 		store.set("windowBounds", win?.getBounds());
 	};
-	win.on("resize", q), win.on("move", q), win.on("close", (p) => {
-		let H = store.get("minimizeToTray") ?? !0;
-		return !app.isQuitting && H && (p.preventDefault(), win?.hide(), updateTrayMenu()), !1;
-	}), win.on("show", updateTrayMenu), win.on("hide", updateTrayMenu), win.on("maximize", () => {
-		win?.webContents.send("window-maximized", !0);
-	}), win.on("unmaximize", () => {
-		win?.webContents.send("window-maximized", !1);
-	}), ipcMain.handle("get-home-dir", () => os.homedir()), ipcMain.handle("select-folder", async () => {
-		let p = await dialog.showOpenDialog(win, {
+	win.on("resize", saveBounds);
+	win.on("move", saveBounds);
+	win.on("close", (event) => {
+		const minimizeToTray = store.get("minimizeToTray") ?? true;
+		if (!app.isQuitting && minimizeToTray) {
+			event.preventDefault();
+			win?.hide();
+			updateTrayMenu();
+		}
+		return false;
+	});
+	win.on("show", updateTrayMenu);
+	win.on("hide", updateTrayMenu);
+	win.on("maximize", () => {
+		win?.webContents.send("window-maximized", true);
+	});
+	win.on("unmaximize", () => {
+		win?.webContents.send("window-maximized", false);
+	});
+	ipcMain.handle("get-home-dir", () => {
+		return os.homedir();
+	});
+	ipcMain.handle("select-folder", async () => {
+		const result = await dialog.showOpenDialog(win, {
 			properties: ["openDirectory"],
 			title: "Select Folder to Scan"
 		});
-		return p.canceled || p.filePaths.length === 0 ? {
-			canceled: !0,
+		if (result.canceled || result.filePaths.length === 0) return {
+			canceled: true,
 			path: null
-		} : {
-			canceled: !1,
-			path: p.filePaths[0]
 		};
-	}), ipcMain.handle("store-get", (p, H) => store.get(H)), ipcMain.handle("store-set", (p, H, U) => {
-		if (store.set(H, U), H === "launchAtLogin") {
-			let p = setLoginItemSettingsSafely(U === !0);
-			!p.success && win && win.webContents.send("login-item-error", {
+		return {
+			canceled: false,
+			path: result.filePaths[0]
+		};
+	});
+	ipcMain.handle("store-get", (_event, key) => store.get(key));
+	ipcMain.handle("store-set", (_event, key, value) => {
+		store.set(key, value);
+		if (key === "launchAtLogin") {
+			const result = setLoginItemSettingsSafely(value === true);
+			if (!result.success && win) win.webContents.send("login-item-error", {
 				message: "Unable to set launch at login. This may require additional permissions.",
-				error: p.error
+				error: result.error
 			});
 		}
-	}), ipcMain.handle("store-delete", (p, H) => store.delete(H)), setupScreenshotHandlers(win), ipcMain.on("tray-update-menu", (p, H) => {
-		recentTools = H || [], updateTrayMenu();
-	}), ipcMain.on("tray-update-clipboard", (p, H) => {
-		clipboardItems = (H || []).sort((p, H) => H.timestamp - p.timestamp), updateTrayMenu();
-	}), ipcMain.handle("clipboard-read-text", () => {
+	});
+	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
+	setupScreenshotHandlers(win);
+	ipcMain.handle("permissions:check-all", async () => {
+		const platform = process.platform;
+		const results = {};
+		if (platform === "darwin") {
+			results.accessibility = await checkAccessibilityPermission();
+			results.fullDiskAccess = await checkFullDiskAccessPermission();
+			results.screenRecording = await checkScreenRecordingPermission();
+		} else if (platform === "win32") {
+			results.fileAccess = await checkFileAccessPermission();
+			results.registryAccess = await checkRegistryAccessPermission();
+		}
+		results.clipboard = await checkClipboardPermission();
+		results.launchAtLogin = await checkLaunchAtLoginPermission();
+		return results;
+	});
+	ipcMain.handle("permissions:check-accessibility", async () => {
+		if (process.platform !== "darwin") return {
+			status: "not-applicable",
+			message: "Only available on macOS"
+		};
+		return await checkAccessibilityPermission();
+	});
+	ipcMain.handle("permissions:check-full-disk-access", async () => {
+		if (process.platform !== "darwin") return {
+			status: "not-applicable",
+			message: "Only available on macOS"
+		};
+		return await checkFullDiskAccessPermission();
+	});
+	ipcMain.handle("permissions:check-screen-recording", async () => {
+		if (process.platform !== "darwin") return {
+			status: "not-applicable",
+			message: "Only available on macOS"
+		};
+		return await checkScreenRecordingPermission();
+	});
+	ipcMain.handle("permissions:test-clipboard", async () => {
+		return await testClipboardPermission();
+	});
+	ipcMain.handle("permissions:test-file-access", async () => {
+		return await testFileAccessPermission();
+	});
+	ipcMain.handle("permissions:open-system-preferences", async (_event, permissionType) => {
+		return await openSystemPreferences(permissionType);
+	});
+	async function checkAccessibilityPermission() {
+		if (process.platform !== "darwin") return { status: "not-applicable" };
+		try {
+			const { stdout } = await execAsync(`tccutil reset Accessibility ${app.getBundleId() || app.getName()} 2>&1 || echo "not-found"`);
+			try {
+				const testShortcut = "CommandOrControl+Shift+TestPermission";
+				if (globalShortcut.register(testShortcut, () => {})) {
+					globalShortcut.unregister(testShortcut);
+					return { status: "granted" };
+				}
+			} catch (e) {}
+			if (globalShortcut.isRegistered("CommandOrControl+Shift+D")) return { status: "granted" };
+			return {
+				status: "not-determined",
+				message: "Unable to determine status. Try testing."
+			};
+		} catch (error) {
+			return {
+				status: "error",
+				message: error.message
+			};
+		}
+	}
+	async function checkFullDiskAccessPermission() {
+		if (process.platform !== "darwin") return { status: "not-applicable" };
+		try {
+			for (const testPath of [
+				"/Library/Application Support",
+				"/System/Library",
+				"/private/var/db"
+			]) try {
+				await fs.access(testPath);
+				return { status: "granted" };
+			} catch (e) {}
+			const homeDir = os.homedir();
+			try {
+				await fs.readdir(homeDir);
+				return {
+					status: "granted",
+					message: "Basic file access available"
+				};
+			} catch (e) {
+				return {
+					status: "denied",
+					message: "Cannot access protected directories"
+				};
+			}
+		} catch (error) {
+			return {
+				status: "error",
+				message: error.message
+			};
+		}
+	}
+	async function checkScreenRecordingPermission() {
+		if (process.platform !== "darwin") return { status: "not-applicable" };
+		try {
+			if (win) try {
+				const sources = await win.webContents.getSources();
+				if (sources && sources.length > 0) return { status: "granted" };
+			} catch (e) {}
+			return {
+				status: "not-determined",
+				message: "Unable to determine. Try testing screenshot feature."
+			};
+		} catch (error) {
+			return {
+				status: "error",
+				message: error.message
+			};
+		}
+	}
+	async function checkClipboardPermission() {
+		try {
+			clipboard.readText();
+			const originalText = clipboard.readText();
+			clipboard.writeText("__PERMISSION_TEST__");
+			const written = clipboard.readText();
+			clipboard.writeText(originalText);
+			if (written === "__PERMISSION_TEST__") return { status: "granted" };
+			return {
+				status: "denied",
+				message: "Clipboard access failed"
+			};
+		} catch (error) {
+			return {
+				status: "error",
+				message: error.message
+			};
+		}
+	}
+	async function checkLaunchAtLoginPermission() {
+		try {
+			const loginItemSettings = app.getLoginItemSettings();
+			return {
+				status: loginItemSettings.openAtLogin ? "granted" : "not-determined",
+				message: loginItemSettings.openAtLogin ? "Launch at login is enabled" : "Launch at login is not enabled"
+			};
+		} catch (error) {
+			return {
+				status: "error",
+				message: error.message
+			};
+		}
+	}
+	async function checkFileAccessPermission() {
+		if (process.platform !== "win32") return { status: "not-applicable" };
+		try {
+			const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
+			const testContent = "permission test";
+			await fs.writeFile(testPath, testContent);
+			const readContent = await fs.readFile(testPath, "utf-8");
+			await fs.unlink(testPath);
+			if (readContent === testContent) return { status: "granted" };
+			return {
+				status: "denied",
+				message: "File access test failed"
+			};
+		} catch (error) {
+			return {
+				status: "denied",
+				message: error.message
+			};
+		}
+	}
+	async function checkRegistryAccessPermission() {
+		if (process.platform !== "win32") return { status: "not-applicable" };
+		try {
+			const { stdout } = await execAsync("reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\" /v ProgramFilesDir 2>&1");
+			if (stdout && !stdout.includes("ERROR")) return { status: "granted" };
+			return {
+				status: "denied",
+				message: "Registry access test failed"
+			};
+		} catch (error) {
+			return {
+				status: "denied",
+				message: error.message
+			};
+		}
+	}
+	async function testClipboardPermission() {
+		try {
+			const originalText = clipboard.readText();
+			const testText = `Permission test ${Date.now()}`;
+			clipboard.writeText(testText);
+			const readText = clipboard.readText();
+			clipboard.writeText(originalText);
+			if (readText === testText) return {
+				status: "granted",
+				message: "Clipboard read/write test passed"
+			};
+			return {
+				status: "denied",
+				message: "Clipboard test failed"
+			};
+		} catch (error) {
+			return {
+				status: "error",
+				message: error.message
+			};
+		}
+	}
+	async function testFileAccessPermission() {
+		try {
+			const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
+			const testContent = `Test ${Date.now()}`;
+			await fs.writeFile(testPath, testContent);
+			const readContent = await fs.readFile(testPath, "utf-8");
+			await fs.unlink(testPath);
+			if (readContent === testContent) return {
+				status: "granted",
+				message: "File access test passed"
+			};
+			return {
+				status: "denied",
+				message: "File access test failed"
+			};
+		} catch (error) {
+			return {
+				status: "denied",
+				message: error.message
+			};
+		}
+	}
+	async function openSystemPreferences(permissionType) {
+		const platform = process.platform;
+		try {
+			if (platform === "darwin") {
+				let command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy\"";
+				if (permissionType === "accessibility") command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"";
+				else if (permissionType === "full-disk-access") command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles\"";
+				else if (permissionType === "screen-recording") command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture\"";
+				await execAsync(command);
+				return {
+					success: true,
+					message: "Opened System Preferences"
+				};
+			} else if (platform === "win32") {
+				await execAsync("start ms-settings:privacy");
+				return {
+					success: true,
+					message: "Opened Windows Settings"
+				};
+			}
+			return {
+				success: false,
+				message: "Unsupported platform"
+			};
+		} catch (error) {
+			return {
+				success: false,
+				message: error.message
+			};
+		}
+	}
+	ipcMain.on("tray-update-menu", (_event, items) => {
+		recentTools = items || [];
+		updateTrayMenu();
+	});
+	ipcMain.on("tray-update-clipboard", (_event, items) => {
+		clipboardItems = (items || []).sort((a, b) => b.timestamp - a.timestamp);
+		updateTrayMenu();
+	});
+	ipcMain.handle("clipboard-read-text", () => {
 		try {
 			return clipboard.readText();
-		} catch (p) {
-			return console.error("Failed to read clipboard:", p), "";
+		} catch (error) {
+			console.error("Failed to read clipboard:", error);
+			return "";
 		}
-	}), ipcMain.handle("clipboard-read-image", async () => {
+	});
+	ipcMain.handle("clipboard-read-image", async () => {
 		try {
-			let p = clipboard.readImage();
-			return p.isEmpty() ? null : p.toDataURL();
-		} catch (p) {
-			return console.error("Failed to read clipboard image:", p), null;
+			const image = clipboard.readImage();
+			if (image.isEmpty()) return null;
+			return image.toDataURL();
+		} catch (error) {
+			console.error("Failed to read clipboard image:", error);
+			return null;
 		}
-	}), ipcMain.on("sync-clipboard-monitoring", (p, H) => {
-		clipboardMonitoringEnabled = H, updateTrayMenu();
-	}), ipcMain.on("stats-update-tray", (p, H) => {
-		statsMenuData = H, updateTrayMenu();
-	}), ipcMain.on("health-update-tray", (p, H) => {
-		healthMenuData = H, updateTrayMenu();
-	}), ipcMain.handle("health-start-monitoring", async () => {
-		healthMonitoringInterval && clearInterval(healthMonitoringInterval);
-		let p = async () => {
+	});
+	ipcMain.on("sync-clipboard-monitoring", (_event, enabled) => {
+		clipboardMonitoringEnabled = enabled;
+		updateTrayMenu();
+	});
+	ipcMain.on("stats-update-tray", (_event, data) => {
+		statsMenuData = data;
+		updateTrayMenu();
+	});
+	ipcMain.on("health-update-tray", (_event, data) => {
+		healthMenuData = data;
+		updateTrayMenu();
+	});
+	ipcMain.handle("health-start-monitoring", async () => {
+		if (healthMonitoringInterval) clearInterval(healthMonitoringInterval);
+		const updateHealth = async () => {
 			try {
-				let p = await si.mem(), H = await si.currentLoad(), W = await si.fsSize(), G = await si.battery().catch(() => null), K = [], q = W.find((p) => p.mount === "/" || p.mount === "C:") || W[0];
-				if (q) {
-					let p = q.available / q.size * 100;
-					p < 10 ? K.push({
+				const mem = await si.mem();
+				const load = await si.currentLoad();
+				const disk = await si.fsSize();
+				const battery = await si.battery().catch(() => null);
+				const alerts = [];
+				const rootDisk = disk.find((d) => d.mount === "/" || d.mount === "C:") || disk[0];
+				if (rootDisk) {
+					const freePercent = rootDisk.available / rootDisk.size * 100;
+					if (freePercent < 10) alerts.push({
 						type: "low_space",
 						severity: "critical",
-						message: `Low disk space: ${formatBytes(q.available)} free`
-					}) : p < 20 && K.push({
+						message: `Low disk space: ${formatBytes(rootDisk.available)} free`
+					});
+					else if (freePercent < 20) alerts.push({
 						type: "low_space",
 						severity: "warning",
-						message: `Disk space getting low: ${formatBytes(q.available)} free`
+						message: `Disk space getting low: ${formatBytes(rootDisk.available)} free`
 					});
 				}
-				H.currentLoad > 90 && K.push({
+				if (load.currentLoad > 90) alerts.push({
 					type: "high_cpu",
 					severity: "warning",
-					message: `High CPU usage: ${H.currentLoad.toFixed(1)}%`
+					message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
 				});
-				let J = p.used / p.total * 100;
-				J > 90 && K.push({
+				const memPercent = mem.used / mem.total * 100;
+				if (memPercent > 90) alerts.push({
 					type: "memory_pressure",
 					severity: "warning",
-					message: `High memory usage: ${J.toFixed(1)}%`
-				}), healthMenuData = {
-					cpu: H.currentLoad,
+					message: `High memory usage: ${memPercent.toFixed(1)}%`
+				});
+				healthMenuData = {
+					cpu: load.currentLoad,
 					ram: {
-						used: p.used,
-						total: p.total,
-						percentage: J
+						used: mem.used,
+						total: mem.total,
+						percentage: memPercent
 					},
-					disk: q ? {
-						free: q.available,
-						total: q.size,
-						percentage: (q.size - q.available) / q.size * 100
+					disk: rootDisk ? {
+						free: rootDisk.available,
+						total: rootDisk.size,
+						percentage: (rootDisk.size - rootDisk.available) / rootDisk.size * 100
 					} : null,
-					battery: G ? {
-						level: G.percent,
-						charging: G.isCharging || !1
+					battery: battery ? {
+						level: battery.percent,
+						charging: battery.isCharging || false
 					} : null,
-					alerts: K
-				}, updateTrayMenu();
-				let Y = K.filter((p) => p.severity === "critical");
-				Y.length > 0 && win && Y.forEach((p) => {
+					alerts
+				};
+				updateTrayMenu();
+				const criticalAlerts = alerts.filter((a) => a.severity === "critical");
+				if (criticalAlerts.length > 0 && win) criticalAlerts.forEach((alert) => {
 					new Notification({
 						title: "⚠️ System Alert",
-						body: p.message,
-						silent: !1
+						body: alert.message,
+						silent: false
 					}).show();
 				});
-			} catch (p) {
-				console.error("Health monitoring error:", p);
+			} catch (e) {
+				console.error("Health monitoring error:", e);
 			}
 		};
-		return p(), healthMonitoringInterval = setInterval(p, 5e3), { success: !0 };
-	}), ipcMain.handle("health-stop-monitoring", () => (healthMonitoringInterval &&= (clearInterval(healthMonitoringInterval), null), healthMenuData = null, updateTrayMenu(), { success: !0 })), ipcMain.on("window-minimize", () => {
+		updateHealth();
+		healthMonitoringInterval = setInterval(updateHealth, 5e3);
+		return { success: true };
+	});
+	ipcMain.handle("health-stop-monitoring", () => {
+		if (healthMonitoringInterval) {
+			clearInterval(healthMonitoringInterval);
+			healthMonitoringInterval = null;
+		}
+		healthMenuData = null;
+		updateTrayMenu();
+		return { success: true };
+	});
+	ipcMain.on("window-minimize", () => {
 		win?.minimize();
-	}), ipcMain.on("window-maximize", () => {
-		win?.isMaximized() ? win.unmaximize() : win?.maximize();
-	}), ipcMain.on("window-close", () => {
+	});
+	ipcMain.on("window-maximize", () => {
+		if (win?.isMaximized()) win.unmaximize();
+		else win?.maximize();
+	});
+	ipcMain.on("window-close", () => {
 		win?.close();
-	}), win.webContents.on("did-finish-load", () => {
+	});
+	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-	}), VITE_DEV_SERVER_URL ? win.loadURL(VITE_DEV_SERVER_URL) : win.loadFile(join(process.env.DIST || "", "index.html"));
+	});
+	if (VITE_DEV_SERVER_URL) win.loadURL(VITE_DEV_SERVER_URL);
+	else win.loadFile(join(process.env.DIST || "", "index.html"));
 }
 app.on("window-all-closed", () => {
-	process.platform !== "darwin" && app.quit();
-}), app.on("activate", () => {
-	BrowserWindow.getAllWindows().length === 0 ? createWindow() : win && win.show();
-}), app.on("before-quit", () => {
-	app.isQuitting = !0, win && win.webContents.send("check-clear-clipboard-on-quit");
-}), app.whenReady().then(() => {
+	if (process.platform !== "darwin") app.quit();
+});
+app.on("activate", () => {
+	if (BrowserWindow.getAllWindows().length === 0) createWindow();
+	else if (win) win.show();
+});
+app.on("before-quit", () => {
+	app.isQuitting = true;
+	if (win) win.webContents.send("check-clear-clipboard-on-quit");
+});
+app.whenReady().then(() => {
 	setTimeout(() => {
-		win && win.webContents.executeJavaScript("\n        (async () => {\n          if (window.cleanerAPI?.startHealthMonitoring) {\n            await window.cleanerAPI.startHealthMonitoring();\n          }\n        })()\n      ").catch(() => {});
+		if (win) win.webContents.executeJavaScript(`
+        (async () => {
+          if (window.cleanerAPI?.startHealthMonitoring) {
+            await window.cleanerAPI.startHealthMonitoring();
+          }
+        })()
+      `).catch(() => {});
 	}, 2e3);
 	try {
 		globalShortcut.register("CommandOrControl+Shift+D", () => {
 			toggleWindow();
-		}), globalShortcut.register("CommandOrControl+Shift+C", () => {
-			win?.show(), win?.webContents.send("open-clipboard-manager");
 		});
-	} catch (p) {
-		console.error("Failed to register global shortcut", p);
+		globalShortcut.register("CommandOrControl+Shift+C", () => {
+			win?.show();
+			win?.webContents.send("open-clipboard-manager");
+		});
+	} catch (e) {
+		console.error("Failed to register global shortcut", e);
 	}
-	setLoginItemSettingsSafely(store.get("launchAtLogin") === !0), ipcMain.handle("get-cpu-stats", async () => {
-		let [p, H] = await Promise.all([si.cpu(), si.currentLoad()]);
+	setLoginItemSettingsSafely(store.get("launchAtLogin") === true);
+	ipcMain.handle("get-cpu-stats", async () => {
+		const [cpu, currentLoad] = await Promise.all([si.cpu(), si.currentLoad()]);
 		return {
-			manufacturer: p.manufacturer,
-			brand: p.brand,
-			speed: p.speed,
-			cores: p.cores,
-			physicalCores: p.physicalCores,
-			load: H
+			manufacturer: cpu.manufacturer,
+			brand: cpu.brand,
+			speed: cpu.speed,
+			cores: cpu.cores,
+			physicalCores: cpu.physicalCores,
+			load: currentLoad
 		};
-	}), ipcMain.handle("get-memory-stats", async () => await si.mem()), ipcMain.handle("get-network-stats", async () => {
-		let [p, H] = await Promise.all([si.networkStats(), si.networkInterfaces()]);
+	});
+	ipcMain.handle("get-memory-stats", async () => {
+		return await si.mem();
+	});
+	ipcMain.handle("get-network-stats", async () => {
+		const [stats, interfaces] = await Promise.all([si.networkStats(), si.networkInterfaces()]);
 		return {
-			stats: p,
-			interfaces: H
+			stats,
+			interfaces
 		};
-	}), ipcMain.handle("get-disk-stats", async () => {
+	});
+	ipcMain.handle("get-disk-stats", async () => {
 		try {
-			let [p, H] = await Promise.all([si.fsSize(), si.disksIO()]), U = null;
-			if (H && Array.isArray(H) && H.length > 0) {
-				let p = H[0];
-				U = {
-					rIO: p.rIO || 0,
-					wIO: p.wIO || 0,
-					tIO: p.tIO || 0,
-					rIO_sec: p.rIO_sec || 0,
-					wIO_sec: p.wIO_sec || 0,
-					tIO_sec: p.tIO_sec || 0
+			const [fsSize, ioStatsRaw] = await Promise.all([si.fsSize(), si.disksIO()]);
+			let ioStats = null;
+			if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
+				const firstDisk = ioStatsRaw[0];
+				ioStats = {
+					rIO: firstDisk.rIO || 0,
+					wIO: firstDisk.wIO || 0,
+					tIO: firstDisk.tIO || 0,
+					rIO_sec: firstDisk.rIO_sec || 0,
+					wIO_sec: firstDisk.wIO_sec || 0,
+					tIO_sec: firstDisk.tIO_sec || 0
 				};
-			} else H && typeof H == "object" && !Array.isArray(H) && (U = {
-				rIO: H.rIO || 0,
-				wIO: H.wIO || 0,
-				tIO: H.tIO || 0,
-				rIO_sec: H.rIO_sec || 0,
-				wIO_sec: H.wIO_sec || 0,
-				tIO_sec: H.tIO_sec || 0
-			});
-			return {
-				fsSize: p,
-				ioStats: U
+			} else if (ioStatsRaw && typeof ioStatsRaw === "object" && !Array.isArray(ioStatsRaw)) ioStats = {
+				rIO: ioStatsRaw.rIO || 0,
+				wIO: ioStatsRaw.wIO || 0,
+				tIO: ioStatsRaw.tIO || 0,
+				rIO_sec: ioStatsRaw.rIO_sec || 0,
+				wIO_sec: ioStatsRaw.wIO_sec || 0,
+				tIO_sec: ioStatsRaw.tIO_sec || 0
 			};
-		} catch (p) {
-			return console.error("Error fetching disk stats:", p), {
+			return {
+				fsSize,
+				ioStats
+			};
+		} catch (error) {
+			console.error("Error fetching disk stats:", error);
+			return {
 				fsSize: await si.fsSize().catch(() => []),
 				ioStats: null
 			};
 		}
-	}), ipcMain.handle("get-gpu-stats", async () => await si.graphics()), ipcMain.handle("get-battery-stats", async () => {
+	});
+	ipcMain.handle("get-gpu-stats", async () => {
+		return await si.graphics();
+	});
+	ipcMain.handle("get-battery-stats", async () => {
 		try {
-			let p = await si.battery(), H, U;
-			if ("powerConsumptionRate" in p && p.powerConsumptionRate && typeof p.powerConsumptionRate == "number" && (H = p.powerConsumptionRate), p.voltage && p.voltage > 0) {
-				if (!p.isCharging && p.timeRemaining > 0 && p.currentCapacity > 0) {
-					let U = p.currentCapacity / p.timeRemaining * 60;
-					H = p.voltage * U;
+			const battery = await si.battery();
+			let powerConsumptionRate;
+			let chargingPower;
+			if ("powerConsumptionRate" in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === "number") powerConsumptionRate = battery.powerConsumptionRate;
+			if (battery.voltage && battery.voltage > 0) {
+				if (!battery.isCharging && battery.timeRemaining > 0 && battery.currentCapacity > 0) {
+					const estimatedCurrent = battery.currentCapacity / battery.timeRemaining * 60;
+					powerConsumptionRate = battery.voltage * estimatedCurrent;
 				}
-				p.isCharging && p.voltage > 0 && (U = p.voltage * 2e3);
+				if (battery.isCharging && battery.voltage > 0) chargingPower = battery.voltage * 2e3;
 			}
 			return {
-				...p,
-				powerConsumptionRate: H,
-				chargingPower: U
+				...battery,
+				powerConsumptionRate,
+				chargingPower
 			};
-		} catch (p) {
-			return console.error("Error fetching battery stats:", p), null;
+		} catch (error) {
+			console.error("Error fetching battery stats:", error);
+			return null;
 		}
-	}), ipcMain.handle("get-sensor-stats", async () => await si.cpuTemperature()), ipcMain.handle("get-bluetooth-stats", async () => {
+	});
+	ipcMain.handle("get-sensor-stats", async () => {
+		return await si.cpuTemperature();
+	});
+	ipcMain.handle("get-bluetooth-stats", async () => {
 		try {
-			let p = await si.bluetoothDevices();
+			const bluetooth = await si.bluetoothDevices();
 			return {
-				enabled: p.length > 0 || await checkBluetoothEnabled(),
-				devices: p.map((p) => ({
-					name: p.name || "Unknown",
-					mac: p.mac || p.address || "",
-					type: p.type || p.deviceClass || "unknown",
-					battery: p.battery || p.batteryLevel || void 0,
-					connected: p.connected !== !1,
-					rssi: p.rssi || p.signalStrength || void 0,
-					manufacturer: p.manufacturer || p.vendor || void 0
+				enabled: bluetooth.length > 0 || await checkBluetoothEnabled(),
+				devices: bluetooth.map((device) => ({
+					name: device.name || "Unknown",
+					mac: device.mac || device.address || "",
+					type: device.type || device.deviceClass || "unknown",
+					battery: device.battery || device.batteryLevel || void 0,
+					connected: device.connected !== false,
+					rssi: device.rssi || device.signalStrength || void 0,
+					manufacturer: device.manufacturer || device.vendor || void 0
 				}))
 			};
-		} catch (p) {
-			return console.error("Error fetching bluetooth stats:", p), {
-				enabled: !1,
+		} catch (error) {
+			console.error("Error fetching bluetooth stats:", error);
+			return {
+				enabled: false,
 				devices: []
 			};
 		}
-	}), ipcMain.handle("get-timezones-stats", async () => {
+	});
+	ipcMain.handle("get-timezones-stats", async () => {
 		try {
-			let p = await si.time(), H = Intl.DateTimeFormat().resolvedOptions().timeZone, U = [
+			const time = await si.time();
+			const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			const zones = [
 				"America/New_York",
 				"Europe/London",
 				"Asia/Tokyo",
 				"Asia/Shanghai"
-			].map((p) => {
-				let H = /* @__PURE__ */ new Date(), U = new Intl.DateTimeFormat("en-US", {
-					timeZone: p,
+			].map((tz) => {
+				const now = /* @__PURE__ */ new Date();
+				const formatter = new Intl.DateTimeFormat("en-US", {
+					timeZone: tz,
 					hour: "2-digit",
 					minute: "2-digit",
 					second: "2-digit",
-					hour12: !1
-				}), W = new Intl.DateTimeFormat("en-US", {
-					timeZone: p,
+					hour12: false
+				});
+				const dateFormatter = new Intl.DateTimeFormat("en-US", {
+					timeZone: tz,
 					year: "numeric",
 					month: "short",
 					day: "numeric"
-				}), G = getTimezoneOffset(p);
+				});
+				const offset = getTimezoneOffset(tz);
 				return {
-					timezone: p,
-					city: p.split("/").pop()?.replace("_", " ") || p,
-					time: U.format(H),
-					date: W.format(H),
-					offset: G
+					timezone: tz,
+					city: tz.split("/").pop()?.replace("_", " ") || tz,
+					time: formatter.format(now),
+					date: dateFormatter.format(now),
+					offset
 				};
 			});
 			return {
 				local: {
-					timezone: H,
-					city: H.split("/").pop()?.replace("_", " ") || "Local",
-					time: p.current,
-					date: p.uptime ? (/* @__PURE__ */ new Date()).toLocaleDateString() : "",
-					offset: getTimezoneOffset(H)
+					timezone: localTz,
+					city: localTz.split("/").pop()?.replace("_", " ") || "Local",
+					time: time.current,
+					date: time.uptime ? (/* @__PURE__ */ new Date()).toLocaleDateString() : "",
+					offset: getTimezoneOffset(localTz)
 				},
-				zones: U
+				zones
 			};
-		} catch (p) {
-			return console.error("Error fetching timezones stats:", p), null;
+		} catch (error) {
+			console.error("Error fetching timezones stats:", error);
+			return null;
 		}
-	}), ipcMain.handle("app-manager:get-installed-apps", async () => {
+	});
+	ipcMain.handle("app-manager:get-installed-apps", async () => {
 		try {
-			let U = process.platform, W = [];
-			if (U === "darwin") {
-				let H = "/Applications", U = await fs.readdir(H, { withFileTypes: !0 }).catch(() => []);
-				for (let G of U) if (G.name.endsWith(".app")) {
-					let U = join(H, G.name);
+			const platform = process.platform;
+			const apps = [];
+			if (platform === "darwin") {
+				const appsDir = "/Applications";
+				const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
+				for (const file of files) if (file.name.endsWith(".app")) {
+					const appPath = join(appsDir, file.name);
 					try {
-						let H = await fs.stat(U), K = G.name.replace(".app", ""), q = U.startsWith("/System") || U.startsWith("/Library") || K.startsWith("com.apple.");
-						W.push({
-							id: `macos-${K}-${H.ino}`,
-							name: K,
+						const stats = await fs.stat(appPath);
+						const appName = file.name.replace(".app", "");
+						const isSystemApp = appPath.startsWith("/System") || appPath.startsWith("/Library") || appName.startsWith("com.apple.");
+						apps.push({
+							id: `macos-${appName}-${stats.ino}`,
+							name: appName,
 							version: void 0,
 							publisher: void 0,
-							installDate: H.birthtime.toISOString(),
-							installLocation: U,
-							size: await p(U).catch(() => 0),
-							isSystemApp: q
+							installDate: stats.birthtime.toISOString(),
+							installLocation: appPath,
+							size: await getDirSize$1(appPath).catch(() => 0),
+							isSystemApp
 						});
-					} catch {}
+					} catch (e) {}
 				}
-			} else if (U === "win32") try {
-				let { stdout: p } = await execAsync(`powershell -Command "${"\n            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | \n            Where-Object { $_.DisplayName } | \n            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | \n            ConvertTo-Json -Depth 3\n          ".replace(/"/g, "\\\"")}"`), U = JSON.parse(p), G = Array.isArray(U) ? U : [U];
-				for (let p of G) if (p.DisplayName) {
-					let U = p.Publisher || "", G = p.InstallLocation || "", K = U.includes("Microsoft") || U.includes("Windows") || G.includes("Windows\\") || G.includes("Program Files\\Windows");
-					W.push({
-						id: `win-${p.DisplayName}-${p.InstallDate || "unknown"}`,
-						name: p.DisplayName,
-						version: p.DisplayVersion || void 0,
-						publisher: U || void 0,
-						installDate: p.InstallDate ? H(p.InstallDate) : void 0,
-						installLocation: G || void 0,
-						size: p.EstimatedSize ? p.EstimatedSize * 1024 : void 0,
-						isSystemApp: K
+			} else if (platform === "win32") try {
+				const { stdout } = await execAsync(`powershell -Command "${`
+            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
+            Where-Object { $_.DisplayName } | 
+            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | 
+            ConvertTo-Json -Depth 3
+          `.replace(/"/g, "\\\"")}"`);
+				const data = JSON.parse(stdout);
+				const list = Array.isArray(data) ? data : [data];
+				for (const item of list) if (item.DisplayName) {
+					const publisher = item.Publisher || "";
+					const installLocation = item.InstallLocation || "";
+					const isSystemApp = publisher.includes("Microsoft") || publisher.includes("Windows") || installLocation.includes("Windows\\") || installLocation.includes("Program Files\\Windows");
+					apps.push({
+						id: `win-${item.DisplayName}-${item.InstallDate || "unknown"}`,
+						name: item.DisplayName,
+						version: item.DisplayVersion || void 0,
+						publisher: publisher || void 0,
+						installDate: item.InstallDate ? formatWindowsDate(item.InstallDate) : void 0,
+						installLocation: installLocation || void 0,
+						size: item.EstimatedSize ? item.EstimatedSize * 1024 : void 0,
+						isSystemApp
 					});
 				}
-			} catch (p) {
-				console.error("Error fetching Windows apps:", p);
+			} catch (e) {
+				console.error("Error fetching Windows apps:", e);
 			}
-			return W;
-		} catch (p) {
-			return console.error("Error fetching installed apps:", p), [];
+			return apps;
+		} catch (error) {
+			console.error("Error fetching installed apps:", error);
+			return [];
 		}
-	}), ipcMain.handle("app-manager:get-running-processes", async () => {
+	});
+	ipcMain.handle("app-manager:get-running-processes", async () => {
 		try {
-			let p = await si.processes(), H = await si.mem();
-			return p.list.map((p) => ({
-				pid: p.pid,
-				name: p.name,
-				cpu: p.cpu || 0,
-				memory: p.mem || 0,
-				memoryPercent: H.total > 0 ? (p.mem || 0) / H.total * 100 : 0,
-				started: p.started || "",
-				user: p.user || void 0,
-				command: p.command || void 0,
-				path: p.path || void 0
+			const processes = await si.processes();
+			const memInfo = await si.mem();
+			return processes.list.map((proc) => ({
+				pid: proc.pid,
+				name: proc.name,
+				cpu: proc.cpu || 0,
+				memory: proc.mem || 0,
+				memoryPercent: memInfo.total > 0 ? (proc.mem || 0) / memInfo.total * 100 : 0,
+				started: proc.started || "",
+				user: proc.user || void 0,
+				command: proc.command || void 0,
+				path: proc.path || void 0
 			}));
-		} catch (p) {
-			return console.error("Error fetching running processes:", p), [];
+		} catch (error) {
+			console.error("Error fetching running processes:", error);
+			return [];
 		}
-	}), ipcMain.handle("app-manager:uninstall-app", async (p, H) => {
+	});
+	ipcMain.handle("app-manager:uninstall-app", async (_event, app$1) => {
 		try {
-			let p = process.platform;
-			if (p === "darwin") {
-				if (H.installLocation) return await fs.rm(H.installLocation, {
-					recursive: !0,
-					force: !0
-				}), { success: !0 };
-			} else if (p === "win32") try {
-				return await execAsync(`powershell -Command "${`
+			const platform = process.platform;
+			if (platform === "darwin") {
+				if (app$1.installLocation) {
+					await fs.rm(app$1.installLocation, {
+						recursive: true,
+						force: true
+					});
+					return { success: true };
+				}
+			} else if (platform === "win32") try {
+				await execAsync(`powershell -Command "${`
             $app = Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
-                   Where-Object { $_.DisplayName -eq "${H.name.replace(/"/g, "\\\"")}" } | 
+                   Where-Object { $_.DisplayName -eq "${app$1.name.replace(/"/g, "\\\"")}" } | 
                    Select-Object -First 1
             if ($app.UninstallString) {
               $uninstallString = $app.UninstallString
@@ -2326,71 +3177,80 @@ app.on("window-all-closed", () => {
             } else {
               Write-Output "No uninstall string found"
             }
-          `.replace(/"/g, "\\\"")}"`), { success: !0 };
-			} catch (p) {
+          `.replace(/"/g, "\\\"")}"`);
+				return { success: true };
+			} catch (e) {
 				return {
-					success: !1,
-					error: p.message
+					success: false,
+					error: e.message
 				};
 			}
 			return {
-				success: !1,
+				success: false,
 				error: "Unsupported platform"
 			};
-		} catch (p) {
+		} catch (error) {
 			return {
-				success: !1,
-				error: p.message
-			};
-		}
-	}), ipcMain.handle("app-manager:kill-process", async (p, H) => {
-		try {
-			return process.kill(H, "SIGTERM"), { success: !0 };
-		} catch (p) {
-			return {
-				success: !1,
-				error: p.message
+				success: false,
+				error: error.message
 			};
 		}
 	});
-	async function p(H) {
+	ipcMain.handle("app-manager:kill-process", async (_event, pid) => {
 		try {
-			let U = 0, W = await fs.readdir(H, { withFileTypes: !0 });
-			for (let G of W) {
-				let W = join(H, G.name);
+			process.kill(pid, "SIGTERM");
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	});
+	async function getDirSize$1(dirPath) {
+		try {
+			let totalSize = 0;
+			const files = await fs.readdir(dirPath, { withFileTypes: true });
+			for (const file of files) {
+				const filePath = join(dirPath, file.name);
 				try {
-					if (G.isDirectory()) U += await p(W);
+					if (file.isDirectory()) totalSize += await getDirSize$1(filePath);
 					else {
-						let p = await fs.stat(W);
-						U += p.size;
+						const stats = await fs.stat(filePath);
+						totalSize += stats.size;
 					}
-				} catch {}
+				} catch (e) {}
 			}
-			return U;
-		} catch {
+			return totalSize;
+		} catch (e) {
 			return 0;
 		}
 	}
-	function H(p) {
-		return p && p.length === 8 ? `${p.substring(0, 4)}-${p.substring(4, 6)}-${p.substring(6, 8)}` : p;
+	function formatWindowsDate(dateStr) {
+		if (dateStr && dateStr.length === 8) return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+		return dateStr;
 	}
-	setupCleanerHandlers(), createTray(), createWindow();
+	setupCleanerHandlers();
+	createTray();
+	createWindow();
 });
 async function checkBluetoothEnabled() {
 	try {
 		if (process.platform === "darwin") {
-			let { execSync: p } = __require("child_process");
-			return p("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
+			const { execSync } = __require("child_process");
+			return execSync("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
 		}
-		return !0;
+		return true;
 	} catch {
-		return !1;
+		return false;
 	}
 }
-function getTimezoneOffset(p) {
-	let H = /* @__PURE__ */ new Date(), U = H.getTime() + H.getTimezoneOffset() * 6e4, W = H.toLocaleString("en-US", {
-		timeZone: p,
-		hour12: !1,
+function getTimezoneOffset(timezone) {
+	const now = /* @__PURE__ */ new Date();
+	const utcTime = now.getTime() + now.getTimezoneOffset() * 6e4;
+	const tzString = now.toLocaleString("en-US", {
+		timeZone: timezone,
+		hour12: false,
 		year: "numeric",
 		month: "2-digit",
 		day: "2-digit",
@@ -2398,19 +3258,23 @@ function getTimezoneOffset(p) {
 		minute: "2-digit",
 		second: "2-digit"
 	});
-	return (new Date(W).getTime() - U) / (1e3 * 60 * 60);
+	return (new Date(tzString).getTime() - utcTime) / (1e3 * 60 * 60);
 }
-function formatBytes(p) {
-	if (p === 0) return "0 B";
-	let H = 1024, U = [
+function formatBytes(bytes) {
+	if (bytes === 0) return "0 B";
+	const k = 1024;
+	const sizes = [
 		"B",
 		"KB",
 		"MB",
 		"GB",
 		"TB"
-	], W = Math.floor(Math.log(p) / Math.log(H));
-	return `${(p / H ** +W).toFixed(1)} ${U[W]}`;
+	];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
-function formatSpeed(p) {
-	return p > 1024 * 1024 ? `${(p / 1024 / 1024).toFixed(1)} MB/s` : p > 1024 ? `${(p / 1024).toFixed(1)} KB/s` : `${p.toFixed(0)} B/s`;
+function formatSpeed(bytesPerSec) {
+	if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+	if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+	return `${bytesPerSec.toFixed(0)} B/s`;
 }

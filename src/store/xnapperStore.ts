@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { RedactionArea } from '../tools/screenshot/utils/redaction';
 import type { Background } from '../tools/screenshot/utils/backgroundGenerator';
+import type { AnnotationType, AnnotationConfig } from '../tools/screenshot/utils/annotations';
+import { DEFAULT_ANNOTATION_CONFIG } from '../tools/screenshot/utils/annotations';
+import type { CropBounds } from '../tools/screenshot/utils/crop';
 
 export type CaptureMode = 'fullscreen' | 'window' | 'area';
 export type ExportFormat = 'png' | 'jpg' | 'webp';
@@ -46,6 +49,20 @@ interface XnapperState {
     setBackground: (background: Background | null) => void;
     backgroundPadding: number;
     setBackgroundPadding: (padding: number) => void;
+
+    // Annotations
+    activeAnnotationTool: AnnotationType | null;
+    setActiveAnnotationTool: (tool: AnnotationType | null) => void;
+    annotationConfig: AnnotationConfig;
+    setAnnotationConfig: (config: Partial<AnnotationConfig>) => void;
+    canvasData: string | null; // Serialized Fabric.js canvas
+    setCanvasData: (data: string | null) => void;
+
+    // Crop
+    cropBounds: CropBounds | null;
+    setCropBounds: (bounds: CropBounds | null) => void;
+    isCropping: boolean;
+    setIsCropping: (cropping: boolean) => void;
 
     // Screenshot history
     history: Screenshot[];
@@ -104,6 +121,22 @@ export const useXnapperStore = create<XnapperState>()(
             backgroundPadding: 40,
             setBackgroundPadding: (padding) => set({ backgroundPadding: padding }),
 
+            // Annotations
+            activeAnnotationTool: null,
+            setActiveAnnotationTool: (tool) => set({ activeAnnotationTool: tool }),
+            annotationConfig: DEFAULT_ANNOTATION_CONFIG,
+            setAnnotationConfig: (config) => set((state) => ({
+                annotationConfig: { ...state.annotationConfig, ...config }
+            })),
+            canvasData: null,
+            setCanvasData: (data) => set({ canvasData: data }),
+
+            // Crop
+            cropBounds: null,
+            setCropBounds: (bounds) => set({ cropBounds: bounds }),
+            isCropping: false,
+            setIsCropping: (cropping) => set({ isCropping: cropping }),
+
             // Screenshot history
             history: [],
             addToHistory: (screenshot) => set((state) => ({
@@ -130,6 +163,7 @@ export const useXnapperStore = create<XnapperState>()(
                 exportQuality: state.exportQuality,
                 autoBalance: state.autoBalance,
                 backgroundPadding: state.backgroundPadding,
+                annotationConfig: state.annotationConfig,
                 history: state.history,
             }),
         }

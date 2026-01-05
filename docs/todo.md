@@ -704,13 +704,13 @@
 
 ### 8.3 Phase 3: Annotations
 
-- [ ] Integrate Fabric.js for canvas manipulation
+- [x] Integrate Fabric.js for canvas manipulation (utilities created)
 - [ ] Create PreviewSection with Fabric.js canvas
-- [ ] Implement arrow tool (straight, curved)
-- [ ] Implement text tool with font selection
-- [ ] Implement shape tools (rectangle, circle, ellipse)
-- [ ] Implement blur tool for selective blur
-- [ ] Implement crop tool for manual adjustment
+- [x] Implement arrow tool (straight, curved)
+- [x] Implement text tool with font selection
+- [x] Implement shape tools (rectangle, circle, ellipse)
+- [x] Implement blur tool for selective blur
+- [x] Implement crop tool for manual adjustment
 - [ ] Create AnnotationToolbar component
 - [ ] Implement undo/redo functionality
 - [ ] Add color picker and size controls
