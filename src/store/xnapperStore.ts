@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { RedactionArea } from '../tools/screenshot/utils/redaction';
+import type { Background } from '../tools/screenshot/utils/backgroundGenerator';
 
 export type CaptureMode = 'fullscreen' | 'window' | 'area';
 export type ExportFormat = 'png' | 'jpg' | 'webp';
@@ -32,6 +34,19 @@ interface XnapperState {
     autoBalance: boolean;
     setAutoBalance: (enabled: boolean) => void;
 
+    // Redaction
+    redactionAreas: RedactionArea[];
+    addRedactionArea: (area: RedactionArea) => void;
+    removeRedactionArea: (id: string) => void;
+    clearRedactionAreas: () => void;
+    updateRedactionArea: (id: string, updates: Partial<RedactionArea>) => void;
+
+    // Background
+    background: Background | null;
+    setBackground: (background: Background | null) => void;
+    backgroundPadding: number;
+    setBackgroundPadding: (padding: number) => void;
+
     // Screenshot history
     history: Screenshot[];
     addToHistory: (screenshot: Screenshot) => void;
@@ -43,6 +58,8 @@ interface XnapperState {
     setIsCapturing: (capturing: boolean) => void;
     showPreview: boolean;
     setShowPreview: (show: boolean) => void;
+    isAnalyzing: boolean;
+    setIsAnalyzing: (analyzing: boolean) => void;
 }
 
 export const useXnapperStore = create<XnapperState>()(
@@ -66,6 +83,27 @@ export const useXnapperStore = create<XnapperState>()(
             autoBalance: true,
             setAutoBalance: (enabled) => set({ autoBalance: enabled }),
 
+            // Redaction
+            redactionAreas: [],
+            addRedactionArea: (area) => set((state) => ({
+                redactionAreas: [...state.redactionAreas, area]
+            })),
+            removeRedactionArea: (id) => set((state) => ({
+                redactionAreas: state.redactionAreas.filter(a => a.id !== id)
+            })),
+            clearRedactionAreas: () => set({ redactionAreas: [] }),
+            updateRedactionArea: (id, updates) => set((state) => ({
+                redactionAreas: state.redactionAreas.map(a =>
+                    a.id === id ? { ...a, ...updates } : a
+                )
+            })),
+
+            // Background
+            background: null,
+            setBackground: (background) => set({ background }),
+            backgroundPadding: 40,
+            setBackgroundPadding: (padding) => set({ backgroundPadding: padding }),
+
             // Screenshot history
             history: [],
             addToHistory: (screenshot) => set((state) => ({
@@ -81,6 +119,8 @@ export const useXnapperStore = create<XnapperState>()(
             setIsCapturing: (capturing) => set({ isCapturing: capturing }),
             showPreview: false,
             setShowPreview: (show) => set({ showPreview: show }),
+            isAnalyzing: false,
+            setIsAnalyzing: (analyzing) => set({ isAnalyzing: analyzing }),
         }),
         {
             name: 'xnapper-storage',
@@ -89,6 +129,7 @@ export const useXnapperStore = create<XnapperState>()(
                 exportFormat: state.exportFormat,
                 exportQuality: state.exportQuality,
                 autoBalance: state.autoBalance,
+                backgroundPadding: state.backgroundPadding,
                 history: state.history,
             }),
         }

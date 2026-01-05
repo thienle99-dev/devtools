@@ -692,14 +692,14 @@
 
 ### 8.2 Phase 2: Redaction & Background
 
-- [ ] Integrate Tesseract.js for OCR
-- [ ] Implement regex pattern detection (email, IP, API keys)
+- [x] Integrate Tesseract.js for OCR
+- [x] Implement regex pattern detection (email, IP, API keys)
 - [ ] Create RedactionPanel component
-- [ ] Implement redaction tools (blur, pixelate, solid overlay)
+- [x] Implement redaction tools (blur, pixelate, solid overlay)
 - [ ] Implement manual redaction area selection
 - [ ] Create BackgroundPanel component
-- [ ] Implement gradient background generator
-- [ ] Implement image background support with blur effect
+- [x] Implement gradient background generator
+- [x] Implement image background support with blur effect
 - [ ] Add background preview thumbnails
 
 ### 8.3 Phase 3: Annotations
