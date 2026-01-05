@@ -17,10 +17,14 @@ import {
     FolderOpen,
     Trash,
     RefreshCw,
-    AlertCircle
+    AlertCircle,
+    LayoutGrid,
+    ChevronLeft,
+    Box
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
-import { useSystemCleanerStore, FileItem, DuplicateGroup, LargeFile } from './store/systemCleanerStore';
+import type { useSystemCleanerStore as StoreType, FileItem, DuplicateGroup, LargeFile, SpaceLensNode } from './store/systemCleanerStore';
+import { useSystemCleanerStore } from './store/systemCleanerStore';
 import { useSmartScan } from './hooks/useSmartScan';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -104,7 +108,7 @@ const SmartScan = () => {
             {results && (
                 <div className="w-full max-w-4xl space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card className="p-6 space-y-4">
+                        <Card className="p-6 space-y-4 shadow-xl border-border-glass bg-white/5">
                             <div className="flex items-center gap-3 text-emerald-400">
                                 <CheckCircle2 className="w-5 h-5" />
                                 <h4 className="font-bold">Cleanup</h4>
@@ -112,7 +116,7 @@ const SmartScan = () => {
                             <div className="text-3xl font-bold">{formatSize(results.totalSpaceSavings)}</div>
                             <p className="text-sm text-foreground-muted">Junk files can be safely removed</p>
                         </Card>
-                        <Card className="p-6 space-y-4">
+                        <Card className="p-6 space-y-4 shadow-xl border-border-glass bg-white/5">
                             <div className="flex items-center gap-3 text-indigo-400">
                                 <ShieldCheck className="w-5 h-5" />
                                 <h4 className="font-bold">Protection</h4>
@@ -120,7 +124,7 @@ const SmartScan = () => {
                             <div className="text-3xl font-bold">Safe</div>
                             <p className="text-sm text-foreground-muted">No threats detected in quick scan</p>
                         </Card>
-                        <Card className="p-6 space-y-4">
+                        <Card className="p-6 space-y-4 shadow-xl border-border-glass bg-white/5">
                             <div className="flex items-center gap-3 text-amber-400">
                                 <Zap className="w-5 h-5" />
                                 <h4 className="font-bold">Performance</h4>
@@ -135,10 +139,130 @@ const SmartScan = () => {
     );
 };
 
+// --- Space Lens ---
+
+const SpaceLensView = () => {
+    const { spaceLensData, setSpaceLensData } = useSystemCleanerStore();
+    const [isScanning, setIsScanning] = useState(false);
+    const [history, setHistory] = useState<SpaceLensNode[]>([]);
+    const [currentPath, setCurrentPath] = useState('');
+
+    const scanSpace = async (pathStr = '') => {
+        setIsScanning(true);
+        try {
+            const data = await (window as any).cleanerAPI.getSpaceLens(pathStr || undefined);
+            setSpaceLensData(data);
+            if (!currentPath) setCurrentPath(data.path);
+        } catch (e) {
+            toast.error('Failed to scan storage.');
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!spaceLensData) scanSpace();
+    }, []);
+
+    const navigateTo = (node: SpaceLensNode) => {
+        if (node.type === 'dir' && node.children) {
+            setHistory([...history, spaceLensData!]);
+            setSpaceLensData(node);
+        }
+    };
+
+    const goBack = () => {
+        if (history.length > 0) {
+            const prev = history[history.length - 1];
+            setSpaceLensData(prev);
+            setHistory(history.slice(0, -1));
+        }
+    };
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    {history.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={goBack}>
+                            <ChevronLeft className="w-5 h-5" />
+                        </Button>
+                    )}
+                    <div>
+                        <h2 className="text-2xl font-bold">Space Lens</h2>
+                        <p className="text-sm text-foreground-muted truncate max-w-md">
+                            {spaceLensData?.path || 'Analyzing storage structure...'}
+                        </p>
+                    </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => scanSpace()} loading={isScanning}>
+                    <RefreshCw className={cn("w-4 h-4 mr-2", isScanning && "animate-spin")} />
+                    Refresh
+                </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto space-y-4 pr-2 custom-scrollbar">
+                {isScanning && (
+                    <div className="flex flex-col items-center justify-center h-full space-y-4 text-foreground-muted">
+                        <Box className="w-12 h-12 animate-bounce" />
+                        <p>Scanning files and folders...</p>
+                    </div>
+                )}
+
+                {spaceLensData && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
+                        {spaceLensData.children?.map((node, i) => {
+                            const percentage = (node.size / spaceLensData.size) * 100;
+                            return (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    whileHover={{ scale: 1.02, y: -4 }}
+                                    onClick={() => navigateTo(node)}
+                                    className={cn(
+                                        "group relative p-4 rounded-2xl border transition-all cursor-pointer overflow-hidden",
+                                        node.type === 'dir' ? "bg-white/5 border-border-glass" : "bg-white/[0.02] border-border-glass/50"
+                                    )}
+                                >
+                                    {/* Visual Size Meter Background */}
+                                    <div 
+                                        className="absolute bottom-0 left-0 h-1 bg-indigo-500/30 transition-all group-hover:bg-indigo-500"
+                                        style={{ width: `${Math.max(percentage, 2)}%` }}
+                                    />
+                                    
+                                    <div className="flex flex-col items-center text-center space-y-3">
+                                        <div className={cn(
+                                            "p-3 rounded-xl transition-colors",
+                                            node.type === 'dir' ? "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white" : "bg-white/5 text-foreground-muted"
+                                        )}>
+                                            {node.type === 'dir' ? <FolderOpen className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
+                                        </div>
+                                        <div className="w-full">
+                                            <div className="text-sm font-bold truncate px-1">{node.name}</div>
+                                            <div className="text-[10px] text-foreground-muted">{formatSize(node.size)}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {percentage > 10 && (
+                                        <div className="absolute top-2 right-2 text-[8px] font-bold text-foreground-muted/50 uppercase tracking-tighter">
+                                            {percentage.toFixed(0)}%
+                                        </div>
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // --- Cleanup Views ---
 
 const JunkCleanupView = () => {
-    const { results, isScanning } = useSystemCleanerStore();
+    const { results, isScanning, platformInfo } = useSystemCleanerStore();
     const { runSmartScan } = useSmartScan();
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [isCleaning, setIsCleaning] = useState(false);
@@ -156,7 +280,7 @@ const JunkCleanupView = () => {
             const cleanupResult = await (window as any).cleanerAPI.runCleanup(selectedItems);
             if (cleanupResult.success) {
                 toast.success(`Cleaned ${formatSize(cleanupResult.freedSize)} successfully!`);
-                runSmartScan(); // Refresh results
+                runSmartScan(); 
             } else {
                 toast.error('Some files could not be cleaned.');
             }
@@ -183,7 +307,9 @@ const JunkCleanupView = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">System Junk</h2>
-                    <p className="text-sm text-foreground-muted">Select categories to clean safely.</p>
+                    <p className="text-sm text-foreground-muted">
+                        Optimized for {platformInfo?.platform === 'win32' ? 'Windows' : 'macOS'} system paths.
+                    </p>
                 </div>
                 {results?.junkFiles && (
                     <div className="text-right">
@@ -194,8 +320,8 @@ const JunkCleanupView = () => {
             </div>
 
             <div className="flex-1 overflow-auto space-y-3 pr-2 custom-scrollbar">
-                {results?.junkFiles?.items.map((item: FileItem, i: number) => (
-                    <Card key={i} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                {results?.junkFiles?.items.map((item: any, i: number) => (
+                    <Card key={i} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
                         <div className="flex items-center gap-4">
                             <Checkbox 
                                 checked={selectedItems.includes(item.path)}
@@ -204,12 +330,12 @@ const JunkCleanupView = () => {
                                     else setSelectedItems(selectedItems.filter(p => p !== item.path));
                                 }}
                             />
-                            <div className="p-2 bg-indigo-500/10 rounded-lg">
+                            <div className="p-2 bg-indigo-500/10 rounded-lg group-hover:bg-indigo-500/20 transition-colors">
                                 <FolderOpen className="w-5 h-5 text-indigo-400" />
                             </div>
                             <div>
                                 <h4 className="font-medium text-sm">{item.name}</h4>
-                                <p className="text-xs text-foreground-muted">{item.path}</p>
+                                <p className="text-xs text-foreground-muted truncate max-w-md">{item.path}</p>
                             </div>
                         </div>
                         <div className="text-sm font-bold">{item.sizeFormatted}</div>
@@ -288,7 +414,7 @@ const LargeFilesView = () => {
                     </div>
                 )}
                 
-                {largeFiles.map((file: LargeFile, i: number) => (
+                {largeFiles.map((file: any, i: number) => (
                     <Card key={i} className="p-3 flex items-center justify-between group hover:bg-white/5 transition-colors">
                         <div className="flex items-center gap-3 overflow-hidden">
                             <Checkbox 
@@ -365,19 +491,19 @@ const DuplicatesView = () => {
                     </div>
                 )}
 
-                {duplicates.map((group: DuplicateGroup, i: number) => (
-                    <Card key={i} className="overflow-hidden border-border-glass">
-                        <div className="bg-white/5 p-3 flex items-center justify-between border-b border-border-glass">
+                {duplicates.map((group: any, i: number) => (
+                    <Card key={i} className="overflow-hidden border-border-glass shadow-lg">
+                        <div className="bg-white/10 p-3 flex items-center justify-between border-b border-border-glass">
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-indigo-400">HASH: {group.hash.slice(0, 8)}</span>
-                                <span className="text-xs text-foreground-muted">• {group.files.length} copies</span>
+                                <span className="text-xs font-bold text-indigo-400 uppercase">HASH: {group.hash.slice(0, 8)}</span>
+                                <span className="text-xs text-foreground-muted">• {group.files.length} copies found</span>
                             </div>
-                            <div className="text-xs font-bold text-amber-500">Wasted: {group.totalWastedFormatted}</div>
+                            <div className="text-xs font-bold text-amber-500">Resource impact: {group.totalWastedFormatted}</div>
                         </div>
                         <div className="p-2 space-y-1">
                             {group.files.map((path: string, j: number) => (
-                                <div key={j} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 text-[11px] group">
-                                    <span className="truncate flex-1 text-foreground-muted group-hover:text-foreground">{path}</span>
+                                <div key={j} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 text-[11px] group transition-colors">
+                                    <span className="truncate flex-1 text-foreground-muted group-hover:text-foreground italic">{path}</span>
                                     {j > 0 && (
                                         <Button 
                                             variant="ghost" 
@@ -386,7 +512,7 @@ const DuplicatesView = () => {
                                             onClick={async () => {
                                                 const res = await (window as any).cleanerAPI.runCleanup([path]);
                                                 if (res.success) {
-                                                    toast.success('Cleaned copy');
+                                                    toast.success('Duplicate copy removed');
                                                     scanDuplicates();
                                                 }
                                             }}
@@ -405,15 +531,16 @@ const DuplicatesView = () => {
 };
 
 const ModulePlaceholder = ({ title, icon: Icon, description }: { title: string, icon: any, description: string }) => (
-    <div className="flex flex-col items-center justify-center h-full space-y-6 text-center max-w-2xl mx-auto">
-        <div className="bg-white/5 p-8 rounded-full border border-border-glass">
-            <Icon className="w-12 h-12 text-foreground-muted" />
+    <div className="flex flex-col items-center justify-center h-full space-y-6 text-center max-w-2xl mx-auto animate-in zoom-in-95 duration-500">
+        <div className="bg-white/5 p-8 rounded-full border border-border-glass relative">
+            <div className="absolute inset-0 bg-indigo-500/5 blur-2xl rounded-full" />
+            <Icon className="w-12 h-12 text-foreground-muted relative" />
         </div>
         <div>
             <h2 className="text-2xl font-bold text-foreground mb-2">{title}</h2>
-            <p className="text-foreground-muted">{description}</p>
+            <p className="text-foreground-muted leading-relaxed">{description}</p>
         </div>
-        <Button variant="outline" size="lg">Coming Soon</Button>
+        <Button variant="outline" size="lg" className="rounded-xl">Coming Soon</Button>
     </div>
 );
 
@@ -423,25 +550,26 @@ export const SystemCleaner: React.FC = () => {
     const [activeTab, setActiveTab] = useState('smart-scan');
     
     const tabs = [
-        { id: 'smart-scan', name: 'Smart Care', icon: Shield, description: 'Quick system analysis' },
-        { id: 'cleanup', name: 'System Junk', icon: Trash2, description: 'Remove junk and trash' },
-        { id: 'large-files', name: 'Large Files', icon: FileText, description: 'Find space hogs' },
-        { id: 'duplicates', name: 'Duplicates', icon: Copy, description: 'Find identical files' },
-        { id: 'protection', name: 'Protection', icon: ShieldCheck, description: 'Malware & privacy' },
-        { id: 'performance', name: 'Performance', icon: Zap, description: 'Speed up system' },
-        { id: 'maintenance', name: 'Maintenance', icon: Wrench, description: 'System tasks' },
+        { id: 'smart-scan', name: 'Smart Care', icon: Shield },
+        { id: 'space-lens', name: 'Space Lens', icon: LayoutGrid },
+        { id: 'cleanup', name: 'System Junk', icon: Trash2 },
+        { id: 'large-files', name: 'Large Files', icon: FileText },
+        { id: 'duplicates', name: 'Duplicates', icon: Copy },
+        { id: 'protection', name: 'Protection', icon: ShieldCheck },
+        { id: 'performance', name: 'Performance', icon: Zap },
+        { id: 'maintenance', name: 'Maintenance', icon: Wrench },
     ];
 
     return (
         <ToolPane
             title="System Cleaner"
-            description="Comprehensive cross-platform cleaning and protection suite"
+            description="Premium system maintenance and storage visualization"
         >
             <div className="flex h-full gap-8 overflow-hidden">
                 {/* Sidebar Navigation */}
-                <div className="w-64 flex flex-col space-y-1 shrink-0">
-                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider px-4 mb-2">General</div>
-                    {tabs.slice(0, 1).map((tab) => (
+                <div className="w-60 flex flex-col space-y-1 shrink-0">
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mb-3 opacity-50">Intelligence</div>
+                    {tabs.slice(0, 2).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -457,8 +585,8 @@ export const SystemCleaner: React.FC = () => {
                         </button>
                     ))}
                     
-                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider px-4 mt-4 mb-2">Cleanup</div>
-                    {tabs.slice(1, 4).map((tab) => (
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Cleaning</div>
+                    {tabs.slice(2, 5).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -474,8 +602,8 @@ export const SystemCleaner: React.FC = () => {
                         </button>
                     ))}
 
-                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider px-4 mt-4 mb-2">System</div>
-                    {tabs.slice(4).map((tab) => (
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Optimization</div>
+                    {tabs.slice(5).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -491,35 +619,36 @@ export const SystemCleaner: React.FC = () => {
                         </button>
                     ))}
                     
-                    <div className="mt-auto px-4 py-6 border-t border-border-glass">
+                    <div className="mt-auto px-4 py-5 border-t border-border-glass/50">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-border-glass">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-border-glass">
                                 <HardDrive className="w-5 h-5 text-indigo-400" />
                             </div>
                             <div>
-                                <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider">Storage</div>
-                                <div className="text-sm font-bold">Safe</div>
+                                <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider">Disk Health</div>
+                                <div className="text-sm font-bold">Excellent</div>
                             </div>
                         </div>
                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500 w-[45%]" />
+                            <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 w-[38%]" />
                         </div>
                     </div>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 bg-white/5 rounded-3xl border border-border-glass overflow-hidden relative">
-                    <div className="absolute inset-0 p-8 overflow-auto custom-scrollbar">
+                <div className="flex-1 bg-white/[0.03] rounded-[32px] border border-border-glass overflow-hidden relative shadow-inner">
+                    <div className="absolute inset-0 p-10 overflow-auto custom-scrollbar">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.3 }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.3, ease: "easeOut" }}
                                 className="h-full"
                             >
                                 {activeTab === 'smart-scan' && <SmartScan />}
+                                {activeTab === 'space-lens' && <SpaceLensView />}
                                 {activeTab === 'cleanup' && <JunkCleanupView />}
                                 {activeTab === 'large-files' && <LargeFilesView />}
                                 {activeTab === 'duplicates' && <DuplicatesView />}
@@ -527,21 +656,21 @@ export const SystemCleaner: React.FC = () => {
                                     <ModulePlaceholder 
                                         title="System Protection" 
                                         icon={ShieldCheck} 
-                                        description="Scan for malware, adware, and privacy threats. Protect your personal data and browser history." 
+                                        description="Scan for malware, adware, and privacy threats. Protect your personal data and browser history with a real-time shield." 
                                     />
                                 )}
                                 {activeTab === 'performance' && (
                                     <ModulePlaceholder 
                                         title="Performance Optimization" 
                                         icon={Zap} 
-                                        description="Speed up your system by freeing up RAM, managing startup items, and monitoring resource-heavy applications." 
+                                        description="Speed up your system by freeing up RAM, managing startup items, and monitoring resource-heavy applications in real-time." 
                                     />
                                 )}
                                 {activeTab === 'maintenance' && (
                                     <ModulePlaceholder 
                                         title="Maintenance Tasks" 
                                         icon={Wrench} 
-                                        description="Run deep system maintenance tasks like flushing DNS cache, rebuilding search indexes, and repairing disk permissions." 
+                                        description="Run deep system maintenance tasks like flushing DNS cache, rebuilding search indexes, and repairing disk permissions to keep things smooth." 
                                     />
                                 )}
                             </motion.div>

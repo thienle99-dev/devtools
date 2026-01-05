@@ -52,6 +52,7 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 	scanJunk: () => electron.ipcRenderer.invoke("cleaner:scan-junk"),
 	getLargeFiles: (options) => electron.ipcRenderer.invoke("cleaner:get-large-files", options),
 	getDuplicates: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-duplicates", scanPath),
+	getSpaceLens: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-space-lens", scanPath),
 	runCleanup: (files) => electron.ipcRenderer.invoke("cleaner:run-cleanup", files),
 	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram")
 });

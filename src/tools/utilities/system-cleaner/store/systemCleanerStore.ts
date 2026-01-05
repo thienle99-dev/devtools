@@ -65,6 +65,15 @@ export interface SmartScanResult {
     estimatedTime: number;
 }
 
+export interface SpaceLensNode {
+    name: string;
+    path: string;
+    size: number;
+    sizeFormatted: string;
+    type: 'dir' | 'file';
+    children?: SpaceLensNode[];
+}
+
 export interface SystemCleanerState {
     platformInfo: PlatformInfo | null;
     isScanning: boolean;
@@ -73,6 +82,7 @@ export interface SystemCleanerState {
     results: SmartScanResult | null;
     largeFiles: LargeFile[];
     duplicates: DuplicateGroup[];
+    spaceLensData: SpaceLensNode | null;
     
     // Actions
     setPlatformInfo: (info: PlatformInfo) => void;
@@ -82,6 +92,7 @@ export interface SystemCleanerState {
     setResults: (results: SmartScanResult) => void;
     setLargeFiles: (files: LargeFile[]) => void;
     setDuplicates: (duplicates: DuplicateGroup[]) => void;
+    setSpaceLensData: (data: SpaceLensNode | null) => void;
     clearResults: () => void;
 }
 
@@ -93,6 +104,7 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
     results: null,
     largeFiles: [],
     duplicates: [],
+    spaceLensData: null,
 
     setPlatformInfo: (platformInfo) => set({ platformInfo }),
     startScan: () => set({ isScanning: true, scanProgress: 0, scanStatus: 'Starting scan...' }),
@@ -101,5 +113,6 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
     setResults: (results) => set({ results, isScanning: false, scanProgress: 100, scanStatus: 'Scan complete' }),
     setLargeFiles: (largeFiles) => set({ largeFiles }),
     setDuplicates: (duplicates) => set({ duplicates }),
-    clearResults: () => set({ results: null, largeFiles: [], duplicates: [], scanProgress: 0, scanStatus: 'Idle' }),
+    setSpaceLensData: (spaceLensData) => set({ spaceLensData }),
+    clearResults: () => set({ results: null, largeFiles: [], duplicates: [], spaceLensData: null, scanProgress: 0, scanStatus: 'Idle' }),
 }));

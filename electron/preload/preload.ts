@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   scanJunk: () => ipcRenderer.invoke('cleaner:scan-junk'),
   getLargeFiles: (options: any) => ipcRenderer.invoke('cleaner:get-large-files', options),
   getDuplicates: (scanPath: string) => ipcRenderer.invoke('cleaner:get-duplicates', scanPath),
+  getSpaceLens: (scanPath: string) => ipcRenderer.invoke('cleaner:get-space-lens', scanPath),
   runCleanup: (files: string[]) => ipcRenderer.invoke('cleaner:run-cleanup', files),
   freeRam: () => ipcRenderer.invoke('cleaner:free-ram'),
 })
