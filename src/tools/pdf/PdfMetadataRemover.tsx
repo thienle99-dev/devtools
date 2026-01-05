@@ -54,8 +54,8 @@ export const PdfMetadataRemover: React.FC<PdfMetadataRemoverProps> = ({ tabId })
         setLoadingAction('Removing Metadata');
 
         try {
-            const arrayBuffer = await pdfFile.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(arrayBuffer);
+            const fileArrayBuffer = await pdfFile.arrayBuffer();
+            const pdfDoc = await PDFDocument.load(fileArrayBuffer);
 
             // Remove all metadata by creating a new PDF without metadata
             // Note: pdf-lib doesn't have a direct method to remove metadata,
@@ -68,7 +68,12 @@ export const PdfMetadataRemover: React.FC<PdfMetadataRemoverProps> = ({ tabId })
             // This effectively removes all metadata
 
             const pdfBytes = await newPdf.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            // pdf-lib returns a Uint8Array; wrap its underlying ArrayBuffer for Blob compatibility
+            const pdfArrayBuffer = pdfBytes.buffer.slice(
+                pdfBytes.byteOffset,
+                pdfBytes.byteOffset + pdfBytes.byteLength
+            );
+            const pdfBlob = new Blob([pdfArrayBuffer as ArrayBuffer], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: 'Metadata removed successfully',
