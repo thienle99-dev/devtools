@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useToolStore } from '../store/toolStore';
+import { usePermissionsStore } from '../store/permissionsStore';
 import { ToolPane } from '../components/layout/ToolPane';
 import { Input } from '../components/ui/Input';
 import { Switch } from '../components/ui/Switch';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Monitor, Type, WrapText, History, Trash2, Smartphone, Keyboard, Sun, Moon, Laptop } from 'lucide-react';
+import { Monitor, Type, WrapText, History, Trash2, Smartphone, Keyboard, Sun, Moon, Laptop, Shield, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, ExternalLink } from 'lucide-react';
 import { CATEGORIES, getToolsByCategory } from '../tools/registry';
+import { toast } from 'sonner';
 
 interface SettingsPageProps {
     tabId?: string;
@@ -22,6 +24,21 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
         startMinimized, setStartMinimized
     } = useSettingsStore();
     const { clearHistory } = useToolStore();
+    const {
+        permissions,
+        isLoading,
+        checkAllPermissions,
+        checkPermission,
+        testPermission,
+        openSystemPreferences,
+    } = usePermissionsStore();
+
+    const platform = (window as any).ipcRenderer?.process?.platform || 'unknown';
+
+    // Check permissions on mount
+    useEffect(() => {
+        checkAllPermissions();
+    }, [checkAllPermissions]);
 
     return (
         <ToolPane
@@ -152,9 +169,152 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                         <div>
                             <p className="text-[10px] text-foreground-muted uppercase font-black tracking-widest mb-1">Platform</p>
                             <p className="text-sm text-foreground capitalize font-mono">
-                                {(window as any).ipcRenderer?.process?.platform || 'unknown'}
+                                {platform}
                             </p>
                         </div>
+                    </Card>
+                </section>
+
+                {/* Permissions Section */}
+                <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black text-foreground-muted uppercase tracking-[0.2em] flex items-center">
+                            <Shield className="w-3.5 h-3.5 mr-2" />
+                            Permissions
+                        </h3>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                checkAllPermissions();
+                                toast.success('Refreshing permissions...');
+                            }}
+                            disabled={isLoading}
+                            className="text-xs"
+                        >
+                            <RefreshCw className={`w-3 h-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
+                    </div>
+                    <Card className="p-1">
+                        {/* macOS Permissions */}
+                        {platform === 'darwin' && (
+                            <>
+                                <PermissionItem
+                                    name="Accessibility"
+                                    description="Required for global keyboard shortcuts (Cmd+Shift+D, Cmd+Shift+C)"
+                                    permissionKey="accessibility"
+                                    permission={permissions.accessibility}
+                                    onCheck={() => checkPermission('accessibility')}
+                                    onTest={() => {
+                                        testPermission('accessibility');
+                                        toast.info('Testing accessibility permission...');
+                                    }}
+                                    onRequest={() => {
+                                        openSystemPreferences('accessibility');
+                                        toast.info('Opening System Preferences...');
+                                    }}
+                                />
+                                <PermissionItem
+                                    name="Full Disk Access"
+                                    description="Required for System Cleaner to scan and delete files"
+                                    permissionKey="fullDiskAccess"
+                                    permission={permissions.fullDiskAccess}
+                                    onCheck={() => checkPermission('fullDiskAccess')}
+                                    onTest={() => {
+                                        testPermission('fullDiskAccess');
+                                        toast.info('Testing full disk access...');
+                                    }}
+                                    onRequest={() => {
+                                        openSystemPreferences('full-disk-access');
+                                        toast.info('Opening System Preferences...');
+                                    }}
+                                />
+                                <PermissionItem
+                                    name="Screen Recording"
+                                    description="Required for Screenshot tool to capture screen"
+                                    permissionKey="screenRecording"
+                                    permission={permissions.screenRecording}
+                                    onCheck={() => checkPermission('screenRecording')}
+                                    onTest={() => {
+                                        testPermission('screenRecording');
+                                        toast.info('Testing screen recording permission...');
+                                    }}
+                                    onRequest={() => {
+                                        openSystemPreferences('screen-recording');
+                                        toast.info('Opening System Preferences...');
+                                    }}
+                                />
+                            </>
+                        )}
+
+                        {/* Windows Permissions */}
+                        {platform === 'win32' && (
+                            <>
+                                <PermissionItem
+                                    name="File System Access"
+                                    description="Required for System Cleaner to read and write files"
+                                    permissionKey="fileAccess"
+                                    permission={permissions.fileAccess}
+                                    onCheck={() => checkPermission('fileAccess')}
+                                    onTest={async () => {
+                                        await testPermission('fileAccess');
+                                        toast.info('Testing file access...');
+                                    }}
+                                    onRequest={() => {
+                                        openSystemPreferences();
+                                        toast.info('Opening Windows Settings...');
+                                    }}
+                                />
+                                <PermissionItem
+                                    name="Registry Access"
+                                    description="Required for System Cleaner to read registry entries"
+                                    permissionKey="registryAccess"
+                                    permission={permissions.registryAccess}
+                                    onCheck={() => checkPermission('registryAccess')}
+                                    onTest={() => {
+                                        testPermission('registryAccess');
+                                        toast.info('Testing registry access...');
+                                    }}
+                                    onRequest={() => {
+                                        openSystemPreferences();
+                                        toast.info('Opening Windows Settings...');
+                                    }}
+                                />
+                            </>
+                        )}
+
+                        {/* Common Permissions */}
+                        <PermissionItem
+                            name="Clipboard Access"
+                            description="Required for Clipboard Manager to read and write clipboard content"
+                            permissionKey="clipboard"
+                            permission={permissions.clipboard}
+                            onCheck={() => checkPermission('clipboard')}
+                            onTest={async () => {
+                                await testPermission('clipboard');
+                                toast.info('Testing clipboard access...');
+                            }}
+                            onRequest={() => {
+                                openSystemPreferences();
+                                toast.info('Opening system settings...');
+                            }}
+                        />
+                        <PermissionItem
+                            name="Launch at Login"
+                            description="Required to automatically start app when you log in"
+                            permissionKey="launchAtLogin"
+                            permission={permissions.launchAtLogin}
+                            onCheck={() => checkPermission('launchAtLogin')}
+                            onTest={() => {
+                                testPermission('launchAtLogin');
+                                toast.info('Checking launch at login permission...');
+                            }}
+                            onRequest={() => {
+                                openSystemPreferences();
+                                toast.info('Opening system settings...');
+                            }}
+                        />
                     </Card>
                 </section>
 
@@ -265,6 +425,183 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                 </section>
             </div>
         </ToolPane>
+    );
+};
+
+// Permission Item Component
+interface PermissionItemProps {
+    name: string;
+    description: string;
+    permissionKey: string;
+    permission?: { status: string; message?: string };
+    onCheck: () => void;
+    onTest: () => void;
+    onRequest: () => void;
+}
+
+const PermissionItem: React.FC<PermissionItemProps> = ({
+    name,
+    description,
+    permission,
+    onCheck,
+    onTest,
+    onRequest,
+}) => {
+    const status = permission?.status || 'not-determined';
+    const isLoading = status === 'loading';
+
+    const getStatusIcon = () => {
+        if (isLoading) {
+            return <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />;
+        }
+        switch (status) {
+            case 'granted':
+                return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+            case 'denied':
+                return <XCircle className="w-4 h-4 text-red-500" />;
+            case 'not-determined':
+                return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+            case 'not-applicable':
+                return <AlertCircle className="w-4 h-4 text-foreground-muted" />;
+            default:
+                return <AlertCircle className="w-4 h-4 text-foreground-muted" />;
+        }
+    };
+
+    const getStatusText = () => {
+        if (isLoading) return 'Checking...';
+        switch (status) {
+            case 'granted':
+                return 'Granted';
+            case 'denied':
+                return 'Denied';
+            case 'not-determined':
+                return 'Not Determined';
+            case 'not-applicable':
+                return 'N/A';
+            case 'error':
+                return 'Error';
+            default:
+                return 'Unknown';
+        }
+    };
+
+    const getStatusColor = () => {
+        switch (status) {
+            case 'granted':
+                return 'bg-green-500/10 text-green-500 border-green-500/20';
+            case 'denied':
+                return 'bg-red-500/10 text-red-500 border-red-500/20';
+            case 'not-determined':
+                return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+            default:
+                return 'bg-foreground-muted/10 text-foreground-muted border-border-glass';
+        }
+    };
+
+    // Determine request button state and text based on permission status
+    const getRequestButtonConfig = () => {
+        switch (status) {
+            case 'granted':
+                return {
+                    text: 'Granted',
+                    variant: 'ghost' as const,
+                    disabled: true,
+                    className: 'text-xs text-green-500 cursor-not-allowed',
+                    showIcon: false,
+                };
+            case 'denied':
+                return {
+                    text: 'Request Permission',
+                    variant: 'primary' as const,
+                    disabled: isLoading,
+                    className: 'text-xs',
+                    showIcon: true,
+                };
+            case 'not-determined':
+                return {
+                    text: 'Request Permission',
+                    variant: 'primary' as const,
+                    disabled: isLoading,
+                    className: 'text-xs',
+                    showIcon: true,
+                };
+            case 'not-applicable':
+                return {
+                    text: 'N/A',
+                    variant: 'ghost' as const,
+                    disabled: true,
+                    className: 'text-xs text-foreground-muted cursor-not-allowed',
+                    showIcon: false,
+                };
+            default:
+                return {
+                    text: 'Request Permission',
+                    variant: 'primary' as const,
+                    disabled: isLoading,
+                    className: 'text-xs',
+                    showIcon: true,
+                };
+        }
+    };
+
+    const requestButtonConfig = getRequestButtonConfig();
+
+    return (
+        <div className="flex items-start justify-between p-4 border-b border-border-glass last:border-0 hover:bg-white/5 transition-colors">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="p-2 bg-indigo-500/10 rounded-lg mt-0.5 shrink-0">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <p className="text-sm font-semibold text-foreground">{name}</p>
+                        <div className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${getStatusColor()}`}>
+                            {getStatusIcon()}
+                            <span>{getStatusText()}</span>
+                        </div>
+                    </div>
+                    <p className="text-xs text-foreground-muted leading-relaxed">{description}</p>
+                    {permission?.message && (
+                        <p className="text-[10px] text-foreground-muted mt-1.5 italic">{permission.message}</p>
+                    )}
+                </div>
+            </div>
+            <div className="flex items-center gap-2 ml-4 shrink-0">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onCheck}
+                    disabled={isLoading || status === 'loading'}
+                    className="text-xs h-8 px-3"
+                >
+                    Check
+                </Button>
+                {status !== 'granted' && status !== 'not-applicable' && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onTest}
+                        disabled={isLoading || status === 'loading'}
+                        className="text-xs h-8 px-3"
+                    >
+                        Test
+                    </Button>
+                )}
+                <Button
+                    variant={requestButtonConfig.variant}
+                    size="sm"
+                    onClick={onRequest}
+                    disabled={requestButtonConfig.disabled}
+                    className={`h-8 px-3 ${requestButtonConfig.className}`}
+                >
+                    {requestButtonConfig.showIcon && status !== 'granted' && (
+                        <ExternalLink className="w-3 h-3 mr-1.5" />
+                    )}
+                    {requestButtonConfig.text}
+                </Button>
+            </div>
+        </div>
     );
 };
 

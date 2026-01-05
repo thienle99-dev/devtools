@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, desktopCapturer } from 'electron'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -692,11 +692,7 @@ function createWindow() {
     }
 
     try {
-      // Try to check via tccutil (macOS 10.14+)
-      const bundleId = app.getBundleId() || app.getName();
-      const { stdout } = await execAsync(`tccutil reset Accessibility ${bundleId} 2>&1 || echo "not-found"`);
-      
-      // If tccutil works, try to test by attempting to register a global shortcut
+      // Try to test by attempting to register a global shortcut
       try {
         const testShortcut = 'CommandOrControl+Shift+TestPermission';
         const registered = globalShortcut.register(testShortcut, () => {});
@@ -763,16 +759,15 @@ function createWindow() {
     }
 
     try {
-      // Test by trying to get screen sources (Electron's way)
-      if (win) {
-        try {
-          const sources = await win.webContents.getSources();
-          if (sources && sources.length > 0) {
-            return { status: 'granted' };
-          }
-        } catch (e) {
-          // If getSources fails, likely no permission
+      // Test by trying to use desktopCapturer (Electron's way)
+      try {
+        // Use desktopCapturer to check screen recording permission
+        const sources = await desktopCapturer.getSources({ types: ['screen'] });
+        if (sources && sources.length > 0) {
+          return { status: 'granted' };
         }
+      } catch (e) {
+        // If getSources fails, likely no permission
       }
 
       return { status: 'not-determined', message: 'Unable to determine. Try testing screenshot feature.' };
@@ -783,9 +778,7 @@ function createWindow() {
 
   async function checkClipboardPermission(): Promise<{ status: string; message?: string }> {
     try {
-      // Test read
-      const testText = clipboard.readText();
-      // Test write
+      // Test read and write
       const originalText = clipboard.readText();
       clipboard.writeText('__PERMISSION_TEST__');
       const written = clipboard.readText();

@@ -2537,7 +2537,6 @@ function createWindow() {
 	async function checkAccessibilityPermission() {
 		if (process.platform !== "darwin") return { status: "not-applicable" };
 		try {
-			const { stdout } = await execAsync(`tccutil reset Accessibility ${app.getBundleId() || app.getName()} 2>&1 || echo "not-found"`);
 			try {
 				const testShortcut = "CommandOrControl+Shift+TestPermission";
 				if (globalShortcut.register(testShortcut, () => {})) {
@@ -2591,8 +2590,8 @@ function createWindow() {
 	async function checkScreenRecordingPermission() {
 		if (process.platform !== "darwin") return { status: "not-applicable" };
 		try {
-			if (win) try {
-				const sources = await win.webContents.getSources();
+			try {
+				const sources = await desktopCapturer.getSources({ types: ["screen"] });
 				if (sources && sources.length > 0) return { status: "granted" };
 			} catch (e) {}
 			return {
@@ -2608,7 +2607,6 @@ function createWindow() {
 	}
 	async function checkClipboardPermission() {
 		try {
-			clipboard.readText();
 			const originalText = clipboard.readText();
 			clipboard.writeText("__PERMISSION_TEST__");
 			const written = clipboard.readText();
