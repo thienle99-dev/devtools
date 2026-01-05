@@ -204,8 +204,8 @@
 
 ### 3.4 Development Tools
 
-- [ ] JSON prettify and format
-- [ ] JSON minify
+- [x] JSON prettify and format (JsonFormatter tool)
+- [x] JSON minify (JsonFormatter tool)
 - [x] JSON to CSV
 - [x] SQL prettify and format
 - [ ] YAML prettify and format
@@ -222,7 +222,7 @@
 - [ ] Text statistics
 - [ ] Text diff
 - [ ] String obfuscator
-- [ ] Case converter
+- [x] Case converter (CaseConverter tool in converters)
 - [ ] ASCII Art Text Generator
 
 ### 3.6 Network Tools
@@ -486,12 +486,12 @@
 
 ### 4.9 Toast Notifications
 
-- [ ] Integrate Sonner
-- [ ] Add toast for copy actions
-- [ ] Add toast for download actions
-- [ ] Add toast for errors
-- [ ] Add toast for success messages
-- [ ] Style toasts with glassmorphism
+- [x] Integrate Sonner
+- [x] Add toast for copy actions
+- [x] Add toast for download actions
+- [x] Add toast for errors
+- [x] Add toast for success messages
+- [x] Style toasts with glassmorphism
 
 ### 4.10 System Tray Support
 
@@ -507,10 +507,10 @@
 
 ### 5.1 Performance Optimizations
 
-- [ ] Implement virtual scrolling for long lists
-- [ ] Add lazy loading for tool components
+- [x] Implement virtual scrolling for long lists (VirtualizedList component)
+- [x] Add lazy loading for tool components
 - [ ] Add React.memo for expensive components
-- [ ] Implement debouncing for input handlers
+- [x] Implement debouncing for input handlers
 - [ ] Optimize Zustand selectors
 - [ ] Test performance with large data
 
@@ -598,6 +598,249 @@
 
 ---
 
+---
+
+## Phase 7: System Cleaner Tool (mac-cleaner.md)
+
+### 7.0 Core Features (Completed ✅)
+
+- [x] Settings & Preferences panel (SettingsView with all preferences)
+- [x] Welcome Screen / Onboarding (WelcomeScreen component with multi-step flow)
+- [x] Keyboard Shortcuts (keyboardShortcuts.ts utility)
+- [x] Browser Data Cleanup (Chrome, Firefox, Edge, Safari)
+- [x] Wi-Fi Network Cleanup (Windows & macOS)
+- [x] Search & Filter functionality (across all views)
+- [x] Bulk Actions (Select All, Bulk Delete, Bulk Enable/Disable)
+- [x] Better Empty States (enhanced ScanPlaceholder with tips and quick actions)
+- [x] Smart Scan Improvements (real performance data, privacy scans, retry logic)
+- [x] Progress Tracking (progressUtils.ts with ETA calculations)
+- [x] Backup Management UI (BackupManagementView with CRUD operations)
+- [x] Advanced Space Lens Features (export to JSON/CSV, snapshots, comparison)
+- [x] Error Recovery (errorRecovery.ts with retry logic and batch processing)
+- [x] Memory Management (VirtualizedList component, chunked processing)
+- [x] Caching Strategy (cacheUtils.ts with TTL and size limits)
+- [x] Type Safety (comprehensive types/index.ts with error types)
+
+### 7.1 Testing & Quality Assurance
+
+- [ ] Cross-platform testing (Windows 10/11, macOS Big Sur+)
+- [ ] Safety testing (both platforms)
+- [ ] Performance testing (memory leaks, CPU usage, large dataset handling)
+- [ ] Unit tests for utilities, hooks, components
+- [ ] Integration tests for IPC handlers, Electron main process
+- [ ] E2E tests for critical user flows
+
+### 7.2 Platform-Specific Features
+
+#### Windows-Specific
+- [ ] Windows Update Cleanup (remove old Windows Update files)
+- [ ] System Restore Points management and cleanup
+- [ ] Windows.old Cleanup (remove old Windows installation files)
+- [ ] Registry Cleanup (safe registry cleanup with backups)
+- [ ] Windows Defender Integration (use Windows Defender for malware scanning)
+- [ ] Windows Services Management (enable/disable services)
+- [ ] Task Scheduler Integration (schedule maintenance tasks)
+- [ ] Windows Search Optimization (rebuild and optimize Windows Search index)
+
+#### macOS-Specific
+- [ ] Time Machine Management (clean up Time Machine snapshots)
+- [ ] Spotlight Optimization (rebuild Spotlight index)
+- [ ] Disk Permissions repair (if supported)
+- [ ] Launch Services management (Launch Agents and Daemons)
+- [ ] Gatekeeper Integration (check app security)
+- [ ] iCloud Optimization (manage iCloud storage)
+- [ ] Mail.app Optimization (rebuild Mail database)
+
+### 7.3 Long-term Enhancements
+
+- [ ] AI-Powered Recommendations (ML-based cleaning suggestions)
+- [ ] Cloud Integration (sync settings across devices)
+- [ ] Advanced Analytics (detailed usage statistics)
+- [ ] Custom Scripts (user-defined maintenance scripts - PowerShell/AppleScript)
+- [ ] Community Features (share safety rules, tips)
+- [ ] Multi-language Support (internationalization)
+- [ ] Enhanced Dark Mode
+- [ ] Accessibility (full keyboard navigation, screen reader support)
+- [ ] Linux Support (extend to Linux distributions)
+- [ ] Remote Management (manage multiple devices)
+- [ ] Scheduled Tasks (schedule automatic scans and maintenance)
+- [ ] Export & Reports (export scan results, print-friendly reports, history logs)
+
+### 7.4 App Updater
+
+- [ ] App updater functionality (Windows Store/Chocolatey + macOS App Store)
+- [ ] Update notification system
+- [ ] Background update checks
+- [ ] Update installation flow
+
+---
+
+## Phase 8: Xnapper/Screenshot Tool (xnapper.md)
+
+### 8.1 Phase 1: Core Capture & Basic Processing
+
+- [ ] Setup Xnapper tool structure (`src/tools/screenshot/`)
+- [ ] Install dependencies (fabric, tesseract.js)
+- [ ] Create Xnapper store (`src/store/xnapperStore.ts`)
+- [ ] Implement Electron screen capture API integration
+- [ ] Create CaptureSection component (full screen, window, area selection)
+- [ ] Implement basic image preview
+- [ ] Implement auto-balance enhancement
+- [ ] Implement simple export (PNG/JPG)
+- [ ] Implement save to file functionality
+- [ ] Add to tools registry and sidebar
+
+### 8.2 Phase 2: Redaction & Background
+
+- [ ] Integrate Tesseract.js for OCR
+- [ ] Implement regex pattern detection (email, IP, API keys)
+- [ ] Create RedactionPanel component
+- [ ] Implement redaction tools (blur, pixelate, solid overlay)
+- [ ] Implement manual redaction area selection
+- [ ] Create BackgroundPanel component
+- [ ] Implement gradient background generator
+- [ ] Implement image background support with blur effect
+- [ ] Add background preview thumbnails
+
+### 8.3 Phase 3: Annotations
+
+- [ ] Integrate Fabric.js for canvas manipulation
+- [ ] Create PreviewSection with Fabric.js canvas
+- [ ] Implement arrow tool (straight, curved)
+- [ ] Implement text tool with font selection
+- [ ] Implement shape tools (rectangle, circle, ellipse)
+- [ ] Implement blur tool for selective blur
+- [ ] Implement crop tool for manual adjustment
+- [ ] Create AnnotationToolbar component
+- [ ] Implement undo/redo functionality
+- [ ] Add color picker and size controls
+
+### 8.4 Phase 4: Export & Share
+
+- [ ] Create ExportPanel component
+- [ ] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
+- [ ] Implement custom dimensions
+- [ ] Implement quality settings (compression level)
+- [ ] Implement format options (PNG, JPG, WebP)
+- [ ] Implement copy to clipboard functionality
+- [ ] Implement system share sheet integration (macOS)
+- [ ] Create HistoryPanel component
+- [ ] Implement screenshot history storage
+
+### 8.5 Phase 5: Advanced Features
+
+- [ ] Implement templates system
+- [ ] Add preset saving functionality
+- [ ] Implement batch processing (future)
+- [ ] Add cloud upload (Imgur, Cloudinary) - future
+- [ ] Implement AI background suggestions - future
+- [ ] Add keyboard shortcuts
+- [ ] Implement drag & drop image loading
+- [ ] Add image comparison mode
+
+---
+
+## Phase 9: Stats Monitor Tool (stats-monitor.md)
+
+### 9.1 Core Monitoring Modules
+
+- [ ] CPU Module (real-time utilization, per-core usage, top processes, temperature, frequency)
+- [ ] GPU Module (utilization, VRAM, temperature, active GPU detection)
+- [ ] Memory Module (RAM usage, memory pressure, swap, breakdown)
+- [ ] Disk Module (disk activity, space, I/O, SMART data)
+- [ ] Network Module (in/out speeds, active connections, interface, data usage)
+- [ ] Battery Module (level, status, time remaining, health)
+- [ ] Sensors Module (temperature, voltage, power, fan speed)
+- [ ] Bluetooth Module (connected devices, status, battery, signal strength)
+- [ ] Time Zones Module (multiple time zones, world clock)
+
+### 9.2 Menu Bar Integration
+
+- [ ] Native menu bar dropdown
+- [ ] Menu bar icon states (color-coded, animated)
+- [ ] Real-time graphs in menu
+- [ ] Quick actions (toggle modules)
+- [ ] Settings modal functionality
+- [ ] Module reordering (drag & drop)
+- [ ] Customizable time zones
+
+### 9.3 Additional Features
+
+- [ ] Export metrics data
+- [ ] Historical data charts
+- [ ] Alerts/notifications
+- [ ] Dark/Light theme toggle
+- [ ] Module size customization
+- [ ] Stats tray with dynamic icon
+- [ ] Context menu integration
+
+### 9.4 Implementation Tasks
+
+- [ ] Add BluetoothStats, TimeZonesStats types
+- [ ] Implement `get-bluetooth-stats` and `get-timezones-stats` IPC handlers
+- [ ] Add getBluetoothStats and getTimeZonesStats to preload API
+- [ ] Update useSystemMetrics hook
+- [ ] Create BluetoothModule component
+- [ ] Create TimeZonesModule component
+- [ ] Add modules to StatsMonitor
+- [ ] Create statsTray with dynamic icon
+
+---
+
+## Phase 10: Application Manager Tool (application-manager-plan.md)
+
+### 10.1 Core Features
+
+- [ ] Installed Apps Tab (list, search, filter, uninstall)
+- [ ] Running Processes Tab (real-time monitoring, kill process)
+- [ ] App Type Filter (All/User/System)
+- [ ] Process Grouping (by name)
+- [ ] Color-coded CPU/RAM usage
+- [ ] Badge indicators for system vs user apps
+- [ ] Confirmation dialogs for destructive actions
+
+### 10.2 Implementation Tasks
+
+- [ ] Create TypeScript types for InstalledApp and RunningProcess
+- [ ] Implement backend IPC handlers (get-installed-apps, get-running-processes, uninstall-app, kill-process)
+- [ ] Add appManagerAPI to preload
+- [ ] Create useInstalledApps hook with filter logic
+- [ ] Create useRunningProcesses hook with real-time updates
+- [ ] Create InstalledAppsTab component
+- [ ] Create RunningProcessesTab component
+- [ ] Create UI components (AppCard, ProcessCard, ProcessMetrics, AppTypeFilter)
+- [ ] Create main ApplicationManager component
+- [ ] Register tool in tools registry
+
+### 10.3 Safety & Performance
+
+- [ ] Confirm before uninstall/kill actions
+- [ ] Show warning for system processes/apps
+- [ ] Require admin/elevated permissions where needed
+- [ ] Log all destructive actions
+- [ ] Prevent uninstall system critical apps
+- [ ] Lazy load process list
+- [ ] Virtual scrolling for large lists
+- [ ] Debounce search input
+- [ ] Cache installed apps
+- [ ] Throttle process updates
+
+---
+
+## Phase 11: Clipboard Manager Enhancements (clipboard-manager.md)
+
+### 11.1 Advanced Features
+
+- [ ] Export/Import clipboard history (backup and restore)
+- [ ] Clipboard sync across devices (future)
+- [ ] Rich text support
+- [ ] File clipboard support
+- [ ] Clipboard monitoring service
+- [ ] Auto-paste shortcuts
+- [ ] Clipboard statistics and analytics
+
+---
+
 ## Notes
 
 - Prioritize Phase 1 and Phase 2 for MVP
@@ -607,3 +850,7 @@
 - Test on both Windows and macOS
 - Keep bundle size optimized
 - Document all tools with examples
+- System Cleaner: Most features completed, focus on testing and platform-specific features
+- Xnapper: Not started, high priority for developers/marketers
+- Stats Monitor: Core modules implemented, need additional modules and menu bar integration
+- Application Manager: Not started, useful for system management
