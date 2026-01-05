@@ -140,7 +140,7 @@ export const Sidebar: React.FC = React.memo(() => {
             </div>
 
             {/* Enhanced Navigation */}
-            <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar pb-4">
+            <nav className="flex-1 overflow-y-auto px-4 space-y-5 custom-scrollbar pb-4">
                 {filteredContent ? (
                     <div className="space-y-1">
                          {filteredContent.length === 0 ? (
@@ -214,24 +214,38 @@ export const Sidebar: React.FC = React.memo(() => {
                          })}
                     </div>
                 ) : (
-                    CATEGORIES.map((category) => {
+                    CATEGORIES.map((category, categoryIndex) => {
                     const tools = getToolsByCategory(category.id);
 
                     // Skip Favorites/Recent if empty for now
                     if (['favorites', 'recent'].includes(category.id) && tools.length === 0) return null;
                     if (tools.length === 0) return null;
 
+                    const visibleTools = tools.filter(tool => tool.id !== 'settings');
+
                     return (
                         <div key={category.id} className="space-y-2">
-                            {/* Enhanced Category Header */}
-                            <h3 className="px-3 text-[10px] font-bold text-foreground-muted uppercase tracking-[0.1em] mb-2 flex items-center gap-2">
-                                <category.icon className="w-3.5 h-3.5 opacity-50" />
-                                <span>{category.name}</span>
-                            </h3>
+                            {/* Category Separator - chỉ hiển thị nếu không phải category đầu tiên */}
+                            {categoryIndex > 0 && (
+                                <div className="h-px mx-2 my-3 bg-gradient-to-r from-transparent via-border-glass/80 to-transparent" />
+                            )}
+                            
+                            {/* Enhanced Category Header với background & accent */}
+                            <div className="px-3 py-1.5 rounded-lg bg-[var(--color-glass-panel)]/85 border border-border-glass/80 shadow-sm relative overflow-hidden">
+                                {/* Left accent bar */}
+                                <div className="absolute inset-y-1 left-1 w-[3px] rounded-full bg-gradient-to-b from-indigo-400/90 via-sky-400/90 to-emerald-400/90" />
+                                <h3 className="pl-3 text-[10px] font-semibold text-foreground uppercase tracking-[0.16em] flex items-center gap-2">
+                                    <category.icon className="w-3.5 h-3.5 text-foreground/80" />
+                                    <span>{category.name}</span>
+                                    <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/5 text-foreground/70 border border-border-glass/60">
+                                        {visibleTools.length}
+                                    </span>
+                                </h3>
+                            </div>
 
-                            {/* Enhanced Tool Items */}
-                            <div className="space-y-1">
-                                {tools.filter(tool => tool.id !== 'settings').map((tool) => {
+                            {/* Enhanced Tool Items với padding để tạo khoảng cách */}
+                            <div className="space-y-1 pl-1">
+                                {visibleTools.map((tool) => {
                                     const isActive = activeTab?.toolId === tool.id;
                                     const Icon = tool.icon;
                                     // Get configured or default shortcut
