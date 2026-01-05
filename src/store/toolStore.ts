@@ -65,7 +65,7 @@ export const useToolStore = create<ToolStore>()(
             addToHistory: (id) => {
                 // Track history locally
                 set((state) => ({
-                    history: [id, ...state.history.filter(h => h !== id)].slice(0, 50)
+                history: [id, ...state.history.filter(h => h !== id)].slice(0, 50)
                 }));
 
                 // Track usage in dashboard store
