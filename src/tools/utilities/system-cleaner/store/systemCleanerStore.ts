@@ -74,6 +74,62 @@ export interface SpaceLensNode {
     children?: SpaceLensNode[];
 }
 
+export interface HeavyApp {
+    pid: number;
+    name: string;
+    cpu: number;
+    mem: number;
+    user: string;
+    path: string;
+}
+
+export interface StartupItem {
+    name: string;
+    path: string;
+    type: string;
+    location?: string;
+    enabled?: boolean;
+}
+
+export interface InstalledApp {
+    name: string;
+    version?: string;
+    path: string;
+    size?: number;
+    installDate?: string | Date;
+    type: string;
+}
+
+export interface PerformanceData {
+    heavyApps: HeavyApp[];
+    memory: {
+        total: number;
+        used: number;
+        percent: number;
+    };
+    cpuLoad: number;
+}
+
+export interface PrivacyItem {
+    name: string;
+    path: string;
+    type: 'registry' | 'files';
+    count: number;
+    size: number;
+    sizeFormatted?: string;
+    files?: string[];
+    description: string;
+}
+
+export interface PrivacyScanResult {
+    registryEntries: PrivacyItem[];
+    activityHistory: PrivacyItem[];
+    spotlightHistory: PrivacyItem[];
+    quickLookCache: PrivacyItem[];
+    totalItems: number;
+    totalSize: number;
+}
+
 export interface SystemCleanerState {
     platformInfo: PlatformInfo | null;
     isScanning: boolean;
@@ -83,6 +139,10 @@ export interface SystemCleanerState {
     largeFiles: LargeFile[];
     duplicates: DuplicateGroup[];
     spaceLensData: SpaceLensNode | null;
+    performanceData: PerformanceData | null;
+    startupItems: StartupItem[];
+    installedApps: InstalledApp[];
+    privacyData: PrivacyScanResult | null;
     
     // Actions
     setPlatformInfo: (info: PlatformInfo) => void;
@@ -93,6 +153,10 @@ export interface SystemCleanerState {
     setLargeFiles: (files: LargeFile[]) => void;
     setDuplicates: (duplicates: DuplicateGroup[]) => void;
     setSpaceLensData: (data: SpaceLensNode | null) => void;
+    setPerformanceData: (data: PerformanceData | null) => void;
+    setStartupItems: (items: StartupItem[]) => void;
+    setInstalledApps: (apps: InstalledApp[]) => void;
+    setPrivacyData: (data: PrivacyScanResult | null) => void;
     clearResults: () => void;
 }
 
@@ -105,6 +169,10 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
     largeFiles: [],
     duplicates: [],
     spaceLensData: null,
+    performanceData: null,
+    startupItems: [],
+    installedApps: [],
+    privacyData: null,
 
     setPlatformInfo: (platformInfo) => set({ platformInfo }),
     startScan: () => set({ isScanning: true, scanProgress: 0, scanStatus: 'Starting scan...' }),
@@ -114,5 +182,20 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
     setLargeFiles: (largeFiles) => set({ largeFiles }),
     setDuplicates: (duplicates) => set({ duplicates }),
     setSpaceLensData: (spaceLensData) => set({ spaceLensData }),
-    clearResults: () => set({ results: null, largeFiles: [], duplicates: [], spaceLensData: null, scanProgress: 0, scanStatus: 'Idle' }),
+    setPerformanceData: (performanceData) => set({ performanceData }),
+    setStartupItems: (startupItems) => set({ startupItems }),
+    setInstalledApps: (installedApps) => set({ installedApps }),
+    setPrivacyData: (privacyData) => set({ privacyData }),
+    clearResults: () => set({ 
+        results: null, 
+        largeFiles: [], 
+        duplicates: [], 
+        spaceLensData: null, 
+        performanceData: null,
+        startupItems: [],
+        installedApps: [],
+        privacyData: null,
+        scanProgress: 0, 
+        scanStatus: 'Idle' 
+    }),
 }));

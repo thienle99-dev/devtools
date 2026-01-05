@@ -53,6 +53,19 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 	getLargeFiles: (options) => electron.ipcRenderer.invoke("cleaner:get-large-files", options),
 	getDuplicates: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-duplicates", scanPath),
 	getSpaceLens: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-space-lens", scanPath),
+	getPerformanceData: () => electron.ipcRenderer.invoke("cleaner:get-performance-data"),
+	getStartupItems: () => electron.ipcRenderer.invoke("cleaner:get-startup-items"),
+	toggleStartupItem: (item) => electron.ipcRenderer.invoke("cleaner:toggle-startup-item", item),
+	killProcess: (pid) => electron.ipcRenderer.invoke("cleaner:kill-process", pid),
+	getInstalledApps: () => electron.ipcRenderer.invoke("cleaner:get-installed-apps"),
+	uninstallApp: (app) => electron.ipcRenderer.invoke("cleaner:uninstall-app", app),
 	runCleanup: (files) => electron.ipcRenderer.invoke("cleaner:run-cleanup", files),
-	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram")
+	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram"),
+	scanPrivacy: () => electron.ipcRenderer.invoke("cleaner:scan-privacy"),
+	cleanPrivacy: (options) => electron.ipcRenderer.invoke("cleaner:clean-privacy", options),
+	onSpaceLensProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("cleaner:space-lens-progress", listener);
+		return () => electron.ipcRenderer.removeListener("cleaner:space-lens-progress", listener);
+	}
 });

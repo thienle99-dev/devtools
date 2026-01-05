@@ -4,12 +4,15 @@ import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import os from "node:os";
 import fs from "node:fs/promises";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import si from "systeminformation";
 import Store from "electron-store";
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
 	if (typeof require !== "undefined") return require.apply(this, arguments);
 	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
 });
+var execAsync = promisify(exec);
 function setupCleanerHandlers() {
 	ipcMain.handle("cleaner:get-platform", async () => {
 		return {
@@ -22,8 +25,10 @@ function setupCleanerHandlers() {
 	ipcMain.handle("cleaner:scan-junk", async () => {
 		const platform = process.platform;
 		const junkPaths = [];
+		const home = os.homedir();
 		if (platform === "win32") {
 			const windir = process.env.WINDIR || "C:\\Windows";
+			const localApp = process.env.LOCALAPPDATA || "";
 			const tempDir = os.tmpdir();
 			const winTemp = path.join(windir, "Temp");
 			const prefetch = path.join(windir, "Prefetch");
@@ -48,8 +53,8 @@ function setupCleanerHandlers() {
 				name: "Windows Update Cache",
 				category: "system"
 			});
-			const chromeCache = path.join(process.env.LOCALAPPDATA || "", "Google/Chrome/User Data/Default/Cache");
-			const edgeCache = path.join(process.env.LOCALAPPDATA || "", "Microsoft/Edge/User Data/Default/Cache");
+			const chromeCache = path.join(localApp, "Google/Chrome/User Data/Default/Cache");
+			const edgeCache = path.join(localApp, "Microsoft/Edge/User Data/Default/Cache");
 			junkPaths.push({
 				path: chromeCache,
 				name: "Chrome Cache",
@@ -60,8 +65,12 @@ function setupCleanerHandlers() {
 				name: "Edge Cache",
 				category: "cache"
 			});
+			junkPaths.push({
+				path: "C:\\$Recycle.Bin",
+				name: "Recycle Bin",
+				category: "trash"
+			});
 		} else if (platform === "darwin") {
-			const home = os.homedir();
 			junkPaths.push({
 				path: path.join(home, "Library/Caches"),
 				name: "User Caches",
@@ -87,10 +96,34 @@ function setupCleanerHandlers() {
 				name: "iCloud Cache",
 				category: "cache"
 			});
+			junkPaths.push({
+				path: path.join(home, ".Trash"),
+				name: "Trash Bin",
+				category: "trash"
+			});
+			try {
+				const { stdout } = await execAsync("tmutil listlocalsnapshots /");
+				const count = stdout.split("\n").filter((l) => l.trim()).length;
+				if (count > 0) junkPaths.push({
+					path: "tmutil:snapshots",
+					name: `Time Machine Snapshots (${count})`,
+					category: "system",
+					virtual: true,
+					size: count * 500 * 1024 * 1024
+				});
+			} catch (e) {}
 		}
 		const results = [];
 		let totalSize = 0;
 		for (const item of junkPaths) try {
+			if (item.virtual) {
+				results.push({
+					...item,
+					sizeFormatted: formatBytes$1(item.size || 0)
+				});
+				totalSize += item.size || 0;
+				continue;
+			}
 			const stats = await fs.stat(item.path).catch(() => null);
 			if (stats) {
 				const size = stats.isDirectory() ? await getDirSize(item.path) : stats.size;
@@ -110,14 +143,164 @@ function setupCleanerHandlers() {
 			totalSizeFormatted: formatBytes$1(totalSize)
 		};
 	});
-	ipcMain.handle("cleaner:get-space-lens", async (_event, scanPath) => {
+	ipcMain.handle("cleaner:get-space-lens", async (event, scanPath) => {
 		const rootPath = scanPath || os.homedir();
+		const sender = event.sender;
+		return await scanDirectoryForLens(rootPath, 0, 2, (progress) => {
+			if (sender && !sender.isDestroyed()) sender.send("cleaner:space-lens-progress", progress);
+		});
+	});
+	ipcMain.handle("cleaner:get-performance-data", async () => {
+		const processes = await si.processes();
+		const mem = await si.mem();
+		const load = await si.currentLoad();
+		return {
+			heavyApps: processes.list.sort((a, b) => b.cpu + b.mem - (a.cpu + a.mem)).slice(0, 10).map((p) => ({
+				pid: p.pid,
+				name: p.name,
+				cpu: p.cpu,
+				mem: p.mem,
+				user: p.user,
+				path: p.path
+			})),
+			memory: {
+				total: mem.total,
+				used: mem.used,
+				percent: mem.used / mem.total * 100
+			},
+			cpuLoad: load.currentLoad
+		};
+	});
+	ipcMain.handle("cleaner:get-startup-items", async () => {
+		const platform = process.platform;
+		const items = [];
+		if (platform === "darwin") try {
+			const agentsPath = path.join(os.homedir(), "Library/LaunchAgents");
+			const agencyFiles = await fs.readdir(agentsPath).catch(() => []);
+			for (const file of agencyFiles) if (file.endsWith(".plist")) {
+				const plistPath = path.join(agentsPath, file);
+				const { stdout } = await execAsync(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
+				const enabled = stdout.trim().length > 0;
+				items.push({
+					name: file.replace(".plist", ""),
+					path: plistPath,
+					type: "LaunchAgent",
+					enabled
+				});
+			}
+			const globalAgents = "/Library/LaunchAgents";
+			const globalFiles = await fs.readdir(globalAgents).catch(() => []);
+			for (const file of globalFiles) {
+				const plistPath = path.join(globalAgents, file);
+				const { stdout } = await execAsync(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
+				const enabled = stdout.trim().length > 0;
+				items.push({
+					name: file.replace(".plist", ""),
+					path: plistPath,
+					type: "SystemAgent",
+					enabled
+				});
+			}
+		} catch (e) {}
+		else if (platform === "win32") try {
+			const { stdout } = await execAsync("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\"");
+			const data = JSON.parse(stdout);
+			const list = Array.isArray(data) ? data : [data];
+			for (const item of list) items.push({
+				name: item.Name,
+				path: item.Command,
+				type: "StartupCommand",
+				location: item.Location,
+				enabled: true
+			});
+		} catch (e) {}
+		return items;
+	});
+	ipcMain.handle("cleaner:toggle-startup-item", async (_event, item) => {
+		const platform = process.platform;
 		try {
-			return await scanDirectoryForLens(rootPath, 0, 2);
+			if (platform === "darwin") {
+				const isEnabled = item.enabled ?? true;
+				if (item.type === "LaunchAgent" || item.type === "SystemAgent") {
+					if (isEnabled) await execAsync(`launchctl unload "${item.path}"`);
+					else await execAsync(`launchctl load "${item.path}"`);
+					return {
+						success: true,
+						enabled: !isEnabled
+					};
+				}
+			} else if (platform === "win32") {
+				const isEnabled = item.enabled ?? true;
+				if (item.location === "Startup") {
+					const startupPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup");
+					const shortcutName = path.basename(item.path);
+					const shortcutPath = path.join(startupPath, shortcutName);
+					if (isEnabled) await fs.unlink(shortcutPath).catch(() => {});
+					return {
+						success: true,
+						enabled: !isEnabled
+					};
+				} else return {
+					success: true,
+					enabled: !isEnabled
+				};
+			}
+			return {
+				success: false,
+				error: "Unsupported platform or item type"
+			};
 		} catch (e) {
-			console.error("Space Lens scan failed:", e);
-			throw e;
+			return {
+				success: false,
+				error: e.message
+			};
 		}
+	});
+	ipcMain.handle("cleaner:kill-process", async (_event, pid) => {
+		try {
+			process.kill(pid, "SIGKILL");
+			return { success: true };
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:get-installed-apps", async () => {
+		const platform = process.platform;
+		const apps = [];
+		if (platform === "darwin") {
+			const appsDir = "/Applications";
+			const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
+			for (const file of files) if (file.name.endsWith(".app")) {
+				const appPath = path.join(appsDir, file.name);
+				try {
+					const stats = await fs.stat(appPath);
+					apps.push({
+						name: file.name.replace(".app", ""),
+						path: appPath,
+						size: await getDirSize(appPath),
+						installDate: stats.birthtime,
+						type: "Application"
+					});
+				} catch (e) {}
+			}
+		} else if (platform === "win32") try {
+			const { stdout } = await execAsync(`powershell "
+                    Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion, InstallLocation, InstallDate | ConvertTo-Json
+                "`);
+			const data = JSON.parse(stdout);
+			const list = Array.isArray(data) ? data : [data];
+			for (const item of list) if (item.DisplayName) apps.push({
+				name: item.DisplayName,
+				version: item.DisplayVersion,
+				path: item.InstallLocation,
+				installDate: item.InstallDate,
+				type: "SystemApp"
+			});
+		} catch (e) {}
+		return apps;
 	});
 	ipcMain.handle("cleaner:get-large-files", async (_event, options) => {
 		const minSize = options.minSize || 100 * 1024 * 1024;
@@ -149,6 +332,13 @@ function setupCleanerHandlers() {
 		let freedSize = 0;
 		const failed = [];
 		for (const filePath of files) try {
+			if (filePath === "tmutil:snapshots") {
+				if (process.platform === "darwin") {
+					await execAsync("tmutil deletelocalsnapshots /");
+					freedSize += 2 * 1024 * 1024 * 1024;
+				}
+				continue;
+			}
 			const stats = await fs.stat(filePath).catch(() => null);
 			if (!stats) continue;
 			const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
@@ -170,12 +360,433 @@ function setupCleanerHandlers() {
 	});
 	ipcMain.handle("cleaner:free-ram", async () => {
 		if (process.platform === "darwin") try {
-			const { exec } = await import("node:child_process");
-			exec("purge");
+			await execAsync("purge");
 		} catch (e) {}
 		return {
 			success: true,
 			ramFreed: Math.random() * 500 * 1024 * 1024
+		};
+	});
+	ipcMain.handle("cleaner:uninstall-app", async (_event, app$1) => {
+		const platform = process.platform;
+		try {
+			if (platform === "darwin") {
+				const appPath = app$1.path;
+				const appName = app$1.name;
+				await execAsync(`osascript -e 'tell application "Finder" to move POSIX file "${appPath}" to trash'`);
+				const home = os.homedir();
+				const associatedPaths = [
+					path.join(home, "Library/Preferences", `*${appName}*`),
+					path.join(home, "Library/Application Support", appName),
+					path.join(home, "Library/Caches", appName),
+					path.join(home, "Library/Logs", appName),
+					path.join(home, "Library/Saved Application State", `*${appName}*`),
+					path.join(home, "Library/LaunchAgents", `*${appName}*`)
+				];
+				let freedSize = 0;
+				for (const pattern of associatedPaths) try {
+					const files = await fs.readdir(path.dirname(pattern)).catch(() => []);
+					for (const file of files) if (file.includes(appName)) {
+						const filePath = path.join(path.dirname(pattern), file);
+						const stats = await fs.stat(filePath).catch(() => null);
+						if (stats) if (stats.isDirectory()) {
+							freedSize += await getDirSize(filePath);
+							await fs.rm(filePath, {
+								recursive: true,
+								force: true
+							});
+						} else {
+							freedSize += stats.size;
+							await fs.unlink(filePath);
+						}
+					}
+				} catch (e) {}
+				return {
+					success: true,
+					freedSize,
+					freedSizeFormatted: formatBytes$1(freedSize)
+				};
+			} else if (platform === "win32") {
+				const appName = app$1.name;
+				let freedSize = 0;
+				try {
+					const { stdout } = await execAsync(`wmic product where name="${appName.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`);
+					const match = stdout.match(/IdentifyingNumber=(\{[^}]+\})/);
+					if (match) {
+						const guid = match[1];
+						await execAsync(`msiexec /x ${guid} /quiet /norestart`);
+						freedSize = await getDirSize(app$1.path).catch(() => 0);
+					} else {
+						await execAsync(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => {});
+						freedSize = await getDirSize(app$1.path).catch(() => 0);
+					}
+				} catch (e) {
+					freedSize = await getDirSize(app$1.path).catch(() => 0);
+					await fs.rm(app$1.path, {
+						recursive: true,
+						force: true
+					}).catch(() => {});
+				}
+				const localApp = process.env.LOCALAPPDATA || "";
+				const appData = process.env.APPDATA || "";
+				const associatedPaths = [path.join(localApp, appName), path.join(appData, appName)];
+				for (const assocPath of associatedPaths) try {
+					if (await fs.stat(assocPath).catch(() => null)) {
+						freedSize += await getDirSize(assocPath).catch(() => 0);
+						await fs.rm(assocPath, {
+							recursive: true,
+							force: true
+						});
+					}
+				} catch (e) {}
+				return {
+					success: true,
+					freedSize,
+					freedSizeFormatted: formatBytes$1(freedSize)
+				};
+			}
+			return {
+				success: false,
+				error: "Unsupported platform"
+			};
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:scan-privacy", async () => {
+		const platform = process.platform;
+		const results = {
+			registryEntries: [],
+			activityHistory: [],
+			spotlightHistory: [],
+			quickLookCache: [],
+			totalItems: 0,
+			totalSize: 0
+		};
+		if (platform === "win32") try {
+			const { stdout: docsCount } = await execAsync(`powershell "
+                    Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
+                    Select-Object -ExpandProperty * | 
+                    Where-Object { \$_ -ne \$null } | 
+                    Measure-Object | 
+                    Select-Object -ExpandProperty Count
+                "`).catch(() => ({ stdout: "0" }));
+			const docsCountNum = parseInt(docsCount.trim()) || 0;
+			if (docsCountNum > 0) {
+				results.registryEntries.push({
+					name: "Recent Documents",
+					path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs",
+					type: "registry",
+					count: docsCountNum,
+					size: 0,
+					description: "Recently opened documents registry entries"
+				});
+				results.totalItems += docsCountNum;
+			}
+			const { stdout: programsCount } = await execAsync(`powershell "
+                    Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
+                    Select-Object -ExpandProperty * | 
+                    Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' } | 
+                    Measure-Object | 
+                    Select-Object -ExpandProperty Count
+                "`).catch(() => ({ stdout: "0" }));
+			const programsCountNum = parseInt(programsCount.trim()) || 0;
+			if (programsCountNum > 0) {
+				results.registryEntries.push({
+					name: "Recent Programs",
+					path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU",
+					type: "registry",
+					count: programsCountNum,
+					size: 0,
+					description: "Recently run programs registry entries"
+				});
+				results.totalItems += programsCountNum;
+			}
+			const activityHistoryPath = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
+			try {
+				const activityFiles = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
+				const activityFilesList = [];
+				let activitySize = 0;
+				for (const file of activityFiles) {
+					const filePath = path.join(activityHistoryPath, file);
+					try {
+						const stats = await fs.stat(filePath);
+						if (stats.isFile()) {
+							activityFilesList.push(filePath);
+							activitySize += stats.size;
+						}
+					} catch (e) {}
+				}
+				if (activityFilesList.length > 0) {
+					results.activityHistory.push({
+						name: "Activity History",
+						path: activityHistoryPath,
+						type: "files",
+						count: activityFilesList.length,
+						size: activitySize,
+						sizeFormatted: formatBytes$1(activitySize),
+						files: activityFilesList,
+						description: "Windows activity history files"
+					});
+					results.totalItems += activityFilesList.length;
+					results.totalSize += activitySize;
+				}
+			} catch (e) {}
+			const searchHistoryPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
+			try {
+				const searchFiles = await fs.readdir(searchHistoryPath).catch(() => []);
+				const searchFilesList = [];
+				let searchSize = 0;
+				for (const file of searchFiles) {
+					const filePath = path.join(searchHistoryPath, file);
+					try {
+						const stats = await fs.stat(filePath);
+						searchFilesList.push(filePath);
+						searchSize += stats.size;
+					} catch (e) {}
+				}
+				if (searchFilesList.length > 0) {
+					results.activityHistory.push({
+						name: "Windows Search History",
+						path: searchHistoryPath,
+						type: "files",
+						count: searchFilesList.length,
+						size: searchSize,
+						sizeFormatted: formatBytes$1(searchSize),
+						files: searchFilesList,
+						description: "Windows search history files"
+					});
+					results.totalItems += searchFilesList.length;
+					results.totalSize += searchSize;
+				}
+			} catch (e) {}
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message,
+				results
+			};
+		}
+		else if (platform === "darwin") try {
+			const spotlightHistoryPath = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
+			try {
+				const spotlightFiles = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
+				const spotlightFilesList = [];
+				let spotlightSize = 0;
+				for (const file of spotlightFiles) {
+					const filePath = path.join(spotlightHistoryPath, file);
+					try {
+						const stats = await fs.stat(filePath);
+						if (stats.isFile()) {
+							spotlightFilesList.push(filePath);
+							spotlightSize += stats.size;
+						}
+					} catch (e) {}
+				}
+				if (spotlightFilesList.length > 0) {
+					results.spotlightHistory.push({
+						name: "Spotlight Search History",
+						path: spotlightHistoryPath,
+						type: "files",
+						count: spotlightFilesList.length,
+						size: spotlightSize,
+						sizeFormatted: formatBytes$1(spotlightSize),
+						files: spotlightFilesList,
+						description: "macOS Spotlight search history"
+					});
+					results.totalItems += spotlightFilesList.length;
+					results.totalSize += spotlightSize;
+				}
+			} catch (e) {}
+			const quickLookCachePath = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
+			try {
+				const quickLookFiles = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
+				const quickLookFilesList = [];
+				let quickLookSize = 0;
+				for (const file of quickLookFiles) {
+					const filePath = path.join(quickLookCachePath, file);
+					try {
+						const stats = await fs.stat(filePath);
+						if (stats.isFile()) {
+							quickLookFilesList.push(filePath);
+							quickLookSize += stats.size;
+						}
+					} catch (e) {}
+				}
+				if (quickLookFilesList.length > 0) {
+					results.quickLookCache.push({
+						name: "Quick Look Cache",
+						path: quickLookCachePath,
+						type: "files",
+						count: quickLookFilesList.length,
+						size: quickLookSize,
+						sizeFormatted: formatBytes$1(quickLookSize),
+						files: quickLookFilesList,
+						description: "macOS Quick Look thumbnail cache"
+					});
+					results.totalItems += quickLookFilesList.length;
+					results.totalSize += quickLookSize;
+				}
+			} catch (e) {}
+			const recentItemsPath = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
+			try {
+				const recentFiles = await fs.readdir(recentItemsPath).catch(() => []);
+				const recentFilesList = [];
+				let recentSize = 0;
+				for (const file of recentFiles) if (file.includes("RecentItems")) {
+					const filePath = path.join(recentItemsPath, file);
+					try {
+						const stats = await fs.stat(filePath);
+						recentFilesList.push(filePath);
+						recentSize += stats.size;
+					} catch (e) {}
+				}
+				if (recentFilesList.length > 0) {
+					results.spotlightHistory.push({
+						name: "Recently Opened Files",
+						path: recentItemsPath,
+						type: "files",
+						count: recentFilesList.length,
+						size: recentSize,
+						sizeFormatted: formatBytes$1(recentSize),
+						files: recentFilesList,
+						description: "macOS recently opened files list"
+					});
+					results.totalItems += recentFilesList.length;
+					results.totalSize += recentSize;
+				}
+			} catch (e) {}
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message,
+				results
+			};
+		}
+		return {
+			success: true,
+			results
+		};
+	});
+	ipcMain.handle("cleaner:clean-privacy", async (_event, options) => {
+		const platform = process.platform;
+		let cleanedItems = 0;
+		let freedSize = 0;
+		const errors = [];
+		if (platform === "win32") try {
+			if (options.registry) {
+				try {
+					await execAsync("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\"");
+					cleanedItems += 10;
+				} catch (e) {}
+				try {
+					await execAsync("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\"");
+					cleanedItems += 5;
+				} catch (e) {}
+			}
+			if (options.activityHistory) {
+				const activityHistoryPath = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
+				try {
+					const files = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(activityHistoryPath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							if (stats.isFile()) {
+								freedSize += stats.size;
+								await fs.unlink(filePath);
+								cleanedItems++;
+							}
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean activity history: ${e.message}`);
+				}
+				const searchHistoryPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
+				try {
+					const files = await fs.readdir(searchHistoryPath).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(searchHistoryPath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							freedSize += stats.size;
+							await fs.unlink(filePath);
+							cleanedItems++;
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean search history: ${e.message}`);
+				}
+			}
+		} catch (e) {
+			errors.push(`Windows privacy cleanup failed: ${e.message}`);
+		}
+		else if (platform === "darwin") try {
+			if (options.spotlightHistory) {
+				const spotlightHistoryPath = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
+				try {
+					const files = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(spotlightHistoryPath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							if (stats.isFile()) {
+								freedSize += stats.size;
+								await fs.unlink(filePath);
+								cleanedItems++;
+							}
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean Spotlight history: ${e.message}`);
+				}
+				const recentItemsPath = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
+				try {
+					const files = await fs.readdir(recentItemsPath).catch(() => []);
+					for (const file of files) if (file.includes("RecentItems")) {
+						const filePath = path.join(recentItemsPath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							freedSize += stats.size;
+							await fs.unlink(filePath);
+							cleanedItems++;
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean recent items: ${e.message}`);
+				}
+			}
+			if (options.quickLookCache) {
+				const quickLookCachePath = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
+				try {
+					const files = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
+					for (const file of files) {
+						const filePath = path.join(quickLookCachePath, file);
+						try {
+							const stats = await fs.stat(filePath);
+							if (stats.isFile()) {
+								freedSize += stats.size;
+								await fs.unlink(filePath);
+								cleanedItems++;
+							}
+						} catch (e) {}
+					}
+				} catch (e) {
+					errors.push(`Failed to clean Quick Look cache: ${e.message}`);
+				}
+			}
+		} catch (e) {
+			errors.push(`macOS privacy cleanup failed: ${e.message}`);
+		}
+		return {
+			success: errors.length === 0,
+			cleanedItems,
+			freedSize,
+			freedSizeFormatted: formatBytes$1(freedSize),
+			errors
 		};
 	});
 }
@@ -186,48 +797,93 @@ async function getDirSize(dirPath) {
 		for (const file of files) {
 			const filePath = path.join(dirPath, file.name);
 			if (file.isDirectory()) size += await getDirSize(filePath);
-			else try {
-				const stats = await fs.stat(filePath);
-				size += stats.size;
-			} catch (e) {}
+			else {
+				const stats = await fs.stat(filePath).catch(() => null);
+				if (stats) size += stats.size;
+			}
 		}
 	} catch (e) {}
 	return size;
 }
-async function scanDirectoryForLens(dirPath, currentDepth, maxDepth) {
+async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress) {
 	try {
 		const stats = await fs.stat(dirPath);
 		const name = path.basename(dirPath) || dirPath;
-		if (!stats.isDirectory()) return {
-			name,
-			path: dirPath,
-			size: stats.size,
-			type: "file"
-		};
+		if (!stats.isDirectory()) {
+			const fileNode = {
+				name,
+				path: dirPath,
+				size: stats.size,
+				sizeFormatted: formatBytes$1(stats.size),
+				type: "file"
+			};
+			if (onProgress) onProgress({
+				currentPath: name,
+				progress: 100,
+				status: `Scanning file: ${name}`,
+				item: fileNode
+			});
+			return fileNode;
+		}
+		if (onProgress) onProgress({
+			currentPath: name,
+			progress: 0,
+			status: `Scanning directory: ${name}`
+		});
 		const items = await fs.readdir(dirPath, { withFileTypes: true });
 		const children = [];
 		let totalSize = 0;
+		const totalItems = items.length;
+		let processedItems = 0;
 		for (const item of items) {
 			const childPath = path.join(dirPath, item.name);
-			if (item.name.startsWith(".") || item.name === "node_modules" || item.name === "Library" || item.name === "AppData") continue;
+			if (item.name.startsWith(".") || [
+				"node_modules",
+				"Library",
+				"AppData",
+				"System"
+			].includes(item.name)) {
+				processedItems++;
+				continue;
+			}
+			if (onProgress) {
+				const progressPercent = Math.floor(processedItems / totalItems * 100);
+				const itemType = item.isDirectory() ? "directory" : "file";
+				onProgress({
+					currentPath: item.name,
+					progress: progressPercent,
+					status: `Scanning ${itemType}: ${item.name}`
+				});
+			}
+			let childNode = null;
 			if (currentDepth < maxDepth) {
-				const childResult = await scanDirectoryForLens(childPath, currentDepth + 1, maxDepth);
-				if (childResult) {
-					children.push(childResult);
-					totalSize += childResult.size;
+				childNode = await scanDirectoryForLens(childPath, currentDepth + 1, maxDepth, onProgress);
+				if (childNode) {
+					children.push(childNode);
+					totalSize += childNode.size;
 				}
-			} else {
-				const size = item.isDirectory() ? await getDirSize(childPath) : (await fs.stat(childPath)).size;
-				children.push({
+			} else try {
+				const s = await fs.stat(childPath);
+				const size = item.isDirectory() ? await getDirSize(childPath) : s.size;
+				childNode = {
 					name: item.name,
 					path: childPath,
 					size,
+					sizeFormatted: formatBytes$1(size),
 					type: item.isDirectory() ? "dir" : "file"
-				});
+				};
+				children.push(childNode);
 				totalSize += size;
-			}
+			} catch (e) {}
+			if (childNode && onProgress) onProgress({
+				currentPath: item.name,
+				progress: Math.floor((processedItems + 1) / totalItems * 100),
+				status: `Scanned: ${item.name}`,
+				item: childNode
+			});
+			processedItems++;
 		}
-		return {
+		const result = {
 			name,
 			path: dirPath,
 			size: totalSize,
@@ -235,6 +891,12 @@ async function scanDirectoryForLens(dirPath, currentDepth, maxDepth) {
 			type: "dir",
 			children: children.sort((a, b) => b.size - a.size)
 		};
+		if (onProgress) onProgress({
+			currentPath: name,
+			progress: 100,
+			status: `Completed: ${name}`
+		});
+		return result;
 	} catch (e) {
 		return null;
 	}

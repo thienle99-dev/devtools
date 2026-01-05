@@ -62,6 +62,19 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   getLargeFiles: (options: any) => ipcRenderer.invoke('cleaner:get-large-files', options),
   getDuplicates: (scanPath: string) => ipcRenderer.invoke('cleaner:get-duplicates', scanPath),
   getSpaceLens: (scanPath: string) => ipcRenderer.invoke('cleaner:get-space-lens', scanPath),
+  getPerformanceData: () => ipcRenderer.invoke('cleaner:get-performance-data'),
+  getStartupItems: () => ipcRenderer.invoke('cleaner:get-startup-items'),
+  toggleStartupItem: (item: any) => ipcRenderer.invoke('cleaner:toggle-startup-item', item),
+  killProcess: (pid: number) => ipcRenderer.invoke('cleaner:kill-process', pid),
+  getInstalledApps: () => ipcRenderer.invoke('cleaner:get-installed-apps'),
+  uninstallApp: (app: any) => ipcRenderer.invoke('cleaner:uninstall-app', app),
   runCleanup: (files: string[]) => ipcRenderer.invoke('cleaner:run-cleanup', files),
   freeRam: () => ipcRenderer.invoke('cleaner:free-ram'),
+  scanPrivacy: () => ipcRenderer.invoke('cleaner:scan-privacy'),
+  cleanPrivacy: (options: any) => ipcRenderer.invoke('cleaner:clean-privacy', options),
+  onSpaceLensProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('cleaner:space-lens-progress', listener);
+    return () => ipcRenderer.removeListener('cleaner:space-lens-progress', listener);
+  },
 })

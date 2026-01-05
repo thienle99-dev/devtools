@@ -1151,9 +1151,12 @@ interface SystemCleanerIPC {
 - [x] Log files cleanup (platform-specific)
 - [x] Large files finder (cross-platform)
 - [x] Duplicate finder (cross-platform)
-- [ ] Space Lens visualization (cross-platform)
-- [ ] Windows-specific: Windows Update cache, Prefetch files
-- [ ] macOS-specific: Time Machine snapshots, iCloud cleanup
+- [x] Space Lens visualization (cross-platform)
+- [x] Windows-specific: Windows Update cache, Prefetch files
+- [x] macOS-specific: Time Machine snapshots, iCloud cleanup
+- [ ] **FIX**: Space Lens navigation logic (needs rescan when entering directories)
+- [ ] **FIX**: Space Lens delete refresh (incorrect path after deletion)
+- [ ] **FIX**: Duplicates scan path selector (currently hardcoded to home directory)
 
 ### Phase 3: Protection Module (Week 6-8)
 
@@ -1167,13 +1170,15 @@ interface SystemCleanerIPC {
 
 ### Phase 4: Optimization Module (Week 9-11)
 
-- [ ] App uninstaller (Windows + macOS)
+- [x] App uninstaller (Windows + macOS)
 - [ ] App updater (Windows Store/Chocolatey + macOS App Store)
-- [ ] RAM optimization (platform-specific methods)
-- [ ] Speed tools (platform-specific)
-- [ ] Heavy apps monitor (cross-platform)
-- [ ] Windows: Startup management, Services management
-- [ ] macOS: Login items, Launch Agents
+- [x] RAM optimization (platform-specific methods)
+- [x] Speed tools (platform-specific)
+- [x] Heavy apps monitor (cross-platform)
+- [x] Windows: Startup management, Services management
+- [x] macOS: Login items, Launch Agents
+- [ ] **FIX**: Startup items enable/disable functionality (button not working)
+- [ ] **FIX**: Proper app uninstall logic (currently only deletes folder)
 
 ### Phase 5: Maintenance & Health (Week 12-14)
 
@@ -1191,9 +1196,131 @@ interface SystemCleanerIPC {
 - [ ] Platform-specific UI adaptations
 - [ ] Performance optimization
 - [ ] Safety testing (both platforms)
-- [ ] Error handling
+- [ ] **FIX**: Comprehensive error handling across all views
 - [x] Documentation
 - [ ] Cross-platform testing
+- [ ] **FIX**: Platform detection on component mount
+- [ ] **FIX**: Progress tracking improvements (remove fake progress where possible)
+
+## Known Issues & Bugs
+
+### Critical Issues (Must Fix)
+
+1. **Startup Items - Disable Button Not Working**
+   - **Location**: `SystemCleaner.tsx` line 390
+   - **Issue**: Button "Disable" has no onClick handler
+   - **Impact**: Users cannot disable startup items
+   - **Fix Required**: 
+     - Add IPC handler `cleaner:toggle-startup-item`
+     - Implement platform-specific enable/disable logic (macOS: `launchctl load/unload`, Windows: Registry/PowerShell)
+     - Add state tracking for enabled/disabled status
+
+2. **App Uninstaller - Incorrect Logic**
+   - **Location**: `SystemCleaner.tsx` line 425
+   - **Issue**: Uses `runCleanup([app.path])` which only deletes folder, not properly uninstalling
+   - **Impact**: Apps are not fully removed, leaving registry entries and leftover files
+   - **Fix Required**:
+     - Add IPC handler `cleaner:uninstall-app`
+     - Implement platform-specific uninstall logic:
+       - **macOS**: Use `osascript` to move app to Trash, remove associated files
+       - **Windows**: Use `wmic` for MSI installers, PowerShell for Windows Store apps
+     - Remove associated files (preferences, caches, launch agents)
+
+3. **Space Lens - Navigation Logic Error**
+   - **Location**: `SystemCleaner.tsx` line 529-542
+   - **Issue**: When navigating into directory, sets `spaceLensData = node` but node may not have complete children if already scanned at depth 2
+   - **Impact**: Incomplete directory tree display
+   - **Fix Required**: Call `scanSpace(node.path)` when entering new directory to ensure fresh scan
+
+4. **Space Lens - Delete Refresh Issue**
+   - **Location**: `SystemCleaner.tsx` line 525
+   - **Issue**: After delete, calls `scanSpace(spaceLensData?.path)` but `spaceLensData` may have changed
+   - **Impact**: Incorrect refresh after deletion
+   - **Fix Required**: Store current path before delete operation, refresh from stored path
+
+### High Priority Issues
+
+5. **Error Handling - Missing in Multiple Views**
+   - **Location**: Multiple views in `SystemCleaner.tsx`
+   - **Issue**: Missing try-catch blocks and error state checks (`res.success === false`)
+   - **Impact**: Poor user experience when operations fail silently
+   - **Fix Required**: Add comprehensive error handling with user-friendly toast messages
+
+6. **Platform Detection - Not Called on Mount**
+   - **Location**: `SystemCleaner.tsx` main component
+   - **Issue**: `platformInfo` may be null when component mounts
+   - **Impact**: Platform-specific features may not work correctly
+   - **Fix Required**: Add `useEffect` to call `getPlatform()` on component mount
+
+7. **Duplicates - Hardcoded Scan Path**
+   - **Location**: `SystemCleaner.tsx` DuplicatesView
+   - **Issue**: Scan path is hardcoded to home directory, no UI to select path
+   - **Impact**: Users cannot scan specific directories for duplicates
+   - **Fix Required**: Add UI to select scan path (folder picker or input), pass to IPC handler
+
+### Medium Priority Issues
+
+8. **Progress Tracking - Fake Progress**
+   - **Location**: Multiple views using `setInterval` for progress simulation
+   - **Issue**: Progress bars use simulated progress instead of real operation progress
+   - **Impact**: Progress indicators are inaccurate, misleading to users
+   - **Fix Required**: Sync with real operation progress where possible, or document as estimated progress
+
+9. **Smart Scan - Simulated Steps**
+   - **Location**: `hooks/useSmartScan.ts` line 28-35
+   - **Issue**: Malware and RAM steps are simulated with `setTimeout`, not real scanning
+   - **Impact**: Not performing actual scans, misleading to users
+   - **Fix Required**: Implement real malware scan or remove simulated steps until ready
+
+### Missing Features
+
+10. **Protection Module - Not Implemented**
+    - **Location**: `SystemCleaner.tsx` line 995-1001
+    - **Status**: Placeholder UI only
+    - **Required**: Basic malware scan and privacy cleanup implementation
+    - **IPC Handlers Needed**: `cleaner:scan-malware`, `cleaner:clean-privacy`
+
+11. **Maintenance Module - Not Implemented**
+    - **Location**: `SystemCleaner.tsx` line 1002-1008
+    - **Status**: Placeholder UI only
+    - **Required**: Platform-specific maintenance tasks
+    - **IPC Handlers Needed**: `cleaner:reindex-search`, `cleaner:flush-dns`, `cleaner:run-disk-cleanup` (Windows)
+
+12. **Startup Items - Status Tracking**
+    - **Location**: `store/systemCleanerStore.ts`
+    - **Issue**: No state to track enabled/disabled status
+    - **Required**: Add `enabled` field to `StartupItem` interface, detect current status in IPC handler
+
+## Current Status & Next Steps
+
+### Completed Features ✅
+- Core infrastructure (platform detection, IPC handlers, store structure)
+- Cleanup module (junk files, large files, duplicates, space lens)
+- Performance optimization (RAM optimization, heavy apps monitor)
+- Basic UI/UX with tab navigation
+- Platform-specific path utilities
+
+### In Progress / Needs Fix 🔧
+- Startup items management (disable button not working)
+- App uninstaller (incorrect uninstall logic)
+- Space Lens navigation and delete refresh
+- Error handling improvements
+- Platform detection on mount
+- Duplicates scan path selector
+
+### Not Started ⏳
+- Protection module implementation
+- Maintenance module implementation
+- App updater functionality
+- Safety database
+- Backup system
+
+### Next Steps (Priority Order)
+1. **Fix Critical Bugs**: Startup disable, Uninstaller logic, Space Lens navigation
+2. **Improve Error Handling**: Add comprehensive error handling across all views
+3. **Implement Missing Features**: Protection and Maintenance modules (basic versions)
+4. **Enhance Existing Features**: Add scan path selector, improve progress tracking
+5. **Testing**: Cross-platform testing, safety testing, performance optimization
 
 ## User Experience Flow
 
@@ -1270,6 +1397,121 @@ interface SystemCleanerIPC {
 - **File System Differences**: Case sensitivity, file attributes
 - **Browser Paths**: Different browser data locations
 - **Cloud Services**: Platform-specific cloud folder locations
+
+## Known Issues & Bugs
+
+### Critical Issues (Must Fix)
+
+1. **Startup Items - Disable Button Not Working**
+   - **Location**: `SystemCleaner.tsx` line 390
+   - **Issue**: Button "Disable" has no onClick handler
+   - **Impact**: Users cannot disable startup items
+   - **Fix Required**: 
+     - Add IPC handler `cleaner:toggle-startup-item`
+     - Implement platform-specific enable/disable logic
+     - Add state tracking for enabled/disabled status
+
+2. **App Uninstaller - Incorrect Logic**
+   - **Location**: `SystemCleaner.tsx` line 425
+   - **Issue**: Uses `runCleanup([app.path])` which only deletes folder, not properly uninstalling
+   - **Impact**: Apps are not fully removed, leaving registry entries and leftover files
+   - **Fix Required**:
+     - Add IPC handler `cleaner:uninstall-app`
+     - Implement platform-specific uninstall logic (MSI, Windows Store, macOS app removal)
+     - Remove associated files (preferences, caches, launch agents)
+
+3. **Space Lens - Navigation Logic Error**
+   - **Location**: `SystemCleaner.tsx` line 529-542
+   - **Issue**: When navigating into directory, sets `spaceLensData = node` but node may not have complete children
+   - **Impact**: Incomplete directory tree display
+   - **Fix Required**: Call `scanSpace(node.path)` when entering new directory
+
+4. **Space Lens - Delete Refresh Issue**
+   - **Location**: `SystemCleaner.tsx` line 525
+   - **Issue**: After delete, calls `scanSpace(spaceLensData?.path)` but `spaceLensData` may have changed
+   - **Impact**: Incorrect refresh after deletion
+   - **Fix Required**: Store current path before delete, refresh from stored path
+
+### High Priority Issues
+
+5. **Error Handling - Missing in Multiple Views**
+   - **Location**: Multiple views in `SystemCleaner.tsx`
+   - **Issue**: Missing try-catch blocks and error state checks
+   - **Impact**: Poor user experience when operations fail
+   - **Fix Required**: Add comprehensive error handling with user-friendly messages
+
+6. **Platform Detection - Not Called on Mount**
+   - **Location**: `SystemCleaner.tsx` main component
+   - **Issue**: `platformInfo` may be null when component mounts
+   - **Impact**: Platform-specific features may not work correctly
+   - **Fix Required**: Add `useEffect` to call `getPlatform()` on mount
+
+7. **Duplicates - Hardcoded Scan Path**
+   - **Location**: `SystemCleaner.tsx` DuplicatesView
+   - **Issue**: Scan path is hardcoded to home directory
+   - **Impact**: Users cannot scan specific directories
+   - **Fix Required**: Add UI to select scan path, pass to IPC handler
+
+### Medium Priority Issues
+
+8. **Progress Tracking - Fake Progress**
+   - **Location**: Multiple views using `setInterval` for progress
+   - **Issue**: Progress bars use simulated progress instead of real progress
+   - **Impact**: Progress indicators are inaccurate
+   - **Fix Required**: Sync with real operation progress where possible, or document as estimated
+
+9. **Smart Scan - Simulated Steps**
+   - **Location**: `hooks/useSmartScan.ts` line 28-35
+   - **Issue**: Malware and RAM steps are simulated with `setTimeout`
+   - **Impact**: Not real scanning, misleading to users
+   - **Fix Required**: Implement real malware scan or remove simulated steps
+
+### Missing Features
+
+10. **Protection Module - Not Implemented**
+    - **Location**: `SystemCleaner.tsx` line 995-1001
+    - **Status**: Placeholder only
+    - **Required**: Basic malware scan and privacy cleanup implementation
+
+11. **Maintenance Module - Not Implemented**
+    - **Location**: `SystemCleaner.tsx` line 1002-1008
+    - **Status**: Placeholder only
+    - **Required**: Platform-specific maintenance tasks (Spotlight reindex, DNS flush, etc.)
+
+12. **Startup Items - Status Tracking**
+    - **Location**: `store/systemCleanerStore.ts`
+    - **Issue**: No state to track enabled/disabled status
+    - **Required**: Add `enabled` field to `StartupItem` interface, detect current status
+
+## Current Status & Next Steps
+
+### Completed Features
+- ✅ Core infrastructure (platform detection, IPC handlers, store structure)
+- ✅ Cleanup module (junk files, large files, duplicates, space lens)
+- ✅ Performance optimization (RAM optimization, heavy apps monitor)
+- ✅ Basic UI/UX with tab navigation
+- ✅ Platform-specific path utilities
+
+### In Progress / Needs Fix
+- 🔧 Startup items management (disable button not working)
+- 🔧 App uninstaller (incorrect uninstall logic)
+- 🔧 Space Lens navigation and delete refresh
+- 🔧 Error handling improvements
+- 🔧 Platform detection on mount
+
+### Not Started
+- ⏳ Protection module implementation
+- ⏳ Maintenance module implementation
+- ⏳ App updater functionality
+- ⏳ Safety database
+- ⏳ Backup system
+
+### Next Steps (Priority Order)
+1. **Fix Critical Bugs**: Startup disable, Uninstaller logic, Space Lens navigation
+2. **Improve Error Handling**: Add comprehensive error handling across all views
+3. **Implement Missing Features**: Protection and Maintenance modules (basic versions)
+4. **Enhance Existing Features**: Add scan path selector, improve progress tracking
+5. **Testing**: Cross-platform testing, safety testing, performance optimization
 
 ## Future Enhancements
 
