@@ -9,6 +9,7 @@ import { TabBar } from './components/layout/TabBar';
 import { TabContent } from './components/layout/TabContent';
 import { Dashboard } from './pages/Dashboard';
 import { GlobalClipboardMonitor } from './components/GlobalClipboardMonitor';
+import { AppErrorBoundary } from './components/layout/AppErrorBoundary';
 import { TOOLS } from './tools/registry';
 import { useClipboardStore } from './store/clipboardStore';
 
@@ -247,42 +248,46 @@ function App() {
   }, []);
 
   return (
-    <Router >
+    <Router>
       <GlobalClipboardMonitor />
       <TrayController />
-      <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
-        <WindowControls />
+      <AppErrorBoundary>
+        <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
+          <WindowControls />
 
-        <div className="flex-1 flex overflow-hidden relative">
-          {/* Sidebar with enhanced styling */}
-          <Sidebar />
+          <div className="flex-1 flex overflow-hidden relative">
+            {/* Sidebar with enhanced styling */}
+            <Sidebar />
 
-          {/* Main content area */}
-          <main className="flex-1 flex flex-col min-w-0 relative">
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                {/* Everything goes to MainLayout (Multi-Tab including Settings) */}
-                <Route path="*" element={<MainLayout />} />
-              </Routes>
-            </Suspense>
-          </main>
-        </div>
+            {/* Main content area */}
+            <main className="flex-1 flex flex-col min-w-0 relative">
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* Everything goes to MainLayout (Multi-Tab including Settings) */}
+                  <Route path="*" element={<MainLayout />} />
+                </Routes>
+              </Suspense>
+            </main>
+          </div>
 
-        {/* Enhanced Footer/Status Bar */}
-        <footer className="h-9 px-6 flex items-center justify-between text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30 backdrop-blur-xl">
-          <div className="flex items-center space-x-5">
-            <div className="flex items-center space-x-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
-              <span className="font-medium">Ready</span>
+          {/* Enhanced Footer/Status Bar */}
+          <footer className="h-9 px-6 flex items-center justify-between text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30 backdrop-blur-xl">
+            <div className="flex items-center space-x-5">
+              <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
+                <span className="font-medium">Ready</span>
+              </div>
+              <div className="w-px h-4 bg-border-glass" />
+              <span className="opacity-70">UTF-8</span>
             </div>
-            <div className="w-px h-4 bg-border-glass" />
-            <span className="opacity-70">UTF-8</span>
-          </div>
-          <div className="flex items-center space-x-5">
-            <span className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity font-medium">v0.2.0-beta</span>
-          </div>
-        </footer>
-      </div>
+            <div className="flex items-center space-x-5">
+              <span className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity font-medium">
+                v0.2.0-beta
+              </span>
+            </div>
+          </footer>
+        </div>
+      </AppErrorBoundary>
     </Router>
   );
 }

@@ -39,7 +39,6 @@ export const PdfValidator: React.FC<PdfValidatorProps> = ({ tabId }) => {
             pdfFile: null as File | null,
             validationResult: null as ValidationResult | null
         }
-        };
     };
 
     const options = data.options || {};
