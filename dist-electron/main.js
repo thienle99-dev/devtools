@@ -13,6 +13,12 @@ var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require
 	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
 });
 var execAsync$1 = promisify(exec);
+var dirSizeCache = /* @__PURE__ */ new Map();
+var CACHE_TTL = 300 * 1e3;
+setInterval(() => {
+	const now = Date.now();
+	for (const [key, value] of dirSizeCache.entries()) if (now - value.timestamp > CACHE_TTL) dirSizeCache.delete(key);
+}, 6e4);
 function setupCleanerHandlers() {
 	ipcMain.handle("cleaner:get-platform", async () => {
 		return {
@@ -149,6 +155,40 @@ function setupCleanerHandlers() {
 		return await scanDirectoryForLens(rootPath, 0, 1, (progress) => {
 			if (sender && !sender.isDestroyed()) sender.send("cleaner:space-lens-progress", progress);
 		});
+	});
+	ipcMain.handle("cleaner:get-folder-size", async (event, folderPath) => {
+		const cached = dirSizeCache.get(folderPath);
+		if (cached && Date.now() - cached.timestamp < CACHE_TTL) return {
+			size: cached.size,
+			sizeFormatted: formatBytes$1(cached.size),
+			cached: true
+		};
+		try {
+			const size = await getDirSizeLimited(folderPath, 4);
+			const sizeFormatted = formatBytes$1(size);
+			dirSizeCache.set(folderPath, {
+				size,
+				timestamp: Date.now()
+			});
+			return {
+				size,
+				sizeFormatted,
+				cached: false
+			};
+		} catch (e) {
+			return {
+				size: 0,
+				sizeFormatted: formatBytes$1(0),
+				cached: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:clear-size-cache", async (event, folderPath) => {
+		if (folderPath) {
+			for (const key of dirSizeCache.keys()) if (key.startsWith(folderPath)) dirSizeCache.delete(key);
+		} else dirSizeCache.clear();
+		return { success: true };
 	});
 	ipcMain.handle("cleaner:get-performance-data", async () => {
 		const processes = await si.processes();
@@ -1384,6 +1424,36 @@ async function getDirSize(dirPath) {
 	} catch (e) {}
 	return size;
 }
+async function getDirSizeLimited(dirPath, maxDepth, currentDepth = 0) {
+	if (currentDepth >= maxDepth) return 0;
+	let size = 0;
+	try {
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			if (file.name.startsWith(".") || [
+				"node_modules",
+				"Library",
+				"AppData",
+				"System",
+				".git",
+				".DS_Store"
+			].includes(file.name)) continue;
+			const filePath = path.join(dirPath, file.name);
+			try {
+				if (file.isDirectory()) size += await getDirSizeLimited(filePath, maxDepth, currentDepth + 1);
+				else {
+					const stats = await fs.stat(filePath).catch(() => null);
+					if (stats) size += stats.size;
+				}
+			} catch (e) {
+				continue;
+			}
+		}
+	} catch (e) {
+		return 0;
+	}
+	return size;
+}
 async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress) {
 	try {
 		const stats = await fs.stat(dirPath);
@@ -1442,10 +1512,18 @@ async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress)
 				}
 			} else try {
 				let size = (await fs.stat(childPath)).size;
-				if (item.isDirectory()) try {
-					size = await getDirSize(childPath);
-				} catch (e) {
-					size = 0;
+				if (item.isDirectory()) {
+					const cached = dirSizeCache.get(childPath);
+					if (cached && Date.now() - cached.timestamp < CACHE_TTL) size = cached.size;
+					else try {
+						size = await getDirSizeLimited(childPath, 3);
+						dirSizeCache.set(childPath, {
+							size,
+							timestamp: Date.now()
+						});
+					} catch (e) {
+						size = 0;
+					}
 				}
 				childNode = {
 					name: item.name,

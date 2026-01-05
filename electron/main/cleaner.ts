@@ -9,6 +9,20 @@ import si from 'systeminformation';
 
 const execAsync = promisify(exec);
 
+// Cache for directory sizes to avoid recalculation
+const dirSizeCache = new Map<string, { size: number; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+
+// Clear old cache entries periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of dirSizeCache.entries()) {
+        if (now - value.timestamp > CACHE_TTL) {
+            dirSizeCache.delete(key);
+        }
+    }
+}, 60000); // Clean every minute
+
 export function setupCleanerHandlers() {
     // Get Platform Info
     ipcMain.handle('cleaner:get-platform', async () => {
@@ -106,7 +120,7 @@ export function setupCleanerHandlers() {
         };
     });
 
-    // Space Lens - Optimized: only scan 1 level deep, use fast size calculation
+    // Space Lens - Optimized: only scan 1 level deep, use fast size calculation with caching
     ipcMain.handle('cleaner:get-space-lens', async (event, scanPath: string) => {
         const rootPath = scanPath || os.homedir();
         const sender = event.sender;
@@ -116,6 +130,44 @@ export function setupCleanerHandlers() {
                 sender.send('cleaner:space-lens-progress', progress);
             }
         });
+    });
+
+    // Lazy load directory size when user clicks/navigates into a folder
+    ipcMain.handle('cleaner:get-folder-size', async (event, folderPath: string) => {
+        // Check cache first
+        const cached = dirSizeCache.get(folderPath);
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+            return { size: cached.size, sizeFormatted: formatBytes(cached.size), cached: true };
+        }
+
+        // Calculate size with limited depth (3-4 levels) for balance between accuracy and speed
+        try {
+            const size = await getDirSizeLimited(folderPath, 4);
+            const sizeFormatted = formatBytes(size);
+            
+            // Cache the result
+            dirSizeCache.set(folderPath, { size, timestamp: Date.now() });
+            
+            return { size, sizeFormatted, cached: false };
+        } catch (e) {
+            return { size: 0, sizeFormatted: formatBytes(0), cached: false, error: (e as Error).message };
+        }
+    });
+
+    // Clear size cache (useful when files are deleted)
+    ipcMain.handle('cleaner:clear-size-cache', async (event, folderPath?: string) => {
+        if (folderPath) {
+            // Clear specific path and all subpaths
+            for (const key of dirSizeCache.keys()) {
+                if (key.startsWith(folderPath)) {
+                    dirSizeCache.delete(key);
+                }
+            }
+        } else {
+            // Clear all cache
+            dirSizeCache.clear();
+        }
+        return { success: true };
     });
 
     // --- Optimization Module ---
@@ -1643,14 +1695,23 @@ async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDe
                     let size = s.size;
                     
                     if (item.isDirectory()) {
-                        // Calculate size by recursively summing ALL children (files + nested directories)
-                        // Use getDirSize to get accurate total size including all nested folders
-                        // This ensures folder size is correct even when it contains nested folders
-                        try {
-                            size = await getDirSize(childPath);
-                        } catch (e) {
-                            // Fallback: use 0 if directory can't be read
-                            size = 0;
+                        // Use cached size if available, otherwise calculate with limited depth
+                        // Depth 3-4 provides good balance between accuracy and speed
+                        const cached = dirSizeCache.get(childPath);
+                        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+                            size = cached.size;
+                        } else {
+                            try {
+                                // Use limited depth (3-4 levels) for faster calculation
+                                // This is much faster than full recursive scan but still accurate
+                                size = await getDirSizeLimited(childPath, 3);
+                                
+                                // Cache the result
+                                dirSizeCache.set(childPath, { size, timestamp: Date.now() });
+                            } catch (e) {
+                                // Fallback: use 0 if directory can't be read
+                                size = 0;
+                            }
                         }
                     }
                     

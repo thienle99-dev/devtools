@@ -28,6 +28,8 @@ export const SpaceLensView: React.FC = () => {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
+    const [loadingSizes, setLoadingSizes] = useState<Set<string>>(new Set());
+    const [accurateSizes, setAccurateSizes] = useState<Map<string, number>>(new Map());
     const actionsMenuRef = useRef<HTMLDivElement>(null);
     const scanCancelRef = useRef(false);
     const progressCleanupRef = useRef<(() => void) | null>(null);
@@ -172,6 +174,21 @@ export const SpaceLensView: React.FC = () => {
             const res = await (window as any).cleanerAPI.runCleanup([node.path]);
             setIsScanning(false);
             if (res.success) {
+                // Clear size cache for deleted path and parent
+                if ((window as any).cleanerAPI?.clearSizeCache) {
+                    await (window as any).cleanerAPI.clearSizeCache(node.path);
+                    await (window as any).cleanerAPI.clearSizeCache(currentPath);
+                }
+                // Remove from accurate sizes cache
+                setAccurateSizes(prev => {
+                    const next = new Map(prev);
+                    for (const key of next.keys()) {
+                        if (key.startsWith(node.path)) {
+                            next.delete(key);
+                        }
+                    }
+                    return next;
+                });
                 toast.success(`Deleted ${node.name}`);
                 await scanSpace(currentPath);
             } else {
@@ -200,6 +217,25 @@ export const SpaceLensView: React.FC = () => {
             const res = await (window as any).cleanerAPI.runCleanup(paths);
             setIsScanning(false);
             if (res.success) {
+                // Clear size cache for deleted paths and parent
+                if ((window as any).cleanerAPI?.clearSizeCache) {
+                    for (const path of paths) {
+                        await (window as any).cleanerAPI.clearSizeCache(path);
+                    }
+                    await (window as any).cleanerAPI.clearSizeCache(currentPath);
+                }
+                // Remove from accurate sizes cache
+                setAccurateSizes(prev => {
+                    const next = new Map(prev);
+                    for (const path of paths) {
+                        for (const key of next.keys()) {
+                            if (key.startsWith(path)) {
+                                next.delete(key);
+                            }
+                        }
+                    }
+                    return next;
+                });
                 toast.success(`Deleted ${selectedItems.size} item(s)`);
                 setSelectedItems(new Set());
                 setIsSelectionMode(false);
@@ -212,6 +248,32 @@ export const SpaceLensView: React.FC = () => {
             toast.error('Failed to delete items');
         }
     }, [selectedItems, spaceLensData]);
+
+    // Lazy load accurate folder size on hover or when needed
+    const loadFolderSize = useCallback(async (folderPath: string) => {
+        // Skip if already loading or already have accurate size
+        if (loadingSizes.has(folderPath) || accurateSizes.has(folderPath)) {
+            return;
+        }
+
+        setLoadingSizes(prev => new Set(prev).add(folderPath));
+        try {
+            if ((window as any).cleanerAPI?.getFolderSize) {
+                const result = await (window as any).cleanerAPI.getFolderSize(folderPath);
+                if (result && result.size !== undefined) {
+                    setAccurateSizes(prev => new Map(prev).set(folderPath, result.size));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load folder size:', error);
+        } finally {
+            setLoadingSizes(prev => {
+                const next = new Set(prev);
+                next.delete(folderPath);
+                return next;
+            });
+        }
+    }, [loadingSizes, accurateSizes]);
 
     // Keyboard navigation and selection
     useEffect(() => {
@@ -377,6 +439,10 @@ export const SpaceLensView: React.FC = () => {
     const navigateTo = async (node: SpaceLensNode) => {
         if (node.type === 'dir' && !isScanning) {
             setHistory([...history, spaceLensData!]);
+            // Load accurate size for the folder being navigated to
+            if (!accurateSizes.has(node.path) && !loadingSizes.has(node.path)) {
+                loadFolderSize(node.path);
+            }
             await scanSpace(node.path);
         }
     };
@@ -584,7 +650,7 @@ export const SpaceLensView: React.FC = () => {
                             ) : (
                                 <span className="text-foreground-muted">
                                     Analyzing storage structure...
-                                </span>
+                            </span>
                             )}
                             {spaceLensData && (
                                 <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-foreground-muted">
@@ -642,9 +708,9 @@ export const SpaceLensView: React.FC = () => {
                     </div>
                     {/* Actions Dropdown */}
                     <div className="relative" ref={actionsMenuRef}>
-                        <Button
-                            variant="outline"
-                            size="sm"
+                            <Button
+                                variant="outline"
+                                size="sm"
                             onClick={() => setShowActionsMenu(!showActionsMenu)}
                             disabled={isScanning}
                             title="More Actions"
@@ -657,13 +723,13 @@ export const SpaceLensView: React.FC = () => {
                                 {spaceLensData && (
                                     <>
                                         <button
-                                            onClick={() => {
-                                                const snapshot = createSnapshot(spaceLensData, spaceLensData.path);
-                                                setSnapshots([...snapshots, snapshot]);
-                                                toast.success('Snapshot created');
+                                onClick={() => {
+                                    const snapshot = createSnapshot(spaceLensData, spaceLensData.path);
+                                    setSnapshots([...snapshots, snapshot]);
+                                    toast.success('Snapshot created');
                                                 setShowActionsMenu(false);
-                                            }}
-                                            disabled={isScanning}
+                                }}
+                                disabled={isScanning}
                                             className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
                                         >
                                             <Camera className="w-4 h-4 opacity-70" />
@@ -671,40 +737,40 @@ export const SpaceLensView: React.FC = () => {
                                         </button>
                                         <div className="h-px bg-[var(--color-glass-border)] my-1" />
                                         <button
-                                            onClick={() => {
-                                                const json = exportSpaceLensToJSON(spaceLensData);
-                                                downloadFile(json, `space-lens-${Date.now()}.json`, 'application/json');
-                                                toast.success('Exported to JSON');
+                                onClick={() => {
+                                    const json = exportSpaceLensToJSON(spaceLensData);
+                                    downloadFile(json, `space-lens-${Date.now()}.json`, 'application/json');
+                                    toast.success('Exported to JSON');
                                                 setShowActionsMenu(false);
-                                            }}
-                                            disabled={isScanning}
+                                }}
+                                disabled={isScanning}
                                             className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
                                         >
                                             <Download className="w-4 h-4 opacity-70" />
                                             <span>Export JSON</span>
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                const csv = exportSpaceLensToCSV(spaceLensData);
-                                                downloadFile(csv, `space-lens-${Date.now()}.csv`, 'text/csv');
-                                                toast.success('Exported to CSV');
+                                onClick={() => {
+                                    const csv = exportSpaceLensToCSV(spaceLensData);
+                                    downloadFile(csv, `space-lens-${Date.now()}.csv`, 'text/csv');
+                                    toast.success('Exported to CSV');
                                                 setShowActionsMenu(false);
-                                            }}
-                                            disabled={isScanning}
+                                }}
+                                disabled={isScanning}
                                             className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
                                         >
                                             <Download className="w-4 h-4 opacity-70" />
                                             <span>Export CSV</span>
                                         </button>
                                         <div className="h-px bg-[var(--color-glass-border)] my-1" />
-                                    </>
-                                )}
+                        </>
+                    )}
                                 <button
                                     onClick={() => {
                                         handleSelectFolder();
                                         setShowActionsMenu(false);
                                     }}
-                                    disabled={isScanning}
+                        disabled={isScanning}
                                     className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
                                 >
                                     <FolderPlus className="w-4 h-4 opacity-70" />
@@ -716,7 +782,7 @@ export const SpaceLensView: React.FC = () => {
                                             scanSpace(spaceLensData.path);
                                             setShowActionsMenu(false);
                                         }}
-                                        disabled={isScanning}
+                        disabled={isScanning}
                                         className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
                                     >
                                         <RefreshCw className={cn("w-4 h-4 opacity-70", isScanning && "animate-spin")} />
@@ -763,11 +829,11 @@ export const SpaceLensView: React.FC = () => {
             <div className="flex-1 overflow-auto pr-2 custom-scrollbar">
                 {spaceLensData && spaceLensData.children && spaceLensData.children.length > 0 ? (
                     <>
-                        {viewMode === 'grid' && <GridView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
-                        {viewMode === 'list' && <ListView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
-                        {viewMode === 'tree' && <TreeView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} expandedNodes={expandedNodes} setExpandedNodes={setExpandedNodes} selectedItems={selectedItems} isSelectionMode={isSelectionMode} onToggleSelect={handleToggleSelect} />}
-                        {viewMode === 'detail' && <DetailView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
-                        {viewMode === 'compact' && <CompactView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
+                        {viewMode === 'grid' && <GridView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} loadingSizes={loadingSizes} accurateSizes={accurateSizes} onLoadSize={loadFolderSize} />}
+                        {viewMode === 'list' && <ListView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} loadingSizes={loadingSizes} accurateSizes={accurateSizes} onLoadSize={loadFolderSize} />}
+                        {viewMode === 'tree' && <TreeView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} expandedNodes={expandedNodes} setExpandedNodes={setExpandedNodes} selectedItems={selectedItems} isSelectionMode={isSelectionMode} onToggleSelect={handleToggleSelect} loadingSizes={loadingSizes} accurateSizes={accurateSizes} onLoadSize={loadFolderSize} />}
+                        {viewMode === 'detail' && <DetailView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} loadingSizes={loadingSizes} accurateSizes={accurateSizes} onLoadSize={loadFolderSize} />}
+                        {viewMode === 'compact' && <CompactView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} loadingSizes={loadingSizes} accurateSizes={accurateSizes} onLoadSize={loadFolderSize} />}
                     </>
                 ) : isScanning ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
@@ -790,7 +856,7 @@ export const SpaceLensView: React.FC = () => {
 };
 
 // Grid View (Default)
-const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
+const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect, loadingSizes = new Set(), accurateSizes = new Map(), onLoadSize }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
@@ -800,6 +866,9 @@ const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selecte
     isSelectionMode?: boolean;
     selectedIndex?: number;
     onToggleSelect?: (path: string) => void;
+    loadingSizes?: Set<string>;
+    accurateSizes?: Map<string, number>;
+    onLoadSize?: (path: string) => void;
 }) => {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
@@ -868,7 +937,19 @@ const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selecte
                             </div>
                             <div className="w-full">
                                 <div className="text-sm font-bold truncate px-1">{node.name}</div>
-                                <div className="text-[10px] text-foreground-muted">{formatSize(node.size)}</div>
+                                <div 
+                                    className="text-[10px] text-foreground-muted"
+                                    onMouseEnter={() => {
+                                        if (node.type === 'dir' && onLoadSize && !loadingSizes.has(node.path) && !accurateSizes.has(node.path)) {
+                                            onLoadSize(node.path);
+                                        }
+                                    }}
+                                >
+                                    {node.type === 'dir' && accurateSizes.has(node.path) 
+                                        ? formatSize(accurateSizes.get(node.path)!) 
+                                        : formatSize(node.size)}
+                                    {node.type === 'dir' && loadingSizes.has(node.path) && ' (loading...)'}
+                                </div>
                             </div>
                         </div>
                         {percentage > 10 && (
@@ -884,7 +965,7 @@ const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selecte
 };
 
 // List View
-const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
+const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect, loadingSizes = new Set(), accurateSizes = new Map(), onLoadSize }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
@@ -894,6 +975,9 @@ const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selecte
     isSelectionMode?: boolean;
     selectedIndex?: number;
     onToggleSelect?: (path: string) => void;
+    loadingSizes?: Set<string>;
+    accurateSizes?: Map<string, number>;
+    onLoadSize?: (path: string) => void;
 }) => {
     return (
         <div className="space-y-2 pb-8">
@@ -952,7 +1036,19 @@ const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selecte
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold truncate">{node.name}</div>
-                                <div className="text-xs text-foreground-muted">{formatSize(node.size)} • {percentage.toFixed(1)}%</div>
+                                <div 
+                                    className="text-xs text-foreground-muted"
+                                    onMouseEnter={() => {
+                                        if (node.type === 'dir' && onLoadSize && !loadingSizes.has(node.path) && !accurateSizes.has(node.path)) {
+                                            onLoadSize(node.path);
+                                        }
+                                    }}
+                                >
+                                    {node.type === 'dir' && accurateSizes.has(node.path) 
+                                        ? `${formatSize(accurateSizes.get(node.path)!)} • ${percentage.toFixed(1)}%`
+                                        : `${formatSize(node.size)} • ${percentage.toFixed(1)}%`}
+                                    {node.type === 'dir' && loadingSizes.has(node.path) && ' (loading...)'}
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
@@ -976,7 +1072,7 @@ const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selecte
 };
 
 // Tree View
-const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expandedNodes, setExpandedNodes, selectedItems = new Set(), isSelectionMode = false, onToggleSelect }: {
+const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expandedNodes, setExpandedNodes, selectedItems = new Set(), isSelectionMode = false, onToggleSelect, loadingSizes = new Set(), accurateSizes = new Map(), onLoadSize }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
@@ -987,6 +1083,9 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
     selectedItems?: Set<string>;
     isSelectionMode?: boolean;
     onToggleSelect?: (path: string) => void;
+    loadingSizes?: Set<string>;
+    accurateSizes?: Map<string, number>;
+    onLoadSize?: (path: string) => void;
 }) => {
     const toggleExpand = (path: string) => {
         const newExpanded = new Set(expandedNodes);
@@ -1059,7 +1158,19 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">{node.name}</div>
-                            <div className="text-xs text-foreground-muted">{formatSize(node.size)} • {percentage.toFixed(1)}%</div>
+                            <div 
+                                className="text-xs text-foreground-muted"
+                                onMouseEnter={() => {
+                                    if (node.type === 'dir' && onLoadSize && !loadingSizes.has(node.path) && !accurateSizes.has(node.path)) {
+                                        onLoadSize(node.path);
+                                    }
+                                }}
+                            >
+                                {node.type === 'dir' && accurateSizes.has(node.path) 
+                                    ? `${formatSize(accurateSizes.get(node.path)!)} • ${percentage.toFixed(1)}%`
+                                    : `${formatSize(node.size)} • ${percentage.toFixed(1)}%`}
+                                {node.type === 'dir' && loadingSizes.has(node.path) && ' (loading...)'}
+                            </div>
                         </div>
                         <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
@@ -1094,7 +1205,7 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
 };
 
 // Detail View
-const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
+const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect, loadingSizes = new Set(), accurateSizes = new Map(), onLoadSize }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
@@ -1104,6 +1215,9 @@ const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selec
     isSelectionMode?: boolean;
     selectedIndex?: number;
     onToggleSelect?: (path: string) => void;
+    loadingSizes?: Set<string>;
+    accurateSizes?: Map<string, number>;
+    onLoadSize?: (path: string) => void;
 }) => {
     return (
         <div className="space-y-3 pb-8">
@@ -1161,9 +1275,20 @@ const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selec
                                     <div className="text-xs text-foreground-muted font-mono mt-1 break-all">{node.path}</div>
                                 </div>
                                 <div className="flex items-center gap-4 text-sm">
-                                    <div>
+                                    <div
+                                        onMouseEnter={() => {
+                                            if (node.type === 'dir' && onLoadSize && !loadingSizes.has(node.path) && !accurateSizes.has(node.path)) {
+                                                onLoadSize(node.path);
+                                            }
+                                        }}
+                                    >
                                         <span className="text-foreground-muted">Size: </span>
-                                        <span className="font-bold">{formatSize(node.size)}</span>
+                                        <span className="font-bold">
+                                            {node.type === 'dir' && accurateSizes.has(node.path) 
+                                                ? formatSize(accurateSizes.get(node.path)!)
+                                                : formatSize(node.size)}
+                                            {node.type === 'dir' && loadingSizes.has(node.path) && ' (loading...)'}
+                                        </span>
                                     </div>
                                     <div>
                                         <span className="text-foreground-muted">Percentage: </span>
@@ -1195,7 +1320,7 @@ const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selec
 };
 
 // Compact View
-const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
+const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect, loadingSizes = new Set(), accurateSizes = new Map(), onLoadSize }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
@@ -1205,6 +1330,9 @@ const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, sele
     isSelectionMode?: boolean;
     selectedIndex?: number;
     onToggleSelect?: (path: string) => void;
+    loadingSizes?: Set<string>;
+    accurateSizes?: Map<string, number>;
+    onLoadSize?: (path: string) => void;
 }) => {
     return (
         <div className="space-y-1 pb-8">
@@ -1254,7 +1382,19 @@ const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, sele
                             {node.type === 'dir' ? <FolderOpen className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
                         </div>
                         <div className="flex-1 min-w-0 truncate text-xs font-medium">{node.name}</div>
-                        <div className="text-xs text-foreground-muted">{formatSize(node.size)}</div>
+                        <div 
+                            className="text-xs text-foreground-muted"
+                            onMouseEnter={() => {
+                                if (node.type === 'dir' && onLoadSize && !loadingSizes.has(node.path) && !accurateSizes.has(node.path)) {
+                                    onLoadSize(node.path);
+                                }
+                            }}
+                        >
+                            {node.type === 'dir' && accurateSizes.has(node.path) 
+                                ? formatSize(accurateSizes.get(node.path)!)
+                                : formatSize(node.size)}
+                            {node.type === 'dir' && loadingSizes.has(node.path) && ' (loading...)'}
+                        </div>
                         <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
                         </div>

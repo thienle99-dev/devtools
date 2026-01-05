@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   getLargeFiles: (options: any) => ipcRenderer.invoke('cleaner:get-large-files', options),
   getDuplicates: (scanPath: string) => ipcRenderer.invoke('cleaner:get-duplicates', scanPath),
   getSpaceLens: (scanPath: string) => ipcRenderer.invoke('cleaner:get-space-lens', scanPath),
+  getFolderSize: (folderPath: string) => ipcRenderer.invoke('cleaner:get-folder-size', folderPath),
+  clearSizeCache: (folderPath?: string) => ipcRenderer.invoke('cleaner:clear-size-cache', folderPath),
   getPerformanceData: () => ipcRenderer.invoke('cleaner:get-performance-data'),
   getStartupItems: () => ipcRenderer.invoke('cleaner:get-startup-items'),
   toggleStartupItem: (item: any) => ipcRenderer.invoke('cleaner:toggle-startup-item', item),

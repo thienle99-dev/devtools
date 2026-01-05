@@ -57,6 +57,8 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 	getLargeFiles: (options) => electron.ipcRenderer.invoke("cleaner:get-large-files", options),
 	getDuplicates: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-duplicates", scanPath),
 	getSpaceLens: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-space-lens", scanPath),
+	getFolderSize: (folderPath) => electron.ipcRenderer.invoke("cleaner:get-folder-size", folderPath),
+	clearSizeCache: (folderPath) => electron.ipcRenderer.invoke("cleaner:clear-size-cache", folderPath),
 	getPerformanceData: () => electron.ipcRenderer.invoke("cleaner:get-performance-data"),
 	getStartupItems: () => electron.ipcRenderer.invoke("cleaner:get-startup-items"),
 	toggleStartupItem: (item) => electron.ipcRenderer.invoke("cleaner:toggle-startup-item", item),
