@@ -41,9 +41,9 @@ export const Checkbox: React.FC<CheckboxProps> = ({
                 
                 {/* Custom Checkbox Box */}
                 <div className={cn(
-                    "w-5 h-5 rounded-md border border-white/20 bg-white/5 transition-all duration-200",
+                    "w-5 h-5 rounded-md border border-white/30 bg-white/10 transition-all duration-200",
                     "peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-focus:ring-offset-2 peer-focus:ring-offset-transparent",
-                    "group-hover:border-indigo-500/50 group-hover:bg-white/10",
+                    "group-hover:border-indigo-500/50 group-hover:bg-white/20",
                     
                     // Checked State
                     checked && "bg-indigo-500 border-indigo-500 hover:bg-indigo-600 hover:border-indigo-600 shadow-sm"

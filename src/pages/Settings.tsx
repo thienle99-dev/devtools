@@ -2,8 +2,12 @@ import React from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useToolStore } from '../store/toolStore';
 import { ToolPane } from '../components/layout/ToolPane';
+import { Input } from '../components/ui/Input';
+import { Switch } from '../components/ui/Switch';
+import { Radio } from '../components/ui/Radio';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Monitor, Type, WrapText, History, Trash2, Smartphone, Keyboard } from 'lucide-react';
+import { Monitor, Type, WrapText, History, Trash2, Smartphone, Keyboard, Sun, Moon, Laptop } from 'lucide-react';
 import { CATEGORIES, getToolsByCategory } from '../tools/registry';
 
 interface SettingsPageProps {
@@ -39,16 +43,21 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                 <p className="text-xs text-foreground-muted">Choose your preferred interface style</p>
                             </div>
                             <div className="flex bg-[var(--color-glass-input)] p-1 rounded-xl border border-border-glass">
-                                {(['light', 'dark', 'system'] as const).map((t) => (
+                                {[
+                                    { id: 'light', icon: Sun, label: 'Light' },
+                                    { id: 'dark', icon: Moon, label: 'Dark' },
+                                    { id: 'system', icon: Laptop, label: 'System' }
+                                ].map((t) => (
                                     <button
-                                        key={t}
-                                        onClick={() => setTheme(t)}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${theme === t
+                                        key={t.id}
+                                        onClick={() => setTheme(t.id as any)}
+                                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${theme === t.id
                                             ? 'bg-bg-glass-hover text-foreground shadow-lg shadow-black/5'
                                             : 'text-foreground-muted hover:text-foreground hover:bg-[var(--color-glass-button-hover)]'
                                             }`}
                                     >
-                                        {t}
+                                        <t.icon className="w-3.5 h-3.5" />
+                                        <span>{t.label}</span>
                                     </button>
                                 ))}
                             </div>
@@ -59,16 +68,15 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                 <p className="text-xs text-foreground-muted">Adjust the editor text size</p>
                             </div>
                             <div className="flex items-center space-x-4">
-                                <span className="text-xs font-mono text-foreground-muted">{fontSize}px</span>
-                                <input
-                                    type="range"
+                                <Input
+                                    type="number"
                                     min="10"
                                     max="24"
-                                    step="1"
                                     value={fontSize}
-                                    onChange={(e) => setFontSize(parseInt(e.target.value))}
-                                    className="w-32 accent-indigo-500 bg-[var(--color-glass-input)] rounded-lg appearance-none cursor-pointer h-1.5"
+                                    onChange={(e) => setFontSize(parseInt(e.target.value) || 14)}
+                                    className="w-24 font-mono text-center"
                                 />
+                                <span className="text-xs font-mono text-foreground-muted">px</span>
                             </div>
                         </div>
                     </Card>
@@ -91,14 +99,10 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                     <p className="text-xs text-foreground-muted">Wrap long lines in the editor panes</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setWordWrap(!wordWrap)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${wordWrap ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'
-                                    }`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${wordWrap ? 'left-7' : 'left-1'
-                                    } shadow-md`} />
-                            </button>
+                            <Switch
+                                checked={wordWrap}
+                                onChange={(e) => setWordWrap(e.target.checked)}
+                            />
                         </div>
                     </Card>
                 </section>
@@ -120,16 +124,17 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                     <p className="text-[11px] text-rose-400/60">Remove all tool usage history and stored inputs</p>
                                 </div>
                             </div>
-                            <button
+                            <Button
+                                variant="danger"
+                                size="sm"
                                 onClick={() => {
                                     if (confirm('Are you sure you want to clear all history? This cannot be undone.')) {
                                         clearHistory();
                                     }
                                 }}
-                                className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-bold text-rose-400 transition-all active:scale-95"
                             >
                                 Clear Now
-                            </button>
+                            </Button>
                         </div>
                     </Card>
                 </section>
@@ -187,16 +192,13 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <input
+                                                            <Input
                                                                 type="text"
                                                                 value={currentShortcut}
                                                                 placeholder="None"
-                                                                className="w-32 bg-[var(--color-glass-input)] border border-border-glass rounded text-xs px-2 py-1 text-right focus:border-indigo-500/50 outline-none text-foreground font-mono"
+                                                                className="w-32 text-right font-mono"
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
-                                                                    // Simple validation or just let them type?
-                                                                    // Let's rely on blur or specific "Rec" button in future.
-                                                                    // For now, text input manually "Ctrl+Shift+K".
                                                                     useSettingsStore.getState().setToolShortcut(tool.id, val || null);
                                                                 }}
                                                             />
@@ -224,36 +226,30 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                 <p className="text-sm font-semibold text-foreground">Minimize to Tray</p>
                                 <p className="text-xs text-foreground-muted">Keep app running in tray when closed</p>
                             </div>
-                            <button
-                                onClick={() => setMinimizeToTray(!minimizeToTray)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${minimizeToTray ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'}`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${minimizeToTray ? 'left-7' : 'left-1'} shadow-md`} />
-                            </button>
+                            <Switch
+                                checked={minimizeToTray}
+                                onChange={(e) => setMinimizeToTray(e.target.checked)}
+                            />
                         </div>
                         <div className="flex items-center justify-between p-4">
                             <div>
                                 <p className="text-sm font-semibold text-foreground">Start Minimized</p>
                                 <p className="text-xs text-foreground-muted">Launch app silently to tray</p>
                             </div>
-                            <button
-                                onClick={() => setStartMinimized(!startMinimized)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${startMinimized ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'}`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${startMinimized ? 'left-7' : 'left-1'} shadow-md`} />
-                            </button>
+                            <Switch
+                                checked={startMinimized}
+                                onChange={(e) => setStartMinimized(e.target.checked)}
+                            />
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-border-glass">
                             <div>
                                 <p className="text-sm font-semibold text-foreground">Launch at Login</p>
                                 <p className="text-xs text-foreground-muted">Automatically open app when you log in</p>
                             </div>
-                            <button
-                                onClick={() => useSettingsStore.getState().setLaunchAtLogin(!useSettingsStore.getState().launchAtLogin)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${useSettingsStore.getState().launchAtLogin ? 'bg-indigo-500' : 'bg-[var(--color-glass-input)]'}`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${useSettingsStore.getState().launchAtLogin ? 'left-7' : 'left-1'} shadow-md`} />
-                            </button>
+                            <Switch
+                                checked={useSettingsStore.getState().launchAtLogin}
+                                onChange={(e) => useSettingsStore.getState().setLaunchAtLogin(e.target.checked)}
+                            />
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-border-glass">
                             <div>
