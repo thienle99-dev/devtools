@@ -2,6 +2,10 @@ import React, { useEffect } from 'react';
 import { v1 as uuidv1, v4 as uuidv4 } from 'uuid';
 import { ulid } from 'ulid';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { Input } from '../../components/ui/Input';
+import { Checkbox } from '../../components/ui/Checkbox';
+import { TextArea } from '../../components/ui/TextArea';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 
@@ -83,57 +87,54 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
         >
             <div className="max-w-3xl mx-auto space-y-6 py-6 px-4 h-full flex flex-col">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Type</label>
-                        <select
-                            value={options.type}
-                            onChange={(e) => updateOption('type', e.target.value)}
-                            className="glass-input w-full"
-                        >
-                            <option value="v4">UUID v4 (Random)</option>
-                            <option value="v1">UUID v1 (Time-based)</option>
-                            <option value="ulid">ULID (Sortable)</option>
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Quantity</label>
-                        <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={options.count}
-                            onChange={(e) => updateOption('count', parseInt(e.target.value))}
-                            className="glass-input w-full"
-                        />
-                    </div>
-                    <div className="flex items-center space-x-2 pt-6">
-                        <input
-                            type="checkbox"
+                    <Select
+                        label="Type"
+                        value={options.type}
+                        onChange={(e) => updateOption('type', e.target.value)}
+                        options={[
+                            { label: 'UUID v4 (Random)', value: 'v4' },
+                            { label: 'UUID v1 (Time-based)', value: 'v1' },
+                            { label: 'ULID (Sortable)', value: 'ulid' }
+                        ]}
+                        fullWidth
+                    />
+                    
+                    <Input
+                        label="Quantity"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={options.count}
+                        onChange={(e) => updateOption('count', parseInt(e.target.value))}
+                        fullWidth
+                    />
+
+                    <div className="flex items-end pb-2">
+                        <Checkbox
                             id="hyphens"
+                            label="Hyphens"
                             checked={options.hyphens}
                             disabled={options.type === 'ulid'}
                             onChange={(e) => updateOption('hyphens', e.target.checked)}
-                            className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
                         />
-                        <label htmlFor="hyphens" className="text-sm">Hyphens</label>
                     </div>
-                    <div className="flex items-center space-x-2 pt-6">
-                        <input
-                            type="checkbox"
+                    
+                    <div className="flex items-end pb-2">
+                        <Checkbox
                             id="uppercase"
+                            label="Uppercase"
                             checked={options.uppercase}
                             onChange={(e) => updateOption('uppercase', e.target.checked)}
-                            className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
                         />
-                        <label htmlFor="uppercase" className="text-sm">Uppercase</label>
                     </div>
                 </div>
 
                 <div className="flex-1 relative">
-                    <textarea
+                    <TextArea
                         readOnly
                         value={output}
-                        className="glass-input w-full h-full font-mono text-sm resize-none p-4"
+                        className="h-full font-mono text-sm resize-none"
+                        fullWidth
                     />
                 </div>
             </div>

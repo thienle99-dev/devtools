@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { SystemMetrics } from '../../../../types/stats';
+import type { SystemMetrics } from '../../../../types/stats';
 
 export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);

@@ -1,4 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
+import { Input } from '../../components/ui/Input';
+import { TextArea } from '../../components/ui/TextArea';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolStore } from '../../store/toolStore';
 
@@ -145,39 +149,36 @@ export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
                 <div className="space-y-4">
                     <div className="flex gap-4 items-center">
                         <div className="flex-1 relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                                 <span className="text-foreground-muted font-mono font-bold">/</span>
                             </div>
-                            <input
-                                type="text"
+                            <Input
                                 value={options.regex}
                                 onChange={(e) => setToolData(effectiveId, { options: { ...options, regex: e.target.value } })}
-                                className="glass-input pl-6 pr-6 w-full font-mono text-lg"
+                                className="pl-6 pr-6 w-full font-mono text-lg"
                                 placeholder="pattern"
+                                fullWidth
                             />
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none z-10">
                                 <span className="text-foreground-muted font-mono font-bold">/</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Flags */}
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2">
                         {['g', 'i', 'm', 's', 'u', 'y'].map(flag => (
-                            <button
+                            <Button
                                 key={flag}
+                                size="sm"
+                                variant={options.flags.includes(flag) ? 'primary' : 'outline'}
                                 onClick={() => handleFlagChange(flag)}
-                                className={`
-                                    px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border transition-colors
-                                    ${options.flags.includes(flag)
-                                        ? 'bg-primary/20 border-primary text-primary'
-                                        : 'bg-glass-input border-border-glass text-foreground-muted hover:bg-glass-input-focus'}
-                                `}
+                                className="font-mono font-bold rounded-full w-8 h-8 p-0 flex items-center justify-center"
                             >
                                 {flag}
-                            </button>
+                            </Button>
                         ))}
-                        <span className="text-xs text-foreground-muted ml-auto pt-1">
+                        <span className="text-xs text-foreground-muted ml-auto pt-1 flex items-center">
                             {meta?.error ? <span className="text-red-400">{meta.error}</span> : `${matches.length} matches`}
                         </span>
                     </div>
@@ -185,21 +186,22 @@ export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
 
                 {/* Test String Input */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Test String</label>
-                    <textarea
+                    <TextArea
+                        label="Test String"
                         value={input}
                         onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
-                        className="glass-input w-full h-32 font-mono text-sm leading-relaxed"
+                        className="h-32 font-mono text-sm leading-relaxed"
                         placeholder="Paste your text here..."
+                        fullWidth
                     />
                 </div>
 
                 {/* Results / Highlights */}
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Match Highlights</label>
-                    <div className="glass-panel p-4 rounded-xl min-h-[120px] max-h-[400px] overflow-y-auto">
+                    <Card className="p-4 rounded-xl min-h-[120px] max-h-[400px] overflow-y-auto">
                         {HighlightedText}
-                    </div>
+                    </Card>
                 </div>
 
                 {/* Match Details */}
@@ -208,7 +210,7 @@ export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Match Details</label>
                         <div className="space-y-2">
                             {matches.map((m: Record<string, any>, i: number) => (
-                                <div key={i} className="glass-panel p-3 rounded-lg text-xs font-mono space-y-1">
+                                <Card key={i} className="p-3 rounded-lg text-xs font-mono space-y-1">
                                     <div className="flex justify-between">
                                         <span className="font-bold text-primary">Match {i + 1}</span>
                                         <span className="text-foreground-muted">Index: {m.index}</span>
@@ -224,7 +226,7 @@ export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
                                             ))}
                                         </div>
                                     )}
-                                </div>
+                                </Card>
                             ))}
                         </div>
                     </div>

@@ -14,14 +14,17 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
   const [writeHistory, setWriteHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
 
   useEffect(() => {
-    setReadHistory(prev => {
-      // Use log scale or just raw MB/s
-      return [...prev.slice(1), data.ioStats.rIO_sec];
-    });
+    if (data.ioStats) {
+      const ioStats = data.ioStats;
+      setReadHistory(prev => {
+        // Use log scale or just raw MB/s
+        return [...prev.slice(1), ioStats.rIO_sec || 0];
+      });
 
-    setWriteHistory(prev => {
-      return [...prev.slice(1), data.ioStats.wIO_sec];
-    });
+      setWriteHistory(prev => {
+        return [...prev.slice(1), ioStats.wIO_sec || 0];
+      });
+    }
   }, [data]);
 
    const formatSpeed = (bytesPerSec: number) => {
@@ -35,7 +38,9 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
   };
 
   // Primary disk (usually C: or /)
-  const primaryDisk = data.fsSize.find(d => d.mount === '/' || d.mount === 'C:') || data.fsSize[0];
+  const primaryDisk = data.fsSize && data.fsSize.length > 0 
+    ? (data.fsSize.find(d => d.mount === '/' || d.mount === 'C:') || data.fsSize[0])
+    : null;
   const usedPercent = primaryDisk ? Math.round(primaryDisk.use) : 0;
   
   // Determine color based on usage
@@ -75,7 +80,7 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
                 height={64}
                 min={0}
             />
-             <div className="absolute bottom-1 right-1 text-[10px] text-white/30">Read: {formatSpeed(data.ioStats.rIO_sec)}</div>
+             <div className="absolute bottom-1 right-1 text-[10px] text-white/30">Read: {data.ioStats ? formatSpeed(data.ioStats.rIO_sec) : 'N/A'}</div>
         </div>
         
         {/* Write Graph */}
@@ -87,7 +92,7 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
                 height={64}
                 min={0}
             />
-            <div className="absolute bottom-1 right-1 text-[10px] text-white/30">Write: {formatSpeed(data.ioStats.wIO_sec)}</div>
+            <div className="absolute bottom-1 right-1 text-[10px] text-white/30">Write: {data.ioStats ? formatSpeed(data.ioStats.wIO_sec) : 'N/A'}</div>
         </div>
       </div>
 

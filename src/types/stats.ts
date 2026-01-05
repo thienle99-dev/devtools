@@ -48,7 +48,7 @@ export interface DiskStats {
     rIO_sec: number;
     wIO_sec: number;
     tIO_sec: number;
-  };
+  } | null;
 }
 
 export interface GPUStats {
