@@ -59,6 +59,14 @@ export const useSystemMetrics = (enabledModules: string[], interval: number = 20
           promises.push(window.statsAPI.getSensorStats());
           keys.push('sensors');
         }
+        if (enabledModules.includes('bluetooth')) {
+          promises.push(window.statsAPI.getBluetoothStats());
+          keys.push('bluetooth');
+        }
+        if (enabledModules.includes('timezones')) {
+          promises.push(window.statsAPI.getTimeZonesStats());
+          keys.push('timeZones');
+        }
 
         const results = await Promise.all(promises);
         

@@ -52,4 +52,6 @@ contextBridge.exposeInMainWorld('statsAPI', {
   getGPUStats: () => ipcRenderer.invoke('get-gpu-stats'),
   getBatteryStats: () => ipcRenderer.invoke('get-battery-stats'),
   getSensorStats: () => ipcRenderer.invoke('get-sensor-stats'),
+  getBluetoothStats: () => ipcRenderer.invoke('get-bluetooth-stats'),
+  getTimeZonesStats: () => ipcRenderer.invoke('get-timezones-stats'),
 })

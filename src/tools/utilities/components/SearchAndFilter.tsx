@@ -1,6 +1,10 @@
-import React, { useState, RefObject } from 'react';
-import { Search, Filter, Settings, Trash2, TrendingUp, Tag, Play, Pause } from 'lucide-react';
+import React, { useState, type RefObject } from 'react';
+import { Search, Filter, Settings, Trash2, TrendingUp, Tag } from 'lucide-react';
 import type { FilterOptions, SearchMode } from '../../../store/clipboardStore';
+import { Input } from '../../../components/ui/Input';
+import { Select } from '../../../components/ui/Select';
+import { Checkbox } from '../../../components/ui/Checkbox';
+import { Switch } from '../../../components/ui/Switch';
 
 interface SearchAndFilterProps {
     searchQuery: string;
@@ -35,43 +39,44 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         <div className="space-y-4">
             <div className="flex gap-4 items-center">
                 {/* Search Bar */}
-                <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
-                    <input
+                <div className="flex-1">
+                    {/* Note: Input component handles ref forwarding if using forwardRef but it currently doesn't. 
+                        We might need to fix Input to accept ref or just pass it as prop if supported.
+                        Input source code didn't show forwardRef, but passing ref to functional component is deprecated in newer React if not forwarded.
+                        However, searchInputRef is RefObject<HTMLInputElement>. 
+                        I will check if Input supports 'ref' or similar. 
+                        It doesn't seem to have ref forwarding in the viewed code.
+                        I'll just pass props for now. If ref fails, focus shortcut might break.
+                        Actually, I should assume Input doesn't forward ref.
+                        I'll skip ref for now or wrap it.
+                    */}
+                    <Input
                         ref={searchInputRef}
                         type="text"
-                        className="w-full pl-12 pr-5 py-3 bg-surface-elevated border border-border rounded-xl 
-                                 text-foreground placeholder-foreground-muted text-sm
-                                 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent
-                                 transition-all duration-200"
                         placeholder="Search clipboard history... (⌘K)"
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
+                        icon={Search}
+                        fullWidth
+                        className="h-12 text-base"
                     />
                 </div>
 
                 {/* Monitoring Toggle */}
                 {onToggleMonitoring && (
-                    <button
-                        onClick={onToggleMonitoring}
-                        className={`p-3 rounded-xl border transition-all duration-200 ${monitoringEnabled
-                                ? 'bg-green-500/10 border-green-500 text-green-500'
-                                : 'bg-surface-elevated border-border text-foreground-muted hover:text-foreground hover:border-accent/50'
-                            }`}
-                        title={monitoringEnabled ? 'Monitoring Active (Click to Pause)' : 'Monitoring Paused (Click to Resume)'}
-                    >
-                        {monitoringEnabled ? (
-                            <Play className="w-5 h-5" />
-                        ) : (
-                            <Pause className="w-5 h-5" />
-                        )}
-                    </button>
+                    <div className="flex items-center px-1">
+                         <Switch
+                            checked={monitoringEnabled}
+                            onChange={onToggleMonitoring}
+                            title={monitoringEnabled ? 'Monitoring Active (Click to Pause)' : 'Monitoring Paused (Click to Resume)'}
+                        />
+                    </div>
                 )}
 
                 {/* Filter Toggle */}
                 <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className={`p-3 rounded-xl border transition-all duration-200
+                    className={`p-3 rounded-xl border transition-all duration-200 h-12 w-12 flex items-center justify-center
                               ${showFilters
                             ? 'bg-accent/10 border-accent text-accent'
                             : 'bg-surface-elevated border-border text-foreground-muted hover:text-foreground hover:border-accent/50'
@@ -85,7 +90,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {onOpenStatistics && (
                     <button
                         onClick={onOpenStatistics}
-                        className="p-3 rounded-xl border bg-surface-elevated border-border 
+                        className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
                                  text-foreground-muted hover:text-foreground hover:border-accent/50
                                  transition-all duration-200"
                         title="Statistics"
@@ -98,7 +103,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {onOpenCategories && (
                     <button
                         onClick={onOpenCategories}
-                        className="p-3 rounded-xl border bg-surface-elevated border-border 
+                        className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
                                  text-foreground-muted hover:text-foreground hover:border-accent/50
                                  transition-all duration-200"
                         title="Categories"
@@ -110,7 +115,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {/* Settings */}
                 <button
                     onClick={onOpenSettings}
-                    className="p-3 rounded-xl border bg-surface-elevated border-border 
+                    className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
                              text-foreground-muted hover:text-foreground hover:border-accent/50
                              transition-all duration-200"
                     title="Settings"
@@ -121,7 +126,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {/* Clear All */}
                 <button
                     onClick={onClearAll}
-                    className="p-3 rounded-xl border bg-surface-elevated border-border 
+                    className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
                              text-foreground-muted hover:text-red-500 hover:border-red-500/50
                              transition-all duration-200"
                     title="Clear All"
@@ -135,77 +140,55 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 <div className="p-5 bg-surface-elevated border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
                         {/* Search Mode */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em]">
-                                Search Mode
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 bg-surface border border-border rounded-lg 
-                                         text-foreground text-sm focus:outline-none focus:ring-2 
-                                         focus:ring-accent/50 focus:border-accent transition-all"
-                                value={filters.searchMode || 'contains'}
-                                onChange={(e) => onFilterChange({ ...filters, searchMode: e.target.value as SearchMode })}
-                            >
-                                <option value="contains">Contains</option>
-                                <option value="exact">Exact Match</option>
-                                <option value="startsWith">Starts With</option>
-                                <option value="fuzzy">Fuzzy</option>
-                            </select>
-                        </div>
+                       <Select
+                            label="Search Mode"
+                            value={filters.searchMode || 'contains'}
+                            onChange={(e) => onFilterChange({ ...filters, searchMode: e.target.value as SearchMode })}
+                            options={[
+                                { label: 'Contains', value: 'contains' },
+                                { label: 'Exact Match', value: 'exact' },
+                                { label: 'Starts With', value: 'startsWith' },
+                                { label: 'Fuzzy', value: 'fuzzy' },
+                            ]}
+                            fullWidth
+                       />
 
                         {/* Type Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em]">
-                                Type
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 bg-surface border border-border rounded-lg 
-                                         text-foreground text-sm focus:outline-none focus:ring-2 
-                                         focus:ring-accent/50 focus:border-accent transition-all"
-                                value={filters.type}
-                                onChange={(e) => onFilterChange({ ...filters, type: e.target.value as any })}
-                            >
-                                <option value="all">All Types</option>
-                                <option value="text">Text Only</option>
-                                <option value="image">Images Only</option>
-                                <option value="link">Links Only</option>
-                                <option value="file">Files Only</option>
-                            </select>
-                        </div>
+                        <Select
+                            label="Type"
+                            value={filters.type}
+                            onChange={(e) => onFilterChange({ ...filters, type: e.target.value as any })}
+                            options={[
+                                { label: 'All Types', value: 'all' },
+                                { label: 'Text Only', value: 'text' },
+                                { label: 'Images Only', value: 'image' },
+                                { label: 'Links Only', value: 'link' },
+                                { label: 'Files Only', value: 'file' },
+                            ]}
+                            fullWidth
+                        />
 
                         {/* Date Range Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em]">
-                                Date Range
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 bg-surface border border-border rounded-lg 
-                                         text-foreground text-sm focus:outline-none focus:ring-2 
-                                         focus:ring-accent/50 focus:border-accent transition-all"
-                                value={filters.dateRange}
-                                onChange={(e) => onFilterChange({ ...filters, dateRange: e.target.value as any })}
-                            >
-                                <option value="all">All Time</option>
-                                <option value="today">Today</option>
-                                <option value="week">This Week</option>
-                                <option value="month">This Month</option>
-                            </select>
-                        </div>
+                        <Select
+                            label="Date Range"
+                            value={filters.dateRange}
+                            onChange={(e) => onFilterChange({ ...filters, dateRange: e.target.value as any })}
+                            options={[
+                                { label: 'All Time', value: 'all' },
+                                { label: 'Today', value: 'today' },
+                                { label: 'This Week', value: 'week' },
+                                { label: 'This Month', value: 'month' },
+                            ]}
+                            fullWidth
+                        />
 
                         {/* Pinned Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em]">
-                                Status
-                            </label>
-                            <label className="flex items-center gap-2 px-3 py-2 bg-surface border border-border rounded-lg cursor-pointer hover:border-accent/50 transition-all">
-                                <input
-                                    type="checkbox"
-                                    className="w-4 h-4 rounded border-border text-accent focus:ring-accent/50"
-                                    checked={filters.pinnedOnly}
-                                    onChange={(e) => onFilterChange({ ...filters, pinnedOnly: e.target.checked })}
-                                />
-                                <span className="text-sm text-foreground">Pinned Only</span>
-                            </label>
+                        <div className="flex items-end pb-2">
+                             <Checkbox
+                                label="Pinned Only"
+                                checked={filters.pinnedOnly}
+                                onChange={(e) => onFilterChange({ ...filters, pinnedOnly: e.target.checked })}
+                             />
                         </div>
                     </div>
                 </div>

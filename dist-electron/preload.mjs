@@ -43,5 +43,7 @@ electron.contextBridge.exposeInMainWorld("statsAPI", {
 	getDiskStats: () => electron.ipcRenderer.invoke("get-disk-stats"),
 	getGPUStats: () => electron.ipcRenderer.invoke("get-gpu-stats"),
 	getBatteryStats: () => electron.ipcRenderer.invoke("get-battery-stats"),
-	getSensorStats: () => electron.ipcRenderer.invoke("get-sensor-stats")
+	getSensorStats: () => electron.ipcRenderer.invoke("get-sensor-stats"),
+	getBluetoothStats: () => electron.ipcRenderer.invoke("get-bluetooth-stats"),
+	getTimeZonesStats: () => electron.ipcRenderer.invoke("get-timezones-stats")
 });

@@ -12,6 +12,8 @@ const DiskModule = React.lazy(() => import('./components/DiskModule'));
 const GPUModule = React.lazy(() => import('./components/GPUModule'));
 const BatteryModule = React.lazy(() => import('./components/BatteryModule'));
 const SensorsModule = React.lazy(() => import('./components/SensorsModule'));
+const BluetoothModule = React.lazy(() => import('./components/BluetoothModule'));
+const TimeZonesModule = React.lazy(() => import('./components/TimeZonesModule'));
 
 // Loading skeleton cho modules
 const ModuleSkeleton = () => (
@@ -52,7 +54,26 @@ const StatsMonitor: React.FC = () => {
   const metrics = useSystemMetrics(enabledModules, preferences.updateInterval);
   const hasEnabledModules = enabledModules.length > 0;
 
-  const allModules = React.useMemo(() => ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'], []);
+  // Send stats data to tray for menu bar display
+  React.useEffect(() => {
+    if (metrics && hasEnabledModules && window.ipcRenderer) {
+      // Gửi data lên main process để update tray
+      window.ipcRenderer.send('stats-update-tray', {
+        cpu: metrics.cpu?.load.currentLoad || 0,
+        memory: {
+          used: metrics.memory?.used || 0,
+          total: metrics.memory?.total || 0,
+          percent: metrics.memory ? (metrics.memory.used / metrics.memory.total) * 100 : 0,
+        },
+        network: {
+          rx: metrics.network?.stats[0]?.rx_sec || 0,
+          tx: metrics.network?.stats[0]?.tx_sec || 0,
+        },
+      });
+    }
+  }, [metrics, hasEnabledModules]);
+
+  const allModules = React.useMemo(() => ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors', 'bluetooth', 'timezones'], []);
 
   const [showIntervalMenu, setShowIntervalMenu] = React.useState(false);
   const intervalMenuRef = React.useRef<HTMLDivElement>(null);
@@ -285,6 +306,18 @@ const StatsMonitor: React.FC = () => {
         {enabledModules.includes('sensors') && metrics?.sensors && (
           <Suspense fallback={<ModuleSkeleton />}>
             <SensorsModule data={metrics.sensors} />
+          </Suspense>
+        )}
+
+        {enabledModules.includes('bluetooth') && metrics?.bluetooth && (
+          <Suspense fallback={<ModuleSkeleton />}>
+            <BluetoothModule data={metrics.bluetooth} />
+          </Suspense>
+        )}
+
+        {enabledModules.includes('timezones') && metrics?.timeZones && (
+          <Suspense fallback={<ModuleSkeleton />}>
+            <TimeZonesModule data={metrics.timeZones} />
           </Suspense>
         )}
       </div>

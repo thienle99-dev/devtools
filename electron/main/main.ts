@@ -80,6 +80,13 @@ let recentTools: Array<{ id: string; name: string }> = [];
 let clipboardItems: Array<{ id: string; content: string; timestamp: number }> = [];
 let clipboardMonitoringEnabled = true;
 
+// Stats monitor data for tray
+let statsMenuData: {
+  cpu: number;
+  memory: { used: number; total: number; percent: number };
+  network: { rx: number; tx: number };
+} | null = null;
+
 function updateTrayMenu() {
   if (!tray) return
 
@@ -288,6 +295,35 @@ function updateTrayMenu() {
   });
   template.push({ type: 'separator' });
 
+  // === STATS MONITOR ===
+  if (statsMenuData) {
+    template.push({
+      label: '📊 Stats Monitor',
+      enabled: false,
+    });
+    template.push({
+      label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
+      enabled: false,
+    });
+    template.push({
+      label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
+      enabled: false,
+    });
+    template.push({
+      label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
+      enabled: false,
+    });
+    template.push({ type: 'separator' });
+    template.push({
+      label: 'Open Stats Monitor',
+      click: () => {
+        win?.show();
+        win?.webContents.send('navigate-to', '/stats-monitor');
+      },
+    });
+    template.push({ type: 'separator' });
+  }
+
   // === RECENT TOOLS ===
   if (recentTools.length > 0) {
     template.push({
@@ -443,6 +479,12 @@ function createWindow() {
   // Sync clipboard monitoring state from renderer
   ipcMain.on('sync-clipboard-monitoring', (_event, enabled: boolean) => {
     clipboardMonitoringEnabled = enabled;
+    updateTrayMenu();
+  });
+
+  // Stats monitor tray update
+  ipcMain.on('stats-update-tray', (_event, data) => {
+    statsMenuData = data;
     updateTrayMenu();
   });
 
@@ -643,6 +685,148 @@ app.whenReady().then(() => {
     return await si.cpuTemperature();
   });
 
+  // Bluetooth stats
+  ipcMain.handle('get-bluetooth-stats', async () => {
+    try {
+      const bluetooth = await si.bluetoothDevices();
+      return {
+        enabled: bluetooth.length > 0 || await checkBluetoothEnabled(),
+        devices: bluetooth.map((device: any) => ({
+          name: device.name || 'Unknown',
+          mac: device.mac || device.address || '',
+          type: device.type || device.deviceClass || 'unknown',
+          battery: device.battery || device.batteryLevel || undefined,
+          connected: device.connected !== false,
+          rssi: device.rssi || device.signalStrength || undefined,
+          manufacturer: device.manufacturer || device.vendor || undefined,
+        }))
+      };
+    } catch (error) {
+      console.error('Error fetching bluetooth stats:', error);
+      return { enabled: false, devices: [] };
+    }
+  });
+
+  // Time zones stats
+  ipcMain.handle('get-timezones-stats', async () => {
+    try {
+      const time = await si.time();
+      const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      // Default time zones (có thể config từ preferences)
+      const defaultZones = [
+        'America/New_York',
+        'Europe/London',
+        'Asia/Tokyo',
+        'Asia/Shanghai',
+      ];
+      
+      const zones = defaultZones.map(tz => {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+        const dateFormatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+        
+        const offset = getTimezoneOffset(tz);
+        const cityName = tz.split('/').pop()?.replace('_', ' ') || tz;
+        
+        return {
+          timezone: tz,
+          city: cityName,
+          time: formatter.format(now),
+          date: dateFormatter.format(now),
+          offset,
+        };
+      });
+      
+      return {
+        local: {
+          timezone: localTz,
+          city: localTz.split('/').pop()?.replace('_', ' ') || 'Local',
+          time: time.current,
+          date: time.uptime ? new Date().toLocaleDateString() : '',
+          offset: getTimezoneOffset(localTz),
+        },
+        zones,
+      };
+    } catch (error) {
+      console.error('Error fetching timezones stats:', error);
+      return null;
+    }
+  });
+
   createTray();
   createWindow();
 })
+
+// Helper functions for bluetooth and timezones
+async function checkBluetoothEnabled(): Promise<boolean> {
+  try {
+    // Platform-specific check
+    if (process.platform === 'darwin') {
+      // macOS: Check via system_profiler
+      const { execSync } = require('child_process');
+      const result = execSync('system_profiler SPBluetoothDataType').toString();
+      return result.includes('Bluetooth: On');
+    }
+    // Windows/Linux: Assume enabled if devices found
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getTimezoneOffset(timezone: string): number {
+  const now = new Date();
+  // Get UTC time in milliseconds
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  
+  // Get time string in target timezone
+  const tzString = now.toLocaleString('en-US', { 
+    timeZone: timezone, 
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  
+  // Parse the timezone time
+  const tzDate = new Date(tzString);
+  const tzTime = tzDate.getTime();
+  
+  // Calculate offset in hours
+  const offset = (tzTime - utcTime) / (1000 * 60 * 60);
+  return offset;
+}
+
+// Helper functions for formatting
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec > 1024 * 1024) {
+    return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+  }
+  if (bytesPerSec > 1024) {
+    return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  }
+  return `${bytesPerSec.toFixed(0)} B/s`;
+}

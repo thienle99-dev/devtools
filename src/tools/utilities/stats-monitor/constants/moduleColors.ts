@@ -41,6 +41,18 @@ export const MODULE_COLORS = {
     border: 'border-orange-500/40', 
     dot: 'bg-orange-500' 
   },
+  bluetooth: { 
+    bg: 'bg-cyan-500/20 dark:bg-cyan-500/15', 
+    text: 'text-cyan-700 dark:text-cyan-400', 
+    border: 'border-cyan-500/40', 
+    dot: 'bg-cyan-500' 
+  },
+  timezones: { 
+    bg: 'bg-indigo-500/20 dark:bg-indigo-500/15', 
+    text: 'text-indigo-700 dark:text-indigo-400', 
+    border: 'border-indigo-500/40', 
+    dot: 'bg-indigo-500' 
+  },
 } as const;
 
 export const getModuleColors = (moduleId: string) => {

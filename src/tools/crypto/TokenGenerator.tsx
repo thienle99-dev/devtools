@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
+import { Checkbox } from '../../components/ui/Checkbox';
+import { TextArea } from '../../components/ui/TextArea';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import zxcvbn from 'zxcvbn';
@@ -125,35 +127,33 @@ export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
                                 { id: 'numbers', label: 'Numbers (0-9)' },
                                 { id: 'symbols', label: 'Symbols (!@#)' },
                             ].map(opt => (
-                                <div key={opt.id} className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
+                                <div key={opt.id} className="flex items-center">
+                                    <Checkbox
+                                        label={opt.label}
                                         checked={options[opt.id]}
                                         onChange={(e) => updateOption(opt.id, e.target.checked)}
-                                        className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
                                     />
-                                    <label className="text-sm cursor-pointer" onClick={() => updateOption(opt.id, !options[opt.id])}>{opt.label}</label>
                                 </div>
                             ))}
                         </div>
-                        <div className="flex items-center space-x-2 pt-2">
-                            <input
-                                type="checkbox"
+                        <div className="flex items-center pt-2">
+                            <Checkbox
+                                label="Exclude Similar Characters"
+                                description="Excludes 1, l, I, 0, O, etc."
                                 checked={options.excludeSimilar}
                                 onChange={(e) => updateOption('excludeSimilar', e.target.checked)}
-                                className="rounded border-border-glass bg-bg-glass text-primary focus:ring-primary"
                             />
-                            <label className="text-sm cursor-pointer underline decoration-dotted" onClick={() => updateOption('excludeSimilar', !options.excludeSimilar)} title="Excludes 1, l, I, 0, O, etc.">Exclude Similar Characters</label>
                         </div>
                     </div>
 
                     <div className="space-y-4">
                         <div className="flex-1 relative h-full flex flex-col">
-                            <textarea
+                            <TextArea
                                 readOnly
                                 value={output}
                                 placeholder="Generated tokens will appear here..."
-                                className="glass-input w-full flex-1 font-mono text-lg resize-none p-4"
+                                fullWidth
+                                className="flex-1 font-mono text-lg resize-none min-h-[200px]"
                             />
                         </div>
                     </div>

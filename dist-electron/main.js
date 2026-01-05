@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import si from "systeminformation";
 import Store from "electron-store";
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
 process.env.DIST = join(__dirname, "../dist");
@@ -51,6 +55,7 @@ function toggleWindow() {
 var recentTools = [];
 var clipboardItems = [];
 var clipboardMonitoringEnabled = true;
+var statsMenuData = null;
 function updateTrayMenu() {
 	if (!tray) return;
 	const template = [{
@@ -242,6 +247,33 @@ function updateTrayMenu() {
 		]
 	});
 	template.push({ type: "separator" });
+	if (statsMenuData) {
+		template.push({
+			label: "📊 Stats Monitor",
+			enabled: false
+		});
+		template.push({
+			label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
+			enabled: false
+		});
+		template.push({
+			label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
+			enabled: false
+		});
+		template.push({
+			label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
+			enabled: false
+		});
+		template.push({ type: "separator" });
+		template.push({
+			label: "Open Stats Monitor",
+			click: () => {
+				win?.show();
+				win?.webContents.send("navigate-to", "/stats-monitor");
+			}
+		});
+		template.push({ type: "separator" });
+	}
 	if (recentTools.length > 0) {
 		template.push({
 			label: "🕐 Recent Tools",
@@ -362,6 +394,10 @@ function createWindow() {
 	});
 	ipcMain.on("sync-clipboard-monitoring", (_event, enabled) => {
 		clipboardMonitoringEnabled = enabled;
+		updateTrayMenu();
+	});
+	ipcMain.on("stats-update-tray", (_event, data) => {
+		statsMenuData = data;
 		updateTrayMenu();
 	});
 	ipcMain.on("window-minimize", () => {
@@ -488,6 +524,121 @@ app.whenReady().then(() => {
 	ipcMain.handle("get-sensor-stats", async () => {
 		return await si.cpuTemperature();
 	});
+	ipcMain.handle("get-bluetooth-stats", async () => {
+		try {
+			const bluetooth = await si.bluetoothDevices();
+			return {
+				enabled: bluetooth.length > 0 || await checkBluetoothEnabled(),
+				devices: bluetooth.map((device) => ({
+					name: device.name || "Unknown",
+					mac: device.mac || device.address || "",
+					type: device.type || device.deviceClass || "unknown",
+					battery: device.battery || device.batteryLevel || void 0,
+					connected: device.connected !== false,
+					rssi: device.rssi || device.signalStrength || void 0,
+					manufacturer: device.manufacturer || device.vendor || void 0
+				}))
+			};
+		} catch (error) {
+			console.error("Error fetching bluetooth stats:", error);
+			return {
+				enabled: false,
+				devices: []
+			};
+		}
+	});
+	ipcMain.handle("get-timezones-stats", async () => {
+		try {
+			const time = await si.time();
+			const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			const zones = [
+				"America/New_York",
+				"Europe/London",
+				"Asia/Tokyo",
+				"Asia/Shanghai"
+			].map((tz) => {
+				const now = /* @__PURE__ */ new Date();
+				const formatter = new Intl.DateTimeFormat("en-US", {
+					timeZone: tz,
+					hour: "2-digit",
+					minute: "2-digit",
+					second: "2-digit",
+					hour12: false
+				});
+				const dateFormatter = new Intl.DateTimeFormat("en-US", {
+					timeZone: tz,
+					year: "numeric",
+					month: "short",
+					day: "numeric"
+				});
+				const offset = getTimezoneOffset(tz);
+				return {
+					timezone: tz,
+					city: tz.split("/").pop()?.replace("_", " ") || tz,
+					time: formatter.format(now),
+					date: dateFormatter.format(now),
+					offset
+				};
+			});
+			return {
+				local: {
+					timezone: localTz,
+					city: localTz.split("/").pop()?.replace("_", " ") || "Local",
+					time: time.current,
+					date: time.uptime ? (/* @__PURE__ */ new Date()).toLocaleDateString() : "",
+					offset: getTimezoneOffset(localTz)
+				},
+				zones
+			};
+		} catch (error) {
+			console.error("Error fetching timezones stats:", error);
+			return null;
+		}
+	});
 	createTray();
 	createWindow();
 });
+async function checkBluetoothEnabled() {
+	try {
+		if (process.platform === "darwin") {
+			const { execSync } = __require("child_process");
+			return execSync("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
+		}
+		return true;
+	} catch {
+		return false;
+	}
+}
+function getTimezoneOffset(timezone) {
+	const now = /* @__PURE__ */ new Date();
+	const utcTime = now.getTime() + now.getTimezoneOffset() * 6e4;
+	const tzString = now.toLocaleString("en-US", {
+		timeZone: timezone,
+		hour12: false,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit"
+	});
+	return (new Date(tzString).getTime() - utcTime) / (1e3 * 60 * 60);
+}
+function formatBytes(bytes) {
+	if (bytes === 0) return "0 B";
+	const k = 1024;
+	const sizes = [
+		"B",
+		"KB",
+		"MB",
+		"GB",
+		"TB"
+	];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+}
+function formatSpeed(bytesPerSec) {
+	if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+	if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+	return `${bytesPerSec.toFixed(0)} B/s`;
+}

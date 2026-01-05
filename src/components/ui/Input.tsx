@@ -1,4 +1,4 @@
-import React, { type InputHTMLAttributes } from 'react';
+import React, { type InputHTMLAttributes, forwardRef } from 'react';
 import { cn } from '../../utils/cn';
 import { motion } from 'framer-motion';
 
@@ -10,7 +10,7 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
     fullWidth?: boolean;
 }
 
-export const Input: React.FC<InputProps> = ({
+export const Input = forwardRef<HTMLInputElement, InputProps>(({
     className,
     variant = 'glass',
     label,
@@ -20,7 +20,7 @@ export const Input: React.FC<InputProps> = ({
     id,
     disabled,
     ...props
-}) => {
+}, ref) => {
     const inputId = id || React.useId();
 
     return (
@@ -42,6 +42,7 @@ export const Input: React.FC<InputProps> = ({
                 )}
                 
                 <input
+                    ref={ref}
                     id={inputId}
                     className={cn(
                         // Base styles
@@ -98,4 +99,6 @@ export const Input: React.FC<InputProps> = ({
             )}
         </div>
     );
-};
+});
+
+Input.displayName = 'Input';

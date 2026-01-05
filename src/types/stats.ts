@@ -114,6 +114,34 @@ export interface NetworkStats {
   }[];
 }
 
+export interface BluetoothDevice {
+  name: string;
+  mac: string;
+  type: string; // 'headphones', 'mouse', 'keyboard', 'speaker', etc.
+  battery?: number; // Battery level (0-100)
+  connected: boolean;
+  rssi?: number; // Signal strength
+  manufacturer?: string;
+}
+
+export interface BluetoothStats {
+  enabled: boolean;
+  devices: BluetoothDevice[];
+}
+
+export interface TimeZoneInfo {
+  timezone: string; // e.g., 'America/New_York'
+  city: string; // e.g., 'New York'
+  time: string; // Formatted time
+  date: string; // Formatted date
+  offset: number; // UTC offset in hours
+}
+
+export interface TimeZonesStats {
+  local: TimeZoneInfo;
+  zones: TimeZoneInfo[]; // Additional time zones
+}
+
 export interface SystemMetrics {
   cpu: CPUStats;
   memory: MemoryStats;
@@ -122,6 +150,8 @@ export interface SystemMetrics {
   gpu?: GPUStats;
   battery?: BatteryStats;
   sensors?: SensorStats;
+  bluetooth?: BluetoothStats;
+  timeZones?: TimeZonesStats;
   timestamp: number;
 }
 
@@ -135,6 +165,8 @@ declare global {
       getGPUStats: () => Promise<GPUStats>;
       getBatteryStats: () => Promise<BatteryStats>;
       getSensorStats: () => Promise<SensorStats>;
+      getBluetoothStats: () => Promise<BluetoothStats>;
+      getTimeZonesStats: () => Promise<TimeZonesStats>;
     }
   }
 }
