@@ -69,5 +69,14 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 		return () => electron.ipcRenderer.removeListener("cleaner:space-lens-progress", listener);
 	},
 	runMaintenance: (task) => electron.ipcRenderer.invoke("cleaner:run-maintenance", task),
-	getHealthStatus: () => electron.ipcRenderer.invoke("cleaner:get-health-status")
+	getHealthStatus: () => electron.ipcRenderer.invoke("cleaner:get-health-status"),
+	checkSafety: (files) => electron.ipcRenderer.invoke("cleaner:check-safety", files),
+	createBackup: (files) => electron.ipcRenderer.invoke("cleaner:create-backup", files),
+	listBackups: () => electron.ipcRenderer.invoke("cleaner:list-backups"),
+	getBackupInfo: (backupId) => electron.ipcRenderer.invoke("cleaner:get-backup-info", backupId),
+	restoreBackup: (backupId) => electron.ipcRenderer.invoke("cleaner:restore-backup", backupId),
+	deleteBackup: (backupId) => electron.ipcRenderer.invoke("cleaner:delete-backup", backupId),
+	startHealthMonitoring: () => electron.ipcRenderer.invoke("health-start-monitoring"),
+	stopHealthMonitoring: () => electron.ipcRenderer.invoke("health-stop-monitoring"),
+	updateHealthTray: (data) => electron.ipcRenderer.send("health-update-tray", data)
 });

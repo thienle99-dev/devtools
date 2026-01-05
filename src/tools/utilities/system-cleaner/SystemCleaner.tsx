@@ -43,7 +43,12 @@ import {
     Server,
     Activity as ActivityIcon,
     Battery,
-    AlertCircle
+    AlertCircle,
+    List,
+    GitBranch,
+    Minimize2,
+    ChevronRight,
+    ChevronDown
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import type { SpaceLensNode, HeavyApp, PrivacyItem } from './store/systemCleanerStore';
@@ -60,6 +65,69 @@ const formatSize = (bytes: number) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 };
+
+// --- Reusable Loading Overlay Component ---
+const LoadingOverlay = ({ progress, status, title }: { progress: number; status?: string; title?: string }) => (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 dark:bg-black/50 bg-white/60 backdrop-blur-md z-50 flex flex-col items-center justify-center"
+    >
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-gradient-to-br from-white/10 dark:from-white/10 to-white/5 dark:to-white/5 backdrop-blur-xl border border-white/20 dark:border-white/20 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+        >
+            <div className="flex flex-col items-center space-y-6">
+                {/* Spinner */}
+                <div className="relative">
+                    <div className="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full animate-pulse" />
+                    <div className="relative p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/30 backdrop-blur-sm">
+                        <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
+                    </div>
+                </div>
+                
+                {/* Title and Status */}
+                <div className="text-center space-y-3 w-full">
+                    {title && (
+                        <h3 className="text-xl font-bold text-foreground">{title}</h3>
+                    )}
+                    {status && (
+                        <div className="flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+                            <p className="text-sm text-indigo-400 font-medium">{status}</p>
+                        </div>
+                    )}
+                </div>
+                
+                {/* Progress bar */}
+                <div className="w-full space-y-3">
+                    <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden border border-border-glass">
+                        <motion.div
+                            className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 relative overflow-hidden"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                        >
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                animate={{ x: ['-100%', '100%'] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                            />
+                        </motion.div>
+                    </div>
+                    <div className="flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 backdrop-blur-sm">
+                            <span className="text-lg font-bold text-indigo-400">{Math.round(progress)}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    </motion.div>
+);
 
 // --- Reusable Scan UI Component ---
 const ScanPlaceholder = ({ title, icon: Icon, description, onScan, isScanning, progress }: { 
@@ -252,15 +320,7 @@ const PerformanceView = () => {
 
     return (
         <div className="space-y-6 h-full flex flex-col relative">
-            {isScanning && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{progress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${progress}%` }} />
-                    </div>
-                </div>
-            )}
+            {isScanning && <LoadingOverlay progress={progress} title="Performance" status="Loading performance data..." />}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Performance</h2>
@@ -374,15 +434,7 @@ const StartupView = () => {
 
     return (
         <div className="space-y-6 h-full flex flex-col relative">
-            {isScanning && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{progress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${progress}%` }} />
-                    </div>
-                </div>
-            )}
+            {isScanning && <LoadingOverlay progress={progress} title="Startup Items" status="Loading startup items..." />}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Startup Items</h2>
@@ -493,15 +545,7 @@ const UninstallerView = () => {
 
     return (
         <div className="space-y-6 h-full flex flex-col relative">
-            {isScanning && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{progress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${progress}%` }} />
-                    </div>
-                </div>
-            )}
+            {isScanning && <LoadingOverlay progress={progress} title="Uninstaller" status="Loading installed applications..." />}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Uninstaller</h2>
@@ -546,6 +590,8 @@ const UninstallerView = () => {
 
 // --- Space Lens ---
 
+type ViewMode = 'grid' | 'list' | 'tree' | 'detail' | 'compact';
+
 const SpaceLensView = () => {
     const { spaceLensData, setSpaceLensData } = useSystemCleanerStore();
     const [isScanning, setIsScanning] = useState(false);
@@ -554,6 +600,8 @@ const SpaceLensView = () => {
     const [currentScanPath, setCurrentScanPath] = useState('');
     const [currentScanItem, setCurrentScanItem] = useState('');
     const [history, setHistory] = useState<SpaceLensNode[]>([]);
+    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const scanCancelRef = useRef(false);
     const progressCleanupRef = useRef<(() => void) | null>(null);
 
@@ -852,107 +900,96 @@ const SpaceLensView = () => {
                         </div>
                     </div>
                 </div>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => scanSpace(spaceLensData?.path)}
-                    disabled={isScanning}
-                >
-                    <RefreshCw className={cn("w-4 h-4 mr-2", isScanning && "animate-spin")} />
-                    Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                    {/* View Mode Selector */}
+                    <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-border-glass">
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={cn(
+                                "p-1.5 rounded transition-colors",
+                                viewMode === 'grid' 
+                                    ? "bg-indigo-500 text-white" 
+                                    : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            )}
+                            title="Grid View"
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={cn(
+                                "p-1.5 rounded transition-colors",
+                                viewMode === 'list' 
+                                    ? "bg-indigo-500 text-white" 
+                                    : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            )}
+                            title="List View"
+                        >
+                            <List className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('tree')}
+                            className={cn(
+                                "p-1.5 rounded transition-colors",
+                                viewMode === 'tree' 
+                                    ? "bg-indigo-500 text-white" 
+                                    : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            )}
+                            title="Tree View"
+                        >
+                            <GitBranch className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('detail')}
+                            className={cn(
+                                "p-1.5 rounded transition-colors",
+                                viewMode === 'detail' 
+                                    ? "bg-indigo-500 text-white" 
+                                    : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            )}
+                            title="Detail View"
+                        >
+                            <FileText className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('compact')}
+                            className={cn(
+                                "p-1.5 rounded transition-colors",
+                                viewMode === 'compact' 
+                                    ? "bg-indigo-500 text-white" 
+                                    : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            )}
+                            title="Compact View"
+                        >
+                            <Minimize2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => scanSpace(spaceLensData?.path)}
+                        disabled={isScanning}
+                    >
+                        <RefreshCw className={cn("w-4 h-4 mr-2", isScanning && "animate-spin")} />
+                        Refresh
+                    </Button>
+                </div>
             </div>
 
-            {/* Content - hiển thị items đã scan ngay lập tức */}
-            <div className="flex-1 overflow-auto space-y-4 pr-2 custom-scrollbar">
+            {/* Content - Render based on view mode */}
+            <div className="flex-1 overflow-auto pr-2 custom-scrollbar">
                 {spaceLensData && spaceLensData.children && spaceLensData.children.length > 0 ? (
-                    // Hiển thị items đã scan được, kể cả khi đang scan
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
-                        {spaceLensData.children.map((node, i) => {
-                            const percentage = spaceLensData.size > 0 ? (node.size / spaceLensData.size) * 100 : 0;
-                            return (
-                                <motion.div
-                                    key={`${node.path}-${i}`}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: i * 0.01 }}
-                                    whileHover={{ scale: 1.02, y: -4 }}
-                                    onClick={() => !isScanning && navigateTo(node)}
-                                    className={cn(
-                                        "group relative p-4 rounded-2xl border transition-all overflow-hidden",
-                                        node.type === 'dir' 
-                                            ? "bg-white/5 border-border-glass cursor-pointer hover:bg-white/10" 
-                                            : "bg-white/[0.02] border-border-glass/50",
-                                        isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
-                                    )}
-                                >
-                                    {/* Progress bar ở bottom */}
-                                    <div 
-                                        className="absolute bottom-0 left-0 h-1 bg-indigo-500/40 transition-all group-hover:bg-indigo-500/60"
-                                        style={{ width: `${Math.max(percentage, 2)}%` }}
-                                    />
-                                    
-                                    {/* Delete button - chỉ hiển thị khi không scan */}
-                                    {!isScanning && (
-                                        <button 
-                                            onClick={(e) => handleDelete(e, node)}
-                                            className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white z-10"
-                                        >
-                                            <Trash className="w-3 h-3" />
-                                        </button>
-                                    )}
-                                    
-                                    {/* Content */}
-                                    <div className="flex flex-col items-center text-center space-y-3">
-                                        <div className={cn(
-                                            "p-3 rounded-xl transition-colors",
-                                            node.type === 'dir' 
-                                                ? "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white" 
-                                                : "bg-white/5 text-foreground-muted"
-                                        )}>
-                                            {node.type === 'dir' ? <FolderOpen className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
-                                        </div>
-                                        <div className="w-full">
-                                            <div className="text-sm font-bold truncate px-1">{node.name}</div>
-                                            <div className="text-[10px] text-foreground-muted">{formatSize(node.size)}</div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Percentage badge */}
-                                    {percentage > 10 && (
-                                        <div className="absolute top-2 left-2 text-[8px] font-bold text-foreground-muted/30 uppercase tracking-tighter">
-                                            {percentage.toFixed(0)}%
-                                        </div>
-                                    )}
-                                </motion.div>
-                            );
-                        })}
-                        
-                        {/* Hiển thị skeleton cho item đang scan */}
-                        {isScanning && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="p-4 rounded-2xl border border-border-glass bg-white/5 animate-pulse"
-                            >
-                                <div className="flex flex-col items-center space-y-3">
-                                    <div className="w-12 h-12 rounded-xl bg-white/10" />
-                                    <div className="w-full space-y-2">
-                                        <div className="h-4 bg-white/10 rounded w-3/4 mx-auto" />
-                                        <div className="h-3 bg-white/5 rounded w-1/2 mx-auto" />
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </div>
+                    <>
+                        {viewMode === 'grid' && <GridView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
+                        {viewMode === 'list' && <ListView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
+                        {viewMode === 'tree' && <TreeView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} expandedNodes={expandedNodes} setExpandedNodes={setExpandedNodes} />}
+                        {viewMode === 'detail' && <DetailView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
+                        {viewMode === 'compact' && <CompactView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
+                    </>
                 ) : isScanning ? (
-                    // Skeleton loading khi chưa có items nào
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
                         {Array.from({ length: 8 }).map((_, i) => (
-                            <div
-                                key={i}
-                                className="p-4 rounded-2xl border border-border-glass bg-white/5 animate-pulse"
-                            >
+                            <div key={i} className="p-4 rounded-2xl border border-border-glass bg-white/5 animate-pulse">
                                 <div className="flex flex-col items-center space-y-3">
                                     <div className="w-12 h-12 rounded-xl bg-white/10" />
                                     <div className="w-full space-y-2">
@@ -965,6 +1002,343 @@ const SpaceLensView = () => {
                     </div>
                 ) : null}
             </div>
+        </div>
+    );
+};
+
+// --- Space Lens View Components ---
+
+// Grid View (Default)
+const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+    nodes: SpaceLensNode[];
+    parentSize: number;
+    onNavigate: (node: SpaceLensNode) => void;
+    onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
+    isScanning: boolean;
+}) => {
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
+            {nodes.map((node, i) => {
+                const percentage = parentSize > 0 ? (node.size / parentSize) * 100 : 0;
+                return (
+                    <motion.div
+                        key={`${node.path}-${i}`}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.01 }}
+                        whileHover={{ scale: 1.02, y: -4 }}
+                        onClick={() => !isScanning && onNavigate(node)}
+                        className={cn(
+                            "group relative p-4 rounded-2xl border transition-all overflow-hidden",
+                            node.type === 'dir' 
+                                ? "bg-white/5 border-border-glass cursor-pointer hover:bg-white/10" 
+                                : "bg-white/[0.02] border-border-glass/50",
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                        )}
+                    >
+                        <div className="absolute bottom-0 left-0 h-1 bg-indigo-500/40 transition-all group-hover:bg-indigo-500/60" style={{ width: `${Math.max(percentage, 2)}%` }} />
+                        {!isScanning && (
+                            <button 
+                                onClick={(e) => onDelete(e, node)}
+                                className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white z-10"
+                            >
+                                <Trash className="w-3 h-3" />
+                            </button>
+                        )}
+                        <div className="flex flex-col items-center text-center space-y-3">
+                            <div className={cn(
+                                "p-3 rounded-xl transition-colors",
+                                node.type === 'dir' 
+                                    ? "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white" 
+                                    : "bg-white/5 text-foreground-muted"
+                            )}>
+                                {node.type === 'dir' ? <FolderOpen className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
+                            </div>
+                            <div className="w-full">
+                                <div className="text-sm font-bold truncate px-1">{node.name}</div>
+                                <div className="text-[10px] text-foreground-muted">{formatSize(node.size)}</div>
+                            </div>
+                        </div>
+                        {percentage > 10 && (
+                            <div className="absolute top-2 left-2 text-[8px] font-bold text-foreground-muted/30 uppercase tracking-tighter">
+                                {percentage.toFixed(0)}%
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            })}
+        </div>
+    );
+};
+
+// List View
+const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+    nodes: SpaceLensNode[];
+    parentSize: number;
+    onNavigate: (node: SpaceLensNode) => void;
+    onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
+    isScanning: boolean;
+}) => {
+    return (
+        <div className="space-y-2 pb-8">
+            {nodes.map((node, i) => {
+                const percentage = parentSize > 0 ? (node.size / parentSize) * 100 : 0;
+                return (
+                    <motion.div
+                        key={`${node.path}-${i}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.02 }}
+                        onClick={() => !isScanning && node.type === 'dir' && onNavigate(node)}
+                        className={cn(
+                            "group relative p-4 rounded-xl border transition-all cursor-pointer",
+                            node.type === 'dir' 
+                                ? "bg-white/5 border-border-glass hover:bg-white/10" 
+                                : "bg-white/[0.02] border-border-glass/50",
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                        )}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className={cn(
+                                "p-2 rounded-lg transition-colors",
+                                node.type === 'dir' 
+                                    ? "bg-indigo-500/10 text-indigo-400" 
+                                    : "bg-white/5 text-foreground-muted"
+                            )}>
+                                {node.type === 'dir' ? <FolderOpen className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold truncate">{node.name}</div>
+                                <div className="text-xs text-foreground-muted">{formatSize(node.size)} • {percentage.toFixed(1)}%</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
+                                </div>
+                                {!isScanning && (
+                                    <button 
+                                        onClick={(e) => onDelete(e, node)}
+                                        className="p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white"
+                                    >
+                                        <Trash className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            })}
+        </div>
+    );
+};
+
+// Tree View
+const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expandedNodes, setExpandedNodes }: {
+    nodes: SpaceLensNode[];
+    parentSize: number;
+    onNavigate: (node: SpaceLensNode) => void;
+    onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
+    isScanning: boolean;
+    expandedNodes: Set<string>;
+    setExpandedNodes: React.Dispatch<React.SetStateAction<Set<string>>>;
+}) => {
+    const toggleExpand = (path: string) => {
+        const newExpanded = new Set(expandedNodes);
+        if (newExpanded.has(path)) {
+            newExpanded.delete(path);
+        } else {
+            newExpanded.add(path);
+        }
+        setExpandedNodes(newExpanded);
+    };
+
+    const renderNode = (node: SpaceLensNode, level: number = 0) => {
+        const percentage = parentSize > 0 ? (node.size / parentSize) * 100 : 0;
+        const isExpanded = expandedNodes.has(node.path);
+        const hasChildren = node.children && node.children.length > 0;
+
+        return (
+            <div key={node.path} className="select-none">
+                <div
+                    className={cn(
+                        "group flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors",
+                        level > 0 && "ml-6"
+                    )}
+                    onClick={() => node.type === 'dir' && !isScanning && onNavigate(node)}
+                >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {hasChildren && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpand(node.path);
+                                }}
+                                className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                            >
+                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </button>
+                        )}
+                        {!hasChildren && <div className="w-5" />}
+                        <div className={cn(
+                            "p-1.5 rounded transition-colors",
+                            node.type === 'dir' 
+                                ? "bg-indigo-500/10 text-indigo-400" 
+                                : "bg-white/5 text-foreground-muted"
+                        )}>
+                            {node.type === 'dir' ? <FolderOpen className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{node.name}</div>
+                            <div className="text-xs text-foreground-muted">{formatSize(node.size)} • {percentage.toFixed(1)}%</div>
+                        </div>
+                        <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
+                        </div>
+                        {!isScanning && (
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(e, node);
+                                }}
+                                className="p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded hover:bg-red-500 hover:text-white"
+                            >
+                                <Trash className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                {hasChildren && isExpanded && (
+                    <div className="ml-4 border-l border-border-glass/30 pl-2">
+                        {node.children!.map(child => renderNode(child, level + 1))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-1 pb-8">
+            {nodes.map(node => renderNode(node))}
+        </div>
+    );
+};
+
+// Detail View
+const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+    nodes: SpaceLensNode[];
+    parentSize: number;
+    onNavigate: (node: SpaceLensNode) => void;
+    onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
+    isScanning: boolean;
+}) => {
+    return (
+        <div className="space-y-3 pb-8">
+            {nodes.map((node, i) => {
+                const percentage = parentSize > 0 ? (node.size / parentSize) * 100 : 0;
+                return (
+                    <div
+                        key={`${node.path}-${i}`}
+                        className={cn(
+                            "p-4 rounded-xl border border-border-glass bg-white/5 hover:bg-white/10 transition-colors group",
+                            node.type === 'dir' && !isScanning && "cursor-pointer",
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                        )}
+                        onClick={() => !isScanning && node.type === 'dir' && onNavigate(node)}
+                    >
+                        <div className="flex items-start gap-4">
+                            <div className={cn(
+                                "p-3 rounded-xl transition-colors",
+                                node.type === 'dir' 
+                                    ? "bg-indigo-500/10 text-indigo-400" 
+                                    : "bg-white/5 text-foreground-muted"
+                            )}>
+                                {node.type === 'dir' ? <FolderOpen className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-2">
+                                <div>
+                                    <div className="text-base font-bold">{node.name}</div>
+                                    <div className="text-xs text-foreground-muted font-mono mt-1 break-all">{node.path}</div>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                    <div>
+                                        <span className="text-foreground-muted">Size: </span>
+                                        <span className="font-bold">{formatSize(node.size)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-foreground-muted">Percentage: </span>
+                                        <span className="font-bold">{percentage.toFixed(2)}%</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-foreground-muted">Type: </span>
+                                        <span className="font-bold uppercase">{node.type}</span>
+                                    </div>
+                                </div>
+                                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400" style={{ width: `${percentage}%` }} />
+                                </div>
+                            </div>
+                            {!isScanning && (
+                                <button 
+                                    onClick={(e) => onDelete(e, node)}
+                                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white"
+                                >
+                                    <Trash className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// Compact View
+const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+    nodes: SpaceLensNode[];
+    parentSize: number;
+    onNavigate: (node: SpaceLensNode) => void;
+    onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
+    isScanning: boolean;
+}) => {
+    return (
+        <div className="space-y-1 pb-8">
+            {nodes.map((node, i) => {
+                const percentage = parentSize > 0 ? (node.size / parentSize) * 100 : 0;
+                return (
+                    <div
+                        key={`${node.path}-${i}`}
+                        onClick={() => !isScanning && node.type === 'dir' && onNavigate(node)}
+                        className={cn(
+                            "group flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-sm",
+                            node.type === 'dir' && !isScanning && "cursor-pointer",
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                        )}
+                    >
+                        <div className={cn(
+                            "p-1 rounded",
+                            node.type === 'dir' 
+                                ? "text-indigo-400" 
+                                : "text-foreground-muted"
+                        )}>
+                            {node.type === 'dir' ? <FolderOpen className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                        </div>
+                        <div className="flex-1 min-w-0 truncate text-xs font-medium">{node.name}</div>
+                        <div className="text-xs text-foreground-muted">{formatSize(node.size)}</div>
+                        <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
+                        </div>
+                        {!isScanning && (
+                            <button 
+                                onClick={(e) => onDelete(e, node)}
+                                className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-500/10 rounded"
+                            >
+                                <Trash className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -984,6 +1358,35 @@ const JunkCleanupView = () => {
 
     const handleCleanup = async () => {
         if (selectedItems.length === 0) return;
+        
+        // Safety check
+        try {
+            const safetyCheck = await (window as any).cleanerAPI.checkSafety(selectedItems);
+            if (!safetyCheck.safe) {
+                if (safetyCheck.blocked.length > 0) {
+                    toast.error(`Cannot delete ${safetyCheck.blocked.length} protected file(s)`);
+                    return;
+                }
+                if (safetyCheck.warnings.length > 0) {
+                    const proceed = confirm(`Warning: ${safetyCheck.warnings.length} file(s) may be important. Continue?`);
+                    if (!proceed) return;
+                }
+            }
+        } catch (e) {
+            console.warn('Safety check failed:', e);
+        }
+        
+        // Create backup before deletion
+        try {
+            const backupResult = await (window as any).cleanerAPI.createBackup(selectedItems);
+            if (backupResult.success) {
+                toast.success(`Backup created before cleanup`);
+            }
+        } catch (e) {
+            const proceed = confirm('Failed to create backup. Continue with deletion?');
+            if (!proceed) return;
+        }
+        
         setIsCleaning(true);
         try {
             const cleanupResult = await (window as any).cleanerAPI.runCleanup(selectedItems);
@@ -1006,14 +1409,12 @@ const JunkCleanupView = () => {
 
     return (
         <div className="space-y-6 h-full flex flex-col relative">
-            {isScanning && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{scanProgress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${scanProgress}%` }} />
-                    </div>
-                </div>
+            {(isScanning || isCleaning) && (
+                <LoadingOverlay 
+                    progress={isScanning ? scanProgress : 100} 
+                    title={isScanning ? "System Junk" : "Cleaning"} 
+                    status={isScanning ? "Scanning for junk files..." : "Cleaning selected files..."} 
+                />
             )}
             <div className="flex items-center justify-between">
                 <div>
@@ -1106,13 +1507,11 @@ const LargeFilesView = () => {
     return (
         <div className="space-y-6 h-full flex flex-col relative">
             {(isScanning || isDeleting) && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{progress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${progress}%` }} />
-                    </div>
-                </div>
+                <LoadingOverlay 
+                    progress={progress} 
+                    title={isDeleting ? "Deleting Files" : "Large Files"} 
+                    status={isDeleting ? "Deleting selected files..." : "Scanning for large files..."} 
+                />
             )}
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Large & Old Files</h2>
@@ -1222,15 +1621,7 @@ const DuplicatesView = () => {
 
     return (
         <div className="space-y-6 h-full flex flex-col relative">
-            {isScanning && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{progress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${progress}%` }} />
-                    </div>
-                </div>
-            )}
+            {isScanning && <LoadingOverlay progress={progress} title="Duplicates" status="Scanning for duplicate files..." />}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Duplicates</h2>
@@ -1414,8 +1805,17 @@ const MaintenanceView = () => {
         }
     };
 
+    const currentTask = [...windowsTasks, ...macosTasks].find(t => runningTasks.has(t.id));
+    
     return (
-        <div className="space-y-6 h-full flex flex-col">
+        <div className="space-y-6 h-full flex flex-col relative">
+            {runningTasks.size > 0 && currentTask && (
+                <LoadingOverlay 
+                    progress={100} 
+                    title={currentTask.name} 
+                    status={`Running ${currentTask.name}...`} 
+                />
+            )}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Maintenance</h2>
@@ -1523,6 +1923,10 @@ const HealthMonitorView = () => {
         try {
             const status = await (window as any).cleanerAPI.getHealthStatus();
             setHealthStatus(status);
+            // Update tray widget
+            if (status && (window as any).cleanerAPI.updateHealthTray) {
+                (window as any).cleanerAPI.updateHealthTray(status);
+            }
         } catch (error) {
             toast.error('Failed to get health status');
         } finally {
@@ -1553,7 +1957,14 @@ const HealthMonitorView = () => {
     }
 
     return (
-        <div className="space-y-6 h-full flex flex-col">
+        <div className="space-y-6 h-full flex flex-col relative">
+            {isLoading && (
+                <LoadingOverlay 
+                    progress={100} 
+                    title="Health Monitor" 
+                    status="Loading health data..." 
+                />
+            )}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Health Monitor</h2>
@@ -1845,14 +2256,12 @@ const ProtectionView = () => {
 
     return (
         <div className="space-y-6 h-full flex flex-col relative">
-            {isScanning && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center space-y-4 rounded-3xl">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                    <div className="text-xl font-bold">{progress}%</div>
-                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div className="h-full bg-indigo-500" animate={{ width: `${progress}%` }} />
-                    </div>
-                </div>
+            {(isScanning || isCleaning) && (
+                <LoadingOverlay 
+                    progress={progress} 
+                    title="Privacy Protection" 
+                    status={isCleaning ? "Cleaning privacy data..." : "Scanning privacy data..."} 
+                />
             )}
 
             <div className="flex items-center justify-between">
@@ -1965,6 +2374,50 @@ export const SystemCleaner: React.FC = () => {
         loadPlatform();
     }, [platformInfo, setPlatformInfo]);
     
+    // Start health monitoring for tray widget
+    useEffect(() => {
+        const startMonitoring = async () => {
+            try {
+                await (window as any).cleanerAPI.startHealthMonitoring();
+            } catch (error) {
+                console.warn('Failed to start health monitoring:', error);
+            }
+        };
+        
+        startMonitoring();
+        
+        return () => {
+            // Stop monitoring on unmount
+            (window as any).cleanerAPI.stopHealthMonitoring().catch(() => {});
+        };
+    }, []);
+    
+    // Update tray with health data when health status changes
+    const { privacyData } = useSystemCleanerStore();
+    useEffect(() => {
+        const updateTray = async () => {
+            try {
+                const healthStatus = await (window as any).cleanerAPI.getHealthStatus();
+                if (healthStatus && (window as any).cleanerAPI.updateHealthTray) {
+                    (window as any).cleanerAPI.updateHealthTray(healthStatus);
+                }
+            } catch (error) {
+                // Silently fail - tray updates are optional
+            }
+        };
+        
+        // Update tray periodically
+        const interval = setInterval(updateTray, 5000);
+        updateTray(); // Initial update
+        
+        return () => clearInterval(interval);
+    }, [privacyData]);
+    
+    // Platform-specific UI adaptations
+    const platform = platformInfo?.platform;
+    const isWindows = platform === 'windows';
+    const isMacOS = platform === 'macos';
+    
     const tabs = [
         { id: 'smart-scan', name: 'Smart Care', icon: Shield },
         { id: 'space-lens', name: 'Space Lens', icon: LayoutGrid },
@@ -1982,7 +2435,7 @@ export const SystemCleaner: React.FC = () => {
     return (
         <ToolPane
             title="System Cleaner"
-            description="Premium system maintenance and optimization suite"
+            description={`Premium system maintenance and optimization suite${platform ? ` for ${isWindows ? 'Windows' : isMacOS ? 'macOS' : platform}` : ''}`}
         >
             <div className="flex h-full gap-8 overflow-hidden">
                 {/* Sidebar Navigation */}

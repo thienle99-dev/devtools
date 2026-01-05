@@ -79,4 +79,13 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   },
   runMaintenance: (task: any) => ipcRenderer.invoke('cleaner:run-maintenance', task),
   getHealthStatus: () => ipcRenderer.invoke('cleaner:get-health-status'),
+  checkSafety: (files: string[]) => ipcRenderer.invoke('cleaner:check-safety', files),
+  createBackup: (files: string[]) => ipcRenderer.invoke('cleaner:create-backup', files),
+  listBackups: () => ipcRenderer.invoke('cleaner:list-backups'),
+  getBackupInfo: (backupId: string) => ipcRenderer.invoke('cleaner:get-backup-info', backupId),
+  restoreBackup: (backupId: string) => ipcRenderer.invoke('cleaner:restore-backup', backupId),
+  deleteBackup: (backupId: string) => ipcRenderer.invoke('cleaner:delete-backup', backupId),
+  startHealthMonitoring: () => ipcRenderer.invoke('health-start-monitoring'),
+  stopHealthMonitoring: () => ipcRenderer.invoke('health-stop-monitoring'),
+  updateHealthTray: (data: any) => ipcRenderer.send('health-update-tray', data),
 })

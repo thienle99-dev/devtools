@@ -968,6 +968,84 @@ function setupCleanerHandlers() {
 			};
 		}
 	});
+	ipcMain.handle("cleaner:check-safety", async (_event, files) => {
+		try {
+			const platform = process.platform;
+			const result = checkFilesSafety(files, platform);
+			return {
+				success: true,
+				safe: result.safe,
+				warnings: result.warnings,
+				blocked: result.blocked
+			};
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message,
+				safe: false,
+				warnings: [],
+				blocked: []
+			};
+		}
+	});
+	ipcMain.handle("cleaner:create-backup", async (_event, files) => {
+		try {
+			return await createBackup(files);
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:list-backups", async () => {
+		try {
+			return {
+				success: true,
+				backups: await listBackups()
+			};
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message,
+				backups: []
+			};
+		}
+	});
+	ipcMain.handle("cleaner:get-backup-info", async (_event, backupId) => {
+		try {
+			const backupInfo = await getBackupInfo(backupId);
+			return {
+				success: backupInfo !== null,
+				backupInfo
+			};
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:restore-backup", async (_event, backupId) => {
+		try {
+			return await restoreBackup(backupId);
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
+	ipcMain.handle("cleaner:delete-backup", async (_event, backupId) => {
+		try {
+			return await deleteBackup(backupId);
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
 }
 async function getDirSize(dirPath) {
 	let size = 0;
@@ -1147,6 +1225,250 @@ function formatBytes$1(bytes) {
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
+var getPlatformProtectedPaths = (platform) => {
+	const home = os.homedir();
+	const rules = [];
+	if (platform === "win32") {
+		const windir = process.env.WINDIR || "C:\\Windows";
+		const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
+		const programFilesX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
+		rules.push({
+			path: windir,
+			type: "folder",
+			action: "protect",
+			reason: "Windows system directory",
+			platform: "windows"
+		}, {
+			path: programFiles,
+			type: "folder",
+			action: "protect",
+			reason: "Program Files directory",
+			platform: "windows"
+		}, {
+			path: programFilesX86,
+			type: "folder",
+			action: "protect",
+			reason: "Program Files (x86) directory",
+			platform: "windows"
+		}, {
+			path: "C:\\ProgramData",
+			type: "folder",
+			action: "protect",
+			reason: "ProgramData directory",
+			platform: "windows"
+		}, {
+			path: path.join(home, "Documents"),
+			type: "folder",
+			action: "warn",
+			reason: "User Documents folder",
+			platform: "windows"
+		}, {
+			path: path.join(home, "Desktop"),
+			type: "folder",
+			action: "warn",
+			reason: "User Desktop folder",
+			platform: "windows"
+		});
+	} else if (platform === "darwin") rules.push({
+		path: "/System",
+		type: "folder",
+		action: "protect",
+		reason: "macOS System directory",
+		platform: "macos"
+	}, {
+		path: "/Library",
+		type: "folder",
+		action: "protect",
+		reason: "System Library directory",
+		platform: "macos"
+	}, {
+		path: "/usr",
+		type: "folder",
+		action: "protect",
+		reason: "Unix system resources",
+		platform: "macos"
+	}, {
+		path: path.join(home, "Documents"),
+		type: "folder",
+		action: "warn",
+		reason: "User Documents folder",
+		platform: "macos"
+	}, {
+		path: path.join(home, "Desktop"),
+		type: "folder",
+		action: "warn",
+		reason: "User Desktop folder",
+		platform: "macos"
+	});
+	return rules;
+};
+var checkFileSafety = (filePath, platform) => {
+	const warnings = [];
+	const blocked = [];
+	const rules = getPlatformProtectedPaths(platform);
+	for (const rule of rules) {
+		if (rule.platform && rule.platform !== platform && rule.platform !== "all") continue;
+		const normalizedRulePath = path.normalize(rule.path);
+		const normalizedFilePath = path.normalize(filePath);
+		if (normalizedFilePath === normalizedRulePath || normalizedFilePath.startsWith(normalizedRulePath + path.sep)) {
+			if (rule.action === "protect") {
+				blocked.push(filePath);
+				return {
+					safe: false,
+					warnings: [],
+					blocked: [filePath]
+				};
+			} else if (rule.action === "warn") warnings.push({
+				path: filePath,
+				reason: rule.reason,
+				severity: "high"
+			});
+		}
+	}
+	return {
+		safe: blocked.length === 0,
+		warnings,
+		blocked
+	};
+};
+var checkFilesSafety = (filePaths, platform) => {
+	const allWarnings = [];
+	const allBlocked = [];
+	for (const filePath of filePaths) {
+		const result = checkFileSafety(filePath, platform);
+		if (!result.safe) allBlocked.push(...result.blocked);
+		allWarnings.push(...result.warnings);
+	}
+	return {
+		safe: allBlocked.length === 0,
+		warnings: allWarnings,
+		blocked: allBlocked
+	};
+};
+var getBackupDir = () => {
+	const home = os.homedir();
+	if (process.platform === "win32") return path.join(home, "AppData", "Local", "devtools-app", "backups");
+	else return path.join(home, ".devtools-app", "backups");
+};
+var generateBackupId = () => {
+	return `backup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+var calculateTotalSize = async (files) => {
+	let totalSize = 0;
+	for (const filePath of files) try {
+		const stats = await fs.stat(filePath);
+		if (stats.isFile()) totalSize += stats.size;
+	} catch (e) {}
+	return totalSize;
+};
+var createBackup = async (files) => {
+	try {
+		const backupDir = getBackupDir();
+		await fs.mkdir(backupDir, { recursive: true });
+		const backupId = generateBackupId();
+		const backupPath = path.join(backupDir, backupId);
+		await fs.mkdir(backupPath, { recursive: true });
+		const totalSize = await calculateTotalSize(files);
+		const backedUpFiles = [];
+		for (const filePath of files) try {
+			const stats = await fs.stat(filePath);
+			const fileName = path.basename(filePath);
+			const backupFilePath = path.join(backupPath, fileName);
+			if (stats.isFile()) {
+				await fs.copyFile(filePath, backupFilePath);
+				backedUpFiles.push(filePath);
+			}
+		} catch (e) {}
+		const backupInfo = {
+			id: backupId,
+			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+			files: backedUpFiles,
+			totalSize,
+			location: backupPath,
+			platform: process.platform
+		};
+		const metadataPath = path.join(backupPath, "backup-info.json");
+		await fs.writeFile(metadataPath, JSON.stringify(backupInfo, null, 2));
+		return {
+			success: true,
+			backupId,
+			backupInfo
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error.message
+		};
+	}
+};
+var listBackups = async () => {
+	try {
+		const backupDir = getBackupDir();
+		const entries = await fs.readdir(backupDir, { withFileTypes: true });
+		const backups = [];
+		for (const entry of entries) if (entry.isDirectory() && entry.name.startsWith("backup-")) {
+			const metadataPath = path.join(backupDir, entry.name, "backup-info.json");
+			try {
+				const metadataContent = await fs.readFile(metadataPath, "utf-8");
+				backups.push(JSON.parse(metadataContent));
+			} catch (e) {}
+		}
+		return backups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+	} catch (error) {
+		return [];
+	}
+};
+var getBackupInfo = async (backupId) => {
+	try {
+		const backupDir = getBackupDir();
+		const metadataPath = path.join(backupDir, backupId, "backup-info.json");
+		const metadataContent = await fs.readFile(metadataPath, "utf-8");
+		return JSON.parse(metadataContent);
+	} catch (error) {
+		return null;
+	}
+};
+var restoreBackup = async (backupId) => {
+	try {
+		const backupInfo = await getBackupInfo(backupId);
+		if (!backupInfo) return {
+			success: false,
+			error: "Backup not found"
+		};
+		const backupPath = backupInfo.location;
+		for (const filePath of backupInfo.files) try {
+			const fileName = path.basename(filePath);
+			const backupFilePath = path.join(backupPath, fileName);
+			if ((await fs.stat(backupFilePath)).isFile()) {
+				const destDir = path.dirname(filePath);
+				await fs.mkdir(destDir, { recursive: true });
+				await fs.copyFile(backupFilePath, filePath);
+			}
+		} catch (e) {}
+		return { success: true };
+	} catch (error) {
+		return {
+			success: false,
+			error: error.message
+		};
+	}
+};
+var deleteBackup = async (backupId) => {
+	try {
+		const backupDir = getBackupDir();
+		const backupPath = path.join(backupDir, backupId);
+		await fs.rm(backupPath, {
+			recursive: true,
+			force: true
+		});
+		return { success: true };
+	} catch (error) {
+		return {
+			success: false,
+			error: error.message
+		};
+	}
+};
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
 process.env.DIST = join(__dirname, "../dist");

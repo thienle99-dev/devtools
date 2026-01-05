@@ -88,6 +88,18 @@ let statsMenuData: {
   network: { rx: number; tx: number };
 } | null = null;
 
+// Health monitor data for System Cleaner tray widget
+let healthMenuData: {
+  cpu: number;
+  ram: { used: number; total: number; percentage: number };
+  disk: { free: number; total: number; percentage: number } | null;
+  battery: { level: number; charging: boolean } | null;
+  alerts: Array<{ type: string; severity: string; message: string }>;
+} | null = null;
+
+// Health monitoring interval
+let healthMonitoringInterval: NodeJS.Timeout | null = null;
+
 function updateTrayMenu() {
   if (!tray) return
 
@@ -325,6 +337,147 @@ function updateTrayMenu() {
     template.push({ type: 'separator' });
   }
 
+  // === SYSTEM CLEANER HEALTH WIDGET ===
+  if (healthMenuData) {
+    const alertCount = healthMenuData.alerts.filter((a: any) => a.severity === 'critical' || a.severity === 'warning').length;
+    const healthLabel = alertCount > 0 ? `🛡️ System Health (${alertCount} alerts)` : '🛡️ System Health';
+    
+    const healthSubmenu: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: '📊 Health Metrics',
+        enabled: false,
+      },
+      {
+        label: `CPU: ${healthMenuData.cpu.toFixed(1)}%`,
+        enabled: false,
+      },
+      {
+        label: `RAM: ${healthMenuData.ram.percentage.toFixed(1)}% (${formatBytes(healthMenuData.ram.used)} / ${formatBytes(healthMenuData.ram.total)})`,
+        enabled: false,
+      },
+    ];
+    
+    if (healthMenuData.disk) {
+      healthSubmenu.push({
+        label: `Disk: ${healthMenuData.disk.percentage.toFixed(1)}% used (${formatBytes(healthMenuData.disk.free)} free)`,
+        enabled: false,
+      });
+    }
+    
+    if (healthMenuData.battery) {
+      healthSubmenu.push({
+        label: `Battery: ${healthMenuData.battery.level.toFixed(0)}% ${healthMenuData.battery.charging ? '(Charging)' : ''}`,
+        enabled: false,
+      });
+    }
+    
+    healthSubmenu.push({ type: 'separator' });
+    
+    if (healthMenuData.alerts.length > 0) {
+      healthSubmenu.push({
+        label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
+        enabled: false,
+      });
+      
+      healthMenuData.alerts.slice(0, 5).forEach((alert: any) => {
+        healthSubmenu.push({
+          label: `${alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : '🔵'} ${alert.message.substring(0, 50)}${alert.message.length > 50 ? '...' : ''}`,
+          enabled: false,
+        });
+      });
+      
+      healthSubmenu.push({ type: 'separator' });
+    }
+    
+    healthSubmenu.push({
+      label: '▸ Open Health Monitor',
+      click: () => {
+        win?.show();
+        win?.webContents.send('navigate-to', '/system-cleaner');
+        // Navigate to health tab
+        setTimeout(() => {
+          win?.webContents.send('system-cleaner:switch-tab', 'health');
+        }, 500);
+      },
+    });
+    
+    healthSubmenu.push({
+      label: '⚡ Quick Actions',
+      submenu: [
+        {
+          label: 'Free Up RAM',
+          click: async () => {
+            try {
+              const result = await win?.webContents.executeJavaScript(`
+                (async () => {
+                  const res = await window.cleanerAPI?.freeRam();
+                  return res;
+                })()
+              `);
+              if (result?.success) {
+                new Notification({
+                  title: '✓ RAM Optimized',
+                  body: `Freed ${formatBytes(result.ramFreed || 0)}`,
+                  silent: true
+                }).show();
+              }
+            } catch (e) {
+              new Notification({
+                title: '✗ Failed',
+                body: 'Could not free RAM',
+                silent: true
+              }).show();
+            }
+          },
+        },
+        {
+          label: 'Flush DNS Cache',
+          click: async () => {
+            try {
+              const task = {
+                id: 'dns-flush',
+                name: 'Flush DNS Cache',
+                category: 'dns-flush'
+              };
+              const result = await win?.webContents.executeJavaScript(`
+                (async () => {
+                  const res = await window.cleanerAPI?.runMaintenance(${JSON.stringify(task)});
+                  return res;
+                })()
+              `);
+              if (result?.success) {
+                new Notification({
+                  title: '✓ DNS Cache Flushed',
+                  body: 'DNS cache cleared successfully',
+                  silent: true
+                }).show();
+              }
+            } catch (e) {
+              new Notification({
+                title: '✗ Failed',
+                body: 'Could not flush DNS cache',
+                silent: true
+              }).show();
+            }
+          },
+        },
+        {
+          label: 'Open System Cleaner',
+          click: () => {
+            win?.show();
+            win?.webContents.send('navigate-to', '/system-cleaner');
+          },
+        },
+      ],
+    });
+    
+    template.push({
+      label: healthLabel,
+      submenu: healthSubmenu,
+    });
+    template.push({ type: 'separator' });
+  }
+
   // === RECENT TOOLS ===
   if (recentTools.length > 0) {
     template.push({
@@ -489,6 +642,117 @@ function createWindow() {
     updateTrayMenu();
   });
 
+  // Health monitor tray updates
+  ipcMain.on('health-update-tray', (_event, data) => {
+    healthMenuData = data;
+    updateTrayMenu();
+  });
+
+  // Start health monitoring
+  ipcMain.handle('health-start-monitoring', async () => {
+    if (healthMonitoringInterval) {
+      clearInterval(healthMonitoringInterval);
+    }
+    
+    const updateHealth = async () => {
+      try {
+        const mem = await si.mem();
+        const load = await si.currentLoad();
+        const disk = await si.fsSize();
+        const battery = await si.battery().catch(() => null);
+        
+        const alerts: any[] = [];
+        const rootDisk = disk.find(d => d.mount === '/' || d.mount === 'C:') || disk[0];
+        
+        if (rootDisk) {
+          const freePercent = (rootDisk.available / rootDisk.size) * 100;
+          if (freePercent < 10) {
+            alerts.push({
+              type: 'low_space',
+              severity: 'critical',
+              message: `Low disk space: ${formatBytes(rootDisk.available)} free`
+            });
+          } else if (freePercent < 20) {
+            alerts.push({
+              type: 'low_space',
+              severity: 'warning',
+              message: `Disk space getting low: ${formatBytes(rootDisk.available)} free`
+            });
+          }
+        }
+        
+        if (load.currentLoad > 90) {
+          alerts.push({
+            type: 'high_cpu',
+            severity: 'warning',
+            message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
+          });
+        }
+        
+        const memPercent = (mem.used / mem.total) * 100;
+        if (memPercent > 90) {
+          alerts.push({
+            type: 'memory_pressure',
+            severity: 'warning',
+            message: `High memory usage: ${memPercent.toFixed(1)}%`
+          });
+        }
+        
+        healthMenuData = {
+          cpu: load.currentLoad,
+          ram: {
+            used: mem.used,
+            total: mem.total,
+            percentage: memPercent
+          },
+          disk: rootDisk ? {
+            free: rootDisk.available,
+            total: rootDisk.size,
+            percentage: ((rootDisk.size - rootDisk.available) / rootDisk.size) * 100
+          } : null,
+          battery: battery ? {
+            level: battery.percent,
+            charging: battery.isCharging || false
+          } : null,
+          alerts
+        };
+        
+        updateTrayMenu();
+        
+        // Send notification for critical alerts
+        const criticalAlerts = alerts.filter(a => a.severity === 'critical');
+        if (criticalAlerts.length > 0 && win) {
+          criticalAlerts.forEach(alert => {
+            new Notification({
+              title: '⚠️ System Alert',
+              body: alert.message,
+              silent: false
+            }).show();
+          });
+        }
+      } catch (e) {
+        console.error('Health monitoring error:', e);
+      }
+    };
+    
+    // Update immediately and then every 5 seconds
+    updateHealth();
+    healthMonitoringInterval = setInterval(updateHealth, 5000);
+    
+    return { success: true };
+  });
+
+  // Stop health monitoring
+  ipcMain.handle('health-stop-monitoring', () => {
+    if (healthMonitoringInterval) {
+      clearInterval(healthMonitoringInterval);
+      healthMonitoringInterval = null;
+    }
+    healthMenuData = null;
+    updateTrayMenu();
+    return { success: true };
+  });
+
   // Window Controls IPC
   ipcMain.on('window-minimize', () => {
     win?.minimize();
@@ -546,6 +810,19 @@ app.on('before-quit', () => {
 });
 
 app.whenReady().then(() => {
+  // Start health monitoring for tray widget
+  setTimeout(() => {
+    if (win) {
+      win.webContents.executeJavaScript(`
+        (async () => {
+          if (window.cleanerAPI?.startHealthMonitoring) {
+            await window.cleanerAPI.startHealthMonitoring();
+          }
+        })()
+      `).catch(() => {});
+    }
+  }, 2000); // Wait for renderer to be ready
+  
   // Register Global Shortcuts
   try {
     // Toggle window shortcut
