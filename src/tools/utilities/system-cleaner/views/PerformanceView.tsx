@@ -6,7 +6,7 @@ import { Button } from '../../../../components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import type { HeavyApp } from '../store/systemCleanerStore';
+import type { HeavyApp } from '../types';
 import { formatSize } from '../utils/formatUtils';
 import { toast } from 'sonner';
 

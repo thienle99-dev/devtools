@@ -1,134 +1,25 @@
 import { create } from 'zustand';
-
-export type Platform = 'windows' | 'macos' | 'linux';
-
-export interface PlatformInfo {
-    platform: Platform;
-    version: string;
-    architecture: 'x64' | 'arm64';
-    isAdmin: boolean;
-}
-
-export interface FileItem {
-    name: string;
-    path: string;
-    size: number;
-    sizeFormatted: string;
-    category: string;
-}
-
-export interface JunkFileResult {
-    items: FileItem[];
-    totalSize: number;
-    totalSizeFormatted: string;
-    safeToDelete: boolean;
-}
-
-export interface LargeFile {
-    name: string;
-    path: string;
-    size: number;
-    sizeFormatted: string;
-    lastAccessed: string | Date;
-    type: string;
-}
-
-export interface DuplicateGroup {
-    hash: string;
-    size: number;
-    sizeFormatted: string;
-    totalWasted: number;
-    totalWastedFormatted: string;
-    files: string[];
-}
-
-export interface MalwareResult {
-    threats: any[];
-    suspiciousApps: any[];
-    scanType: 'quick' | 'normal' | 'deep';
-    scanDuration: number;
-}
-
-export interface RAMStatus {
-    used: number;
-    total: number;
-    percentage: number;
-}
-
-export interface SmartScanResult {
-    junkFiles: JunkFileResult | null;
-    malware: MalwareResult | null;
-    ramStatus: RAMStatus | null;
-    updates: any[];
-    clutter: any | null;
-    totalSpaceSavings: number;
-    estimatedTime: number;
-}
-
-export interface SpaceLensNode {
-    name: string;
-    path: string;
-    size: number;
-    sizeFormatted: string;
-    type: 'dir' | 'file';
-    children?: SpaceLensNode[];
-}
-
-export interface HeavyApp {
-    pid: number;
-    name: string;
-    cpu: number;
-    mem: number;
-    user: string;
-    path: string;
-}
-
-export interface StartupItem {
-    name: string;
-    path: string;
-    type: string;
-    location?: string;
-    enabled?: boolean;
-}
-
-export interface InstalledApp {
-    name: string;
-    version?: string;
-    path: string;
-    size?: number;
-    installDate?: string | Date;
-    type: string;
-}
-
-export interface PerformanceData {
-    heavyApps: HeavyApp[];
-    memory: {
-        total: number;
-        used: number;
-        percent: number;
-    };
-    cpuLoad: number;
-}
-
-export interface PrivacyItem {
-    name: string;
-    path: string;
-    type: 'registry' | 'files';
-    count: number;
-    size: number;
-    sizeFormatted?: string;
-    files?: string[];
-    description: string;
-}
-
-export interface PrivacyScanResult {
-    registryEntries: PrivacyItem[];
-    activityHistory: PrivacyItem[];
-    spotlightHistory: PrivacyItem[];
-    quickLookCache: PrivacyItem[];
-    totalItems: number;
-    totalSize: number;
-}
+import type {
+    Platform,
+    PlatformInfo,
+    FileItem,
+    JunkFileResult,
+    LargeFile,
+    DuplicateGroup,
+    MalwareResult,
+    RAMStatus,
+    SmartScanResult,
+    SpaceLensNode,
+    HeavyApp,
+    StartupItem,
+    InstalledApp,
+    PerformanceData,
+    PrivacyItem,
+    PrivacyScanResult,
+    BrowserScanResult,
+    WifiNetwork,
+    BackupInfo
+} from '../types';
 
 export interface SystemCleanerState {
     platformInfo: PlatformInfo | null;
@@ -143,6 +34,9 @@ export interface SystemCleanerState {
     startupItems: StartupItem[];
     installedApps: InstalledApp[];
     privacyData: PrivacyScanResult | null;
+    browserData: BrowserScanResult | null;
+    wifiNetworks: WifiNetwork[] | null;
+    backups: BackupInfo[] | null;
     
     // Actions
     setPlatformInfo: (info: PlatformInfo) => void;
@@ -157,6 +51,9 @@ export interface SystemCleanerState {
     setStartupItems: (items: StartupItem[]) => void;
     setInstalledApps: (apps: InstalledApp[]) => void;
     setPrivacyData: (data: PrivacyScanResult | null) => void;
+    setBrowserData: (data: BrowserScanResult | null) => void;
+    setWifiNetworks: (networks: WifiNetwork[] | null) => void;
+    setBackups: (backups: BackupInfo[] | null) => void;
     clearResults: () => void;
 }
 
@@ -173,6 +70,9 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
     startupItems: [],
     installedApps: [],
     privacyData: null,
+    browserData: null,
+    wifiNetworks: null,
+    backups: null,
 
     setPlatformInfo: (platformInfo) => set({ platformInfo }),
     startScan: () => set({ isScanning: true, scanProgress: 0, scanStatus: 'Starting scan...' }),
@@ -186,6 +86,9 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
     setStartupItems: (startupItems) => set({ startupItems }),
     setInstalledApps: (installedApps) => set({ installedApps }),
     setPrivacyData: (privacyData) => set({ privacyData }),
+    setBrowserData: (browserData) => set({ browserData }),
+    setWifiNetworks: (wifiNetworks) => set({ wifiNetworks }),
+    setBackups: (backups) => set({ backups }),
     clearResults: () => set({ 
         results: null, 
         largeFiles: [], 
@@ -195,7 +98,32 @@ export const useSystemCleanerStore = create<SystemCleanerState>((set) => ({
         startupItems: [],
         installedApps: [],
         privacyData: null,
+        browserData: null,
+        wifiNetworks: null,
         scanProgress: 0, 
         scanStatus: 'Idle' 
     }),
 }));
+
+// Re-export types for convenience
+export type {
+    Platform,
+    PlatformInfo,
+    FileItem,
+    JunkFileResult,
+    LargeFile,
+    DuplicateGroup,
+    MalwareResult,
+    RAMStatus,
+    SmartScanResult,
+    SpaceLensNode,
+    HeavyApp,
+    StartupItem,
+    InstalledApp,
+    PerformanceData,
+    PrivacyItem,
+    PrivacyScanResult,
+    BrowserScanResult,
+    WifiNetwork,
+    BackupInfo
+} from '../types';

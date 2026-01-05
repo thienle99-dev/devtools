@@ -12,7 +12,8 @@ import {
     LayoutGrid,
     FileText,
     Copy,
-    Activity as ActivityIcon
+    Activity as ActivityIcon,
+    Database
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { useSystemCleanerStore } from './store/systemCleanerStore';
@@ -31,6 +32,7 @@ import { DuplicatesView } from './views/DuplicatesView';
 import { MaintenanceView } from './views/MaintenanceView';
 import { HealthMonitorView } from './views/HealthMonitorView';
 import { ProtectionView } from './views/ProtectionView';
+import { BackupManagementView } from './views/BackupManagementView';
 
 // --- Main Component ---
 
@@ -108,6 +110,7 @@ export const SystemCleaner: React.FC = () => {
         { id: 'uninstaller', name: 'Uninstaller', icon: AppWindow },
         { id: 'protection', name: 'Protection', icon: ShieldCheck },
         { id: 'maintenance', name: 'Maintenance', icon: Wrench },
+        { id: 'backups', name: 'Backups', icon: Database },
         { id: 'health', name: 'Health', icon: ActivityIcon },
     ];
 
@@ -171,7 +174,7 @@ export const SystemCleaner: React.FC = () => {
                     ))}
 
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Protection</div>
-                    {tabs.slice(8, 10).map((tab) => (
+                    {tabs.slice(8, 11).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -188,7 +191,7 @@ export const SystemCleaner: React.FC = () => {
                     ))}
 
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Monitoring</div>
-                    {tabs.slice(10).map((tab) => (
+                    {tabs.slice(11).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -227,6 +230,7 @@ export const SystemCleaner: React.FC = () => {
                                 {activeTab === 'uninstaller' && <UninstallerView />}
                                 {activeTab === 'protection' && <ProtectionView />}
                                 {activeTab === 'maintenance' && <MaintenanceView />}
+                                {activeTab === 'backups' && <BackupManagementView />}
                                 {activeTab === 'health' && <HealthMonitorView />}
                             </motion.div>
                         </AnimatePresence>

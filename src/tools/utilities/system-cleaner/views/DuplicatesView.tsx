@@ -6,6 +6,8 @@ import { Checkbox } from '../../../../components/ui/Checkbox';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { formatSize } from '../utils/formatUtils';
+import { retryWithBackoff, isRetryableError, processBatchWithRecovery } from '../utils/errorRecovery';
+import { fileListCache } from '../utils/cacheUtils';
 import { toast } from 'sonner';
 
 export const DuplicatesView: React.FC = () => {
@@ -19,14 +21,31 @@ export const DuplicatesView: React.FC = () => {
     
     const scanDuplicates = async (path?: string) => {
         setIsScanning(true);
+        const scanTarget = path || scanPath || undefined;
+        const cacheKey = `duplicates-${scanTarget || 'home'}`;
+        
+        // Check cache first
+        const cached = fileListCache.get(cacheKey);
+        if (cached) {
+            setDuplicates(cached);
+            setIsScanning(false);
+            return;
+        }
+
         const interval = setInterval(() => setProgress(p => (p < 95 ? p + 1 : p)), 100);
         try {
-            const scanTarget = path || scanPath || undefined;
-            const dups = await (window as any).cleanerAPI.getDuplicates(scanTarget);
+            const dups = await retryWithBackoff(
+                () => (window as any).cleanerAPI.getDuplicates(scanTarget),
+                { 
+                    maxRetries: 2, 
+                    shouldRetry: isRetryableError 
+                }
+            );
             setDuplicates(dups);
+            fileListCache.set(cacheKey, dups);
             setProgress(100);
         } catch (error) {
-            toast.error('Failed to scan for duplicates');
+            toast.error(`Failed to scan for duplicates: ${(error as Error).message}`);
         } finally {
             clearInterval(interval);
             setTimeout(() => setIsScanning(false), 500);
@@ -38,18 +57,43 @@ export const DuplicatesView: React.FC = () => {
         if (!confirm(`Delete ${selectedFiles.length} duplicate copies?`)) return;
         setIsScanning(true);
         try {
-            const res = await (window as any).cleanerAPI.runCleanup(selectedFiles);
+            // Use batch processing with error recovery
+            const result = await processBatchWithRecovery(
+                selectedFiles,
+                async (filePath) => {
+                    const res = await (window as any).cleanerAPI.runCleanup([filePath]);
+                    if (!res.success) {
+                        throw new Error(res.error || 'Failed to delete file');
+                    }
+                    return res;
+                },
+                {
+                    batchSize: 10,
+                    continueOnError: true,
+                    onItemError: (filePath, error) => {
+                        console.warn(`Failed to delete ${filePath}:`, error);
+                    }
+                }
+            );
+
             setIsScanning(false);
-            if (res.success) {
-                toast.success(`Cleaned ${formatSize(res.freedSize)}`);
+            
+            if (result.success) {
+                toast.success(`Cleaned ${selectedFiles.length} files successfully`);
+                setSelectedFiles([]);
+                scanDuplicates();
+            } else if (result.partialData) {
+                const successCount = result.partialData.length;
+                const failCount = result.errors?.length || 0;
+                toast.warning(`Deleted ${successCount} files, ${failCount} failed`);
                 setSelectedFiles([]);
                 scanDuplicates();
             } else {
-                toast.error(`Failed to delete files: ${res.error || 'Unknown error'}`);
+                toast.error(`Failed to delete files: ${result.errors?.map(e => e.error).join(', ') || 'Unknown error'}`);
             }
         } catch (error) {
             setIsScanning(false);
-            toast.error('Failed to delete files');
+            toast.error(`Failed to delete files: ${(error as Error).message}`);
         }
     };
 

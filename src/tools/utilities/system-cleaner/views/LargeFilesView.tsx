@@ -7,6 +7,8 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { formatSize } from '../utils/formatUtils';
+import { retryWithBackoff, isRetryableError } from '../utils/errorRecovery';
+import { fileListCache } from '../utils/cacheUtils';
 import { toast } from 'sonner';
 
 export const LargeFilesView: React.FC = () => {
@@ -21,13 +23,33 @@ export const LargeFilesView: React.FC = () => {
     
     const scanLargeFiles = async () => {
         setIsScanning(true);
+        const cacheKey = 'large-files-50mb';
+        
+        // Check cache first
+        const cached = fileListCache.get(cacheKey);
+        if (cached) {
+            setLargeFiles(cached);
+            setIsScanning(false);
+            return;
+        }
+
         const interval = setInterval(() => setProgress(p => (p < 90 ? p + 5 : p)), 100);
         try {
-            const files = await (window as any).cleanerAPI.getLargeFiles({ minSize: 50 * 1024 * 1024 });
+            const files = await retryWithBackoff(
+                () => (window as any).cleanerAPI.getLargeFiles({ minSize: 50 * 1024 * 1024 }),
+                { 
+                    maxRetries: 3, 
+                    shouldRetry: isRetryableError,
+                    onRetry: (attempt) => {
+                        toast.info(`Retrying scan (attempt ${attempt}/3)...`);
+                    }
+                }
+            );
             setLargeFiles(files);
+            fileListCache.set(cacheKey, files);
             setProgress(100);
         } catch (error) {
-            toast.error('Failed to scan for large files');
+            toast.error(`Failed to scan for large files: ${(error as Error).message}`);
         } finally {
             clearInterval(interval);
             setTimeout(() => setIsScanning(false), 500);
@@ -94,7 +116,22 @@ export const LargeFilesView: React.FC = () => {
     };
 
     if (largeFiles.length === 0 && !isScanning) {
-        return <ScanPlaceholder title="Large Files" icon={FileText} description="Quickly identify huge files and folders that are eating up your disk space." onScan={scanLargeFiles} isScanning={isScanning} progress={progress} />;
+        return (
+            <ScanPlaceholder 
+                title="Large Files" 
+                icon={FileText} 
+                description="Quickly identify huge files and folders that are eating up your disk space." 
+                onScan={scanLargeFiles} 
+                isScanning={isScanning} 
+                progress={progress}
+                tips={[
+                    'Files larger than 50MB are shown by default',
+                    'Use search to find specific files quickly',
+                    'Sort by size to see the largest files first',
+                    'Be careful when deleting system files'
+                ]}
+            />
+        );
     }
 
     return (

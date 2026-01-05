@@ -51,7 +51,22 @@ export const UninstallerView: React.FC = () => {
     const filteredApps = installedApps.filter(a => a.name.toLowerCase().includes(search.toLowerCase()));
 
     if (installedApps.length === 0 && !isScanning) {
-        return <ScanPlaceholder title="Uninstaller" icon={AppWindow} description="Completely remove applications and all their associated files." onScan={refreshApps} isScanning={isScanning} progress={progress} />;
+        return (
+            <ScanPlaceholder 
+                title="Uninstaller" 
+                icon={AppWindow} 
+                description="Completely remove applications and all their associated files." 
+                onScan={refreshApps} 
+                isScanning={isScanning} 
+                progress={progress}
+                tips={[
+                    'Uninstalling removes the app and all associated files',
+                    'Some apps may require admin privileges',
+                    'Backups are created before uninstallation',
+                    'Use search to quickly find apps'
+                ]}
+            />
+        );
     }
 
     return (

@@ -29,7 +29,22 @@ export const StartupView: React.FC = () => {
     };
 
     if (startupItems.length === 0 && !isScanning) {
-        return <ScanPlaceholder title="Startup Management" icon={Power} description="Manage applications and services that start with your system." onScan={refreshItems} isScanning={isScanning} progress={progress} />;
+        return (
+            <ScanPlaceholder 
+                title="Startup Management" 
+                icon={Power} 
+                description="Manage applications and services that start with your system." 
+                onScan={refreshItems} 
+                isScanning={isScanning} 
+                progress={progress}
+                tips={[
+                    'Disable startup items to improve boot time',
+                    'Some items may require admin privileges to modify',
+                    'Be careful when disabling system services',
+                    'You can enable items again if needed'
+                ]}
+            />
+        );
     }
 
     return (

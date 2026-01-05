@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown } from 'lucide-react';
+import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown, Download, Camera, TrendingUp } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import type { SpaceLensNode } from '../store/systemCleanerStore';
+import type { SpaceLensNode } from '../types';
 import { formatSize } from '../utils/formatUtils';
+import { exportSpaceLensToJSON, exportSpaceLensToCSV, createSnapshot, compareSnapshots, downloadFile } from '../utils/spaceLensExport';
 import { cn } from '../../../../utils/cn';
 import { toast } from 'sonner';
 
@@ -21,6 +22,7 @@ export const SpaceLensView: React.FC = () => {
     const [history, setHistory] = useState<SpaceLensNode[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+    const [snapshots, setSnapshots] = useState<any[]>([]);
     const scanCancelRef = useRef(false);
     const progressCleanupRef = useRef<(() => void) | null>(null);
 
@@ -170,7 +172,26 @@ export const SpaceLensView: React.FC = () => {
     }, []);
 
     if (!spaceLensData && !isScanning) {
-        return <ScanPlaceholder title="Space Lens" icon={LayoutGrid} description="Visually explore your storage structure to find what's taking up space." onScan={() => scanSpace()} isScanning={isScanning} progress={progress} />;
+        return (
+            <ScanPlaceholder 
+                title="Space Lens" 
+                icon={LayoutGrid} 
+                description="Visually explore your storage structure to find what's taking up space." 
+                onScan={() => scanSpace()} 
+                isScanning={isScanning} 
+                progress={progress}
+                tips={[
+                    'Click on folders to navigate deeper',
+                    'Use different view modes (grid, list, tree)',
+                    'Export scan results to JSON or CSV',
+                    'Create snapshots to compare changes over time'
+                ]}
+                quickActions={[
+                    { label: 'Scan Home Directory', onClick: () => scanSpace(process.env.HOME || '') },
+                    { label: 'Scan Root', onClick: () => scanSpace('/') }
+                ]}
+            />
+        );
     }
 
     return (
@@ -324,6 +345,49 @@ export const SpaceLensView: React.FC = () => {
                             );
                         })}
                     </div>
+                    {spaceLensData && (
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    const snapshot = createSnapshot(spaceLensData, spaceLensData.path);
+                                    setSnapshots([...snapshots, snapshot]);
+                                    toast.success('Snapshot created');
+                                }}
+                                disabled={isScanning}
+                                title="Create Snapshot"
+                            >
+                                <Camera className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    const json = exportSpaceLensToJSON(spaceLensData);
+                                    downloadFile(json, `space-lens-${Date.now()}.json`, 'application/json');
+                                    toast.success('Exported to JSON');
+                                }}
+                                disabled={isScanning}
+                                title="Export JSON"
+                            >
+                                <Download className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    const csv = exportSpaceLensToCSV(spaceLensData);
+                                    downloadFile(csv, `space-lens-${Date.now()}.csv`, 'text/csv');
+                                    toast.success('Exported to CSV');
+                                }}
+                                disabled={isScanning}
+                                title="Export CSV"
+                            >
+                                <Download className="w-4 h-4" />
+                            </Button>
+                        </>
+                    )}
                     <Button 
                         variant="outline" 
                         size="sm" 

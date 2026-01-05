@@ -8,6 +8,7 @@ import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { useSmartScan } from '../hooks/useSmartScan';
 import { formatSize } from '../utils/formatUtils';
+import { processBatchWithRecovery } from '../utils/errorRecovery';
 import { toast } from 'sonner';
 
 export const JunkCleanupView: React.FC = () => {
@@ -55,12 +56,37 @@ export const JunkCleanupView: React.FC = () => {
         
         setIsCleaning(true);
         try {
-            const cleanupResult = await (window as any).cleanerAPI.runCleanup(selectedItems);
-            if (cleanupResult.success) {
-                toast.success(`Cleaned ${formatSize(cleanupResult.freedSize)} successfully!`);
+            // Use batch processing with error recovery for better reliability
+            const result = await processBatchWithRecovery(
+                selectedItems,
+                async (filePath) => {
+                    const res = await (window as any).cleanerAPI.runCleanup([filePath]);
+                    if (!res.success) {
+                        throw new Error(res.error || 'Failed to delete file');
+                    }
+                    return res;
+                },
+                {
+                    batchSize: 20,
+                    continueOnError: true,
+                    onItemError: (filePath, error) => {
+                        console.warn(`Failed to delete ${filePath}:`, error);
+                    }
+                }
+            );
+
+            if (result.success) {
+                const totalFreed = result.data?.reduce((sum, r) => sum + (r.freedSize || 0), 0) || 0;
+                toast.success(`Cleaned ${formatSize(totalFreed)} successfully!`);
                 runSmartScan(); 
+            } else if (result.partialData) {
+                const successCount = result.partialData.length;
+                const failCount = result.errors?.length || 0;
+                const totalFreed = result.partialData.reduce((sum, r) => sum + (r.freedSize || 0), 0);
+                toast.warning(`Cleaned ${formatSize(totalFreed)} (${successCount} succeeded, ${failCount} failed)`);
+                runSmartScan();
             } else {
-                toast.error(`Failed to run cleanup: ${cleanupResult.error || 'Unknown error'}`);
+                toast.error(`Failed to run cleanup: ${result.errors?.map(e => e.error).join(', ') || 'Unknown error'}`);
             }
         } catch (e) {
             toast.error(`Failed to run cleanup: ${(e as Error).message || 'Unknown error'}`);
@@ -70,7 +96,22 @@ export const JunkCleanupView: React.FC = () => {
     };
 
     if (!results && !isScanning) {
-        return <ScanPlaceholder title="System Junk" icon={Trash2} description="Find and remove hidden junk files taking up valuable disk space." onScan={runSmartScan} isScanning={isScanning} progress={scanProgress} />;
+        return (
+            <ScanPlaceholder 
+                title="System Junk" 
+                icon={Trash2} 
+                description="Find and remove hidden junk files taking up valuable disk space." 
+                onScan={runSmartScan} 
+                isScanning={isScanning} 
+                progress={scanProgress}
+                tips={[
+                    'Junk files include cache, logs, and temporary files',
+                    'All files are checked against safety database before deletion',
+                    'Automatic backups are created before cleanup',
+                    'You can review files before deleting them'
+                ]}
+            />
+        );
     }
 
     return (

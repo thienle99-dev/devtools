@@ -21,6 +21,12 @@ export const SmartScan: React.FC = () => {
                 onScan={runSmartScan}
                 isScanning={isScanning}
                 progress={scanProgress}
+                tips={[
+                    'Smart Scan analyzes multiple areas of your system simultaneously',
+                    'Results are cached for faster subsequent scans',
+                    'You can run Smart Scan anytime to check system health',
+                    'All cleanup operations create automatic backups'
+                ]}
             />
         );
     }
