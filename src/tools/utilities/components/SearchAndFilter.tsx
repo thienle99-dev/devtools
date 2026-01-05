@@ -73,14 +73,14 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                     onClick={() => setShowFilters(!showFilters)}
                     className={`p-2 rounded-lg border transition-all duration-200 h-10 w-10 flex items-center justify-center relative
                               ${showFilters || hasActiveFilters
-                            ? 'bg-accent/10 border-accent text-accent'
-                            : 'glass-button border-border/50 text-foreground-muted hover:text-foreground hover:border-accent/50'
+                            ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400'
+                            : 'glass-button border-[var(--color-glass-border)] text-foreground-muted hover:text-foreground hover:border-indigo-500/50'
                         }`}
                     title="Filter"
                 >
                     <Filter className="w-4 h-4" />
                     {hasActiveFilters && !showFilters && (
-                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
+                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />
                     )}
                 </button>
 
@@ -88,8 +88,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {onOpenStatistics && (
                     <button
                         onClick={onOpenStatistics}
-                        className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
-                                 text-foreground-muted hover:text-foreground hover:border-accent/50
+                        className="p-2 rounded-lg glass-button border border-[var(--color-glass-border)] h-10 w-10 flex items-center justify-center
+                                 text-foreground-muted hover:text-foreground hover:border-indigo-500/50
                                  transition-all duration-200"
                         title="Statistics"
                     >
@@ -101,8 +101,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {onOpenCategories && (
                     <button
                         onClick={onOpenCategories}
-                        className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
-                                 text-foreground-muted hover:text-foreground hover:border-accent/50
+                        className="p-2 rounded-lg glass-button border border-[var(--color-glass-border)] h-10 w-10 flex items-center justify-center
+                                 text-foreground-muted hover:text-foreground hover:border-indigo-500/50
                                  transition-all duration-200"
                         title="Categories"
                     >
@@ -113,8 +113,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {/* Settings */}
                 <button
                     onClick={onOpenSettings}
-                    className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
-                             text-foreground-muted hover:text-foreground hover:border-accent/50
+                    className="p-2 rounded-lg glass-button border border-[var(--color-glass-border)] h-10 w-10 flex items-center justify-center
+                             text-foreground-muted hover:text-foreground hover:border-indigo-500/50
                              transition-all duration-200"
                     title="Settings"
                 >
@@ -124,7 +124,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {/* Clear All */}
                 <button
                     onClick={onClearAll}
-                    className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
+                    className="p-2 rounded-lg glass-button border border-[var(--color-glass-border)] h-10 w-10 flex items-center justify-center
                              text-foreground-muted hover:text-red-500 hover:border-red-500/50
                              transition-all duration-200"
                     title="Clear All"
@@ -135,7 +135,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 
             {/* Filter Options */}
             {showFilters && (
-                <div className="glass-panel p-4 rounded-xl border border-border/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="glass-panel p-4 rounded-xl border border-[var(--color-glass-border)] space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between mb-1">
                         <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                             <Filter className="w-3.5 h-3.5" />

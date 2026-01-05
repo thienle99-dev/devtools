@@ -252,7 +252,7 @@ export const ClipboardManager: React.FC = () => {
                     {/* Loading State */}
                     {isLoading && (
                         <div className="flex items-center justify-center gap-2 p-4 glass-panel rounded-lg">
-                            <Loader2 className="w-4 h-4 text-accent animate-spin" />
+                            <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
                             <span className="text-xs text-foreground-muted font-medium">Loading...</span>
                         </div>
                     )}
@@ -275,7 +275,7 @@ export const ClipboardManager: React.FC = () => {
 
                     {/* Stats Footer */}
                     {items.length > 0 && (
-                        <div className="flex-shrink-0 pt-3 border-t border-border/50">
+                        <div className="flex-shrink-0 pt-3 border-t border-[var(--color-glass-border)]">
                             <p className="text-[10px] text-foreground-muted text-center font-medium">
                                 {filteredItems.length} of {items.length} items
                                 {filters.pinnedOnly || filters.type !== 'all' || filters.dateRange !== 'all' || searchQuery

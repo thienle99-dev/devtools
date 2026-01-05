@@ -28,7 +28,7 @@ export const ClipboardList: React.FC<ClipboardListProps> = ({
     if (items.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="p-4 glass-panel rounded-xl mb-4 border border-border/50">
+                <div className="p-4 glass-panel rounded-xl mb-4 border border-[var(--color-glass-border)]">
                     <Clipboard className="w-12 h-12 text-foreground-muted" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-1">
@@ -47,7 +47,7 @@ export const ClipboardList: React.FC<ClipboardListProps> = ({
             {pinnedItems.length > 0 && (
                 <div className="space-y-2">
                     <div className="flex items-center gap-1.5 px-1">
-                        <Pin className="w-3 h-3 text-accent" />
+                        <Pin className="w-3 h-3 text-indigo-400" />
                         <h3 className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.15em]">
                             Pinned ({pinnedItems.length})
                         </h3>

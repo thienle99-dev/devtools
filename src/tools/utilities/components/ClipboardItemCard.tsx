@@ -86,10 +86,10 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
         <div
             className={`group relative glass-panel rounded-xl border transition-all duration-200 cursor-pointer
                        ${item.pinned 
-                           ? 'border-accent/40 bg-accent/5 hover:border-accent/60' 
-                           : 'border-border/50 hover:border-accent/30 hover:bg-glass-button-hover'
+                           ? 'border-indigo-500/40 bg-indigo-500/5 hover:border-indigo-500/60' 
+                           : 'border-[var(--color-glass-border)] hover:border-indigo-500/30 hover:bg-[var(--color-glass-button-hover)]'
                        }
-                       ${isSelected ? 'ring-2 ring-accent/50 border-accent shadow-lg' : ''}`}
+                       ${isSelected ? 'ring-2 ring-indigo-500/50 border-indigo-500 shadow-lg' : ''}`}
             onClick={() => handleCopy()}
         >
             <div className="p-3">
@@ -97,7 +97,7 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                 <div className="flex items-start gap-3 mb-2">
                     {/* Type Icon or Image Thumbnail */}
                     {item.type === 'image' ? (
-                        <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-surface border border-border/50">
+                        <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-[var(--color-glass-input)] border border-[var(--color-glass-border)]">
                             <img
                                 src={item.content}
                                 alt="Clipboard image"
@@ -113,7 +113,7 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                         </div>
                     ) : (
                         <div className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
-                            item.pinned ? 'bg-accent/20' : 'bg-surface-elevated'
+                            item.pinned ? 'bg-indigo-500/20' : 'bg-[var(--color-glass-input)]'
                         }`}>
                             {getTypeIcon()}
                         </div>
@@ -128,7 +128,7 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                                 </p>
                                 <div className="flex items-center gap-1.5 text-[10px] text-foreground-muted">
                                     {item.metadata?.mimeType && (
-                                        <span className="px-1.5 py-0.5 bg-surface rounded font-medium">
+                                        <span className="px-1.5 py-0.5 bg-[var(--color-glass-input)] rounded font-medium">
                                             {item.metadata.mimeType.split('/')[1]?.toUpperCase() || 'IMG'}
                                         </span>
                                     )}
@@ -154,7 +154,7 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                                         </span>
                                     )}
                                     {item.sourceApp && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-surface rounded text-foreground-muted font-medium">
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-[var(--color-glass-input)] rounded text-foreground-muted font-medium">
                                             {item.sourceApp}
                                         </span>
                                     )}
@@ -166,13 +166,13 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                     {/* Pinned Badge */}
                     {item.pinned && (
                         <div className="flex-shrink-0">
-                            <Pin className="w-3.5 h-3.5 text-accent fill-accent" />
+                            <Pin className="w-3.5 h-3.5 text-indigo-400 fill-indigo-400" />
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--color-glass-border)]">
                     {/* Timestamp */}
                     <span className="text-[10px] font-medium text-foreground-muted">
                         {getRelativeTime()}
@@ -192,23 +192,23 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                                     e.stopPropagation();
                                     setShowPlainTextOption(!showPlainTextOption);
                                 }}
-                                className="p-1.5 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-foreground-muted hover:text-indigo-400 transition-colors"
                                 title="Copy"
                             >
                                 {copied ? (
-                                    <Check className="w-3.5 h-3.5 text-accent" />
+                                    <Check className="w-3.5 h-3.5 text-indigo-400" />
                                 ) : (
                                     <Copy className="w-3.5 h-3.5" />
                                 )}
                             </button>
                             {showPlainTextOption && (
-                                <div className="absolute right-0 bottom-full mb-1 p-1.5 glass-panel border border-border rounded-lg shadow-xl z-20">
+                                <div className="absolute right-0 bottom-full mb-1 p-1.5 glass-panel border border-[var(--color-glass-border)] rounded-lg shadow-xl z-20">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleCopy(true);
                                         }}
-                                        className="text-[10px] text-foreground hover:text-accent whitespace-nowrap"
+                                        className="text-[10px] text-foreground hover:text-indigo-400 whitespace-nowrap"
                                     >
                                         Plain Text
                                     </button>
@@ -222,7 +222,7 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                                 e.stopPropagation();
                                 onViewFull(item);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-foreground-muted hover:text-indigo-400 transition-colors"
                             title="View"
                         >
                             <Eye className="w-3.5 h-3.5" />
@@ -234,10 +234,10 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                                 e.stopPropagation();
                                 item.pinned ? onUnpin(item.id) : onPin(item.id);
                             }}
-                            className={`p-1.5 rounded-lg hover:bg-accent/10 transition-colors ${
+                            className={`p-1.5 rounded-lg hover:bg-indigo-500/10 transition-colors ${
                                 item.pinned 
-                                    ? 'text-accent' 
-                                    : 'text-foreground-muted hover:text-accent'
+                                    ? 'text-indigo-400' 
+                                    : 'text-foreground-muted hover:text-indigo-400'
                             }`}
                             title={item.pinned ? 'Unpin' : 'Pin'}
                         >
