@@ -902,6 +902,325 @@ export function setupCleanerHandlers() {
         };
     });
 
+    // --- Browser Data Cleanup ---
+
+    // Scan Browser Data
+    ipcMain.handle('cleaner:scan-browser-data', async () => {
+        const platform = process.platform;
+        const home = os.homedir();
+        const results: any = {
+            browsers: [],
+            totalSize: 0,
+            totalItems: 0
+        };
+
+        const browserPaths: { name: string; paths: { [key: string]: string[] } }[] = [];
+
+        if (platform === 'win32') {
+            const localApp = process.env.LOCALAPPDATA || '';
+            const appData = process.env.APPDATA || '';
+            
+            browserPaths.push({
+                name: 'Chrome',
+                paths: {
+                    history: [path.join(localApp, 'Google/Chrome/User Data/Default/History')],
+                    cookies: [path.join(localApp, 'Google/Chrome/User Data/Default/Cookies')],
+                    cache: [path.join(localApp, 'Google/Chrome/User Data/Default/Cache')],
+                    downloads: [path.join(localApp, 'Google/Chrome/User Data/Default/History')]
+                }
+            });
+            browserPaths.push({
+                name: 'Edge',
+                paths: {
+                    history: [path.join(localApp, 'Microsoft/Edge/User Data/Default/History')],
+                    cookies: [path.join(localApp, 'Microsoft/Edge/User Data/Default/Cookies')],
+                    cache: [path.join(localApp, 'Microsoft/Edge/User Data/Default/Cache')],
+                    downloads: [path.join(localApp, 'Microsoft/Edge/User Data/Default/History')]
+                }
+            });
+            browserPaths.push({
+                name: 'Firefox',
+                paths: {
+                    history: [path.join(appData, 'Mozilla/Firefox/Profiles')],
+                    cookies: [path.join(appData, 'Mozilla/Firefox/Profiles')],
+                    cache: [path.join(localApp, 'Mozilla/Firefox/Profiles')],
+                    downloads: [path.join(appData, 'Mozilla/Firefox/Profiles')]
+                }
+            });
+        } else if (platform === 'darwin') {
+            browserPaths.push({
+                name: 'Safari',
+                paths: {
+                    history: [path.join(home, 'Library/Safari/History.db')],
+                    cookies: [path.join(home, 'Library/Cookies/Cookies.binarycookies')],
+                    cache: [path.join(home, 'Library/Caches/com.apple.Safari')],
+                    downloads: [path.join(home, 'Library/Safari/Downloads.plist')]
+                }
+            });
+            browserPaths.push({
+                name: 'Chrome',
+                paths: {
+                    history: [path.join(home, 'Library/Application Support/Google/Chrome/Default/History')],
+                    cookies: [path.join(home, 'Library/Application Support/Google/Chrome/Default/Cookies')],
+                    cache: [path.join(home, 'Library/Caches/Google/Chrome')],
+                    downloads: [path.join(home, 'Library/Application Support/Google/Chrome/Default/History')]
+                }
+            });
+            browserPaths.push({
+                name: 'Firefox',
+                paths: {
+                    history: [path.join(home, 'Library/Application Support/Firefox/Profiles')],
+                    cookies: [path.join(home, 'Library/Application Support/Firefox/Profiles')],
+                    cache: [path.join(home, 'Library/Caches/Firefox')],
+                    downloads: [path.join(home, 'Library/Application Support/Firefox/Profiles')]
+                }
+            });
+            browserPaths.push({
+                name: 'Edge',
+                paths: {
+                    history: [path.join(home, 'Library/Application Support/Microsoft Edge/Default/History')],
+                    cookies: [path.join(home, 'Library/Application Support/Microsoft Edge/Default/Cookies')],
+                    cache: [path.join(home, 'Library/Caches/com.microsoft.edgemac')],
+                    downloads: [path.join(home, 'Library/Application Support/Microsoft Edge/Default/History')]
+                }
+            });
+        }
+
+        for (const browser of browserPaths) {
+            const browserData: any = {
+                name: browser.name,
+                history: { size: 0, count: 0, paths: [] },
+                cookies: { size: 0, count: 0, paths: [] },
+                cache: { size: 0, count: 0, paths: [] },
+                downloads: { size: 0, count: 0, paths: [] }
+            };
+
+            for (const [type, paths] of Object.entries(browser.paths)) {
+                for (const dataPath of paths) {
+                    try {
+                        if (type === 'cache' && platform === 'darwin' && browser.name === 'Safari') {
+                            // Safari cache is a directory
+                            const stats = await fs.stat(dataPath).catch(() => null);
+                            if (stats && stats.isDirectory()) {
+                                const size = await getDirSize(dataPath);
+                                browserData[type].size += size;
+                                browserData[type].paths.push(dataPath);
+                                browserData[type].count += 1;
+                            }
+                        } else {
+                            const stats = await fs.stat(dataPath).catch(() => null);
+                            if (stats) {
+                                if (stats.isDirectory()) {
+                                    const size = await getDirSize(dataPath);
+                                    browserData[type].size += size;
+                                    browserData[type].paths.push(dataPath);
+                                    browserData[type].count += 1;
+                                } else if (stats.isFile()) {
+                                    browserData[type].size += stats.size;
+                                    browserData[type].paths.push(dataPath);
+                                    browserData[type].count += 1;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            const browserTotalSize = Object.values(browserData).reduce((sum: number, item: any) => {
+                return sum + (typeof item === 'object' && item.size ? item.size : 0);
+            }, 0) as number;
+
+            if (browserTotalSize > 0) {
+                browserData.totalSize = browserTotalSize;
+                browserData.totalSizeFormatted = formatBytes(browserTotalSize);
+                results.browsers.push(browserData);
+                results.totalSize += browserTotalSize;
+                results.totalItems += Object.values(browserData).reduce((sum: number, item: any) => {
+                    return sum + (typeof item === 'object' && item.count ? item.count : 0);
+                }, 0) as number;
+            }
+        }
+
+        return { success: true, results };
+    });
+
+    // Clean Browser Data
+    ipcMain.handle('cleaner:clean-browser-data', async (_event, options: { browsers: string[]; types: string[] }) => {
+        const platform = process.platform;
+        const home = os.homedir();
+        let cleanedItems = 0;
+        let freedSize = 0;
+        const errors: string[] = [];
+
+        const browserPaths: { [key: string]: { [key: string]: string[] } } = {};
+
+        if (platform === 'win32') {
+            const localApp = process.env.LOCALAPPDATA || '';
+            const appData = process.env.APPDATA || '';
+            
+            browserPaths['Chrome'] = {
+                history: [path.join(localApp, 'Google/Chrome/User Data/Default/History')],
+                cookies: [path.join(localApp, 'Google/Chrome/User Data/Default/Cookies')],
+                cache: [path.join(localApp, 'Google/Chrome/User Data/Default/Cache')],
+                downloads: [path.join(localApp, 'Google/Chrome/User Data/Default/History')]
+            };
+            browserPaths['Edge'] = {
+                history: [path.join(localApp, 'Microsoft/Edge/User Data/Default/History')],
+                cookies: [path.join(localApp, 'Microsoft/Edge/User Data/Default/Cookies')],
+                cache: [path.join(localApp, 'Microsoft/Edge/User Data/Default/Cache')],
+                downloads: [path.join(localApp, 'Microsoft/Edge/User Data/Default/History')]
+            };
+            browserPaths['Firefox'] = {
+                history: [path.join(appData, 'Mozilla/Firefox/Profiles')],
+                cookies: [path.join(appData, 'Mozilla/Firefox/Profiles')],
+                cache: [path.join(localApp, 'Mozilla/Firefox/Profiles')],
+                downloads: [path.join(appData, 'Mozilla/Firefox/Profiles')]
+            };
+        } else if (platform === 'darwin') {
+            browserPaths['Safari'] = {
+                history: [path.join(home, 'Library/Safari/History.db')],
+                cookies: [path.join(home, 'Library/Cookies/Cookies.binarycookies')],
+                cache: [path.join(home, 'Library/Caches/com.apple.Safari')],
+                downloads: [path.join(home, 'Library/Safari/Downloads.plist')]
+            };
+            browserPaths['Chrome'] = {
+                history: [path.join(home, 'Library/Application Support/Google/Chrome/Default/History')],
+                cookies: [path.join(home, 'Library/Application Support/Google/Chrome/Default/Cookies')],
+                cache: [path.join(home, 'Library/Caches/Google/Chrome')],
+                downloads: [path.join(home, 'Library/Application Support/Google/Chrome/Default/History')]
+            };
+            browserPaths['Firefox'] = {
+                history: [path.join(home, 'Library/Application Support/Firefox/Profiles')],
+                cookies: [path.join(home, 'Library/Application Support/Firefox/Profiles')],
+                cache: [path.join(home, 'Library/Caches/Firefox')],
+                downloads: [path.join(home, 'Library/Application Support/Firefox/Profiles')]
+            };
+            browserPaths['Edge'] = {
+                history: [path.join(home, 'Library/Application Support/Microsoft Edge/Default/History')],
+                cookies: [path.join(home, 'Library/Application Support/Microsoft Edge/Default/Cookies')],
+                cache: [path.join(home, 'Library/Caches/com.microsoft.edgemac')],
+                downloads: [path.join(home, 'Library/Application Support/Microsoft Edge/Default/History')]
+            };
+        }
+
+        for (const browserName of options.browsers) {
+            const paths = browserPaths[browserName];
+            if (!paths) continue;
+
+            for (const type of options.types) {
+                const typePaths = paths[type];
+                if (!typePaths) continue;
+
+                for (const dataPath of typePaths) {
+                    try {
+                        const stats = await fs.stat(dataPath).catch(() => null);
+                        if (!stats) continue;
+
+                        if (stats.isDirectory()) {
+                            const size = await getDirSize(dataPath);
+                            await fs.rm(dataPath, { recursive: true, force: true });
+                            freedSize += size;
+                            cleanedItems++;
+                        } else if (stats.isFile()) {
+                            freedSize += stats.size;
+                            await fs.unlink(dataPath);
+                            cleanedItems++;
+                        }
+                    } catch (e) {
+                        errors.push(`Failed to clean ${browserName} ${type}: ${(e as Error).message}`);
+                    }
+                }
+            }
+        }
+
+        return {
+            success: errors.length === 0,
+            cleanedItems,
+            freedSize,
+            freedSizeFormatted: formatBytes(freedSize),
+            errors
+        };
+    });
+
+    // --- Wi-Fi Network Cleanup ---
+
+    // Get Wi-Fi Networks
+    ipcMain.handle('cleaner:get-wifi-networks', async () => {
+        const platform = process.platform;
+        const networks: any[] = [];
+
+        try {
+            if (platform === 'win32') {
+                // Windows: Use netsh to list Wi-Fi profiles
+                const { stdout } = await execAsync('netsh wlan show profiles');
+                const lines = stdout.split('\n');
+                for (const line of lines) {
+                    const match = line.match(/All User Profile\s*:\s*(.+)/);
+                    if (match) {
+                        const profileName = match[1].trim();
+                        try {
+                            const { stdout: profileInfo } = await execAsync(`netsh wlan show profile name="${profileName}" key=clear`);
+                            const keyMatch = profileInfo.match(/Key Content\s*:\s*(.+)/);
+                            networks.push({
+                                name: profileName,
+                                hasPassword: !!keyMatch,
+                                platform: 'windows'
+                            });
+                        } catch (e) {
+                            networks.push({
+                                name: profileName,
+                                hasPassword: false,
+                                platform: 'windows'
+                            });
+                        }
+                    }
+                }
+            } else if (platform === 'darwin') {
+                // macOS: Use networksetup to list Wi-Fi networks
+                const { stdout } = await execAsync('networksetup -listallhardwareports');
+                const wifiInterface = stdout.split('\n').find((line: string) => line.includes('Wi-Fi') || line.includes('AirPort'));
+                if (wifiInterface) {
+                    const { stdout: networksOutput } = await execAsync('networksetup -listpreferredwirelessnetworks en0').catch(() => ({ stdout: '' }));
+                    const networkNames = networksOutput.split('\n').filter((line: string) => line.trim() && !line.includes('Preferred networks'));
+                    for (const networkName of networkNames) {
+                        const name = networkName.trim();
+                        if (name) {
+                            networks.push({
+                                name,
+                                hasPassword: true, // Assume has password if in preferred list
+                                platform: 'macos'
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            return { success: false, error: (e as Error).message, networks: [] };
+        }
+
+        return { success: true, networks };
+    });
+
+    // Remove Wi-Fi Network
+    ipcMain.handle('cleaner:remove-wifi-network', async (_event, networkName: string) => {
+        const platform = process.platform;
+
+        try {
+            if (platform === 'win32') {
+                // Windows: Delete Wi-Fi profile using netsh
+                await execAsync(`netsh wlan delete profile name="${networkName}"`);
+                return { success: true };
+            } else if (platform === 'darwin') {
+                // macOS: Remove Wi-Fi network using networksetup
+                await execAsync(`networksetup -removepreferredwirelessnetwork en0 "${networkName}"`);
+                return { success: true };
+            }
+            return { success: false, error: 'Unsupported platform' };
+        } catch (e) {
+            return { success: false, error: (e as Error).message };
+        }
+    });
+
     // --- Maintenance Module ---
 
     // Run Maintenance Task

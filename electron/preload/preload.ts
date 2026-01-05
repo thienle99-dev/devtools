@@ -72,6 +72,10 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   freeRam: () => ipcRenderer.invoke('cleaner:free-ram'),
   scanPrivacy: () => ipcRenderer.invoke('cleaner:scan-privacy'),
   cleanPrivacy: (options: any) => ipcRenderer.invoke('cleaner:clean-privacy', options),
+  scanBrowserData: () => ipcRenderer.invoke('cleaner:scan-browser-data'),
+  cleanBrowserData: (options: any) => ipcRenderer.invoke('cleaner:clean-browser-data', options),
+  getWifiNetworks: () => ipcRenderer.invoke('cleaner:get-wifi-networks'),
+  removeWifiNetwork: (networkName: string) => ipcRenderer.invoke('cleaner:remove-wifi-network', networkName),
   onSpaceLensProgress: (callback: (progress: any) => void) => {
     const listener = (_event: any, progress: any) => callback(progress);
     ipcRenderer.on('cleaner:space-lens-progress', listener);

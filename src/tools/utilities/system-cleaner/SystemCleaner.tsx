@@ -1487,6 +1487,9 @@ const LargeFilesView = () => {
     const [progress, setProgress] = useState(0);
     const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'size' | 'name' | 'date'>('size');
+    const [filterType, setFilterType] = useState<string>('all');
     
     const scanLargeFiles = async () => {
         setIsScanning(true);
@@ -1523,6 +1526,45 @@ const LargeFilesView = () => {
         }
     };
 
+    // Filter and sort files
+    const filteredFiles = React.useMemo(() => {
+        let filtered = largeFiles.filter(file => {
+            const matchesSearch = searchQuery === '' || 
+                file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                file.path.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesType = filterType === 'all' || file.type === filterType;
+            return matchesSearch && matchesType;
+        });
+
+        // Sort
+        filtered.sort((a, b) => {
+            if (sortBy === 'size') return b.size - a.size;
+            if (sortBy === 'name') return a.name.localeCompare(b.name);
+            if (sortBy === 'date') {
+                const dateA = new Date(a.lastAccessed).getTime();
+                const dateB = new Date(b.lastAccessed).getTime();
+                return dateB - dateA;
+            }
+            return 0;
+        });
+
+        return filtered;
+    }, [largeFiles, searchQuery, sortBy, filterType]);
+
+    // Get unique file types
+    const fileTypes = React.useMemo(() => {
+        const types = new Set(largeFiles.map(f => f.type || 'unknown'));
+        return ['all', ...Array.from(types)].sort();
+    }, [largeFiles]);
+
+    const handleSelectAll = () => {
+        if (selectedFiles.length === filteredFiles.length) {
+            setSelectedFiles([]);
+        } else {
+            setSelectedFiles(filteredFiles.map(f => f.path));
+        }
+    };
+
     if (largeFiles.length === 0 && !isScanning) {
         return <ScanPlaceholder title="Large Files" icon={FileText} description="Quickly identify huge files and folders that are eating up your disk space." onScan={scanLargeFiles} isScanning={isScanning} progress={progress} />;
     }
@@ -1548,17 +1590,65 @@ const LargeFilesView = () => {
                     <Button variant="outline" size="sm" onClick={scanLargeFiles}><RefreshCw className="mr-2 w-4 h-4" /> Rescan</Button>
                 </div>
             </div>
+
+            {/* Search & Filter Bar */}
+            <div className="flex gap-3 items-center">
+                <div className="flex-1 relative">
+                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground-muted" />
+                    <input
+                        type="text"
+                        placeholder="Search files..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/5 border border-border-glass rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    />
+                </div>
+                <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="bg-white/5 border border-border-glass rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                >
+                    {fileTypes.map(type => (
+                        <option key={type} value={type}>{type === 'all' ? 'All Types' : type.toUpperCase()}</option>
+                    ))}
+                </select>
+                <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'size' | 'name' | 'date')}
+                    className="bg-white/5 border border-border-glass rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                >
+                    <option value="size">Sort by Size</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="date">Sort by Date</option>
+                </select>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                >
+                    {selectedFiles.length === filteredFiles.length ? 'Deselect All' : 'Select All'}
+                </Button>
+            </div>
+
             <div className="flex-1 overflow-auto space-y-2 pr-2 custom-scrollbar">
-                {largeFiles.map((file, i) => (
-                    <Card key={i} className="p-3 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <Checkbox checked={selectedFiles.includes(file.path)} onChange={(c) => c ? setSelectedFiles([...selectedFiles, file.path]) : setSelectedFiles(selectedFiles.filter(p => p !== file.path))} />
-                            <div className="p-2 bg-white/5 rounded-lg"><FileText className="w-5 h-5 text-indigo-400" /></div>
-                            <div className="overflow-hidden"><h4 className="text-sm font-medium truncate">{file.name}</h4><p className="text-[10px] text-foreground-muted truncate">{file.path}</p></div>
-                        </div>
-                        <div className="text-sm font-bold">{file.sizeFormatted}</div>
+                {filteredFiles.length === 0 ? (
+                    <Card className="p-12 text-center border-border-glass bg-white/5">
+                        <SearchIcon className="w-16 h-16 text-foreground-muted mx-auto mb-4" />
+                        <h3 className="text-lg font-bold mb-2">No files found</h3>
+                        <p className="text-sm text-foreground-muted">Try adjusting your search or filter criteria</p>
                     </Card>
-                ))}
+                ) : (
+                    filteredFiles.map((file, i) => (
+                        <Card key={i} className="p-3 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <Checkbox checked={selectedFiles.includes(file.path)} onChange={(c) => c ? setSelectedFiles([...selectedFiles, file.path]) : setSelectedFiles(selectedFiles.filter(p => p !== file.path))} />
+                                <div className="p-2 bg-white/5 rounded-lg"><FileText className="w-5 h-5 text-indigo-400" /></div>
+                                <div className="overflow-hidden"><h4 className="text-sm font-medium truncate">{file.name}</h4><p className="text-[10px] text-foreground-muted truncate">{file.path}</p></div>
+                            </div>
+                            <div className="text-sm font-bold">{file.sizeFormatted}</div>
+                        </Card>
+                    ))
+                )}
             </div>
         </div>
     );
@@ -1570,6 +1660,8 @@ const DuplicatesView = () => {
     const [progress, setProgress] = useState(0);
     const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
     const [scanPath, setScanPath] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'size' | 'wasted'>('wasted');
     
     const scanDuplicates = async (path?: string) => {
         setIsScanning(true);
@@ -1667,27 +1759,102 @@ const DuplicatesView = () => {
                     <Button variant="outline" size="sm" onClick={() => scanDuplicates()}><RefreshCw className="mr-2 w-4 h-4" /> Rescan</Button>
                 </div>
             </div>
+
+            {/* Search & Filter Bar */}
+            <div className="flex gap-3 items-center">
+                <div className="flex-1 relative">
+                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground-muted" />
+                    <input
+                        type="text"
+                        placeholder="Search duplicate files..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/5 border border-border-glass rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    />
+                </div>
+                <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'size' | 'wasted')}
+                    className="bg-white/5 border border-border-glass rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                >
+                    <option value="wasted">Sort by Wasted Space</option>
+                    <option value="size">Sort by File Size</option>
+                </select>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        const allFiles = duplicates.flatMap(g => g.files);
+                        if (selectedFiles.length === allFiles.length) {
+                            setSelectedFiles([]);
+                        } else {
+                            setSelectedFiles(allFiles);
+                        }
+                    }}
+                >
+                    {selectedFiles.length === duplicates.flatMap(g => g.files).length ? 'Deselect All' : 'Select All'}
+                </Button>
+            </div>
+
             <div className="flex-1 overflow-auto space-y-4 pr-2 custom-scrollbar">
-                {duplicates.map((group, i) => (
-                    <Card key={i} className="overflow-hidden border-border-glass">
-                        <div className="bg-white/10 p-3 flex items-center justify-between border-b border-border-glass">
-                            <span className="text-xs font-bold text-indigo-400 uppercase">HASH: {group.hash.slice(0, 8)}</span>
-                            <span className="text-xs font-bold text-amber-500">Wasted: {group.totalWastedFormatted}</span>
-                        </div>
-                        <div className="p-2 space-y-1">
-                            {group.files.map((path: string, j: number) => (
-                                <div key={j} className="flex items-center p-2 rounded-lg hover:bg-white/5 text-[11px] group transition-colors">
-                                    <Checkbox 
-                                        checked={selectedFiles.includes(path)} 
-                                        onChange={(c) => c ? setSelectedFiles([...selectedFiles, path]) : setSelectedFiles(selectedFiles.filter(p => p !== path))}
-                                        className="mr-3"
-                                    />
-                                    <span className="truncate flex-1 text-foreground-muted italic group-hover:text-foreground">{path}</span>
-                                </div>
-                            ))}
-                        </div>
+                {React.useMemo(() => {
+                    let filtered = duplicates.filter(group => {
+                        if (searchQuery === '') return true;
+                        return group.files.some((path: string) => 
+                            path.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+                    });
+
+                    filtered.sort((a, b) => {
+                        if (sortBy === 'wasted') return b.totalWasted - a.totalWasted;
+                        if (sortBy === 'size') return b.size - a.size;
+                        return 0;
+                    });
+
+                    return filtered;
+                }, [duplicates, searchQuery, sortBy]).length === 0 ? (
+                    <Card className="p-12 text-center border-border-glass bg-white/5">
+                        <SearchIcon className="w-16 h-16 text-foreground-muted mx-auto mb-4" />
+                        <h3 className="text-lg font-bold mb-2">No duplicates found</h3>
+                        <p className="text-sm text-foreground-muted">Try adjusting your search criteria</p>
                     </Card>
-                ))}
+                ) : (
+                    React.useMemo(() => {
+                        let filtered = duplicates.filter(group => {
+                            if (searchQuery === '') return true;
+                            return group.files.some((path: string) => 
+                                path.toLowerCase().includes(searchQuery.toLowerCase())
+                            );
+                        });
+
+                        filtered.sort((a, b) => {
+                            if (sortBy === 'wasted') return b.totalWasted - a.totalWasted;
+                            if (sortBy === 'size') return b.size - a.size;
+                            return 0;
+                        });
+
+                        return filtered;
+                    }, [duplicates, searchQuery, sortBy]).map((group, i) => (
+                        <Card key={i} className="overflow-hidden border-border-glass">
+                            <div className="bg-white/10 p-3 flex items-center justify-between border-b border-border-glass">
+                                <span className="text-xs font-bold text-indigo-400 uppercase">HASH: {group.hash.slice(0, 8)}</span>
+                                <span className="text-xs font-bold text-amber-500">Wasted: {group.totalWastedFormatted}</span>
+                            </div>
+                            <div className="p-2 space-y-1">
+                                {group.files.map((path: string, j: number) => (
+                                    <div key={j} className="flex items-center p-2 rounded-lg hover:bg-white/5 text-[11px] group transition-colors">
+                                        <Checkbox 
+                                            checked={selectedFiles.includes(path)} 
+                                            onChange={(c) => c ? setSelectedFiles([...selectedFiles, path]) : setSelectedFiles(selectedFiles.filter(p => p !== path))}
+                                            className="mr-3"
+                                        />
+                                        <span className="truncate flex-1 text-foreground-muted italic group-hover:text-foreground">{path}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    ))
+                )}
             </div>
         </div>
     );
@@ -2151,6 +2318,7 @@ const HealthMonitorView = () => {
 
 const ProtectionView = () => {
     const { privacyData, setPrivacyData, platformInfo } = useSystemCleanerStore();
+    const [activeTab, setActiveTab] = useState<'privacy' | 'browser' | 'wifi'>('privacy');
     const [isScanning, setIsScanning] = useState(false);
     const [isCleaning, setIsCleaning] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -2160,6 +2328,18 @@ const ProtectionView = () => {
         spotlightHistory?: boolean;
         quickLookCache?: boolean;
     }>({});
+    
+    // Browser Data state
+    const [browserData, setBrowserData] = useState<any>(null);
+    const [isScanningBrowser, setIsScanningBrowser] = useState(false);
+    const [isCleaningBrowser, setIsCleaningBrowser] = useState(false);
+    const [selectedBrowsers, setSelectedBrowsers] = useState<string[]>([]);
+    const [selectedBrowserTypes, setSelectedBrowserTypes] = useState<string[]>(['history', 'cookies', 'cache', 'downloads']);
+    
+    // Wi-Fi Networks state
+    const [wifiNetworks, setWifiNetworks] = useState<any[]>([]);
+    const [isLoadingWifi, setIsLoadingWifi] = useState(false);
+    const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
 
     const scanPrivacy = async () => {
         setIsScanning(true);
@@ -2262,38 +2442,136 @@ const ProtectionView = () => {
         );
     };
 
-    if (!privacyData && !isScanning) {
-        return (
-            <ScanPlaceholder
-                title="Privacy Protection"
-                icon={ShieldCheck}
-                description="Clean up privacy-sensitive data including registry entries, activity history, and search history."
-                onScan={scanPrivacy}
-                isScanning={isScanning}
-                progress={progress}
-            />
-        );
-    }
+    // Browser Data functions
+    const scanBrowserData = async () => {
+        setIsScanningBrowser(true);
+        setProgress(0);
+        const interval = setInterval(() => setProgress(p => (p < 90 ? p + 5 : p)), 100);
+        try {
+            const res = await (window as any).cleanerAPI.scanBrowserData();
+            if (res.success) {
+                setBrowserData(res.results);
+                setProgress(100);
+                setSelectedBrowsers(res.results.browsers.map((b: any) => b.name));
+            } else {
+                toast.error(`Failed to scan browser data: ${res.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            toast.error('Failed to scan browser data');
+        } finally {
+            clearInterval(interval);
+            setTimeout(() => setIsScanningBrowser(false), 500);
+        }
+    };
+
+    const cleanBrowserData = async () => {
+        if (selectedBrowsers.length === 0 || selectedBrowserTypes.length === 0) {
+            toast.error('Please select at least one browser and data type to clean');
+            return;
+        }
+        setIsCleaningBrowser(true);
+        try {
+            const res = await (window as any).cleanerAPI.cleanBrowserData({
+                browsers: selectedBrowsers,
+                types: selectedBrowserTypes
+            });
+            if (res.success) {
+                toast.success(`Cleaned ${res.cleanedItems} items (${res.freedSizeFormatted})`);
+                setBrowserData(null);
+                setSelectedBrowsers([]);
+            } else {
+                toast.error(`Failed to clean: ${res.errors?.join(', ') || 'Unknown error'}`);
+            }
+        } catch (error) {
+            toast.error('Failed to clean browser data');
+        } finally {
+            setIsCleaningBrowser(false);
+        }
+    };
+
+    // Wi-Fi Networks functions
+    const loadWifiNetworks = async () => {
+        setIsLoadingWifi(true);
+        try {
+            const res = await (window as any).cleanerAPI.getWifiNetworks();
+            if (res.success) {
+                setWifiNetworks(res.networks);
+            } else {
+                toast.error(`Failed to load Wi-Fi networks: ${res.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            toast.error('Failed to load Wi-Fi networks');
+        } finally {
+            setIsLoadingWifi(false);
+        }
+    };
+
+    const removeWifiNetwork = async (networkName: string) => {
+        try {
+            const res = await (window as any).cleanerAPI.removeWifiNetwork(networkName);
+            if (res.success) {
+                toast.success(`Removed Wi-Fi network: ${networkName}`);
+                setWifiNetworks(wifiNetworks.filter(n => n.name !== networkName));
+                setSelectedNetworks(selectedNetworks.filter(n => n !== networkName));
+            } else {
+                toast.error(`Failed to remove network: ${res.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            toast.error('Failed to remove Wi-Fi network');
+        }
+    };
+
+    const removeSelectedNetworks = async () => {
+        if (selectedNetworks.length === 0) {
+            toast.error('Please select at least one network to remove');
+            return;
+        }
+        for (const networkName of selectedNetworks) {
+            await removeWifiNetwork(networkName);
+        }
+    };
+
+    // Load Wi-Fi networks on mount if on Wi-Fi tab
+    useEffect(() => {
+        if (activeTab === 'wifi' && wifiNetworks.length === 0 && !isLoadingWifi) {
+            loadWifiNetworks();
+        }
+    }, [activeTab]);
 
     const platform = platformInfo?.platform;
 
-    return (
-        <div className="space-y-6 h-full flex flex-col relative">
-            {(isScanning || isCleaning) && (
-                <LoadingOverlay 
-                    progress={progress} 
-                    title="Privacy Protection" 
-                    status={isCleaning ? "Cleaning privacy data..." : "Scanning privacy data..."} 
+    // Render Privacy Tab
+    const renderPrivacyTab = () => {
+        if (!privacyData && !isScanning) {
+            return (
+                <ScanPlaceholder
+                    title="Privacy Protection"
+                    icon={ShieldCheck}
+                    description="Clean up privacy-sensitive data including registry entries, activity history, and search history."
+                    onScan={scanPrivacy}
+                    isScanning={isScanning}
+                    progress={progress}
                 />
-            )}
+            );
+        }
 
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">Privacy Protection</h2>
-                    <p className="text-sm text-foreground-muted">
-                        Remove privacy-sensitive data from your system
-                    </p>
-                </div>
+        return (
+            <div className="space-y-6 h-full flex flex-col relative">
+                {(isScanning || isCleaning) && (
+                    <LoadingOverlay 
+                        progress={progress} 
+                        title="Privacy Protection" 
+                        status={isCleaning ? "Cleaning privacy data..." : "Scanning privacy data..."} 
+                    />
+                )}
+
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold">Privacy Protection</h2>
+                        <p className="text-sm text-foreground-muted">
+                            Remove privacy-sensitive data from your system
+                        </p>
+                    </div>
                 <div className="flex gap-2">
                     {privacyData && (
                         <Button
@@ -2372,6 +2650,309 @@ const ProtectionView = () => {
                     )}
                 </div>
             )}
+            </div>
+        );
+    };
+
+    // Render Browser Data Tab
+    const renderBrowserTab = () => {
+        if (!browserData && !isScanningBrowser) {
+            return (
+                <ScanPlaceholder
+                    title="Browser Data Cleanup"
+                    icon={SearchIcon}
+                    description="Clean up browser history, cookies, cache, and download history from Chrome, Firefox, Edge, and Safari."
+                    onScan={scanBrowserData}
+                    isScanning={isScanningBrowser}
+                    progress={progress}
+                />
+            );
+        }
+
+        return (
+            <div className="space-y-6 h-full flex flex-col relative">
+                {(isScanningBrowser || isCleaningBrowser) && (
+                    <LoadingOverlay 
+                        progress={progress} 
+                        title="Browser Data Cleanup" 
+                        status={isCleaningBrowser ? "Cleaning browser data..." : "Scanning browser data..."} 
+                    />
+                )}
+
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold">Browser Data Cleanup</h2>
+                        <p className="text-sm text-foreground-muted">
+                            Remove browser history, cookies, cache, and download history
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        {browserData && (
+                            <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={cleanBrowserData}
+                                disabled={isCleaningBrowser || selectedBrowsers.length === 0 || selectedBrowserTypes.length === 0}
+                            >
+                                {isCleaningBrowser ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Cleaning...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash className="w-4 h-4 mr-2" />
+                                        Clean Selected
+                                    </>
+                                )}
+                            </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={scanBrowserData} disabled={isScanningBrowser}>
+                            <RefreshCw className={cn("w-4 h-4 mr-2", isScanningBrowser && "animate-spin")} />
+                            {browserData ? 'Rescan' : 'Scan'}
+                        </Button>
+                    </div>
+                </div>
+
+                {browserData && (
+                    <div className="flex-1 overflow-auto space-y-4 pr-2 custom-scrollbar">
+                        <div className="flex gap-4 mb-4">
+                            <div className="flex-1">
+                                <label className="text-sm font-medium mb-2 block">Data Types</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['history', 'cookies', 'cache', 'downloads'].map(type => (
+                                        <Checkbox
+                                            key={type}
+                                            checked={selectedBrowserTypes.includes(type)}
+                                            onChange={(checked) => {
+                                                if (checked) {
+                                                    setSelectedBrowserTypes([...selectedBrowserTypes, type]);
+                                                } else {
+                                                    setSelectedBrowserTypes(selectedBrowserTypes.filter(t => t !== type));
+                                                }
+                                            }}
+                                            label={type.charAt(0).toUpperCase() + type.slice(1)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {browserData.browsers.map((browser: any) => (
+                            <Card key={browser.name} className="p-6 space-y-4 border-border-glass bg-white/5">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                            <SearchIcon className="w-5 h-5 text-indigo-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold">{browser.name}</h3>
+                                            <p className="text-xs text-foreground-muted">{browser.totalSizeFormatted}</p>
+                                        </div>
+                                    </div>
+                                    <Checkbox
+                                        checked={selectedBrowsers.includes(browser.name)}
+                                        onChange={(checked) => {
+                                            if (checked) {
+                                                setSelectedBrowsers([...selectedBrowsers, browser.name]);
+                                            } else {
+                                                setSelectedBrowsers(selectedBrowsers.filter(b => b !== browser.name));
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {['history', 'cookies', 'cache', 'downloads'].map(type => {
+                                        const data = browser[type];
+                                        if (!data || data.size === 0) return null;
+                                        return (
+                                            <div key={type} className="p-3 bg-white/5 rounded-lg border border-border-glass/50">
+                                                <div className="text-xs text-foreground-muted mb-1 capitalize">{type}</div>
+                                                <div className="text-sm font-bold text-indigo-400">{formatSize(data.size)}</div>
+                                                <div className="text-xs text-foreground-muted">{data.count} items</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </Card>
+                        ))}
+
+                        {browserData.totalSize > 0 && (
+                            <Card className="p-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/30">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-bold">Total Browser Data Found</h3>
+                                        <p className="text-sm text-foreground-muted">
+                                            {browserData.totalItems} items • {formatSize(browserData.totalSize)}
+                                        </p>
+                                    </div>
+                                    <SearchIcon className="w-12 h-12 text-indigo-400" />
+                                </div>
+                            </Card>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Render Wi-Fi Networks Tab
+    const renderWifiTab = () => {
+        return (
+            <div className="space-y-6 h-full flex flex-col relative">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold">Wi-Fi Network Cleanup</h2>
+                        <p className="text-sm text-foreground-muted">
+                            Remove old or forgotten Wi-Fi networks from your system
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        {selectedNetworks.length > 0 && (
+                            <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={removeSelectedNetworks}
+                                disabled={isLoadingWifi}
+                            >
+                                <Trash className="w-4 h-4 mr-2" />
+                                Remove Selected ({selectedNetworks.length})
+                            </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={loadWifiNetworks} disabled={isLoadingWifi}>
+                            <RefreshCw className={cn("w-4 h-4 mr-2", isLoadingWifi && "animate-spin")} />
+                            Refresh
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-auto space-y-2 pr-2 custom-scrollbar">
+                    {isLoadingWifi ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                        </div>
+                    ) : wifiNetworks.length === 0 ? (
+                        <Card className="p-12 text-center border-border-glass bg-white/5">
+                            <Wifi className="w-16 h-16 text-foreground-muted mx-auto mb-4" />
+                            <h3 className="text-lg font-bold mb-2">No Wi-Fi Networks Found</h3>
+                            <p className="text-sm text-foreground-muted mb-4">
+                                Click Refresh to scan for saved Wi-Fi networks
+                            </p>
+                            <Button variant="outline" onClick={loadWifiNetworks}>
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Scan Networks
+                            </Button>
+                        </Card>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="text-sm text-foreground-muted">
+                                    {wifiNetworks.length} network{wifiNetworks.length !== 1 ? 's' : ''} found
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (selectedNetworks.length === wifiNetworks.length) {
+                                            setSelectedNetworks([]);
+                                        } else {
+                                            setSelectedNetworks(wifiNetworks.map(n => n.name));
+                                        }
+                                    }}
+                                >
+                                    {selectedNetworks.length === wifiNetworks.length ? 'Deselect All' : 'Select All'}
+                                </Button>
+                            </div>
+                            {wifiNetworks.map((network) => (
+                                <Card key={network.name} className="p-4 border-border-glass bg-white/5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <Checkbox
+                                                checked={selectedNetworks.includes(network.name)}
+                                                onChange={(checked) => {
+                                                    if (checked) {
+                                                        setSelectedNetworks([...selectedNetworks, network.name]);
+                                                    } else {
+                                                        setSelectedNetworks(selectedNetworks.filter(n => n !== network.name));
+                                                    }
+                                                }}
+                                            />
+                                            <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                                <Wifi className="w-5 h-5 text-indigo-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-bold">{network.name}</div>
+                                                <div className="text-xs text-foreground-muted">
+                                                    {network.hasPassword ? 'Password protected' : 'Open network'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => removeWifiNetwork(network.name)}
+                                            disabled={isLoadingWifi}
+                                        >
+                                            <Trash className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </Card>
+                            ))}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-border-glass">
+                <button
+                    onClick={() => setActiveTab('privacy')}
+                    className={cn(
+                        "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                        activeTab === 'privacy'
+                            ? "border-indigo-500 text-indigo-400"
+                            : "border-transparent text-foreground-muted hover:text-foreground"
+                    )}
+                >
+                    <ShieldCheck className="w-4 h-4 inline mr-2" />
+                    Privacy
+                </button>
+                <button
+                    onClick={() => setActiveTab('browser')}
+                    className={cn(
+                        "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                        activeTab === 'browser'
+                            ? "border-indigo-500 text-indigo-400"
+                            : "border-transparent text-foreground-muted hover:text-foreground"
+                    )}
+                >
+                    <SearchIcon className="w-4 h-4 inline mr-2" />
+                    Browser Data
+                </button>
+                <button
+                    onClick={() => setActiveTab('wifi')}
+                    className={cn(
+                        "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                        activeTab === 'wifi'
+                            ? "border-indigo-500 text-indigo-400"
+                            : "border-transparent text-foreground-muted hover:text-foreground"
+                    )}
+                >
+                    <Wifi className="w-4 h-4 inline mr-2" />
+                    Wi-Fi Networks
+                </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden">
+                {activeTab === 'privacy' && renderPrivacyTab()}
+                {activeTab === 'browser' && renderBrowserTab()}
+                {activeTab === 'wifi' && renderWifiTab()}
+            </div>
         </div>
     );
 };

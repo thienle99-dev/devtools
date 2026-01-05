@@ -63,6 +63,10 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram"),
 	scanPrivacy: () => electron.ipcRenderer.invoke("cleaner:scan-privacy"),
 	cleanPrivacy: (options) => electron.ipcRenderer.invoke("cleaner:clean-privacy", options),
+	scanBrowserData: () => electron.ipcRenderer.invoke("cleaner:scan-browser-data"),
+	cleanBrowserData: (options) => electron.ipcRenderer.invoke("cleaner:clean-browser-data", options),
+	getWifiNetworks: () => electron.ipcRenderer.invoke("cleaner:get-wifi-networks"),
+	removeWifiNetwork: (networkName) => electron.ipcRenderer.invoke("cleaner:remove-wifi-network", networkName),
 	onSpaceLensProgress: (callback) => {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("cleaner:space-lens-progress", listener);
