@@ -10,6 +10,9 @@ interface SettingsStore {
     startMinimized: boolean;
     launchAtLogin: boolean;
 
+    toolShortcuts: Record<string, string>;
+    setToolShortcut: (toolId: string, shortcut: string | null) => void;
+
     setFontSize: (size: number) => void;
     setWordWrap: (wrap: boolean) => void;
     setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -28,6 +31,17 @@ export const useSettingsStore = create<SettingsStore>()(
             minimizeToTray: true,
             startMinimized: false,
             launchAtLogin: false,
+            toolShortcuts: {},
+
+            setToolShortcut: (toolId, shortcut) => set((state) => {
+                const newShortcuts = { ...state.toolShortcuts };
+                if (shortcut) {
+                    newShortcuts[toolId] = shortcut;
+                } else {
+                    delete newShortcuts[toolId];
+                }
+                return { toolShortcuts: newShortcuts };
+            }),
 
             setFontSize: (fontSize) => set({ fontSize }),
             setWordWrap: (wordWrap) => set({ wordWrap }),

@@ -28,6 +28,7 @@ export interface ToolDefinition {
     icon: React.ElementType;
     component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>;
     keywords?: string[];
+    shortcut?: string;
 }
 
 export interface CategoryDefinition {
@@ -116,7 +117,8 @@ export const TOOLS: ToolDefinition[] = [
         category: 'formatters',
         icon: FileJson,
         component: JsonFormatter,
-        keywords: ['json', 'format', 'minify', 'prettier']
+        keywords: ['json', 'format', 'minify', 'prettier'],
+        shortcut: 'Ctrl+Shift+J'
     },
     {
         id: 'sql-format',
@@ -280,7 +282,8 @@ export const TOOLS: ToolDefinition[] = [
         category: 'crypto',
         icon: Hash, // fingerprint icon if available?
         component: UuidGenerator,
-        keywords: ['uuid', 'ulid', 'guid', 'id']
+        keywords: ['uuid', 'ulid', 'guid', 'id'],
+        shortcut: 'Ctrl+Shift+U'
     },
     {
         id: 'token-generator',
@@ -496,7 +499,8 @@ export const TOOLS: ToolDefinition[] = [
         category: 'utilities',
         icon: Activity,
         component: StatsMonitor,
-        keywords: ['cpu', 'memory', 'disk', 'network', 'battery', 'gpu', 'stats', 'monitor']
+        keywords: ['cpu', 'memory', 'disk', 'network', 'battery', 'gpu', 'stats', 'monitor'],
+        shortcut: 'Ctrl+Shift+M'
     },
 
     // Settings (Special tool - not in any category)

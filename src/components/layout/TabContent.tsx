@@ -59,7 +59,7 @@ export const TabContent: React.FC = React.memo(() => {
     const ToolComponent = toolDef.component;
 
     return (
-        <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area">
+        <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area h-full w-full">
             <Suspense fallback={
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">

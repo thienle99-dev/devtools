@@ -3,7 +3,8 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useToolStore } from '../store/toolStore';
 import { ToolPane } from '../components/layout/ToolPane';
 import { Card } from '../components/ui/Card';
-import { Monitor, Type, WrapText, History, Trash2, Smartphone } from 'lucide-react';
+import { Monitor, Type, WrapText, History, Trash2, Smartphone, Keyboard } from 'lucide-react';
+import { CATEGORIES, getToolsByCategory } from '../tools/registry';
 
 interface SettingsPageProps {
     tabId?: string;
@@ -149,6 +150,64 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                             <p className="text-sm text-foreground capitalize font-mono">
                                 {(window as any).ipcRenderer?.process?.platform || 'unknown'}
                             </p>
+                        </div>
+                    </Card>
+                </section>
+
+                {/* Tool Shortcuts Section */}
+                <section className="space-y-4">
+                    <h3 className="text-xs font-black text-foreground-muted uppercase tracking-[0.2em] flex items-center">
+                        <Keyboard className="w-3.5 h-3.5 mr-2" />
+                        Tool Shortcuts
+                    </h3>
+                    <Card className="p-1">
+                        <div className="flex flex-col">
+                            {CATEGORIES.map(category => {
+                                const categoryTools = getToolsByCategory(category.id);
+                                if (categoryTools.length === 0) return null;
+
+                                return (
+                                    <div key={category.id} className="border-b border-border-glass last:border-0">
+                                        <div className="px-4 py-2 bg-[var(--color-glass-input)]/50 text-xs font-bold text-foreground-muted uppercase tracking-wider">
+                                            {category.name}
+                                        </div>
+                                        <div>
+                                            {categoryTools.map(tool => {
+                                                const currentShortcut = useSettingsStore.getState().toolShortcuts[tool.id] || tool.shortcut || '';
+
+                                                return (
+                                                    <div key={tool.id} className="flex items-center justify-between p-3 hover:bg-[var(--color-glass-button)] transition-colors">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-1.5 bg-[var(--color-glass-button)] rounded-md">
+                                                                <tool.icon className="w-4 h-4 text-foreground-secondary" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium text-foreground">{tool.name}</p>
+                                                                <p className="text-[10px] text-foreground-muted truncate max-w-[200px]">{tool.description}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={currentShortcut}
+                                                                placeholder="None"
+                                                                className="w-32 bg-[var(--color-glass-input)] border border-border-glass rounded text-xs px-2 py-1 text-right focus:border-indigo-500/50 outline-none text-foreground font-mono"
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    // Simple validation or just let them type?
+                                                                    // Let's rely on blur or specific "Rec" button in future.
+                                                                    // For now, text input manually "Ctrl+Shift+K".
+                                                                    useSettingsStore.getState().setToolShortcut(tool.id, val || null);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </Card>
                 </section>

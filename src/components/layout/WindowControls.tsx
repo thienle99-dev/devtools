@@ -1,12 +1,25 @@
-import React from 'react';
-import { Minus, Square, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Minus, Square, X, Copy } from 'lucide-react';
 
 export const WindowControls: React.FC = () => {
+    const [isMaximized, setIsMaximized] = useState(false);
     
-    // Check if we are on macOS to conditionally render (or rely on CSS)
-    // For now, render standard controls for Windows/Linux, and hide on macOS if needed via platform check
-    // Since we don't have easy platform check here, we render and assume Windows style for this user.
-    
+    useEffect(() => {
+        const handleMaximized = (_event: any, state: boolean) => {
+            setIsMaximized(state);
+        };
+        
+        const ipcRenderer = (window as any).ipcRenderer;
+        if (ipcRenderer) {
+            const removeListener = ipcRenderer.on('window-maximized', handleMaximized);
+            return () => {
+                 if (typeof removeListener === 'function') {
+                     removeListener();
+                 }
+            };
+        }
+    }, []);
+
     const handleMinimize = () => {
         (window as any).ipcRenderer?.send('window-minimize');
     };
@@ -38,9 +51,13 @@ export const WindowControls: React.FC = () => {
                 <button 
                     onClick={handleMaximize}
                     className="p-1.5 hover:bg-[var(--color-glass-button)] rounded-md transition-colors text-foreground-muted hover:text-foreground"
-                    title="Maximize"
+                    title={isMaximized ? "Restore" : "Maximize"}
                 >
-                    <Square className="w-3.5 h-3.5" />
+                    {isMaximized ? (
+                        <Copy className="w-3.5 h-3.5 rotate-180" /> // Approximate restore icon
+                    ) : (
+                        <Square className="w-3.5 h-3.5" />
+                    )}
                 </button>
                 <button 
                     onClick={handleClose}

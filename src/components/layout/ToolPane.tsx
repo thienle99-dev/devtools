@@ -22,7 +22,7 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
     onClear
 }) => {
     return (
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative h-full w-full">
             {/* Header */}
             <div className="px-8 py-5 flex items-center justify-between backdrop-blur-md sticky top-0 z-10 bg-[var(--color-glass-50)] relative shrink-0">
                 <div>

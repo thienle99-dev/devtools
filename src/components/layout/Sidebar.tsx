@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
+import { useSettingsStore } from '../../store/settingsStore';
 
 export const Sidebar: React.FC = React.memo(() => {
     const openTab = useTabStore(state => state.openTab);
@@ -64,6 +65,9 @@ export const Sidebar: React.FC = React.memo(() => {
                                 {tools.filter(tool => tool.id !== 'settings').map((tool) => {
                                     const isActive = activeTab?.toolId === tool.id;
                                     const Icon = tool.icon;
+                                    // Get configured or default shortcut
+                                    const toolShortcuts = useSettingsStore.getState().toolShortcuts;
+                                    const shortcut = toolShortcuts[tool.id] || tool.shortcut;
 
                                     return (
                                         <div
@@ -80,7 +84,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                                     navigate(tool.path);
                                                 }
                                             }}
-                                            title={tool.description}
+                                            title={tool.description + (shortcut ? ` (${shortcut})` : '')}
                                             className={cn(
                                                 "sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer",
                                                 isActive
@@ -95,6 +99,14 @@ export const Sidebar: React.FC = React.memo(() => {
                                                 )} />
                                             )}
                                             <span className="truncate flex-1 font-medium">{tool.name}</span>
+                                            {shortcut && (
+                                                <span className={cn(
+                                                    "text-[10px] opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded font-mono",
+                                                    isActive && "opacity-70 bg-black/5 dark:bg-white/10 text-foreground"
+                                                )}>
+                                                    {shortcut.replace('Ctrl', 'Win').replace('Cmd', '⌘').replace('Shift', '⇧').replace('Alt', 'Alt').split('+').map(k => k.trim()).join('+').replace('Win+⇧', 'Win+⇧').replace(/\+/g, '')}
+                                                </span>
+                                            )}
                                         </div>
                                     );
                                 })}

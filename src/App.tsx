@@ -110,7 +110,58 @@ function App() {
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
+
+  // Global Tool Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if input/textarea is focused (unless it's a special global shortcut?)
+      // Actually usually "Quick Open" shortcuts should work even if focused, or maybe check modifiers.
+      // E.g. Ctrl/Cmd+Shift... is unlikely to conflict with text input except specific editor commands.
+      // Let's rely on modifiers being present.
+
+      const { toolShortcuts } = useSettingsStore.getState();
+      const openTab = useTabStore.getState().openTab;
+
+      for (const tool of TOOLS) {
+        const shortcut = toolShortcuts[tool.id] || tool.shortcut;
+        if (!shortcut) continue;
+
+        const parts = shortcut.toLowerCase().split('+').map(p => p.trim());
+        const key = parts[parts.length - 1];
+        const modifiers = parts.slice(0, parts.length - 1);
+
+        const eventKey = e.key.toLowerCase();
+        
+        // Check key match
+        if (eventKey !== key) continue;
+
+        // Check modifiers
+        // We'll treat "Ctrl" in the config as "Primary Modifier" (Cmd on Mac, Ctrl on Win)
+        const configHasCtrl = modifiers.some(m => ['ctrl', 'cmd', 'command', 'control'].includes(m));
+        const configHasShift = modifiers.includes('shift');
+        const configHasAlt = modifiers.includes('alt') || modifiers.includes('option');
+        // We generally ignore specific Meta unless it's the primary modifier on Mac
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const eventHasPrimary = isMac ? e.metaKey : e.ctrlKey;
+        
+        if (configHasCtrl !== eventHasPrimary) continue;
+        if (configHasShift !== e.shiftKey) continue;
+        if (configHasAlt !== e.altKey) continue;
+
+        // If matched
+        e.preventDefault();
+        openTab(tool.id, tool.path, tool.name, tool.description);
+        return; // Handle only one
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <Router>
