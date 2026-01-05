@@ -7,6 +7,7 @@ import { WindowControls } from './components/layout/WindowControls';
 import { TrayController } from './components/layout/TrayController';
 import { TabBar } from './components/layout/TabBar';
 import { TabContent } from './components/layout/TabContent';
+import { Dashboard } from './pages/Dashboard';
 import { GlobalClipboardMonitor } from './components/GlobalClipboardMonitor';
 import { TOOLS } from './tools/registry';
 import { useClipboardStore } from './store/clipboardStore';
@@ -27,10 +28,17 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const settings = useClipboardStore(state => state.settings);
 
+  const isDashboard = location.pathname === '/dashboard';
+
   // Sync URL -> Tab
   // This allows bookmarks, tray navigation, and redirects to work
   useEffect(() => {
-    // If we are on root, do nothing or open default?
+    // Never auto-open a tool when on dashboard
+    if (location.pathname === '/dashboard') return;
+
+    // If no tabs are open, don't recreate a tab just because URL still points to a tool
+    if (tabs.length === 0) return;
+
     // If we are on a tool path (including settings), ensure tab is open
     const tool = TOOLS.find(t => t.path === location.pathname);
     if (tool) {
@@ -44,7 +52,14 @@ const MainLayout = () => {
         setActiveTab(existingTab.id);
       }
     }
-  }, [location.pathname, openTab, tabs]);
+  }, [location.pathname, openTab, tabs, setActiveTab]);
+
+  // When all tabs are closed, redirect to dashboard instead of recreating the last tool tab
+  useEffect(() => {
+    if (tabs.length === 0 && location.pathname !== '/dashboard') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [tabs.length, location.pathname, navigate]);
 
   // Sync Tab -> URL
   // When active tab changes, update URL to match
@@ -78,7 +93,7 @@ const MainLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TabBar />
         <div className="flex-1 min-h-0">
-          <TabContent />
+          {isDashboard ? <Dashboard /> : <TabContent />}
         </div>
       </div>
     </div>

@@ -222,9 +222,17 @@ export const TabBar: React.FC = React.memo(() => {
 
                                 {/* Close Button - Always enabled, even for active/last tab */}
                                 <button
-                                    onClick={(e) => handleCloseTab(e, tab.id)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleCloseTab(e, tab.id);
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
                                     className={cn(
-                                        "tab-close-button-chrome shrink-0 rounded-md p-1 transition-all duration-150",
+                                        "tab-close-button-chrome shrink-0 rounded-md p-1 transition-all duration-150 relative z-10",
                                         sortedTabs.length > 1 ? "opacity-0 group-hover:opacity-100" : "opacity-60",
                                         "hover:bg-red-500/20 hover:text-red-400",
                                         "cursor-pointer"
@@ -233,7 +241,7 @@ export const TabBar: React.FC = React.memo(() => {
                                     title={sortedTabs.length === 1 ? "Close tab (last tab)" : "Close tab"}
                                     type="button"
                                 >
-                                    <X className="w-3.5 h-3.5" />
+                                    <X className="w-3.5 h-3.5 pointer-events-none" />
                                 </button>
                             </div>
                         );

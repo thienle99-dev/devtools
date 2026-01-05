@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo } from 'react';
 import { useTabStore } from '../../store/tabStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Settings,
-    Search
+    Search,
+    LayoutDashboard
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
@@ -16,7 +17,9 @@ export const Sidebar: React.FC = React.memo(() => {
     const activeTabId = useTabStore(state => state.activeTabId);
     const tabs = useTabStore(state => state.tabs);
     const navigate = useNavigate();
+    const location = useLocation();
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+    const isDashboard = location.pathname === '/dashboard';
     
     // Count preview tabs
     const previewTabsCount = useMemo(() => tabs.filter(t => t.isPreview).length, [tabs]);
@@ -61,8 +64,28 @@ export const Sidebar: React.FC = React.memo(() => {
             transition={{ duration: 0.3, ease: 'easeOut' }}
             className="w-64 h-full sidebar-macos flex flex-col z-20"
         >
+            {/* Dashboard Entry */}
+            <div className="px-5 pt-4 pb-1">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/dashboard');
+                    }}
+                    className={cn(
+                        "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm transition-all duration-200 cursor-pointer",
+                        "bg-[var(--color-glass-input)]/70 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass",
+                        isDashboard && "border-border-glass bg-[var(--color-glass-input)]"
+                    )}
+                >
+                    <LayoutDashboard className="w-4 h-4 shrink-0" />
+                    <span className="truncate font-medium">Dashboard</span>
+                </button>
+            </div>
+
             {/* Enhanced Search Section */}
-            <div className="px-5 pt-5 pb-4">
+            <div className="px-5 pt-2 pb-4">
                 <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted pointer-events-none transition-colors" />
                     <input
