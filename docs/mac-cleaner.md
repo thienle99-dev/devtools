@@ -23,33 +23,40 @@ A comprehensive cross-platform cleaning, protection, and optimization tool inspi
 ## Platform Detection
 
 ```typescript
-type Platform = 'windows' | 'macos' | 'linux';
+type Platform = "windows" | "macos" | "linux";
 
 interface PlatformInfo {
   platform: Platform;
   version: string;
-  architecture: 'x64' | 'arm64';
+  architecture: "x64" | "arm64";
   isAdmin: boolean;
 }
 
 // Platform-specific utilities
 const getPlatformPaths = (platform: Platform): PlatformPaths => {
-  if (platform === 'windows') {
+  if (platform === "windows") {
     return {
-      userCache: path.join(process.env.APPDATA || '', '..', 'Local'),
-      systemCache: path.join(process.env.WINDIR || '', 'Temp'),
-      userLogs: path.join(process.env.APPDATA || '', '..', 'Local', 'Temp'),
-      systemLogs: path.join(process.env.WINDIR || '', 'Logs'),
-      trashBin: path.join(process.env.USERPROFILE || '', 'AppData', 'Local', 'Microsoft', 'Windows', 'RecycleBin'),
+      userCache: path.join(process.env.APPDATA || "", "..", "Local"),
+      systemCache: path.join(process.env.WINDIR || "", "Temp"),
+      userLogs: path.join(process.env.APPDATA || "", "..", "Local", "Temp"),
+      systemLogs: path.join(process.env.WINDIR || "", "Logs"),
+      trashBin: path.join(
+        process.env.USERPROFILE || "",
+        "AppData",
+        "Local",
+        "Microsoft",
+        "Windows",
+        "RecycleBin"
+      ),
       // ... more Windows paths
     };
-  } else if (platform === 'macos') {
+  } else if (platform === "macos") {
     return {
-      userCache: path.join(process.env.HOME || '', 'Library', 'Caches'),
-      systemCache: '/Library/Caches',
-      userLogs: path.join(process.env.HOME || '', 'Library', 'Logs'),
-      systemLogs: '/var/log',
-      trashBin: path.join(process.env.HOME || '', '.Trash'),
+      userCache: path.join(process.env.HOME || "", "Library", "Caches"),
+      systemCache: "/Library/Caches",
+      userLogs: path.join(process.env.HOME || "", "Library", "Logs"),
+      systemLogs: "/var/log",
+      trashBin: path.join(process.env.HOME || "", ".Trash"),
       // ... more macOS paths
     };
   }
@@ -65,6 +72,7 @@ const getPlatformPaths = (platform: Platform): PlatformPaths => {
 **Purpose**: Automated comprehensive system scan combining multiple cleaning tasks
 
 **Features**:
+
 - **Unified Scan**: Combines 5 main tasks in one operation
   - Junk files detection
   - Malware scanning
@@ -77,6 +85,7 @@ const getPlatformPaths = (platform: Platform): PlatformPaths => {
 - **One-Click Fix**: Apply all recommended fixes at once
 
 **Implementation**:
+
 ```typescript
 interface SmartScanResult {
   junkFiles: JunkFileResult;
@@ -99,6 +108,7 @@ interface ScanOptions {
 ```
 
 **Technical Requirements**:
+
 - IPC communication with Electron main process
 - Native macOS APIs for file system access
 - Background worker threads for scanning
@@ -111,6 +121,7 @@ interface ScanOptions {
 **Features**:
 
 **Windows**:
+
 - **Cache Cleanup**:
   - User cache (`%LOCALAPPDATA%`)
   - System cache (`%WINDIR%\Temp`)
@@ -136,6 +147,7 @@ interface ScanOptions {
 - **Recycle Bin**: Empty recycle bin safely
 
 **macOS**:
+
 - **Cache Cleanup**:
   - User cache (`~/Library/Caches`)
   - System cache (`/Library/Caches`)
@@ -153,11 +165,13 @@ interface ScanOptions {
 - **Trash Bins**: Empty all trash bins safely
 
 **Common**:
+
 - **Broken Downloads**: Incomplete or corrupted downloads
 - **Review Before Delete**: Show files before deletion
 - **Safety Database**: Whitelist important files/folders
 
 **Implementation**:
+
 ```typescript
 interface JunkFileResult {
   cacheFiles: FileInfo[];
@@ -175,11 +189,12 @@ interface FileInfo {
   size: number;
   type: string;
   lastAccessed: Date;
-  category: 'cache' | 'log' | 'download' | 'junk' | 'language' | 'trash';
+  category: "cache" | "log" | "download" | "junk" | "language" | "trash";
 }
 ```
 
 **Technical Requirements**:
+
 - File system scanning with `fs` module
 - Size calculation for large directories
 - Safety checks against whitelist
@@ -190,6 +205,7 @@ interface FileInfo {
 **Purpose**: Identify and manage large files, old files, and duplicates
 
 **Features**:
+
 - **Large Files Finder**:
   - Configurable size threshold (e.g., >100MB, >500MB, >1GB)
   - Sort by size, date, type
@@ -209,6 +225,7 @@ interface FileInfo {
   - Drill-down navigation
 
 **Implementation**:
+
 ```typescript
 interface LargeFileResult {
   files: FileInfo[];
@@ -231,12 +248,13 @@ interface SpaceLensNode {
   path: string;
   size: number;
   children: SpaceLensNode[];
-  type: 'file' | 'directory';
+  type: "file" | "directory";
   color: string;
 }
 ```
 
 **Technical Requirements**:
+
 - Recursive directory scanning
 - Hash calculation for duplicates (with progress)
 - Tree structure for Space Lens
@@ -249,6 +267,7 @@ interface SpaceLensNode {
 **Features**:
 
 **Windows**:
+
 - **OneDrive Cleanup**:
   - Scan OneDrive folder (`%USERPROFILE%\OneDrive`)
   - Remove local copies of synced files
@@ -261,6 +280,7 @@ interface SpaceLensNode {
   - Remove local copies of synced files
 
 **macOS**:
+
 - **iCloud Drive Cleanup**:
   - Scan `~/Library/Mobile Documents`
   - Identify files already synced
@@ -273,11 +293,13 @@ interface SpaceLensNode {
   - Remove local copies of synced files
 
 **Common**:
+
 - **Safety Checks**: Verify cloud sync status before deletion
 - **Selective Cleanup**: Choose specific folders/files
 - **Sync Status Detection**: Check if files are fully synced before deletion
 
 **Implementation**:
+
 ```typescript
 interface CloudCleanupResult {
   iCloudFiles: CloudFileInfo[];
@@ -289,13 +311,14 @@ interface CloudCleanupResult {
 interface CloudFileInfo {
   path: string;
   size: number;
-  syncStatus: 'synced' | 'syncing' | 'error';
+  syncStatus: "synced" | "syncing" | "error";
   lastSynced: Date;
   safeToDelete: boolean;
 }
 ```
 
 **Technical Requirements**:
+
 - Cloud service API integration (optional)
 - File system monitoring for sync status
 - Safety verification before deletion
@@ -307,6 +330,7 @@ interface CloudFileInfo {
 **Purpose**: Detect and remove malware, adware, and threats
 
 **Features**:
+
 - **Moonlock Engine** (or similar):
   - Quick scan (common locations)
   - Normal scan (system-wide)
@@ -324,32 +348,34 @@ interface CloudFileInfo {
 - **Threat Database**: Regular updates
 
 **Implementation**:
+
 ```typescript
 interface MalwareScanResult {
   threats: ThreatInfo[];
   suspiciousApps: AppInfo[];
-  scanType: 'quick' | 'normal' | 'deep';
+  scanType: "quick" | "normal" | "deep";
   scanDuration: number;
 }
 
 interface ThreatInfo {
   name: string;
-  type: 'adware' | 'ransomware' | 'trojan' | 'spyware' | 'other';
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  type: "adware" | "ransomware" | "trojan" | "spyware" | "other";
+  severity: "low" | "medium" | "high" | "critical";
   location: string;
   description: string;
-  removalAction: 'quarantine' | 'delete' | 'repair';
+  removalAction: "quarantine" | "delete" | "repair";
 }
 
 interface AppInfo {
   name: string;
   path: string;
   permissions: PermissionInfo[];
-  riskLevel: 'safe' | 'suspicious' | 'dangerous';
+  riskLevel: "safe" | "suspicious" | "dangerous";
 }
 ```
 
 **Technical Requirements**:
+
 - Malware signature database
 - Heuristic analysis
 - System integrity checks
@@ -362,6 +388,7 @@ interface AppInfo {
 **Features**:
 
 **Windows**:
+
 - **Browser Data Cleanup**:
   - History (Edge, Chrome, Firefox)
   - Cookies and site data
@@ -386,6 +413,7 @@ interface AppInfo {
   - MRU (Most Recently Used) lists
 
 **macOS**:
+
 - **Browser Data Cleanup**:
   - History (Safari, Chrome, Firefox, Edge)
   - Cookies and site data
@@ -403,10 +431,12 @@ interface AppInfo {
   - Recent items
 
 **Common**:
+
 - **Selective Cleaning**: Choose what to clean
 - **Secure Deletion**: Overwrite deleted files (optional)
 
 **Implementation**:
+
 ```typescript
 interface PrivacyCleanupResult {
   browserData: BrowserDataResult;
@@ -426,6 +456,7 @@ interface BrowserDataResult {
 ```
 
 **Technical Requirements**:
+
 - Browser database access (SQLite)
 - System preferences access
 - Secure deletion methods
@@ -439,6 +470,7 @@ interface BrowserDataResult {
 **Features**:
 
 **Windows**:
+
 - **Uninstaller**:
   - Complete app removal via Windows Installer
   - Registry cleanup (uninstall registry entries)
@@ -466,6 +498,7 @@ interface BrowserDataResult {
   - Windows background apps settings
 
 **macOS**:
+
 - **Uninstaller**:
   - Complete app removal (app + leftovers)
   - Preference Panes removal
@@ -488,10 +521,12 @@ interface BrowserDataResult {
   - Disable unnecessary background items
 
 **Common**:
+
 - **App Size Analysis**: Show app sizes and disk usage
 - **App Usage Statistics**: Track app usage patterns
 
 **Implementation**:
+
 ```typescript
 interface AppInfo {
   name: string;
@@ -514,6 +549,7 @@ interface UninstallResult {
 ```
 
 **Technical Requirements**:
+
 - Application bundle analysis
 - Leftover file detection
 - Update checking APIs
@@ -526,6 +562,7 @@ interface UninstallResult {
 **Features**:
 
 **Windows**:
+
 - **Free Up RAM**:
   - Identify memory-hungry processes
   - Clear standby memory
@@ -552,6 +589,7 @@ interface UninstallResult {
   - Optimize virtual memory
 
 **macOS**:
+
 - **Free Up RAM**:
   - Identify memory-hungry processes
   - Clear inactive memory
@@ -570,6 +608,7 @@ interface UninstallResult {
   - Kill heavy processes
 
 **Common**:
+
 - **System Info**:
   - Uptime tracking
   - Temperature monitoring (if available)
@@ -577,6 +616,7 @@ interface UninstallResult {
   - Disk health status
 
 **Implementation**:
+
 ```typescript
 interface SpeedToolsResult {
   ramFreed: number;
@@ -602,6 +642,7 @@ interface SystemInfo {
 ```
 
 **Technical Requirements**:
+
 - System metrics APIs
 - Process management
 - Performance monitoring
@@ -611,6 +652,7 @@ interface SystemInfo {
 **Purpose**: Continuous system health monitoring
 
 **Features**:
+
 - **Menu Bar Widget**:
   - CPU usage indicator
   - RAM usage indicator
@@ -627,6 +669,7 @@ interface SystemInfo {
 - **Dashboard**: Detailed health metrics view
 
 **Implementation**:
+
 ```typescript
 interface HealthStatus {
   cpu: number;
@@ -648,14 +691,20 @@ interface HealthStatus {
 }
 
 interface Alert {
-  type: 'low_space' | 'frozen_app' | 'large_trash' | 'high_cpu' | 'memory_pressure';
-  severity: 'info' | 'warning' | 'critical';
+  type:
+    | "low_space"
+    | "frozen_app"
+    | "large_trash"
+    | "high_cpu"
+    | "memory_pressure";
+  severity: "info" | "warning" | "critical";
   message: string;
   action?: string;
 }
 ```
 
 **Technical Requirements**:
+
 - System tray integration
 - Real-time monitoring
 - Alert system
@@ -670,6 +719,7 @@ interface Alert {
 **Features**:
 
 **Windows**:
+
 - **Periodic Scripts**:
   - Run maintenance scripts on schedule
   - PowerShell script support
@@ -695,6 +745,7 @@ interface Alert {
   - Fix indexing issues
 
 **macOS**:
+
 - **Periodic Scripts**:
   - Run maintenance scripts on schedule
   - Shell script support
@@ -718,19 +769,27 @@ interface Alert {
   - Reset network settings
 
 **Common**:
+
 - **Scheduled Tasks**: Create scheduled maintenance tasks
 - **Task History**: View execution history and logs
 
 **Implementation**:
+
 ```typescript
 interface MaintenanceTask {
   id: string;
   name: string;
   description: string;
-  category: 'script' | 'indexing' | 'permissions' | 'mail' | 'timemachine' | 'network';
+  category:
+    | "script"
+    | "indexing"
+    | "permissions"
+    | "mail"
+    | "timemachine"
+    | "network";
   estimatedTime: number;
   requiresSudo: boolean;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
 }
 
 interface MaintenanceResult {
@@ -743,6 +802,7 @@ interface MaintenanceResult {
 ```
 
 **Technical Requirements**:
+
 - Sudo elevation for system tasks
 - Script execution engine
 - Task scheduling
@@ -753,6 +813,7 @@ interface MaintenanceResult {
 **Purpose**: Proactive issue detection and resolution
 
 **Features**:
+
 - **Issue Detection**:
   - Low disk space
   - Incorrect uninstallations
@@ -770,11 +831,12 @@ interface MaintenanceResult {
   - Links to resources
 
 **Implementation**:
+
 ```typescript
 interface Issue {
   id: string;
   type: IssueType;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: "low" | "medium" | "high" | "critical";
   title: string;
   description: string;
   detectedAt: Date;
@@ -782,23 +844,24 @@ interface Issue {
   autoFixable: boolean;
 }
 
-type IssueType = 
-  | 'low_space'
-  | 'incorrect_uninstall'
-  | 'outdated_apps'
-  | 'payment_issue'
-  | 'malware_detected'
-  | 'system_error';
+type IssueType =
+  | "low_space"
+  | "incorrect_uninstall"
+  | "outdated_apps"
+  | "payment_issue"
+  | "malware_detected"
+  | "system_error";
 
 interface Resolution {
   action: string;
   steps: string[];
   estimatedTime: number;
-  riskLevel: 'low' | 'medium' | 'high';
+  riskLevel: "low" | "medium" | "high";
 }
 ```
 
 **Technical Requirements**:
+
 - Issue detection engine
 - Alert management system
 - Resolution workflow
@@ -810,6 +873,7 @@ interface Resolution {
 **Purpose**: User control and safety features
 
 **Features**:
+
 - **Safety Database**:
   - Whitelist important files/folders
   - System file protection
@@ -830,11 +894,12 @@ interface Resolution {
   - Customizable notification settings
 
 **Implementation**:
+
 ```typescript
 interface SafetyRule {
   path: string;
-  type: 'file' | 'folder' | 'pattern';
-  action: 'protect' | 'warn' | 'allow';
+  type: "file" | "folder" | "pattern";
+  action: "protect" | "warn" | "allow";
   reason: string;
 }
 
@@ -852,6 +917,7 @@ interface BackupInfo {
 **Purpose**: Planned enhancements
 
 **Features**:
+
 - **Advanced File Search/Management**:
   - Advanced search with filters
   - File tagging
@@ -913,54 +979,67 @@ src/tools/utilities/system-cleaner/
 
 interface SystemCleanerIPC {
   // Platform
-  'system-cleaner:get-platform': () => Promise<PlatformInfo>;
-  'system-cleaner:is-admin': () => Promise<boolean>;
-  'system-cleaner:request-admin': () => Promise<boolean>;
-  
+  "system-cleaner:get-platform": () => Promise<PlatformInfo>;
+  "system-cleaner:is-admin": () => Promise<boolean>;
+  "system-cleaner:request-admin": () => Promise<boolean>;
+
   // Scanning
-  'system-cleaner:start-scan': (options: ScanOptions) => Promise<SmartScanResult>;
-  'system-cleaner:scan-progress': (progress: ScanProgress) => void;
-  'system-cleaner:cancel-scan': () => Promise<void>;
-  
+  "system-cleaner:start-scan": (
+    options: ScanOptions
+  ) => Promise<SmartScanResult>;
+  "system-cleaner:scan-progress": (progress: ScanProgress) => void;
+  "system-cleaner:cancel-scan": () => Promise<void>;
+
   // Cleanup
-  'system-cleaner:delete-files': (files: string[]) => Promise<DeleteResult>;
-  'system-cleaner:get-junk-files': () => Promise<JunkFileResult>;
-  'system-cleaner:get-duplicates': () => Promise<DuplicateResult>;
-  'system-cleaner:get-large-files': (threshold: number) => Promise<LargeFileResult>;
-  
+  "system-cleaner:delete-files": (files: string[]) => Promise<DeleteResult>;
+  "system-cleaner:get-junk-files": () => Promise<JunkFileResult>;
+  "system-cleaner:get-duplicates": () => Promise<DuplicateResult>;
+  "system-cleaner:get-large-files": (
+    threshold: number
+  ) => Promise<LargeFileResult>;
+
   // Protection
-  'system-cleaner:scan-malware': (type: 'quick' | 'normal' | 'deep') => Promise<MalwareScanResult>;
-  'system-cleaner:remove-threat': (threat: ThreatInfo) => Promise<boolean>;
-  'system-cleaner:clean-privacy': (options: PrivacyOptions) => Promise<PrivacyCleanupResult>;
-  
+  "system-cleaner:scan-malware": (
+    type: "quick" | "normal" | "deep"
+  ) => Promise<MalwareScanResult>;
+  "system-cleaner:remove-threat": (threat: ThreatInfo) => Promise<boolean>;
+  "system-cleaner:clean-privacy": (
+    options: PrivacyOptions
+  ) => Promise<PrivacyCleanupResult>;
+
   // Optimization
-  'system-cleaner:uninstall-app': (appId: string) => Promise<UninstallResult>;
-  'system-cleaner:check-updates': () => Promise<AppInfo[]>;
-  'system-cleaner:free-ram': () => Promise<number>;
-  'system-cleaner:get-heavy-apps': () => Promise<ProcessInfo[]>;
-  
+  "system-cleaner:uninstall-app": (appId: string) => Promise<UninstallResult>;
+  "system-cleaner:check-updates": () => Promise<AppInfo[]>;
+  "system-cleaner:free-ram": () => Promise<number>;
+  "system-cleaner:get-heavy-apps": () => Promise<ProcessInfo[]>;
+
   // Maintenance
-  'system-cleaner:run-maintenance': (task: MaintenanceTask) => Promise<MaintenanceResult>;
-  'system-cleaner:reindex-search': () => Promise<boolean>; // Spotlight on macOS, Windows Search on Windows
-  'system-cleaner:repair-permissions': () => Promise<boolean>; // macOS only
-  'system-cleaner:run-disk-cleanup': () => Promise<boolean>; // Windows only
-  'system-cleaner:run-sfc': () => Promise<boolean>; // Windows only
-  
+  "system-cleaner:run-maintenance": (
+    task: MaintenanceTask
+  ) => Promise<MaintenanceResult>;
+  "system-cleaner:reindex-search": () => Promise<boolean>; // Spotlight on macOS, Windows Search on Windows
+  "system-cleaner:repair-permissions": () => Promise<boolean>; // macOS only
+  "system-cleaner:run-disk-cleanup": () => Promise<boolean>; // Windows only
+  "system-cleaner:run-sfc": () => Promise<boolean>; // Windows only
+
   // Health Monitor
-  'system-cleaner:get-health-status': () => Promise<HealthStatus>;
-  'system-cleaner:start-monitoring': () => void;
-  'system-cleaner:stop-monitoring': () => void;
-  
+  "system-cleaner:get-health-status": () => Promise<HealthStatus>;
+  "system-cleaner:start-monitoring": () => void;
+  "system-cleaner:stop-monitoring": () => void;
+
   // Safety
-  'system-cleaner:check-safety': (files: string[]) => Promise<SafetyCheckResult>;
-  'system-cleaner:create-backup': (files: string[]) => Promise<BackupInfo>;
-  'system-cleaner:restore-backup': (backupId: string) => Promise<boolean>;
+  "system-cleaner:check-safety": (
+    files: string[]
+  ) => Promise<SafetyCheckResult>;
+  "system-cleaner:create-backup": (files: string[]) => Promise<BackupInfo>;
+  "system-cleaner:restore-backup": (backupId: string) => Promise<boolean>;
 }
 ```
 
 ### Native Dependencies
 
 **Required npm packages**:
+
 - `systeminformation` - System metrics (cross-platform)
 - `chokidar` - File system watching
 - `crypto` - Hash calculation (built-in)
@@ -975,6 +1054,7 @@ interface SystemCleanerIPC {
 **Platform-specific APIs**:
 
 **Windows**:
+
 - File System APIs (via Node.js `fs`)
 - Windows Registry APIs (via `winreg` or `node-windows-registry`)
 - Windows Management Instrumentation (WMI) via PowerShell
@@ -985,6 +1065,7 @@ interface SystemCleanerIPC {
 - Windows Defender APIs (for malware scanning)
 
 **macOS**:
+
 - File System APIs (via Node.js `fs`)
 - System Preferences APIs
 - Process Management APIs
@@ -1054,25 +1135,28 @@ interface SystemCleanerIPC {
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure (Week 1-2)
-- [ ] Platform detection system
-- [ ] Setup Electron IPC handlers (cross-platform)
-- [ ] Create base store structure
-- [ ] Implement file scanning utilities (platform-aware)
+
+- [x] Platform detection system
+- [x] Setup Electron IPC handlers (cross-platform)
+- [x] Create base store structure
+- [x] Implement file scanning utilities (platform-aware)
 - [ ] Setup safety database (platform-specific rules)
 - [ ] Create backup system
-- [ ] Platform-specific path utilities
+- [x] Platform-specific path utilities
 
 ### Phase 2: Cleanup Module (Week 3-5)
-- [ ] Junk files scanner (Windows + macOS)
-- [ ] Cache cleanup (platform-specific paths)
-- [ ] Log files cleanup (platform-specific)
-- [ ] Large files finder (cross-platform)
-- [ ] Duplicate finder (cross-platform)
+
+- [x] Junk files scanner (Windows + macOS)
+- [x] Cache cleanup (platform-specific paths)
+- [x] Log files cleanup (platform-specific)
+- [x] Large files finder (cross-platform)
+- [x] Duplicate finder (cross-platform)
 - [ ] Space Lens visualization (cross-platform)
 - [ ] Windows-specific: Windows Update cache, Prefetch files
 - [ ] macOS-specific: Time Machine snapshots, iCloud cleanup
 
 ### Phase 3: Protection Module (Week 6-8)
+
 - [ ] Malware scanner (basic, platform-aware)
 - [ ] Privacy cleanup (platform-specific)
 - [ ] Browser data cleanup (all major browsers)
@@ -1082,6 +1166,7 @@ interface SystemCleanerIPC {
 - [ ] macOS: Spotlight history, Quick Look cache
 
 ### Phase 4: Optimization Module (Week 9-11)
+
 - [ ] App uninstaller (Windows + macOS)
 - [ ] App updater (Windows Store/Chocolatey + macOS App Store)
 - [ ] RAM optimization (platform-specific methods)
@@ -1091,6 +1176,7 @@ interface SystemCleanerIPC {
 - [ ] macOS: Login items, Launch Agents
 
 ### Phase 5: Maintenance & Health (Week 12-14)
+
 - [ ] Maintenance tasks (platform-specific)
 - [ ] Health monitor (cross-platform)
 - [ ] Menu bar widget (platform-specific UI)
@@ -1100,12 +1186,13 @@ interface SystemCleanerIPC {
 - [ ] macOS: Spotlight reindexing, Disk permissions
 
 ### Phase 6: Polish & Testing (Week 15-16)
-- [ ] UI/UX improvements
+
+- [x] UI/UX improvements
 - [ ] Platform-specific UI adaptations
 - [ ] Performance optimization
 - [ ] Safety testing (both platforms)
 - [ ] Error handling
-- [ ] Documentation
+- [x] Documentation
 - [ ] Cross-platform testing
 
 ## User Experience Flow
@@ -1155,6 +1242,7 @@ interface SystemCleanerIPC {
 ## Platform-Specific Considerations
 
 ### Windows-Specific Features
+
 - **Windows Update Cleanup**: Remove old Windows Update files
 - **System Restore Points**: Manage and clean restore points
 - **Windows.old Cleanup**: Remove old Windows installation files
@@ -1165,6 +1253,7 @@ interface SystemCleanerIPC {
 - **Windows Search Optimization**: Rebuild and optimize Windows Search index
 
 ### macOS-Specific Features
+
 - **Time Machine Management**: Clean up Time Machine snapshots
 - **Spotlight Optimization**: Rebuild Spotlight index
 - **Disk Permissions**: Repair disk permissions (if supported)
@@ -1174,6 +1263,7 @@ interface SystemCleanerIPC {
 - **Mail.app Optimization**: Rebuild Mail database
 
 ### Cross-Platform Considerations
+
 - **Path Normalization**: Handle different path separators
 - **Permission Handling**: Different permission models
 - **Admin/Elevation**: Different elevation methods
@@ -1193,4 +1283,3 @@ interface SystemCleanerIPC {
 8. **Accessibility**: Full keyboard navigation, screen reader support
 9. **Linux Support**: Extend to Linux distributions
 10. **Remote Management**: Manage multiple devices
-

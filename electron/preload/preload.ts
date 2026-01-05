@@ -59,6 +59,8 @@ contextBridge.exposeInMainWorld('statsAPI', {
 contextBridge.exposeInMainWorld('cleanerAPI', {
   getPlatform: () => ipcRenderer.invoke('cleaner:get-platform'),
   scanJunk: () => ipcRenderer.invoke('cleaner:scan-junk'),
-  runCleanup: (categories: string[]) => ipcRenderer.invoke('cleaner:run-cleanup', categories),
+  getLargeFiles: (options: any) => ipcRenderer.invoke('cleaner:get-large-files', options),
+  getDuplicates: (scanPath: string) => ipcRenderer.invoke('cleaner:get-duplicates', scanPath),
+  runCleanup: (files: string[]) => ipcRenderer.invoke('cleaner:run-cleanup', files),
   freeRam: () => ipcRenderer.invoke('cleaner:free-ram'),
 })

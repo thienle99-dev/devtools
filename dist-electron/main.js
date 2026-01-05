@@ -25,6 +25,7 @@ function setupCleanerHandlers() {
 		if (platform === "win32") {
 			const tempDir = os.tmpdir();
 			const winTemp = path.join(process.env.WINDIR || "C:\\Windows", "Temp");
+			const prefetch = path.join(process.env.WINDIR || "C:\\Windows", "Prefetch");
 			junkPaths.push({
 				path: tempDir,
 				name: "User Temporary Files",
@@ -34,6 +35,17 @@ function setupCleanerHandlers() {
 				path: winTemp,
 				name: "System Temporary Files",
 				category: "temp"
+			});
+			junkPaths.push({
+				path: prefetch,
+				name: "Prefetch Files",
+				category: "system"
+			});
+			const chromeCache = path.join(process.env.LOCALAPPDATA || "", "Google/Chrome/User Data/Default/Cache");
+			junkPaths.push({
+				path: chromeCache,
+				name: "Chrome Cache",
+				category: "cache"
 			});
 		} else if (platform === "darwin") {
 			const home = os.homedir();
@@ -52,18 +64,26 @@ function setupCleanerHandlers() {
 				name: "System Caches",
 				category: "cache"
 			});
+			junkPaths.push({
+				path: "/var/log",
+				name: "System Logs",
+				category: "log"
+			});
 		}
 		const results = [];
 		let totalSize = 0;
 		for (const item of junkPaths) try {
-			const size = await getDirSize(item.path);
-			if (size > 0) {
-				results.push({
-					...item,
-					size,
-					sizeFormatted: formatBytes$1(size)
-				});
-				totalSize += size;
+			const stats = await fs.stat(item.path).catch(() => null);
+			if (stats) {
+				const size = stats.isDirectory() ? await getDirSize(item.path) : stats.size;
+				if (size > 0) {
+					results.push({
+						...item,
+						size,
+						sizeFormatted: formatBytes$1(size)
+					});
+					totalSize += size;
+				}
 			}
 		} catch (e) {
 			console.warn(`Failed to scan ${item.path}:`, e);
@@ -74,11 +94,53 @@ function setupCleanerHandlers() {
 			totalSizeFormatted: formatBytes$1(totalSize)
 		};
 	});
-	ipcMain.handle("cleaner:run-cleanup", async (_event, categories) => {
+	ipcMain.handle("cleaner:get-large-files", async (_event, options) => {
+		const minSize = options.minSize || 100 * 1024 * 1024;
+		const scanPaths = options.scanPaths || [os.homedir()];
+		const largeFiles = [];
+		for (const scanPath of scanPaths) await findLargeFiles(scanPath, minSize, largeFiles);
+		largeFiles.sort((a, b) => b.size - a.size);
+		return largeFiles.slice(0, 50);
+	});
+	ipcMain.handle("cleaner:get-duplicates", async (_event, scanPath) => {
+		const rootPath = scanPath || os.homedir();
+		const fileHashes = /* @__PURE__ */ new Map();
+		const duplicates = [];
+		await findDuplicates(rootPath, fileHashes);
+		for (const [hash, paths] of fileHashes.entries()) if (paths.length > 1) {
+			const stats = await fs.stat(paths[0]);
+			duplicates.push({
+				hash,
+				size: stats.size,
+				sizeFormatted: formatBytes$1(stats.size),
+				totalWasted: stats.size * (paths.length - 1),
+				totalWastedFormatted: formatBytes$1(stats.size * (paths.length - 1)),
+				files: paths
+			});
+		}
+		return duplicates.sort((a, b) => b.totalWasted - a.totalWasted);
+	});
+	ipcMain.handle("cleaner:run-cleanup", async (_event, files) => {
+		let freedSize = 0;
+		const failed = [];
+		for (const filePath of files) try {
+			const stats = await fs.stat(filePath);
+			const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
+			if (stats.isDirectory()) await fs.rm(filePath, {
+				recursive: true,
+				force: true
+			});
+			else await fs.unlink(filePath);
+			freedSize += size;
+		} catch (e) {
+			console.error(`Failed to delete ${filePath}:`, e);
+			failed.push(filePath);
+		}
 		return {
-			success: true,
-			freedSize: 0,
-			message: "Cleanup simulated successfully"
+			success: failed.length === 0,
+			freedSize,
+			freedSizeFormatted: formatBytes$1(freedSize),
+			failed
 		};
 	});
 	ipcMain.handle("cleaner:free-ram", async () => {
@@ -101,13 +163,57 @@ async function getDirSize(dirPath) {
 		for (const file of files) {
 			const filePath = path.join(dirPath, file.name);
 			if (file.isDirectory()) size += await getDirSize(filePath);
-			else {
+			else try {
 				const stats = await fs.stat(filePath);
 				size += stats.size;
-			}
+			} catch (e) {}
 		}
 	} catch (e) {}
 	return size;
+}
+async function findLargeFiles(dirPath, minSize, results) {
+	try {
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			const filePath = path.join(dirPath, file.name);
+			if (file.name.startsWith(".") || file.name === "node_modules" || file.name === "Library" || file.name === "AppData") continue;
+			try {
+				const stats = await fs.stat(filePath);
+				if (file.isDirectory()) await findLargeFiles(filePath, minSize, results);
+				else if (stats.size >= minSize) results.push({
+					name: file.name,
+					path: filePath,
+					size: stats.size,
+					sizeFormatted: formatBytes$1(stats.size),
+					lastAccessed: stats.atime,
+					type: path.extname(file.name).slice(1) || "file"
+				});
+			} catch (e) {}
+		}
+	} catch (e) {}
+}
+async function findDuplicates(dirPath, fileHashes) {
+	try {
+		const files = await fs.readdir(dirPath, { withFileTypes: true });
+		for (const file of files) {
+			const filePath = path.join(dirPath, file.name);
+			if (file.name.startsWith(".") || file.name === "node_modules") continue;
+			try {
+				const stats = await fs.stat(filePath);
+				if (file.isDirectory()) await findDuplicates(filePath, fileHashes);
+				else if (stats.size > 1024 && stats.size < 100 * 1024 * 1024) {
+					const hash = await hashFile(filePath);
+					const existing = fileHashes.get(hash) || [];
+					existing.push(filePath);
+					fileHashes.set(hash, existing);
+				}
+			} catch (e) {}
+		}
+	} catch (e) {}
+}
+async function hashFile(filePath) {
+	const buffer = await fs.readFile(filePath);
+	return createHash("md5").update(buffer).digest("hex");
 }
 function formatBytes$1(bytes) {
 	if (bytes === 0) return "0 B";

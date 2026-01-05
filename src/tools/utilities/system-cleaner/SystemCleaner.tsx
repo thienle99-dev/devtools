@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '../../../components/layout/ToolPane';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Checkbox } from '../../../components/ui/Checkbox';
 import { 
     Trash2, 
     Shield, 
@@ -10,25 +11,33 @@ import {
     HardDrive,
     ShieldCheck,
     Wrench,
-    CheckCircle2
+    CheckCircle2,
+    FileText,
+    Copy,
+    FolderOpen,
+    Trash,
+    RefreshCw,
+    AlertCircle
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
-import { useSystemCleanerStore } from './store/systemCleanerStore';
+import { useSystemCleanerStore, FileItem, DuplicateGroup, LargeFile } from './store/systemCleanerStore';
 import { useSmartScan } from './hooks/useSmartScan';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
-// Sub-components
+// --- Sub-components ---
+
+const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+};
+
 const SmartScan = () => {
     const { isScanning, scanProgress, scanStatus, results } = useSystemCleanerStore();
     const { runSmartScan } = useSmartScan();
-    
-    const formatSize = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-    };
     
     return (
         <div className="flex flex-col items-center justify-center h-full space-y-8 animate-in fade-in duration-500">
@@ -120,14 +129,277 @@ const SmartScan = () => {
                             <p className="text-sm text-foreground-muted">System is optimized</p>
                         </Card>
                     </div>
-                    
-                    <div className="flex justify-center pt-8">
-                        <Button variant="primary" size="lg" className="px-16 py-6 rounded-2xl">
-                            Run Full Cleanup
-                        </Button>
-                    </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+// --- Cleanup Views ---
+
+const JunkCleanupView = () => {
+    const { results, isScanning } = useSystemCleanerStore();
+    const { runSmartScan } = useSmartScan();
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
+    const [isCleaning, setIsCleaning] = useState(false);
+
+    useEffect(() => {
+        if (results?.junkFiles?.items) {
+            setSelectedItems(results.junkFiles.items.map(i => i.path));
+        }
+    }, [results]);
+
+    const handleCleanup = async () => {
+        if (selectedItems.length === 0) return;
+        setIsCleaning(true);
+        try {
+            const cleanupResult = await (window as any).cleanerAPI.runCleanup(selectedItems);
+            if (cleanupResult.success) {
+                toast.success(`Cleaned ${formatSize(cleanupResult.freedSize)} successfully!`);
+                runSmartScan(); // Refresh results
+            } else {
+                toast.error('Some files could not be cleaned.');
+            }
+        } catch (e) {
+            toast.error('Failed to run cleanup.');
+        } finally {
+            setIsCleaning(false);
+        }
+    };
+
+    if (!results?.junkFiles && !isScanning) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full space-y-4">
+                <Trash2 className="w-16 h-16 text-foreground-muted" />
+                <h3 className="text-xl font-bold">No Scan Data</h3>
+                <p className="text-foreground-muted">Run a Smart Scan to find junk files.</p>
+                <Button onClick={runSmartScan}>Scan Now</Button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">System Junk</h2>
+                    <p className="text-sm text-foreground-muted">Select categories to clean safely.</p>
+                </div>
+                {results?.junkFiles && (
+                    <div className="text-right">
+                        <div className="text-2xl font-bold text-indigo-400">{results.junkFiles.totalSizeFormatted}</div>
+                        <div className="text-xs text-foreground-muted uppercase tracking-wider">Total Junk Found</div>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-auto space-y-3 pr-2 custom-scrollbar">
+                {results?.junkFiles?.items.map((item: FileItem, i: number) => (
+                    <Card key={i} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                            <Checkbox 
+                                checked={selectedItems.includes(item.path)}
+                                onChange={(checked) => {
+                                    if (checked) setSelectedItems([...selectedItems, item.path]);
+                                    else setSelectedItems(selectedItems.filter(p => p !== item.path));
+                                }}
+                            />
+                            <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                <FolderOpen className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div>
+                                <h4 className="font-medium text-sm">{item.name}</h4>
+                                <p className="text-xs text-foreground-muted">{item.path}</p>
+                            </div>
+                        </div>
+                        <div className="text-sm font-bold">{item.sizeFormatted}</div>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="pt-4 border-t border-border-glass flex justify-between items-center">
+                <div className="text-sm text-foreground-muted">
+                    {selectedItems.length} items selected
+                </div>
+                <Button 
+                    variant="primary" 
+                    size="lg" 
+                    className="px-12"
+                    disabled={selectedItems.length === 0 || isCleaning}
+                    onClick={handleCleanup}
+                    loading={isCleaning}
+                >
+                    Clean Selected
+                </Button>
+            </div>
+        </div>
+    );
+};
+
+const LargeFilesView = () => {
+    const { largeFiles, setLargeFiles } = useSystemCleanerStore();
+    const [isScanning, setIsScanning] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+
+    const scanLargeFiles = async () => {
+        setIsScanning(true);
+        try {
+            const files = await (window as any).cleanerAPI.getLargeFiles({ minSize: 50 * 1024 * 1024 });
+            setLargeFiles(files);
+        } catch (e) {
+            toast.error('Failed to scan for large files.');
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (selectedFiles.length === 0) return;
+        try {
+            const result = await (window as any).cleanerAPI.runCleanup(selectedFiles);
+            if (result.success) {
+                toast.success(`Deleted ${formatSize(result.freedSize)}`);
+                scanLargeFiles();
+                setSelectedFiles([]);
+            }
+        } catch (e) {
+            toast.error('Deletion failed.');
+        }
+    };
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">Large & Old Files</h2>
+                    <p className="text-sm text-foreground-muted">Find files over 50MB taking up space.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={scanLargeFiles} loading={isScanning}>
+                    <RefreshCw className={cn("w-4 h-4 mr-2", isScanning && "animate-spin")} />
+                    Refresh
+                </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto space-y-2 pr-2 custom-scrollbar">
+                {largeFiles.length === 0 && !isScanning && (
+                    <div className="flex flex-col items-center justify-center h-full text-foreground-muted h-64">
+                        <FileText className="w-12 h-12 mb-2 opacity-20" />
+                        <p>No large files found. Click refresh to scan.</p>
+                    </div>
+                )}
+                
+                {largeFiles.map((file: LargeFile, i: number) => (
+                    <Card key={i} className="p-3 flex items-center justify-between group hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <Checkbox 
+                                checked={selectedFiles.includes(file.path)}
+                                onChange={(checked) => {
+                                    if (checked) setSelectedFiles([...selectedFiles, file.path]);
+                                    else setSelectedFiles(selectedFiles.filter(p => p !== file.path));
+                                }}
+                            />
+                            <div className="shrink-0 p-2 bg-white/5 rounded-lg">
+                                <FileText className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div className="overflow-hidden">
+                                <h4 className="text-sm font-medium truncate">{file.name}</h4>
+                                <p className="text-[10px] text-foreground-muted truncate group-hover:text-foreground transition-colors">{file.path}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0">
+                            <div className="text-sm font-bold">{file.sizeFormatted}</div>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+
+            {selectedFiles.length > 0 && (
+                <div className="pt-4 border-t border-border-glass flex justify-between items-center animate-in slide-in-from-bottom-2">
+                    <div className="text-sm text-amber-400 flex items-center gap-2 font-medium">
+                        <AlertCircle className="w-4 h-4" />
+                        Files will be permanently deleted
+                    </div>
+                    <Button variant="danger" onClick={handleDelete}>
+                        Delete {selectedFiles.length} Files
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const DuplicatesView = () => {
+    const { duplicates, setDuplicates } = useSystemCleanerStore();
+    const [isScanning, setIsScanning] = useState(false);
+
+    const scanDuplicates = async () => {
+        setIsScanning(true);
+        try {
+            const dups = await (window as any).cleanerAPI.getDuplicates();
+            setDuplicates(dups);
+        } catch (e) {
+            toast.error('Failed to scan for duplicates.');
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">Duplicates</h2>
+                    <p className="text-sm text-foreground-muted">Identical files found in different locations.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={scanDuplicates} loading={isScanning}>
+                    <Copy className={cn("w-4 h-4 mr-2", isScanning && "animate-spin")} />
+                    Find Duplicates
+                </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto space-y-4 pr-2 custom-scrollbar">
+                {duplicates.length === 0 && !isScanning && (
+                    <div className="flex flex-col items-center justify-center h-full text-foreground-muted h-64">
+                        <Copy className="w-12 h-12 mb-2 opacity-20" />
+                        <p>No duplicates found yet.</p>
+                    </div>
+                )}
+
+                {duplicates.map((group: DuplicateGroup, i: number) => (
+                    <Card key={i} className="overflow-hidden border-border-glass">
+                        <div className="bg-white/5 p-3 flex items-center justify-between border-b border-border-glass">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-indigo-400">HASH: {group.hash.slice(0, 8)}</span>
+                                <span className="text-xs text-foreground-muted">• {group.files.length} copies</span>
+                            </div>
+                            <div className="text-xs font-bold text-amber-500">Wasted: {group.totalWastedFormatted}</div>
+                        </div>
+                        <div className="p-2 space-y-1">
+                            {group.files.map((path: string, j: number) => (
+                                <div key={j} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 text-[11px] group">
+                                    <span className="truncate flex-1 text-foreground-muted group-hover:text-foreground">{path}</span>
+                                    {j > 0 && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-6 w-6 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                                            onClick={async () => {
+                                                const res = await (window as any).cleanerAPI.runCleanup([path]);
+                                                if (res.success) {
+                                                    toast.success('Cleaned copy');
+                                                    scanDuplicates();
+                                                }
+                                            }}
+                                        >
+                                            <Trash className="w-3 h-3" />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                ))}
+            </div>
         </div>
     );
 };
@@ -145,12 +417,16 @@ const ModulePlaceholder = ({ title, icon: Icon, description }: { title: string, 
     </div>
 );
 
+// --- Main Component ---
+
 export const SystemCleaner: React.FC = () => {
     const [activeTab, setActiveTab] = useState('smart-scan');
     
     const tabs = [
         { id: 'smart-scan', name: 'Smart Care', icon: Shield, description: 'Quick system analysis' },
-        { id: 'cleanup', name: 'Cleanup', icon: Trash2, description: 'Remove junk and trash' },
+        { id: 'cleanup', name: 'System Junk', icon: Trash2, description: 'Remove junk and trash' },
+        { id: 'large-files', name: 'Large Files', icon: FileText, description: 'Find space hogs' },
+        { id: 'duplicates', name: 'Duplicates', icon: Copy, description: 'Find identical files' },
         { id: 'protection', name: 'Protection', icon: ShieldCheck, description: 'Malware & privacy' },
         { id: 'performance', name: 'Performance', icon: Zap, description: 'Speed up system' },
         { id: 'maintenance', name: 'Maintenance', icon: Wrench, description: 'System tasks' },
@@ -163,19 +439,54 @@ export const SystemCleaner: React.FC = () => {
         >
             <div className="flex h-full gap-8 overflow-hidden">
                 {/* Sidebar Navigation */}
-                <div className="w-64 flex flex-col space-y-2 shrink-0">
-                    {tabs.map((tab) => (
+                <div className="w-64 flex flex-col space-y-1 shrink-0">
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider px-4 mb-2">General</div>
+                    {tabs.slice(0, 1).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
-                                "flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-sm font-medium",
+                                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
                                 activeTab === tab.id 
-                                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30" 
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >
-                            <tab.icon className="w-5 h-5" />
+                            <tab.icon className="w-4 h-4" />
+                            <span>{tab.name}</span>
+                        </button>
+                    ))}
+                    
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider px-4 mt-4 mb-2">Cleanup</div>
+                    {tabs.slice(1, 4).map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
+                                activeTab === tab.id 
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                    : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
+                            )}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            <span>{tab.name}</span>
+                        </button>
+                    ))}
+
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider px-4 mt-4 mb-2">System</div>
+                    {tabs.slice(4).map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
+                                activeTab === tab.id 
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                    : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
+                            )}
+                        >
+                            <tab.icon className="w-4 h-4" />
                             <span>{tab.name}</span>
                         </button>
                     ))}
@@ -187,7 +498,7 @@ export const SystemCleaner: React.FC = () => {
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider">Storage</div>
-                                <div className="text-sm font-bold">45% Used</div>
+                                <div className="text-sm font-bold">Safe</div>
                             </div>
                         </div>
                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
@@ -209,13 +520,9 @@ export const SystemCleaner: React.FC = () => {
                                 className="h-full"
                             >
                                 {activeTab === 'smart-scan' && <SmartScan />}
-                                {activeTab === 'cleanup' && (
-                                    <ModulePlaceholder 
-                                        title="System Cleanup" 
-                                        icon={Trash2} 
-                                        description="Identify and remove junk files, cache, log files, and other unnecessary data to free up gigabytes of space." 
-                                    />
-                                )}
+                                {activeTab === 'cleanup' && <JunkCleanupView />}
+                                {activeTab === 'large-files' && <LargeFilesView />}
+                                {activeTab === 'duplicates' && <DuplicatesView />}
                                 {activeTab === 'protection' && (
                                     <ModulePlaceholder 
                                         title="System Protection" 

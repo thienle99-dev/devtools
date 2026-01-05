@@ -50,6 +50,8 @@ electron.contextBridge.exposeInMainWorld("statsAPI", {
 electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 	getPlatform: () => electron.ipcRenderer.invoke("cleaner:get-platform"),
 	scanJunk: () => electron.ipcRenderer.invoke("cleaner:scan-junk"),
-	runCleanup: (categories) => electron.ipcRenderer.invoke("cleaner:run-cleanup", categories),
+	getLargeFiles: (options) => electron.ipcRenderer.invoke("cleaner:get-large-files", options),
+	getDuplicates: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-duplicates", scanPath),
+	runCleanup: (files) => electron.ipcRenderer.invoke("cleaner:run-cleanup", files),
 	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram")
 });
