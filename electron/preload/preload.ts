@@ -93,3 +93,10 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   stopHealthMonitoring: () => ipcRenderer.invoke('health-stop-monitoring'),
   updateHealthTray: (data: any) => ipcRenderer.send('health-update-tray', data),
 })
+
+contextBridge.exposeInMainWorld('appManagerAPI', {
+  getInstalledApps: () => ipcRenderer.invoke('app-manager:get-installed-apps'),
+  getRunningProcesses: () => ipcRenderer.invoke('app-manager:get-running-processes'),
+  uninstallApp: (app: any) => ipcRenderer.invoke('app-manager:uninstall-app', app),
+  killProcess: (pid: number) => ipcRenderer.invoke('app-manager:kill-process', pid),
+})

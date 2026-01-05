@@ -3,9 +3,14 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
+import fs from 'node:fs/promises'
 import { setupCleanerHandlers } from './cleaner'
 import si from 'systeminformation'
 import Store from 'electron-store'
+
+const execAsync = promisify(exec)
 
 const store = new Store()
 
@@ -1042,6 +1047,197 @@ app.whenReady().then(() => {
       return null;
     }
   });
+
+  // Application Manager IPC Handlers
+  ipcMain.handle('app-manager:get-installed-apps', async () => {
+    try {
+      const platform = process.platform;
+      const apps: any[] = [];
+
+      if (platform === 'darwin') {
+        const appsDir = '/Applications';
+        const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
+        for (const file of files) {
+          if (file.name.endsWith('.app')) {
+            const appPath = join(appsDir, file.name);
+            try {
+              const stats = await fs.stat(appPath);
+              const appName = file.name.replace('.app', '');
+              const isSystemApp = appPath.startsWith('/System') || 
+                                  appPath.startsWith('/Library') ||
+                                  appName.startsWith('com.apple.');
+              
+              apps.push({
+                id: `macos-${appName}-${stats.ino}`,
+                name: appName,
+                version: undefined,
+                publisher: undefined,
+                installDate: stats.birthtime.toISOString(),
+                installLocation: appPath,
+                size: await getDirSize(appPath).catch(() => 0),
+                isSystemApp,
+              });
+            } catch (e) {
+              // Skip errors
+            }
+          }
+        }
+      } else if (platform === 'win32') {
+        try {
+          const script = `
+            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
+            Where-Object { $_.DisplayName } | 
+            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | 
+            ConvertTo-Json -Depth 3
+          `;
+          const { stdout } = await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
+          const data = JSON.parse(stdout);
+          const list = Array.isArray(data) ? data : [data];
+          
+          for (const item of list) {
+            if (item.DisplayName) {
+              const publisher = item.Publisher || '';
+              const installLocation = item.InstallLocation || '';
+              const isSystemApp = publisher.includes('Microsoft') || 
+                                  publisher.includes('Windows') ||
+                                  installLocation.includes('Windows\\') ||
+                                  installLocation.includes('Program Files\\Windows');
+              
+              apps.push({
+                id: `win-${item.DisplayName}-${item.InstallDate || 'unknown'}`,
+                name: item.DisplayName,
+                version: item.DisplayVersion || undefined,
+                publisher: publisher || undefined,
+                installDate: item.InstallDate ? formatWindowsDate(item.InstallDate) : undefined,
+                installLocation: installLocation || undefined,
+                size: item.EstimatedSize ? item.EstimatedSize * 1024 : undefined, // KB to bytes
+                isSystemApp,
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching Windows apps:', e);
+        }
+      }
+
+      return apps;
+    } catch (error) {
+      console.error('Error fetching installed apps:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('app-manager:get-running-processes', async () => {
+    try {
+      const processes = await si.processes();
+      const memInfo = await si.mem();
+      
+      return processes.list.map((proc: any) => ({
+        pid: proc.pid,
+        name: proc.name,
+        cpu: proc.cpu || 0,
+        memory: proc.mem || 0,
+        memoryPercent: memInfo.total > 0 ? ((proc.mem || 0) / memInfo.total) * 100 : 0,
+        started: proc.started || '',
+        user: proc.user || undefined,
+        command: proc.command || undefined,
+        path: proc.path || undefined,
+      }));
+    } catch (error) {
+      console.error('Error fetching running processes:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('app-manager:uninstall-app', async (_event, app: any) => {
+    try {
+      const platform = process.platform;
+      
+      if (platform === 'darwin') {
+        // macOS: Remove .app bundle
+        if (app.installLocation) {
+          await fs.rm(app.installLocation, { recursive: true, force: true });
+          return { success: true };
+        }
+      } else if (platform === 'win32') {
+        // Windows: Use uninstall string from registry or wmic
+        try {
+          const script = `
+            $app = Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
+                   Where-Object { $_.DisplayName -eq "${app.name.replace(/"/g, '\\"')}" } | 
+                   Select-Object -First 1
+            if ($app.UninstallString) {
+              $uninstallString = $app.UninstallString
+              if ($uninstallString -match '^"(.+)"') {
+                $exe = $matches[1]
+                $args = $uninstallString.Substring($matches[0].Length).Trim()
+                Start-Process -FilePath $exe -ArgumentList $args -Wait
+              } else {
+                Start-Process -FilePath $uninstallString -Wait
+              }
+              Write-Output "Success"
+            } else {
+              Write-Output "No uninstall string found"
+            }
+          `;
+          await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
+          return { success: true };
+        } catch (e) {
+          return { success: false, error: (e as Error).message };
+        }
+      }
+      
+      return { success: false, error: 'Unsupported platform' };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  ipcMain.handle('app-manager:kill-process', async (_event, pid: number) => {
+    try {
+      process.kill(pid, 'SIGTERM');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  // Helper functions
+  async function getDirSize(dirPath: string): Promise<number> {
+    try {
+      let totalSize = 0;
+      const files = await fs.readdir(dirPath, { withFileTypes: true });
+      
+      for (const file of files) {
+        const filePath = join(dirPath, file.name);
+        try {
+          if (file.isDirectory()) {
+            totalSize += await getDirSize(filePath);
+          } else {
+            const stats = await fs.stat(filePath);
+            totalSize += stats.size;
+          }
+        } catch (e) {
+          // Skip errors
+        }
+      }
+      
+      return totalSize;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function formatWindowsDate(dateStr: string): string {
+    // Windows date format: YYYYMMDD
+    if (dateStr && dateStr.length === 8) {
+      const year = dateStr.substring(0, 4);
+      const month = dateStr.substring(4, 6);
+      const day = dateStr.substring(6, 8);
+      return `${year}-${month}-${day}`;
+    }
+    return dateStr;
+  }
 
   setupCleanerHandlers();
   createTray();

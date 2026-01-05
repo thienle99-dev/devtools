@@ -6,8 +6,6 @@ import { createHash } from 'node:crypto';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import si from 'systeminformation';
-import { checkFilesSafety } from '../../src/tools/utilities/system-cleaner/utils/safetyUtils';
-import { createBackup, listBackups, restoreBackup, deleteBackup, getBackupInfo } from '../../src/tools/utilities/system-cleaner/utils/backupUtils';
 
 const execAsync = promisify(exec);
 
@@ -338,9 +336,6 @@ export function setupCleanerHandlers() {
         }
         const sorted = duplicates.sort((a, b) => b.totalWasted - a.totalWasted);
         
-        // Cache result
-        duplicateCache.set(cacheKey, { result: sorted, timestamp: Date.now() });
-        
         return sorted;
     });
 
@@ -366,25 +361,26 @@ export function setupCleanerHandlers() {
         for (let i = 0; i < files.length; i += chunkSize) {
             const chunk = files.slice(i, i + chunkSize);
             for (const filePath of chunk) {
-            try {
-                if (filePath === 'tmutil:snapshots') {
-                    if (process.platform === 'darwin') {
-                        await execAsync('tmutil deletelocalsnapshots /');
-                        freedSize += 2 * 1024 * 1024 * 1024;
+                try {
+                    if (filePath === 'tmutil:snapshots') {
+                        if (process.platform === 'darwin') {
+                            await execAsync('tmutil deletelocalsnapshots /');
+                            freedSize += 2 * 1024 * 1024 * 1024;
+                        }
+                        continue;
                     }
-                    continue;
+                    const stats = await fs.stat(filePath).catch(() => null);
+                    if (!stats) continue;
+                    const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
+                    if (stats.isDirectory()) {
+                        await fs.rm(filePath, { recursive: true, force: true });
+                    } else {
+                        await fs.unlink(filePath);
+                    }
+                    freedSize += size;
+                } catch (e) {
+                    failed.push(filePath);
                 }
-                const stats = await fs.stat(filePath).catch(() => null);
-                if (!stats) continue;
-                const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
-                if (stats.isDirectory()) {
-                    await fs.rm(filePath, { recursive: true, force: true });
-                } else {
-                    await fs.unlink(filePath);
-                }
-                freedSize += size;
-            } catch (e) {
-                failed.push(filePath);
             }
         }
         return { success: failed.length === 0, freedSize, freedSizeFormatted: formatBytes(freedSize), failed };

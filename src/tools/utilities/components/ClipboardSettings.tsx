@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Download, Upload } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useClipboardStore } from '../../../store/clipboardStore';
 
@@ -12,6 +12,9 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
     const maxItems = useClipboardStore((state) => state.maxItems);
     const updateSettings = useClipboardStore((state) => state.updateSettings);
     const setMaxItems = useClipboardStore((state) => state.setMaxItems);
+    const exportData = useClipboardStore((state) => state.exportData);
+    const importData = useClipboardStore((state) => state.importData);
+    const items = useClipboardStore((state) => state.items);
 
     const [localSettings, setLocalSettings] = useState({
         ...settings,
@@ -19,11 +22,77 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
         clearOnQuit: settings.clearOnQuit ?? false,
     });
     const [localMaxItems, setLocalMaxItems] = useState(maxItems);
+    const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleSave = () => {
         updateSettings(localSettings);
         setMaxItems(localMaxItems);
         onClose();
+    };
+
+    const handleExport = () => {
+        try {
+            const jsonData = exportData();
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `clipboard-export-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setImportStatus({ success: true, message: `Exported ${items.length} items successfully!` });
+            setTimeout(() => setImportStatus(null), 3000);
+        } catch (error) {
+            setImportStatus({ success: false, message: `Export failed: ${(error as Error).message}` });
+            setTimeout(() => setImportStatus(null), 5000);
+        }
+    };
+
+    const handleImport = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const jsonData = event.target?.result as string;
+                const result = importData(jsonData);
+                
+                if (result.success) {
+                    setImportStatus({ 
+                        success: true, 
+                        message: `Imported ${result.importedCount} items successfully!` 
+                    });
+                    setTimeout(() => {
+                        setImportStatus(null);
+                        onClose();
+                    }, 2000);
+                } else {
+                    setImportStatus({ 
+                        success: false, 
+                        message: result.error || 'Import failed' 
+                    });
+                    setTimeout(() => setImportStatus(null), 5000);
+                }
+            } catch (error) {
+                setImportStatus({ 
+                    success: false, 
+                    message: `Failed to read file: ${(error as Error).message}` 
+                });
+                setTimeout(() => setImportStatus(null), 5000);
+            }
+        };
+        reader.readAsText(file);
+        
+        // Reset input
+        e.target.value = '';
     };
 
     const handleBackdropClick = (e: React.MouseEvent) => {
@@ -211,6 +280,48 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Export/Import Section */}
+                    <div className="pt-4 border-t border-border">
+                        <h3 className="text-sm font-semibold text-foreground mb-4">Backup & Restore</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                variant="secondary"
+                                onClick={handleExport}
+                                className="flex items-center justify-center gap-2"
+                            >
+                                <Download className="w-4 h-4" />
+                                Export History
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={handleImport}
+                                className="flex items-center justify-center gap-2"
+                            >
+                                <Upload className="w-4 h-4" />
+                                Import History
+                            </Button>
+                        </div>
+                        <p className="text-xs text-foreground-muted mt-2">
+                            Export your clipboard history to a JSON file or import from a previous backup
+                        </p>
+                        {importStatus && (
+                            <div className={`mt-3 p-3 rounded-lg border ${
+                                importStatus.success 
+                                    ? 'bg-green-500/10 border-green-500/30 text-green-500' 
+                                    : 'bg-red-500/10 border-red-500/30 text-red-500'
+                            }`}>
+                                <p className="text-sm font-medium">{importStatus.message}</p>
+                            </div>
+                        )}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".json"
+                            className="hidden"
+                            onChange={handleFileSelect}
+                        />
                     </div>
                 </div>
 

@@ -2,17 +2,17 @@ import { BrowserWindow, Menu, Notification, Tray, app, clipboard, globalShortcut
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
-import os from "node:os";
-import fs from "node:fs/promises";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import fs from "node:fs/promises";
+import os from "node:os";
 import si from "systeminformation";
 import Store from "electron-store";
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
 	if (typeof require !== "undefined") return require.apply(this, arguments);
 	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
 });
-var execAsync = promisify(exec);
+var execAsync$1 = promisify(exec);
 function setupCleanerHandlers() {
 	ipcMain.handle("cleaner:get-platform", async () => {
 		return {
@@ -102,7 +102,7 @@ function setupCleanerHandlers() {
 				category: "trash"
 			});
 			try {
-				const { stdout } = await execAsync("tmutil listlocalsnapshots /");
+				const { stdout } = await execAsync$1("tmutil listlocalsnapshots /");
 				const count = stdout.split("\n").filter((l) => l.trim()).length;
 				if (count > 0) junkPaths.push({
 					path: "tmutil:snapshots",
@@ -179,7 +179,7 @@ function setupCleanerHandlers() {
 			const agencyFiles = await fs.readdir(agentsPath).catch(() => []);
 			for (const file of agencyFiles) if (file.endsWith(".plist")) {
 				const plistPath = path.join(agentsPath, file);
-				const { stdout } = await execAsync(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
+				const { stdout } = await execAsync$1(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
 				const enabled = stdout.trim().length > 0;
 				items.push({
 					name: file.replace(".plist", ""),
@@ -192,7 +192,7 @@ function setupCleanerHandlers() {
 			const globalFiles = await fs.readdir(globalAgents).catch(() => []);
 			for (const file of globalFiles) {
 				const plistPath = path.join(globalAgents, file);
-				const { stdout } = await execAsync(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
+				const { stdout } = await execAsync$1(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
 				const enabled = stdout.trim().length > 0;
 				items.push({
 					name: file.replace(".plist", ""),
@@ -203,7 +203,7 @@ function setupCleanerHandlers() {
 			}
 		} catch (e) {}
 		else if (platform === "win32") try {
-			const { stdout } = await execAsync("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\"");
+			const { stdout } = await execAsync$1("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\"");
 			const data = JSON.parse(stdout);
 			const list = Array.isArray(data) ? data : [data];
 			for (const item of list) items.push({
@@ -222,8 +222,8 @@ function setupCleanerHandlers() {
 			if (platform === "darwin") {
 				const isEnabled = item.enabled ?? true;
 				if (item.type === "LaunchAgent" || item.type === "SystemAgent") {
-					if (isEnabled) await execAsync(`launchctl unload "${item.path}"`);
-					else await execAsync(`launchctl load "${item.path}"`);
+					if (isEnabled) await execAsync$1(`launchctl unload "${item.path}"`);
+					else await execAsync$1(`launchctl load "${item.path}"`);
 					return {
 						success: true,
 						enabled: !isEnabled
@@ -287,7 +287,7 @@ function setupCleanerHandlers() {
 				} catch (e) {}
 			}
 		} else if (platform === "win32") try {
-			const { stdout } = await execAsync(`powershell "
+			const { stdout } = await execAsync$1(`powershell "
                     Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion, InstallLocation, InstallDate | ConvertTo-Json
                 "`);
 			const data = JSON.parse(stdout);
@@ -331,25 +331,38 @@ function setupCleanerHandlers() {
 	ipcMain.handle("cleaner:run-cleanup", async (_event, files) => {
 		let freedSize = 0;
 		const failed = [];
-		for (const filePath of files) try {
-			if (filePath === "tmutil:snapshots") {
-				if (process.platform === "darwin") {
-					await execAsync("tmutil deletelocalsnapshots /");
-					freedSize += 2 * 1024 * 1024 * 1024;
+		const platform = process.platform;
+		const safetyResult = checkFilesSafety(files, platform);
+		if (!safetyResult.safe && safetyResult.blocked.length > 0) return {
+			success: false,
+			error: `Cannot delete ${safetyResult.blocked.length} protected file(s)`,
+			freedSize: 0,
+			freedSizeFormatted: formatBytes$1(0),
+			failed: safetyResult.blocked
+		};
+		const chunkSize = 50;
+		for (let i = 0; i < files.length; i += chunkSize) {
+			const chunk = files.slice(i, i + chunkSize);
+			for (const filePath of chunk) try {
+				if (filePath === "tmutil:snapshots") {
+					if (process.platform === "darwin") {
+						await execAsync$1("tmutil deletelocalsnapshots /");
+						freedSize += 2 * 1024 * 1024 * 1024;
+					}
+					continue;
 				}
-				continue;
+				const stats = await fs.stat(filePath).catch(() => null);
+				if (!stats) continue;
+				const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
+				if (stats.isDirectory()) await fs.rm(filePath, {
+					recursive: true,
+					force: true
+				});
+				else await fs.unlink(filePath);
+				freedSize += size;
+			} catch (e) {
+				failed.push(filePath);
 			}
-			const stats = await fs.stat(filePath).catch(() => null);
-			if (!stats) continue;
-			const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
-			if (stats.isDirectory()) await fs.rm(filePath, {
-				recursive: true,
-				force: true
-			});
-			else await fs.unlink(filePath);
-			freedSize += size;
-		} catch (e) {
-			failed.push(filePath);
 		}
 		return {
 			success: failed.length === 0,
@@ -360,7 +373,7 @@ function setupCleanerHandlers() {
 	});
 	ipcMain.handle("cleaner:free-ram", async () => {
 		if (process.platform === "darwin") try {
-			await execAsync("purge");
+			await execAsync$1("purge");
 		} catch (e) {}
 		return {
 			success: true,
@@ -373,7 +386,7 @@ function setupCleanerHandlers() {
 			if (platform === "darwin") {
 				const appPath = app$1.path;
 				const appName = app$1.name;
-				await execAsync(`osascript -e 'tell application "Finder" to move POSIX file "${appPath}" to trash'`);
+				await execAsync$1(`osascript -e 'tell application "Finder" to move POSIX file "${appPath}" to trash'`);
 				const home = os.homedir();
 				const associatedPaths = [
 					path.join(home, "Library/Preferences", `*${appName}*`),
@@ -410,14 +423,14 @@ function setupCleanerHandlers() {
 				const appName = app$1.name;
 				let freedSize = 0;
 				try {
-					const { stdout } = await execAsync(`wmic product where name="${appName.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`);
+					const { stdout } = await execAsync$1(`wmic product where name="${appName.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`);
 					const match = stdout.match(/IdentifyingNumber=(\{[^}]+\})/);
 					if (match) {
 						const guid = match[1];
-						await execAsync(`msiexec /x ${guid} /quiet /norestart`);
+						await execAsync$1(`msiexec /x ${guid} /quiet /norestart`);
 						freedSize = await getDirSize(app$1.path).catch(() => 0);
 					} else {
-						await execAsync(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => {});
+						await execAsync$1(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => {});
 						freedSize = await getDirSize(app$1.path).catch(() => 0);
 					}
 				} catch (e) {
@@ -467,7 +480,7 @@ function setupCleanerHandlers() {
 			totalSize: 0
 		};
 		if (platform === "win32") try {
-			const { stdout: docsCount } = await execAsync(`powershell "
+			const { stdout: docsCount } = await execAsync$1(`powershell "
                     Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
                     Select-Object -ExpandProperty * | 
                     Where-Object { \$_ -ne \$null } | 
@@ -486,7 +499,7 @@ function setupCleanerHandlers() {
 				});
 				results.totalItems += docsCountNum;
 			}
-			const { stdout: programsCount } = await execAsync(`powershell "
+			const { stdout: programsCount } = await execAsync$1(`powershell "
                     Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
                     Select-Object -ExpandProperty * | 
                     Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' } | 
@@ -679,27 +692,27 @@ function setupCleanerHandlers() {
 		if (platform === "win32") try {
 			if (options.registry) {
 				try {
-					const { stdout: docsCountBefore } = await execAsync(`powershell "
+					const { stdout: docsCountBefore } = await execAsync$1(`powershell "
                             \$props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
                             Select-Object -ExpandProperty * | 
                             Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' }
                             if (\$props) { \$props.Count } else { 0 }
                         "`).catch(() => ({ stdout: "0" }));
 					const docsCountNum = parseInt(docsCountBefore.trim()) || 0;
-					await execAsync("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\"");
+					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\"");
 					cleanedItems += docsCountNum;
 				} catch (e) {
 					errors.push(`Failed to clean Recent Documents registry: ${e.message}`);
 				}
 				try {
-					const { stdout: programsCountBefore } = await execAsync(`powershell "
+					const { stdout: programsCountBefore } = await execAsync$1(`powershell "
                             \$props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
                             Select-Object -ExpandProperty * | 
                             Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' }
                             if (\$props) { \$props.Count } else { 0 }
                         "`).catch(() => ({ stdout: "0" }));
 					const programsCountNum = parseInt(programsCountBefore.trim()) || 0;
-					await execAsync("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\"");
+					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\"");
 					cleanedItems += programsCountNum;
 				} catch (e) {
 					errors.push(`Failed to clean Recent Programs registry: ${e.message}`);
@@ -807,6 +820,315 @@ function setupCleanerHandlers() {
 			errors
 		};
 	});
+	ipcMain.handle("cleaner:scan-browser-data", async () => {
+		const platform = process.platform;
+		const home = os.homedir();
+		const results = {
+			browsers: [],
+			totalSize: 0,
+			totalItems: 0
+		};
+		const browserPaths = [];
+		if (platform === "win32") {
+			const localApp = process.env.LOCALAPPDATA || "";
+			const appData = process.env.APPDATA || "";
+			browserPaths.push({
+				name: "Chrome",
+				paths: {
+					history: [path.join(localApp, "Google/Chrome/User Data/Default/History")],
+					cookies: [path.join(localApp, "Google/Chrome/User Data/Default/Cookies")],
+					cache: [path.join(localApp, "Google/Chrome/User Data/Default/Cache")],
+					downloads: [path.join(localApp, "Google/Chrome/User Data/Default/History")]
+				}
+			});
+			browserPaths.push({
+				name: "Edge",
+				paths: {
+					history: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")],
+					cookies: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cookies")],
+					cache: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cache")],
+					downloads: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")]
+				}
+			});
+			browserPaths.push({
+				name: "Firefox",
+				paths: {
+					history: [path.join(appData, "Mozilla/Firefox/Profiles")],
+					cookies: [path.join(appData, "Mozilla/Firefox/Profiles")],
+					cache: [path.join(localApp, "Mozilla/Firefox/Profiles")],
+					downloads: [path.join(appData, "Mozilla/Firefox/Profiles")]
+				}
+			});
+		} else if (platform === "darwin") {
+			browserPaths.push({
+				name: "Safari",
+				paths: {
+					history: [path.join(home, "Library/Safari/History.db")],
+					cookies: [path.join(home, "Library/Cookies/Cookies.binarycookies")],
+					cache: [path.join(home, "Library/Caches/com.apple.Safari")],
+					downloads: [path.join(home, "Library/Safari/Downloads.plist")]
+				}
+			});
+			browserPaths.push({
+				name: "Chrome",
+				paths: {
+					history: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")],
+					cookies: [path.join(home, "Library/Application Support/Google/Chrome/Default/Cookies")],
+					cache: [path.join(home, "Library/Caches/Google/Chrome")],
+					downloads: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")]
+				}
+			});
+			browserPaths.push({
+				name: "Firefox",
+				paths: {
+					history: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+					cookies: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+					cache: [path.join(home, "Library/Caches/Firefox")],
+					downloads: [path.join(home, "Library/Application Support/Firefox/Profiles")]
+				}
+			});
+			browserPaths.push({
+				name: "Edge",
+				paths: {
+					history: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")],
+					cookies: [path.join(home, "Library/Application Support/Microsoft Edge/Default/Cookies")],
+					cache: [path.join(home, "Library/Caches/com.microsoft.edgemac")],
+					downloads: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")]
+				}
+			});
+		}
+		for (const browser of browserPaths) {
+			const browserData = {
+				name: browser.name,
+				history: {
+					size: 0,
+					count: 0,
+					paths: []
+				},
+				cookies: {
+					size: 0,
+					count: 0,
+					paths: []
+				},
+				cache: {
+					size: 0,
+					count: 0,
+					paths: []
+				},
+				downloads: {
+					size: 0,
+					count: 0,
+					paths: []
+				}
+			};
+			for (const [type, paths] of Object.entries(browser.paths)) for (const dataPath of paths) try {
+				if (type === "cache" && platform === "darwin" && browser.name === "Safari") {
+					const stats = await fs.stat(dataPath).catch(() => null);
+					if (stats && stats.isDirectory()) {
+						const size = await getDirSize(dataPath);
+						browserData[type].size += size;
+						browserData[type].paths.push(dataPath);
+						browserData[type].count += 1;
+					}
+				} else {
+					const stats = await fs.stat(dataPath).catch(() => null);
+					if (stats) {
+						if (stats.isDirectory()) {
+							const size = await getDirSize(dataPath);
+							browserData[type].size += size;
+							browserData[type].paths.push(dataPath);
+							browserData[type].count += 1;
+						} else if (stats.isFile()) {
+							browserData[type].size += stats.size;
+							browserData[type].paths.push(dataPath);
+							browserData[type].count += 1;
+						}
+					}
+				}
+			} catch (e) {}
+			const browserTotalSize = Object.values(browserData).reduce((sum, item) => {
+				return sum + (typeof item === "object" && item.size ? item.size : 0);
+			}, 0);
+			if (browserTotalSize > 0) {
+				browserData.totalSize = browserTotalSize;
+				browserData.totalSizeFormatted = formatBytes$1(browserTotalSize);
+				results.browsers.push(browserData);
+				results.totalSize += browserTotalSize;
+				results.totalItems += Object.values(browserData).reduce((sum, item) => {
+					return sum + (typeof item === "object" && item.count ? item.count : 0);
+				}, 0);
+			}
+		}
+		return {
+			success: true,
+			results
+		};
+	});
+	ipcMain.handle("cleaner:clean-browser-data", async (_event, options) => {
+		const platform = process.platform;
+		const home = os.homedir();
+		let cleanedItems = 0;
+		let freedSize = 0;
+		const errors = [];
+		const browserPaths = {};
+		if (platform === "win32") {
+			const localApp = process.env.LOCALAPPDATA || "";
+			const appData = process.env.APPDATA || "";
+			browserPaths["Chrome"] = {
+				history: [path.join(localApp, "Google/Chrome/User Data/Default/History")],
+				cookies: [path.join(localApp, "Google/Chrome/User Data/Default/Cookies")],
+				cache: [path.join(localApp, "Google/Chrome/User Data/Default/Cache")],
+				downloads: [path.join(localApp, "Google/Chrome/User Data/Default/History")]
+			};
+			browserPaths["Edge"] = {
+				history: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")],
+				cookies: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cookies")],
+				cache: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cache")],
+				downloads: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")]
+			};
+			browserPaths["Firefox"] = {
+				history: [path.join(appData, "Mozilla/Firefox/Profiles")],
+				cookies: [path.join(appData, "Mozilla/Firefox/Profiles")],
+				cache: [path.join(localApp, "Mozilla/Firefox/Profiles")],
+				downloads: [path.join(appData, "Mozilla/Firefox/Profiles")]
+			};
+		} else if (platform === "darwin") {
+			browserPaths["Safari"] = {
+				history: [path.join(home, "Library/Safari/History.db")],
+				cookies: [path.join(home, "Library/Cookies/Cookies.binarycookies")],
+				cache: [path.join(home, "Library/Caches/com.apple.Safari")],
+				downloads: [path.join(home, "Library/Safari/Downloads.plist")]
+			};
+			browserPaths["Chrome"] = {
+				history: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")],
+				cookies: [path.join(home, "Library/Application Support/Google/Chrome/Default/Cookies")],
+				cache: [path.join(home, "Library/Caches/Google/Chrome")],
+				downloads: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")]
+			};
+			browserPaths["Firefox"] = {
+				history: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+				cookies: [path.join(home, "Library/Application Support/Firefox/Profiles")],
+				cache: [path.join(home, "Library/Caches/Firefox")],
+				downloads: [path.join(home, "Library/Application Support/Firefox/Profiles")]
+			};
+			browserPaths["Edge"] = {
+				history: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")],
+				cookies: [path.join(home, "Library/Application Support/Microsoft Edge/Default/Cookies")],
+				cache: [path.join(home, "Library/Caches/com.microsoft.edgemac")],
+				downloads: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")]
+			};
+		}
+		for (const browserName of options.browsers) {
+			const paths = browserPaths[browserName];
+			if (!paths) continue;
+			for (const type of options.types) {
+				const typePaths = paths[type];
+				if (!typePaths) continue;
+				for (const dataPath of typePaths) try {
+					const stats = await fs.stat(dataPath).catch(() => null);
+					if (!stats) continue;
+					if (stats.isDirectory()) {
+						const size = await getDirSize(dataPath);
+						await fs.rm(dataPath, {
+							recursive: true,
+							force: true
+						});
+						freedSize += size;
+						cleanedItems++;
+					} else if (stats.isFile()) {
+						freedSize += stats.size;
+						await fs.unlink(dataPath);
+						cleanedItems++;
+					}
+				} catch (e) {
+					errors.push(`Failed to clean ${browserName} ${type}: ${e.message}`);
+				}
+			}
+		}
+		return {
+			success: errors.length === 0,
+			cleanedItems,
+			freedSize,
+			freedSizeFormatted: formatBytes$1(freedSize),
+			errors
+		};
+	});
+	ipcMain.handle("cleaner:get-wifi-networks", async () => {
+		const platform = process.platform;
+		const networks = [];
+		try {
+			if (platform === "win32") {
+				const { stdout } = await execAsync$1("netsh wlan show profiles");
+				const lines = stdout.split("\n");
+				for (const line of lines) {
+					const match = line.match(/All User Profile\s*:\s*(.+)/);
+					if (match) {
+						const profileName = match[1].trim();
+						try {
+							const { stdout: profileInfo } = await execAsync$1(`netsh wlan show profile name="${profileName}" key=clear`);
+							const keyMatch = profileInfo.match(/Key Content\s*:\s*(.+)/);
+							networks.push({
+								name: profileName,
+								hasPassword: !!keyMatch,
+								platform: "windows"
+							});
+						} catch (e) {
+							networks.push({
+								name: profileName,
+								hasPassword: false,
+								platform: "windows"
+							});
+						}
+					}
+				}
+			} else if (platform === "darwin") {
+				const { stdout } = await execAsync$1("networksetup -listallhardwareports");
+				if (stdout.split("\n").find((line) => line.includes("Wi-Fi") || line.includes("AirPort"))) {
+					const { stdout: networksOutput } = await execAsync$1("networksetup -listpreferredwirelessnetworks en0").catch(() => ({ stdout: "" }));
+					const networkNames = networksOutput.split("\n").filter((line) => line.trim() && !line.includes("Preferred networks"));
+					for (const networkName of networkNames) {
+						const name = networkName.trim();
+						if (name) networks.push({
+							name,
+							hasPassword: true,
+							platform: "macos"
+						});
+					}
+				}
+			}
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message,
+				networks: []
+			};
+		}
+		return {
+			success: true,
+			networks
+		};
+	});
+	ipcMain.handle("cleaner:remove-wifi-network", async (_event, networkName) => {
+		const platform = process.platform;
+		try {
+			if (platform === "win32") {
+				await execAsync$1(`netsh wlan delete profile name="${networkName}"`);
+				return { success: true };
+			} else if (platform === "darwin") {
+				await execAsync$1(`networksetup -removepreferredwirelessnetwork en0 "${networkName}"`);
+				return { success: true };
+			}
+			return {
+				success: false,
+				error: "Unsupported platform"
+			};
+		} catch (e) {
+			return {
+				success: false,
+				error: e.message
+			};
+		}
+	});
 	ipcMain.handle("cleaner:run-maintenance", async (_event, task) => {
 		const platform = process.platform;
 		const startTime = Date.now();
@@ -814,30 +1136,30 @@ function setupCleanerHandlers() {
 		try {
 			if (platform === "win32") switch (task.category) {
 				case "sfc":
-					const { stdout: sfcOutput } = await execAsync("sfc /scannow", { timeout: 3e5 });
+					const { stdout: sfcOutput } = await execAsync$1("sfc /scannow", { timeout: 3e5 });
 					output = sfcOutput;
 					break;
 				case "dism":
-					const { stdout: dismOutput } = await execAsync("DISM /Online /Cleanup-Image /RestoreHealth", { timeout: 6e5 });
+					const { stdout: dismOutput } = await execAsync$1("DISM /Online /Cleanup-Image /RestoreHealth", { timeout: 6e5 });
 					output = dismOutput;
 					break;
 				case "disk-cleanup":
-					const { stdout: cleanupOutput } = await execAsync("cleanmgr /sagerun:1", { timeout: 3e5 });
+					const { stdout: cleanupOutput } = await execAsync$1("cleanmgr /sagerun:1", { timeout: 3e5 });
 					output = cleanupOutput || "Disk cleanup completed";
 					break;
 				case "dns-flush":
-					const { stdout: dnsOutput } = await execAsync("ipconfig /flushdns");
+					const { stdout: dnsOutput } = await execAsync$1("ipconfig /flushdns");
 					output = dnsOutput || "DNS cache flushed successfully";
 					break;
 				case "winsock-reset":
-					const { stdout: winsockOutput } = await execAsync("netsh winsock reset");
+					const { stdout: winsockOutput } = await execAsync$1("netsh winsock reset");
 					output = winsockOutput || "Winsock reset completed";
 					break;
 				case "windows-search-rebuild":
 					try {
-						await execAsync("powershell \"Stop-Service -Name WSearch -Force\"");
-						await execAsync("powershell \"Remove-Item -Path \"$env:ProgramData\\Microsoft\\Search\\Data\\*\" -Recurse -Force\"");
-						await execAsync("powershell \"Start-Service -Name WSearch\"");
+						await execAsync$1("powershell \"Stop-Service -Name WSearch -Force\"");
+						await execAsync$1("powershell \"Remove-Item -Path \"$env:ProgramData\\Microsoft\\Search\\Data\\*\" -Recurse -Force\"");
+						await execAsync$1("powershell \"Start-Service -Name WSearch\"");
 						output = "Windows Search index rebuilt successfully";
 					} catch (e) {
 						throw new Error(`Failed to rebuild search index: ${e.message}`);
@@ -848,11 +1170,11 @@ function setupCleanerHandlers() {
 			else if (platform === "darwin") switch (task.category) {
 				case "spotlight-reindex":
 					try {
-						await execAsync("sudo mdutil -E /");
+						await execAsync$1("sudo mdutil -E /");
 						output = "Spotlight index rebuilt successfully";
 					} catch (e) {
 						try {
-							await execAsync("mdutil -E ~");
+							await execAsync$1("mdutil -E ~");
 							output = "Spotlight index rebuilt successfully (user directory only)";
 						} catch (e2) {
 							throw new Error(`Failed to rebuild Spotlight index: ${e2.message}`);
@@ -861,7 +1183,7 @@ function setupCleanerHandlers() {
 					break;
 				case "disk-permissions":
 					try {
-						const { stdout: diskOutput } = await execAsync("diskutil verifyVolume /");
+						const { stdout: diskOutput } = await execAsync$1("diskutil verifyVolume /");
 						output = diskOutput || "Disk permissions verified";
 					} catch (e) {
 						output = "Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)";
@@ -869,11 +1191,11 @@ function setupCleanerHandlers() {
 					break;
 				case "dns-flush":
 					try {
-						await execAsync("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
+						await execAsync$1("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
 						output = "DNS cache flushed successfully";
 					} catch (e) {
 						try {
-							await execAsync("dscacheutil -flushcache; killall -HUP mDNSResponder");
+							await execAsync$1("dscacheutil -flushcache; killall -HUP mDNSResponder");
 							output = "DNS cache flushed successfully";
 						} catch (e2) {
 							throw new Error(`Failed to flush DNS: ${e2.message}`);
@@ -882,7 +1204,7 @@ function setupCleanerHandlers() {
 					break;
 				case "mail-rebuild":
 					try {
-						await execAsync("killall Mail 2>/dev/null || true");
+						await execAsync$1("killall Mail 2>/dev/null || true");
 						output = "Mail database rebuild initiated (please ensure Mail.app is closed)";
 					} catch (e) {
 						throw new Error(`Failed to rebuild Mail database: ${e.message}`);
@@ -1469,6 +1791,7 @@ var deleteBackup = async (backupId) => {
 		};
 	}
 };
+var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
 process.env.DIST = join(__dirname, "../dist");
@@ -1517,6 +1840,8 @@ var recentTools = [];
 var clipboardItems = [];
 var clipboardMonitoringEnabled = true;
 var statsMenuData = null;
+var healthMenuData = null;
+var healthMonitoringInterval = null;
 function updateTrayMenu() {
 	if (!tray) return;
 	const template = [{
@@ -1735,6 +2060,124 @@ function updateTrayMenu() {
 		});
 		template.push({ type: "separator" });
 	}
+	if (healthMenuData) {
+		const alertCount = healthMenuData.alerts.filter((a) => a.severity === "critical" || a.severity === "warning").length;
+		const healthLabel = alertCount > 0 ? `🛡️ System Health (${alertCount} alerts)` : "🛡️ System Health";
+		const healthSubmenu = [
+			{
+				label: "📊 Health Metrics",
+				enabled: false
+			},
+			{
+				label: `CPU: ${healthMenuData.cpu.toFixed(1)}%`,
+				enabled: false
+			},
+			{
+				label: `RAM: ${healthMenuData.ram.percentage.toFixed(1)}% (${formatBytes(healthMenuData.ram.used)} / ${formatBytes(healthMenuData.ram.total)})`,
+				enabled: false
+			}
+		];
+		if (healthMenuData.disk) healthSubmenu.push({
+			label: `Disk: ${healthMenuData.disk.percentage.toFixed(1)}% used (${formatBytes(healthMenuData.disk.free)} free)`,
+			enabled: false
+		});
+		if (healthMenuData.battery) healthSubmenu.push({
+			label: `Battery: ${healthMenuData.battery.level.toFixed(0)}% ${healthMenuData.battery.charging ? "(Charging)" : ""}`,
+			enabled: false
+		});
+		healthSubmenu.push({ type: "separator" });
+		if (healthMenuData.alerts.length > 0) {
+			healthSubmenu.push({
+				label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
+				enabled: false
+			});
+			healthMenuData.alerts.slice(0, 5).forEach((alert) => {
+				healthSubmenu.push({
+					label: `${alert.severity === "critical" ? "🔴" : alert.severity === "warning" ? "🟡" : "🔵"} ${alert.message.substring(0, 50)}${alert.message.length > 50 ? "..." : ""}`,
+					enabled: false
+				});
+			});
+			healthSubmenu.push({ type: "separator" });
+		}
+		healthSubmenu.push({
+			label: "▸ Open Health Monitor",
+			click: () => {
+				win?.show();
+				win?.webContents.send("navigate-to", "/system-cleaner");
+				setTimeout(() => {
+					win?.webContents.send("system-cleaner:switch-tab", "health");
+				}, 500);
+			}
+		});
+		healthSubmenu.push({
+			label: "⚡ Quick Actions",
+			submenu: [
+				{
+					label: "Free Up RAM",
+					click: async () => {
+						try {
+							const result = await win?.webContents.executeJavaScript(`
+                (async () => {
+                  const res = await window.cleanerAPI?.freeRam();
+                  return res;
+                })()
+              `);
+							if (result?.success) new Notification({
+								title: "✓ RAM Optimized",
+								body: `Freed ${formatBytes(result.ramFreed || 0)}`,
+								silent: true
+							}).show();
+						} catch (e) {
+							new Notification({
+								title: "✗ Failed",
+								body: "Could not free RAM",
+								silent: true
+							}).show();
+						}
+					}
+				},
+				{
+					label: "Flush DNS Cache",
+					click: async () => {
+						try {
+							if ((await win?.webContents.executeJavaScript(`
+                (async () => {
+                  const res = await window.cleanerAPI?.runMaintenance(${JSON.stringify({
+								id: "dns-flush",
+								name: "Flush DNS Cache",
+								category: "dns-flush"
+							})});
+                  return res;
+                })()
+              `))?.success) new Notification({
+								title: "✓ DNS Cache Flushed",
+								body: "DNS cache cleared successfully",
+								silent: true
+							}).show();
+						} catch (e) {
+							new Notification({
+								title: "✗ Failed",
+								body: "Could not flush DNS cache",
+								silent: true
+							}).show();
+						}
+					}
+				},
+				{
+					label: "Open System Cleaner",
+					click: () => {
+						win?.show();
+						win?.webContents.send("navigate-to", "/system-cleaner");
+					}
+				}
+			]
+		});
+		template.push({
+			label: healthLabel,
+			submenu: healthSubmenu
+		});
+		template.push({ type: "separator" });
+	}
 	if (recentTools.length > 0) {
 		template.push({
 			label: "🕐 Recent Tools",
@@ -1861,6 +2304,88 @@ function createWindow() {
 		statsMenuData = data;
 		updateTrayMenu();
 	});
+	ipcMain.on("health-update-tray", (_event, data) => {
+		healthMenuData = data;
+		updateTrayMenu();
+	});
+	ipcMain.handle("health-start-monitoring", async () => {
+		if (healthMonitoringInterval) clearInterval(healthMonitoringInterval);
+		const updateHealth = async () => {
+			try {
+				const mem = await si.mem();
+				const load = await si.currentLoad();
+				const disk = await si.fsSize();
+				const battery = await si.battery().catch(() => null);
+				const alerts = [];
+				const rootDisk = disk.find((d) => d.mount === "/" || d.mount === "C:") || disk[0];
+				if (rootDisk) {
+					const freePercent = rootDisk.available / rootDisk.size * 100;
+					if (freePercent < 10) alerts.push({
+						type: "low_space",
+						severity: "critical",
+						message: `Low disk space: ${formatBytes(rootDisk.available)} free`
+					});
+					else if (freePercent < 20) alerts.push({
+						type: "low_space",
+						severity: "warning",
+						message: `Disk space getting low: ${formatBytes(rootDisk.available)} free`
+					});
+				}
+				if (load.currentLoad > 90) alerts.push({
+					type: "high_cpu",
+					severity: "warning",
+					message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
+				});
+				const memPercent = mem.used / mem.total * 100;
+				if (memPercent > 90) alerts.push({
+					type: "memory_pressure",
+					severity: "warning",
+					message: `High memory usage: ${memPercent.toFixed(1)}%`
+				});
+				healthMenuData = {
+					cpu: load.currentLoad,
+					ram: {
+						used: mem.used,
+						total: mem.total,
+						percentage: memPercent
+					},
+					disk: rootDisk ? {
+						free: rootDisk.available,
+						total: rootDisk.size,
+						percentage: (rootDisk.size - rootDisk.available) / rootDisk.size * 100
+					} : null,
+					battery: battery ? {
+						level: battery.percent,
+						charging: battery.isCharging || false
+					} : null,
+					alerts
+				};
+				updateTrayMenu();
+				const criticalAlerts = alerts.filter((a) => a.severity === "critical");
+				if (criticalAlerts.length > 0 && win) criticalAlerts.forEach((alert) => {
+					new Notification({
+						title: "⚠️ System Alert",
+						body: alert.message,
+						silent: false
+					}).show();
+				});
+			} catch (e) {
+				console.error("Health monitoring error:", e);
+			}
+		};
+		updateHealth();
+		healthMonitoringInterval = setInterval(updateHealth, 5e3);
+		return { success: true };
+	});
+	ipcMain.handle("health-stop-monitoring", () => {
+		if (healthMonitoringInterval) {
+			clearInterval(healthMonitoringInterval);
+			healthMonitoringInterval = null;
+		}
+		healthMenuData = null;
+		updateTrayMenu();
+		return { success: true };
+	});
 	ipcMain.on("window-minimize", () => {
 		win?.minimize();
 	});
@@ -1889,6 +2414,15 @@ app.on("before-quit", () => {
 	if (win) win.webContents.send("check-clear-clipboard-on-quit");
 });
 app.whenReady().then(() => {
+	setTimeout(() => {
+		if (win) win.webContents.executeJavaScript(`
+        (async () => {
+          if (window.cleanerAPI?.startHealthMonitoring) {
+            await window.cleanerAPI.startHealthMonitoring();
+          }
+        })()
+      `).catch(() => {});
+	}, 2e3);
 	try {
 		globalShortcut.register("CommandOrControl+Shift+D", () => {
 			toggleWindow();
@@ -2056,6 +2590,166 @@ app.whenReady().then(() => {
 			return null;
 		}
 	});
+	ipcMain.handle("app-manager:get-installed-apps", async () => {
+		try {
+			const platform = process.platform;
+			const apps = [];
+			if (platform === "darwin") {
+				const appsDir = "/Applications";
+				const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
+				for (const file of files) if (file.name.endsWith(".app")) {
+					const appPath = join(appsDir, file.name);
+					try {
+						const stats = await fs.stat(appPath);
+						const appName = file.name.replace(".app", "");
+						const isSystemApp = appPath.startsWith("/System") || appPath.startsWith("/Library") || appName.startsWith("com.apple.");
+						apps.push({
+							id: `macos-${appName}-${stats.ino}`,
+							name: appName,
+							version: void 0,
+							publisher: void 0,
+							installDate: stats.birthtime.toISOString(),
+							installLocation: appPath,
+							size: await getDirSize$1(appPath).catch(() => 0),
+							isSystemApp
+						});
+					} catch (e) {}
+				}
+			} else if (platform === "win32") try {
+				const { stdout } = await execAsync(`powershell -Command "${`
+            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
+            Where-Object { $_.DisplayName } | 
+            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | 
+            ConvertTo-Json -Depth 3
+          `.replace(/"/g, "\\\"")}"`);
+				const data = JSON.parse(stdout);
+				const list = Array.isArray(data) ? data : [data];
+				for (const item of list) if (item.DisplayName) {
+					const publisher = item.Publisher || "";
+					const installLocation = item.InstallLocation || "";
+					const isSystemApp = publisher.includes("Microsoft") || publisher.includes("Windows") || installLocation.includes("Windows\\") || installLocation.includes("Program Files\\Windows");
+					apps.push({
+						id: `win-${item.DisplayName}-${item.InstallDate || "unknown"}`,
+						name: item.DisplayName,
+						version: item.DisplayVersion || void 0,
+						publisher: publisher || void 0,
+						installDate: item.InstallDate ? formatWindowsDate(item.InstallDate) : void 0,
+						installLocation: installLocation || void 0,
+						size: item.EstimatedSize ? item.EstimatedSize * 1024 : void 0,
+						isSystemApp
+					});
+				}
+			} catch (e) {
+				console.error("Error fetching Windows apps:", e);
+			}
+			return apps;
+		} catch (error) {
+			console.error("Error fetching installed apps:", error);
+			return [];
+		}
+	});
+	ipcMain.handle("app-manager:get-running-processes", async () => {
+		try {
+			const processes = await si.processes();
+			const memInfo = await si.mem();
+			return processes.list.map((proc) => ({
+				pid: proc.pid,
+				name: proc.name,
+				cpu: proc.cpu || 0,
+				memory: proc.mem || 0,
+				memoryPercent: memInfo.total > 0 ? (proc.mem || 0) / memInfo.total * 100 : 0,
+				started: proc.started || "",
+				user: proc.user || void 0,
+				command: proc.command || void 0,
+				path: proc.path || void 0
+			}));
+		} catch (error) {
+			console.error("Error fetching running processes:", error);
+			return [];
+		}
+	});
+	ipcMain.handle("app-manager:uninstall-app", async (_event, app$1) => {
+		try {
+			const platform = process.platform;
+			if (platform === "darwin") {
+				if (app$1.installLocation) {
+					await fs.rm(app$1.installLocation, {
+						recursive: true,
+						force: true
+					});
+					return { success: true };
+				}
+			} else if (platform === "win32") try {
+				await execAsync(`powershell -Command "${`
+            $app = Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
+                   Where-Object { $_.DisplayName -eq "${app$1.name.replace(/"/g, "\\\"")}" } | 
+                   Select-Object -First 1
+            if ($app.UninstallString) {
+              $uninstallString = $app.UninstallString
+              if ($uninstallString -match '^"(.+)"') {
+                $exe = $matches[1]
+                $args = $uninstallString.Substring($matches[0].Length).Trim()
+                Start-Process -FilePath $exe -ArgumentList $args -Wait
+              } else {
+                Start-Process -FilePath $uninstallString -Wait
+              }
+              Write-Output "Success"
+            } else {
+              Write-Output "No uninstall string found"
+            }
+          `.replace(/"/g, "\\\"")}"`);
+				return { success: true };
+			} catch (e) {
+				return {
+					success: false,
+					error: e.message
+				};
+			}
+			return {
+				success: false,
+				error: "Unsupported platform"
+			};
+		} catch (error) {
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	});
+	ipcMain.handle("app-manager:kill-process", async (_event, pid) => {
+		try {
+			process.kill(pid, "SIGTERM");
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	});
+	async function getDirSize$1(dirPath) {
+		try {
+			let totalSize = 0;
+			const files = await fs.readdir(dirPath, { withFileTypes: true });
+			for (const file of files) {
+				const filePath = join(dirPath, file.name);
+				try {
+					if (file.isDirectory()) totalSize += await getDirSize$1(filePath);
+					else {
+						const stats = await fs.stat(filePath);
+						totalSize += stats.size;
+					}
+				} catch (e) {}
+			}
+			return totalSize;
+		} catch (e) {
+			return 0;
+		}
+	}
+	function formatWindowsDate(dateStr) {
+		if (dateStr && dateStr.length === 8) return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+		return dateStr;
+	}
 	setupCleanerHandlers();
 	createTray();
 	createWindow();

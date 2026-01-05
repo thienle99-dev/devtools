@@ -84,3 +84,9 @@ electron.contextBridge.exposeInMainWorld("cleanerAPI", {
 	stopHealthMonitoring: () => electron.ipcRenderer.invoke("health-stop-monitoring"),
 	updateHealthTray: (data) => electron.ipcRenderer.send("health-update-tray", data)
 });
+electron.contextBridge.exposeInMainWorld("appManagerAPI", {
+	getInstalledApps: () => electron.ipcRenderer.invoke("app-manager:get-installed-apps"),
+	getRunningProcesses: () => electron.ipcRenderer.invoke("app-manager:get-running-processes"),
+	uninstallApp: (app) => electron.ipcRenderer.invoke("app-manager:uninstall-app", app),
+	killProcess: (pid) => electron.ipcRenderer.invoke("app-manager:kill-process", pid)
+});

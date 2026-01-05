@@ -72,6 +72,10 @@ interface ClipboardStore {
 
     // Statistics
     getStatistics: () => ClipboardStatistics;
+
+    // Export/Import
+    exportData: () => string;
+    importData: (jsonData: string) => { success: boolean; error?: string; importedCount?: number };
 }
 
 export const useClipboardStore = create<ClipboardStore>()(
@@ -297,6 +301,66 @@ export const useClipboardStore = create<ClipboardStore>()(
                     itemsByType,
                     itemsByDay,
                 };
+            },
+
+            // Export/Import
+            exportData: () => {
+                const state = get();
+                const exportData = {
+                    version: '1.0',
+                    exportedAt: new Date().toISOString(),
+                    items: state.items,
+                    settings: state.settings,
+                    availableCategories: state.availableCategories,
+                };
+                return JSON.stringify(exportData, null, 2);
+            },
+
+            importData: (jsonData: string) => {
+                try {
+                    const parsed = JSON.parse(jsonData);
+                    
+                    // Validate structure
+                    if (!parsed.items || !Array.isArray(parsed.items)) {
+                        return { success: false, error: 'Invalid export format: missing items array' };
+                    }
+
+                    // Validate items structure
+                    const validItems = parsed.items.filter((item: any) => 
+                        item.id && 
+                        item.content !== undefined && 
+                        item.type && 
+                        typeof item.timestamp === 'number'
+                    );
+
+                    if (validItems.length === 0) {
+                        return { success: false, error: 'No valid items found in export file' };
+                    }
+
+                    // Merge with existing items (avoid duplicates by content)
+                    set((state) => {
+                        const existingContents = new Set(state.items.map(i => i.content));
+                        const newItems = validItems.filter((item: ClipboardItem) => 
+                            !existingContents.has(item.content)
+                        );
+                        
+                        // Combine and limit to maxItems
+                        const combinedItems = [...newItems, ...state.items].slice(0, state.maxItems);
+                        
+                        return {
+                            items: combinedItems,
+                            // Optionally import settings and categories if provided
+                            settings: parsed.settings ? { ...state.settings, ...parsed.settings } : state.settings,
+                            availableCategories: parsed.availableCategories && Array.isArray(parsed.availableCategories)
+                                ? [...new Set([...state.availableCategories, ...parsed.availableCategories])]
+                                : state.availableCategories,
+                        };
+                    });
+
+                    return { success: true, importedCount: validItems.length };
+                } catch (error) {
+                    return { success: false, error: `Failed to parse JSON: ${(error as Error).message}` };
+                }
             },
         }),
         {
