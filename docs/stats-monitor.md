@@ -676,12 +676,12 @@ export const useStatsStore = create<StatsStore>()(
 ## Implementation Checklist
 
 ### Phase 1: Core Monitoring
-- [ ] Setup Electron IPC for system metrics
-- [ ] Implement CPU module
-- [ ] Implement Memory module
-- [ ] Implement Network module
+- [x] Setup Electron IPC for system metrics
+- [x] Implement CPU module
+- [x] Implement Memory module
+- [x] Implement Network module
 - [ ] Basic menu bar integration
-- [ ] Real-time graph visualization
+- [x] Real-time graph visualization
 
 ### Phase 2: Additional Modules
 - [ ] Disk module

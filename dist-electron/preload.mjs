@@ -31,3 +31,8 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 		readImage: () => electron.ipcRenderer.invoke("clipboard-read-image")
 	}
 });
+electron.contextBridge.exposeInMainWorld("statsAPI", {
+	getCPUStats: () => electron.ipcRenderer.invoke("get-cpu-stats"),
+	getMemoryStats: () => electron.ipcRenderer.invoke("get-memory-stats"),
+	getNetworkStats: () => electron.ipcRenderer.invoke("get-network-stats")
+});

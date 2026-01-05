@@ -1,0 +1,79 @@
+import React from 'react';
+import { useSystemMetrics } from './hooks/useSystemMetrics';
+import { useStatsStore } from './store/statsStore';
+import { CPUModule } from './components/CPUModule';
+import { MemoryModule } from './components/MemoryModule';
+import { NetworkModule } from './components/NetworkModule';
+import { Settings, Activity } from 'lucide-react';
+
+const StatsMonitor: React.FC = () => {
+  const { enabledModules, preferences, toggleModule } = useStatsStore();
+  const metrics = useSystemMetrics(true, preferences.updateInterval);
+
+  if (!metrics) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white/50">
+        <Activity className="w-12 h-12 mb-4 animate-pulse text-white/20" />
+        <p>Initializing system sensors...</p>
+        <p className="text-sm mt-2">Checking Electron IPC permissions...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col p-6 gap-6 overflow-y-auto">
+      <div className="flex items-center justify-between">
+        <div>
+           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
+            System Monitor
+          </h1>
+          <p className="text-white/50 text-sm">Real-time performance metrics</p>
+        </div>
+        
+        <div className="flex gap-2">
+            {/* Quick toggles for modules */}
+            <div className="bg-black/20 p-1 rounded-lg flex items-center gap-1 border border-white/5">
+                {['cpu', 'memory', 'network'].map(mod => (
+                    <button
+                        key={mod}
+                        onClick={() => toggleModule(mod)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                            enabledModules.includes(mod) 
+                                ? 'bg-white/10 text-white shadow-sm' 
+                                : 'text-white/40 hover:text-white/70'
+                        }`}
+                    >
+                        {mod.toUpperCase()}
+                    </button>
+                ))}
+            </div>
+            
+            <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/50 hover:text-white">
+                <Settings className="w-5 h-5" />
+            </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {enabledModules.includes('cpu') && metrics.cpu && (
+            <CPUModule data={metrics.cpu} />
+        )}
+        
+        {enabledModules.includes('memory') && metrics.memory && (
+            <MemoryModule data={metrics.memory} />
+        )}
+
+        {enabledModules.includes('network') && metrics.network && (
+            <NetworkModule data={metrics.network} />
+        )}
+      </div>
+
+       {/* Debug / Raw Data View (Optional, maybe hidden or collapsible) */}
+       {/* <div className="mt-8 p-4 bg-black/40 rounded-lg overflow-auto max-h-60 text-xs font-mono text-white/30">
+        <pre>{JSON.stringify(metrics, null, 2)}</pre>
+       </div> */}
+    </div>
+  );
+};
+
+export default StatsMonitor;

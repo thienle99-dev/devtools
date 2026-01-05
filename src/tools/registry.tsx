@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'favorites' | 'recent';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'favorites' | 'recent';
 
 export interface ToolDefinition {
     id: string;
@@ -43,6 +43,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'crypto', name: 'Crypto', icon: Hash },
     { id: 'web', name: 'Web', icon: Globe },
     { id: 'network', name: 'Network', icon: Globe },
+    { id: 'utilities', name: 'Utilities', icon: Box },
     { id: 'development', name: 'Dev Utils', icon: Code2 },
 ];
 
@@ -89,6 +90,7 @@ const CrontabGenerator = React.lazy(() => import('./development/CrontabGenerator
 const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
 const DockerConverter = React.lazy(() => import('./development/DockerConverter').then(m => ({ default: m.DockerConverter })));
 const ClipboardManager = React.lazy(() => import('./utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
+const StatsMonitor = React.lazy(() => import('./utilities/stats-monitor/StatsMonitor').then(m => ({ default: m.default })));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)

@@ -38,3 +38,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     readImage: () => ipcRenderer.invoke('clipboard-read-image'),
   }
 })
+
+contextBridge.exposeInMainWorld('statsAPI', {
+  getCPUStats: () => ipcRenderer.invoke('get-cpu-stats'),
+  getMemoryStats: () => ipcRenderer.invoke('get-memory-stats'),
+  getNetworkStats: () => ipcRenderer.invoke('get-network-stats'),
+})

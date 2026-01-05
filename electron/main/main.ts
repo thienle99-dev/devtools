@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import si from 'systeminformation'
 import Store from 'electron-store'
 
 const store = new Store()
@@ -500,6 +501,34 @@ app.whenReady().then(() => {
   // Check launch at login status on startup
   const launchAtLogin = store.get('launchAtLogin') as boolean;
   setLoginItemSettingsSafely(launchAtLogin === true);
+
+  // System Stats IPC
+  ipcMain.handle('get-cpu-stats', async () => {
+    const [cpu, currentLoad] = await Promise.all([
+      si.cpu(),
+      si.currentLoad()
+    ]);
+    return {
+      manufacturer: cpu.manufacturer,
+      brand: cpu.brand,
+      speed: cpu.speed,
+      cores: cpu.cores,
+      physicalCores: cpu.physicalCores,
+      load: currentLoad
+    };
+  });
+
+  ipcMain.handle('get-memory-stats', async () => {
+    return await si.mem();
+  });
+
+  ipcMain.handle('get-network-stats', async () => {
+    const [stats, interfaces] = await Promise.all([
+      si.networkStats(),
+      si.networkInterfaces()
+    ]);
+    return { stats, interfaces };
+  });
 
   createTray();
   createWindow();
