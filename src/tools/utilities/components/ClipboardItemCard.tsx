@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Image as ImageIcon, Link as LinkIcon, File, Copy, Pin, Trash2, Eye } from 'lucide-react';
+import { FileText, Image as ImageIcon, Link as LinkIcon, File, Copy, Pin, Trash2, Eye, Check } from 'lucide-react';
 import type { ClipboardItem } from '../../../store/clipboardStore';
 import { useClipboard } from '../hooks/useClipboard';
 import { formatDistanceToNow } from 'date-fns';
@@ -29,13 +29,10 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
         let success = false;
 
         if (item.type === 'image') {
-            // Copy image as actual image to clipboard
             success = await copyImageToClipboard(item.content, item.metadata?.mimeType);
         } else {
-            // Copy text/link/file content
             let content = item.content;
             if (asPlainText) {
-                // Remove all formatting - convert to plain text
                 content = content.replace(/[\r\n]+/g, ' ').trim();
             }
             success = await copyToClipboard(content);
@@ -48,18 +45,6 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
         }
     };
 
-    const getTooltipText = () => {
-        const parts: string[] = [];
-        if (item.sourceApp) {
-            parts.push(`Source: ${item.sourceApp}`);
-        }
-        if (item.copyCount > 1) {
-            parts.push(`Copied ${item.copyCount} times`);
-        }
-        parts.push(getRelativeTime());
-        return parts.join(' • ');
-    };
-
     const getPreview = () => {
         if (item.type === 'image') {
             return 'Image (base64)';
@@ -70,7 +55,7 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
         if (item.type === 'file') {
             return item.metadata?.filePath || item.content;
         }
-        const maxLength = 300; // Increased from 150 for better preview
+        const maxLength = 150;
         return item.content.length > maxLength
             ? item.content.substring(0, maxLength) + '...'
             : item.content;
@@ -79,13 +64,13 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
     const getTypeIcon = () => {
         switch (item.type) {
             case 'image':
-                return <ImageIcon className="w-4 h-4 text-foreground-muted" />;
+                return <ImageIcon className="w-3.5 h-3.5" />;
             case 'link':
-                return <LinkIcon className="w-4 h-4 text-foreground-muted" />;
+                return <LinkIcon className="w-3.5 h-3.5" />;
             case 'file':
-                return <File className="w-4 h-4 text-foreground-muted" />;
+                return <File className="w-3.5 h-3.5" />;
             default:
-                return <FileText className="w-4 h-4 text-foreground-muted" />;
+                return <FileText className="w-3.5 h-3.5" />;
         }
     };
 
@@ -99,153 +84,178 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
 
     return (
         <div
-            className={`group relative p-5 bg-surface-elevated border rounded-xl 
-                       hover:border-accent/50 transition-all duration-200 cursor-pointer
-                       ${item.pinned ? 'border-accent/30 bg-accent/5' : 'border-border'}
+            className={`group relative glass-panel rounded-xl border transition-all duration-200 cursor-pointer
+                       ${item.pinned 
+                           ? 'border-accent/40 bg-accent/5 hover:border-accent/60' 
+                           : 'border-border/50 hover:border-accent/30 hover:bg-glass-button-hover'
+                       }
                        ${isSelected ? 'ring-2 ring-accent/50 border-accent shadow-lg' : ''}`}
-            title={getTooltipText()}
+            onClick={() => handleCopy()}
         >
-            {/* Header */}
-            <div className="flex items-start gap-4 mb-3">
-                {/* Type Icon or Image Thumbnail */}
-                {item.type === 'image' ? (
-                    <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-surface border border-border">
-                        <img
-                            src={item.content}
-                            alt="Clipboard image"
-                            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => onViewFull(item)}
-                            onError={(e) => {
-                                // Fallback if image fails to load
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-foreground-muted"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
-                            }}
-                        />
-                    </div>
-                ) : (
-                    <div className={`flex-shrink-0 p-2.5 rounded-lg ${item.pinned ? 'bg-accent/10' : 'bg-surface'}`}>
-                        {getTypeIcon()}
-                    </div>
-                )}
-
-                {/* Content Preview */}
-                <div className="flex-1 min-w-0">
+            <div className="p-3">
+                {/* Header */}
+                <div className="flex items-start gap-3 mb-2">
+                    {/* Type Icon or Image Thumbnail */}
                     {item.type === 'image' ? (
-                        <>
-                            <p className="text-sm font-medium text-foreground mb-1">
-                                Image Clipboard
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-foreground-muted">
-                                {item.metadata?.mimeType && (
-                                    <span className="px-2 py-0.5 bg-surface rounded">
-                                        {item.metadata.mimeType.split('/')[1]?.toUpperCase() || 'IMAGE'}
-                                    </span>
-                                )}
-                                {item.metadata?.length && (
-                                    <span>
-                                        {(item.metadata.length / 1024).toFixed(1)} KB
-                                    </span>
-                                )}
-                            </div>
-                        </>
+                        <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-surface border border-border/50">
+                            <img
+                                src={item.content}
+                                alt="Clipboard image"
+                                className="w-full h-full object-cover"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onViewFull(item);
+                                }}
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                }}
+                            />
+                        </div>
                     ) : (
-                        <>
-                            <p className="text-sm leading-relaxed text-foreground break-words whitespace-pre-wrap line-clamp-4">
-                                {getPreview()}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                                {item.metadata?.length && item.type === 'text' && (
-                                    <p className="text-xs text-foreground-muted">
-                                        {item.metadata.length.toLocaleString()} characters
-                                    </p>
-                                )}
-                                {item.copyCount > 1 && (
-                                    <span className="text-xs text-foreground-muted">
-                                        • {item.copyCount}x
-                                    </span>
-                                )}
-                                {item.sourceApp && (
-                                    <span className="text-xs text-foreground-muted">
-                                        • {item.sourceApp}
-                                    </span>
-                                )}
-                            </div>
-                        </>
+                        <div className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
+                            item.pinned ? 'bg-accent/20' : 'bg-surface-elevated'
+                        }`}>
+                            {getTypeIcon()}
+                        </div>
                     )}
-                </div>
 
-                {/* Pinned Badge */}
-                {item.pinned && (
-                    <div className="flex-shrink-0">
-                        <Pin className="w-4 h-4 text-accent fill-accent" />
-                    </div>
-                )}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
-                {/* Timestamp */}
-                <span className="text-xs font-medium text-foreground-muted">
-                    {getRelativeTime()}
-                </span>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {/* Copy with plain text option */}
-                    <div className="relative">
-                        <button
-                            onClick={() => handleCopy(false)}
-                            onContextMenu={(e) => {
-                                e.preventDefault();
-                                setShowPlainTextOption(!showPlainTextOption);
-                            }}
-                            className="p-2 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
-                            title="Copy (Right-click for plain text)"
-                        >
-                            {copied ? (
-                                <span className="text-xs text-accent">✓</span>
-                            ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                            )}
-                        </button>
-                        {showPlainTextOption && (
-                            <div className="absolute right-0 bottom-full mb-1 p-2 bg-surface border border-border rounded-lg shadow-lg z-10">
-                                <button
-                                    onClick={() => handleCopy(true)}
-                                    className="text-xs text-foreground hover:text-accent whitespace-nowrap"
-                                >
-                                    Copy as Plain Text
-                                </button>
-                            </div>
+                    {/* Content Preview */}
+                    <div className="flex-1 min-w-0">
+                        {item.type === 'image' ? (
+                            <>
+                                <p className="text-xs font-semibold text-foreground mb-0.5">
+                                    Image Clipboard
+                                </p>
+                                <div className="flex items-center gap-1.5 text-[10px] text-foreground-muted">
+                                    {item.metadata?.mimeType && (
+                                        <span className="px-1.5 py-0.5 bg-surface rounded font-medium">
+                                            {item.metadata.mimeType.split('/')[1]?.toUpperCase() || 'IMG'}
+                                        </span>
+                                    )}
+                                    {item.metadata?.length && (
+                                        <span>{(item.metadata.length / 1024).toFixed(1)} KB</span>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-xs leading-relaxed text-foreground break-words whitespace-pre-wrap line-clamp-2 mb-1">
+                                    {getPreview()}
+                                </p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {item.metadata?.length && item.type === 'text' && (
+                                        <span className="text-[10px] text-foreground-muted font-medium">
+                                            {item.metadata.length.toLocaleString()} chars
+                                        </span>
+                                    )}
+                                    {item.copyCount > 1 && (
+                                        <span className="text-[10px] text-foreground-muted font-medium">
+                                            {item.copyCount}x
+                                        </span>
+                                    )}
+                                    {item.sourceApp && (
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-surface rounded text-foreground-muted font-medium">
+                                            {item.sourceApp}
+                                        </span>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
 
-                    {/* View Full */}
-                    <button
-                        onClick={() => onViewFull(item)}
-                        className="p-2 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
-                        title="View Full"
-                    >
-                        <Eye className="w-4 h-4" />
-                    </button>
+                    {/* Pinned Badge */}
+                    {item.pinned && (
+                        <div className="flex-shrink-0">
+                            <Pin className="w-3.5 h-3.5 text-accent fill-accent" />
+                        </div>
+                    )}
+                </div>
 
-                    {/* Pin/Unpin */}
-                    <button
-                        onClick={() => item.pinned ? onUnpin(item.id) : onPin(item.id)}
-                        className="p-2 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
-                        title={item.pinned ? 'Unpin' : 'Pin'}
-                    >
-                        <Pin className={`w-4 h-4 ${item.pinned ? 'fill-accent text-accent' : ''}`} />
-                    </button>
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                    {/* Timestamp */}
+                    <span className="text-[10px] font-medium text-foreground-muted">
+                        {getRelativeTime()}
+                    </span>
 
-                    {/* Delete */}
-                    <button
-                        onClick={() => onDelete(item.id)}
-                        className="p-2 rounded-lg hover:bg-red-500/10 text-foreground-muted hover:text-red-500 transition-colors"
-                        title="Delete"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Actions */}
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        {/* Copy */}
+                        <div className="relative">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(false);
+                                }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowPlainTextOption(!showPlainTextOption);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
+                                title="Copy"
+                            >
+                                {copied ? (
+                                    <Check className="w-3.5 h-3.5 text-accent" />
+                                ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                )}
+                            </button>
+                            {showPlainTextOption && (
+                                <div className="absolute right-0 bottom-full mb-1 p-1.5 glass-panel border border-border rounded-lg shadow-xl z-20">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCopy(true);
+                                        }}
+                                        className="text-[10px] text-foreground hover:text-accent whitespace-nowrap"
+                                    >
+                                        Plain Text
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* View Full */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onViewFull(item);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-accent/10 text-foreground-muted hover:text-accent transition-colors"
+                            title="View"
+                        >
+                            <Eye className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Pin/Unpin */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                item.pinned ? onUnpin(item.id) : onPin(item.id);
+                            }}
+                            className={`p-1.5 rounded-lg hover:bg-accent/10 transition-colors ${
+                                item.pinned 
+                                    ? 'text-accent' 
+                                    : 'text-foreground-muted hover:text-accent'
+                            }`}
+                            title={item.pinned ? 'Unpin' : 'Pin'}
+                        >
+                            <Pin className={`w-3.5 h-3.5 ${item.pinned ? 'fill-current' : ''}`} />
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(item.id);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-foreground-muted hover:text-red-500 transition-colors"
+                            title="Delete"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

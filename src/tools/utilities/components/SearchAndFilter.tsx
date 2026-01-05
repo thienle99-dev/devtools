@@ -1,5 +1,5 @@
 import React, { useState, type RefObject } from 'react';
-import { Search, Filter, Settings, Trash2, TrendingUp, Tag } from 'lucide-react';
+import { Search, Filter, Settings, Trash2, TrendingUp, Tag, X } from 'lucide-react';
 import type { FilterOptions, SearchMode } from '../../../store/clipboardStore';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
@@ -35,21 +35,16 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 }) => {
     const [showFilters, setShowFilters] = useState(false);
 
+    const hasActiveFilters = filters.type !== 'all' || 
+                             filters.dateRange !== 'all' || 
+                             filters.pinnedOnly || 
+                             filters.searchMode !== 'contains';
+
     return (
-        <div className="space-y-4">
-            <div className="flex gap-4 items-center">
+        <div className="space-y-3">
+            <div className="flex gap-2 items-center">
                 {/* Search Bar */}
                 <div className="flex-1">
-                    {/* Note: Input component handles ref forwarding if using forwardRef but it currently doesn't. 
-                        We might need to fix Input to accept ref or just pass it as prop if supported.
-                        Input source code didn't show forwardRef, but passing ref to functional component is deprecated in newer React if not forwarded.
-                        However, searchInputRef is RefObject<HTMLInputElement>. 
-                        I will check if Input supports 'ref' or similar. 
-                        It doesn't seem to have ref forwarding in the viewed code.
-                        I'll just pass props for now. If ref fails, focus shortcut might break.
-                        Actually, I should assume Input doesn't forward ref.
-                        I'll skip ref for now or wrap it.
-                    */}
                     <Input
                         ref={searchInputRef}
                         type="text"
@@ -58,17 +53,17 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                         onChange={(e) => onSearchChange(e.target.value)}
                         icon={Search}
                         fullWidth
-                        className="h-12 text-base"
+                        className="h-10 text-sm"
                     />
                 </div>
 
                 {/* Monitoring Toggle */}
                 {onToggleMonitoring && (
                     <div className="flex items-center px-1">
-                         <Switch
+                        <Switch
                             checked={monitoringEnabled}
                             onChange={onToggleMonitoring}
-                            title={monitoringEnabled ? 'Monitoring Active (Click to Pause)' : 'Monitoring Paused (Click to Resume)'}
+                            title={monitoringEnabled ? 'Monitoring Active' : 'Monitoring Paused'}
                         />
                     </div>
                 )}
@@ -76,26 +71,29 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {/* Filter Toggle */}
                 <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className={`p-3 rounded-xl border transition-all duration-200 h-12 w-12 flex items-center justify-center
-                              ${showFilters
+                    className={`p-2 rounded-lg border transition-all duration-200 h-10 w-10 flex items-center justify-center relative
+                              ${showFilters || hasActiveFilters
                             ? 'bg-accent/10 border-accent text-accent'
-                            : 'bg-surface-elevated border-border text-foreground-muted hover:text-foreground hover:border-accent/50'
+                            : 'glass-button border-border/50 text-foreground-muted hover:text-foreground hover:border-accent/50'
                         }`}
                     title="Filter"
                 >
-                    <Filter className="w-5 h-5" />
+                    <Filter className="w-4 h-4" />
+                    {hasActiveFilters && !showFilters && (
+                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
+                    )}
                 </button>
 
                 {/* Statistics */}
                 {onOpenStatistics && (
                     <button
                         onClick={onOpenStatistics}
-                        className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
+                        className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
                                  text-foreground-muted hover:text-foreground hover:border-accent/50
                                  transition-all duration-200"
                         title="Statistics"
                     >
-                        <TrendingUp className="w-5 h-5" />
+                        <TrendingUp className="w-4 h-4" />
                     </button>
                 )}
 
@@ -103,44 +101,57 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 {onOpenCategories && (
                     <button
                         onClick={onOpenCategories}
-                        className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
+                        className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
                                  text-foreground-muted hover:text-foreground hover:border-accent/50
                                  transition-all duration-200"
                         title="Categories"
                     >
-                        <Tag className="w-5 h-5" />
+                        <Tag className="w-4 h-4" />
                     </button>
                 )}
 
                 {/* Settings */}
                 <button
                     onClick={onOpenSettings}
-                    className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
+                    className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
                              text-foreground-muted hover:text-foreground hover:border-accent/50
                              transition-all duration-200"
                     title="Settings"
                 >
-                    <Settings className="w-5 h-5" />
+                    <Settings className="w-4 h-4" />
                 </button>
 
                 {/* Clear All */}
                 <button
                     onClick={onClearAll}
-                    className="p-3 rounded-xl border bg-surface-elevated border-border h-12 w-12 flex items-center justify-center
+                    className="p-2 rounded-lg glass-button border border-border/50 h-10 w-10 flex items-center justify-center
                              text-foreground-muted hover:text-red-500 hover:border-red-500/50
                              transition-all duration-200"
                     title="Clear All"
                 >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Filter Options */}
             {showFilters && (
-                <div className="p-5 bg-surface-elevated border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div className="glass-panel p-4 rounded-xl border border-border/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <Filter className="w-3.5 h-3.5" />
+                            Filters
+                        </h3>
+                        <button
+                            onClick={() => setShowFilters(false)}
+                            className="p-1 rounded-lg hover:bg-glass-button-hover text-foreground-muted hover:text-foreground transition-colors"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                         {/* Search Mode */}
-                       <Select
+                        <Select
                             label="Search Mode"
                             value={filters.searchMode || 'contains'}
                             onChange={(e) => onFilterChange({ ...filters, searchMode: e.target.value as SearchMode })}
@@ -151,7 +162,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                                 { label: 'Fuzzy', value: 'fuzzy' },
                             ]}
                             fullWidth
-                       />
+                        />
 
                         {/* Type Filter */}
                         <Select
@@ -183,12 +194,12 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                         />
 
                         {/* Pinned Filter */}
-                        <div className="flex items-end pb-2">
-                             <Checkbox
+                        <div className="flex items-end pb-1">
+                            <Checkbox
                                 label="Pinned Only"
                                 checked={filters.pinnedOnly}
                                 onChange={(e) => onFilterChange({ ...filters, pinnedOnly: e.target.checked })}
-                             />
+                            />
                         </div>
                     </div>
                 </div>

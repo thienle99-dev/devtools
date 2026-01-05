@@ -11,7 +11,7 @@ import { ClipboardStatistics } from './components/ClipboardStatistics';
 import { CategoryManager } from './components/CategoryManager';
 import { useToolStore } from '../../store/toolStore';
 import { useClipboard } from './hooks/useClipboard';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 const TOOL_ID = 'clipboard-manager';
 
@@ -34,7 +34,7 @@ export const ClipboardManager: React.FC = () => {
         type: 'all',
         dateRange: 'all',
         pinnedOnly: false,
-        searchMode: 'contains', // Default search mode
+        searchMode: 'contains',
     });
     const [selectedItem, setSelectedItem] = useState<ClipboardItem | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -121,7 +121,6 @@ export const ClipboardManager: React.FC = () => {
                     case 'startsWith':
                         return content.startsWith(query);
                     case 'fuzzy':
-                        // Fuzzy match: all characters in query must appear in order
                         let queryIndex = 0;
                         for (let i = 0; i < content.length && queryIndex < query.length; i++) {
                             if (content[i] === query[queryIndex]) {
@@ -170,7 +169,6 @@ export const ClipboardManager: React.FC = () => {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setSelectedIndex(prev => Math.min(prev + 1, filteredItems.length - 1));
-                // Scroll into view
                 setTimeout(() => {
                     const selectedElement = listContainerRef.current?.querySelector(`[data-item-index="${selectedIndex + 1}"]`);
                     selectedElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -178,7 +176,6 @@ export const ClipboardManager: React.FC = () => {
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 setSelectedIndex(prev => Math.max(prev - 1, 0));
-                // Scroll into view
                 setTimeout(() => {
                     const selectedElement = listContainerRef.current?.querySelector(`[data-item-index="${selectedIndex - 1}"]`);
                     selectedElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -187,7 +184,6 @@ export const ClipboardManager: React.FC = () => {
                 e.preventDefault();
                 const item = filteredItems[selectedIndex];
                 copyToClipboard(item.content);
-                // Optionally hide window (if in Electron)
                 if ((window as any).ipcRenderer) {
                     (window as any).ipcRenderer.send('hide-window');
                 }
@@ -222,49 +218,49 @@ export const ClipboardManager: React.FC = () => {
                 title="Clipboard Manager"
                 description="Manage and browse clipboard history with search and organization"
             >
-                <div className="space-y-8">
+                <div className="flex flex-col h-full gap-4">
                     {/* Quick Copy Section */}
                     <QuickCopySection />
 
-                    {/* Divider */}
-                    <div className="border-t border-border/50" />
-
                     {/* Search and Filter */}
-                    <SearchAndFilter
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        filters={filters}
-                        onFilterChange={setFilters}
-                        onClearAll={handleClearAll}
-                        onOpenSettings={() => setShowSettings(true)}
-                        onOpenStatistics={() => setShowStatistics(true)}
-                        onOpenCategories={() => setShowCategoryManager(true)}
-                        monitoringEnabled={settings.enableMonitoring}
-                        onToggleMonitoring={handleToggleMonitoring}
-                        searchInputRef={searchInputRef}
-                    />
+                    <div className="flex-shrink-0">
+                        <SearchAndFilter
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            filters={filters}
+                            onFilterChange={setFilters}
+                            onClearAll={handleClearAll}
+                            onOpenSettings={() => setShowSettings(true)}
+                            onOpenStatistics={() => setShowStatistics(true)}
+                            onOpenCategories={() => setShowCategoryManager(true)}
+                            monitoringEnabled={settings.enableMonitoring}
+                            onToggleMonitoring={handleToggleMonitoring}
+                            searchInputRef={searchInputRef}
+                        />
+                    </div>
 
                     {/* Clear Confirmation */}
                     {showClearConfirm && (
-                        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
-                            <p className="text-sm text-red-500 font-medium">
-                                Click "Clear All" again to confirm deletion of all clipboard items
+                        <div className="flex-shrink-0 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                            <p className="text-xs text-red-500 font-medium flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Click "Clear All" again to confirm deletion
                             </p>
                         </div>
                     )}
 
                     {/* Loading State */}
                     {isLoading && (
-                        <div className="flex items-center justify-center gap-2 p-4 bg-surface-elevated border border-border rounded-lg">
+                        <div className="flex items-center justify-center gap-2 p-4 glass-panel rounded-lg">
                             <Loader2 className="w-4 h-4 text-accent animate-spin" />
-                            <span className="text-sm text-foreground-muted">Loading clipboard items...</span>
+                            <span className="text-xs text-foreground-muted font-medium">Loading...</span>
                         </div>
                     )}
 
                     {/* Clipboard List */}
                     <div
                         ref={listContainerRef}
-                        className="max-h-[calc(100vh-500px)] overflow-y-auto custom-scrollbar"
+                        className="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
                     >
                         <ClipboardList
                             items={filteredItems}
@@ -277,10 +273,10 @@ export const ClipboardManager: React.FC = () => {
                         />
                     </div>
 
-                    {/* Stats */}
+                    {/* Stats Footer */}
                     {items.length > 0 && (
-                        <div className="pt-4 border-t border-border">
-                            <p className="text-xs text-foreground-muted text-center">
+                        <div className="flex-shrink-0 pt-3 border-t border-border/50">
+                            <p className="text-[10px] text-foreground-muted text-center font-medium">
                                 {filteredItems.length} of {items.length} items
                                 {filters.pinnedOnly || filters.type !== 'all' || filters.dateRange !== 'all' || searchQuery
                                     ? ' (filtered)'
