@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { CATEGORIES, getToolsByCategory, type ToolCategory } from '../../tools/registry';
+import { Select } from '../ui/Select';
 import { useSettingsStore } from '../../store/settingsStore';
 import { motion } from 'framer-motion';
 
@@ -117,25 +118,20 @@ export const Sidebar: React.FC = React.memo(() => {
                         className="sidebar-search-input w-full pl-10 pr-3.5 py-2.5 text-sm rounded-lg bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass focus:border-border-glass-hover transition-all duration-200"
                     />
                 </div>
-                {/* Category Filter for Search (Dropdown) */}
-                <div className="mt-2 flex items-center gap-2 text-[11px]">
-                    <span className="text-foreground-muted shrink-0">Category</span>
-                    <div className="relative flex-1">
-                        <select
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value as 'all' | ToolCategory)}
-                            className="w-full appearance-none bg-[var(--color-glass-input)] border border-border-glass/60 rounded-md py-1.5 pl-2.5 pr-7 text-[11px] text-foreground focus:outline-none focus:border-border-glass-hover transition-colors"
-                        >
-                            {categoryFilterOptions.map(option => (
-                                <option key={option.id} value={option.id}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                        <span className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center text-foreground-muted text-[10px]">
-                            ▾
-                        </span>
-                    </div>
+                {/* Category Filter for Search (UI Select component) */}
+                <div className="mt-2">
+                    <Select
+                        label="Category"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value as 'all' | ToolCategory)}
+                        options={categoryFilterOptions.map(option => ({
+                            label: option.label,
+                            value: option.id
+                        }))}
+                        fullWidth
+                        variant="glass"
+                        className="text-[11px] py-1.5"
+                    />
                 </div>
             </div>
 
@@ -214,7 +210,9 @@ export const Sidebar: React.FC = React.memo(() => {
                          })}
                     </div>
                 ) : (
-                    CATEGORIES.map((category, categoryIndex) => {
+                    CATEGORIES
+                    .filter(category => selectedCategory === 'all' || category.id === selectedCategory)
+                    .map((category, categoryIndex) => {
                     const tools = getToolsByCategory(category.id);
 
                     // Skip Favorites/Recent if empty for now
