@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 
@@ -75,14 +76,15 @@ export const MacLookup: React.FC<MacLookupProps> = ({ tabId }) => {
         >
             <div className="max-w-xl mx-auto space-y-8 py-8 px-4">
                 <div className="space-y-4 text-center">
-                    <label className="text-sm font-bold text-foreground-muted uppercase tracking-widest pl-1">Target MAC Address</label>
-                    <input
+                    <Input
+                        label="Target MAC Address"
                         type="text"
                         value={input}
                         onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                         onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
-                        className="glass-input w-full text-center text-xl font-mono"
+                        className="text-center text-xl font-mono"
                         placeholder="00:1A:2B:3C:4D:5E"
+                        fullWidth
                     />
                     <p className="text-xs text-foreground-muted">Uses public API to resolve vendor (Requires Internet)</p>
                 </div>

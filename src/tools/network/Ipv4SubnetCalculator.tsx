@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 // @ts-ignore - ip-subnet-calculator may not have types
 import { calculateSubnetMask } from 'ip-subnet-calculator';
 
@@ -81,9 +82,9 @@ export const Ipv4SubnetCalculator: React.FC<Ipv4SubnetCalculatorProps> = ({ tabI
     };
 
     const InfoRow = ({ label, value }: { label: string, value: string | number }) => (
-        <div className="flex justify-between items-center py-2 border-b border-border-glass last:border-0">
-            <span className="text-sm font-bold text-foreground-muted uppercase tracking-wider">{label}</span>
-            <span className="font-mono text-primary select-all">{value}</span>
+        <div className="flex justify-between items-center py-3 border-b border-border-glass last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
+            <span className="text-xs font-bold text-foreground-muted uppercase tracking-wider">{label}</span>
+            <span className="font-mono text-sm text-primary select-all">{value}</span>
         </div>
     );
 
@@ -94,31 +95,31 @@ export const Ipv4SubnetCalculator: React.FC<Ipv4SubnetCalculatorProps> = ({ tabI
             onClear={handleClear}
         >
             <div className="max-w-2xl mx-auto space-y-8 py-8 px-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2 space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">IP Address</label>
-                        <input
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2">
+                        <Input
+                            label="IP Address"
                             type="text"
                             value={input}
                             onChange={(e) => handleCalculate(e.target.value, options.mask)}
-                            className="glass-input w-full"
                             placeholder="192.168.1.1"
+                            fullWidth
                         />
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">CIDR / Mask</label>
-                        <input
+                    <div>
+                        <Input
+                            label="CIDR / Mask"
                             type="text"
                             value={options.mask}
                             onChange={(e) => handleCalculate(input, e.target.value)}
-                            className="glass-input w-full"
                             placeholder="24"
+                            fullWidth
                         />
                     </div>
                 </div>
 
                 {result && (
-                    <div className="glass-panel p-6 rounded-xl space-y-1">
+                    <div className="glass-panel p-6 rounded-2xl space-y-1">
                         <InfoRow label="Network Address" value={result.ipLowStr} />
                         <InfoRow label="Broadcast Address" value={result.ipHighStr} />
                         <InfoRow label="Subnet Mask" value={result.prefixMaskStr} />
@@ -132,14 +133,14 @@ export const Ipv4SubnetCalculator: React.FC<Ipv4SubnetCalculatorProps> = ({ tabI
                             label="IP Range"
                             value={`${result.ipLowStr} - ${result.ipHighStr}`}
                         />
-                        <div className="mt-4 pt-4 border-t border-border-glass">
-                            <div className="flex justify-between items-center py-1">
-                                <span className="text-xs text-foreground-muted">Binary IP</span>
-                                <span className="font-mono text-xs text-foreground-secondary">{parseInt(result.ipLow).toString(2).padStart(32, '0').match(/.{1,8}/g)?.join('.')}</span>
+                        <div className="mt-6 pt-4 border-t border-border-glass space-y-3">
+                            <div className="flex justify-between items-center px-2">
+                                <span className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Binary IP</span>
+                                <span className="font-mono text-xs text-foreground-secondary tracking-tight">{parseInt(result.ipLow).toString(2).padStart(32, '0').match(/.{1,8}/g)?.join('.')}</span>
                             </div>
-                            <div className="flex justify-between items-center py-1">
-                                <span className="text-xs text-foreground-muted">Binary Mask</span>
-                                <span className="font-mono text-xs text-foreground-secondary">{parseInt(result.prefixMask).toString(2).padStart(32, '0').match(/.{1,8}/g)?.join('.')}</span>
+                            <div className="flex justify-between items-center px-2">
+                                <span className="text-[10px] uppercase font-bold text-foreground-muted tracking-widest">Binary Mask</span>
+                                <span className="font-mono text-xs text-foreground-secondary tracking-tight">{parseInt(result.prefixMask).toString(2).padStart(32, '0').match(/.{1,8}/g)?.join('.')}</span>
                             </div>
                         </div>
                     </div>

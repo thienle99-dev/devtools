@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { DiskStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { HardDrive, X, Info, Database, Activity } from 'lucide-react';
+import { useStatsStore } from '../store/statsStore';
 
 interface DiskModuleProps {
   data: DiskStats;
@@ -164,20 +165,76 @@ const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
-  const [readHistory, setReadHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
-  const [writeHistory, setWriteHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const { chartHistory, updateChartHistory } = useStatsStore();
+  const [readHistory, setReadHistory] = useState<number[]>(chartHistory.disk?.read || Array(MAX_POINTS).fill(0));
+  const [writeHistory, setWriteHistory] = useState<number[]>(chartHistory.disk?.write || Array(MAX_POINTS).fill(0));
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const readHistoryRef = useRef<number[]>(chartHistory.disk?.read || Array(MAX_POINTS).fill(0));
+  const writeHistoryRef = useRef<number[]>(chartHistory.disk?.write || Array(MAX_POINTS).fill(0));
+  const isRestoringRef = useRef(false);
 
   const rIO_sec = data.ioStats?.rIO_sec ?? 0;
   const wIO_sec = data.ioStats?.wIO_sec ?? 0;
   const hasIOStats = data.ioStats !== null && data.ioStats !== undefined;
 
+  // Restore history from store on mount
   useEffect(() => {
-    if (hasIOStats) {
-      setReadHistory(prev => [...prev.slice(1), rIO_sec]);
-      setWriteHistory(prev => [...prev.slice(1), wIO_sec]);
+    if (chartHistory.disk?.read && chartHistory.disk.read.length > 0) {
+      isRestoringRef.current = true;
+      setReadHistory(chartHistory.disk.read);
     }
-  }, [rIO_sec, wIO_sec, hasIOStats]);
+    if (chartHistory.disk?.write && chartHistory.disk.write.length > 0) {
+      setWriteHistory(chartHistory.disk.write);
+    }
+    setTimeout(() => {
+      isRestoringRef.current = false;
+    }, 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!hasIOStats || isRestoringRef.current) return;
+
+    let newReadHistory: number[];
+    let newWriteHistory: number[];
+    
+    setReadHistory(prev => {
+      newReadHistory = [...prev.slice(1), rIO_sec];
+      readHistoryRef.current = newReadHistory;
+      return newReadHistory;
+    });
+    
+    setWriteHistory(prev => {
+      newWriteHistory = [...prev.slice(1), wIO_sec];
+      writeHistoryRef.current = newWriteHistory;
+      return newWriteHistory;
+    });
+    
+    // Debounce store update (save every 2 seconds)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      updateChartHistory('disk', { read: readHistoryRef.current, write: writeHistoryRef.current });
+    }, 2000);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [rIO_sec, wIO_sec, hasIOStats, updateChartHistory]);
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      updateChartHistory('disk', { read: readHistoryRef.current, write: writeHistoryRef.current });
+    };
+  }, [updateChartHistory]);
 
   const formatSpeed = useCallback((bytesPerSec: number) => {
     if (bytesPerSec > 1024 * 1024) {

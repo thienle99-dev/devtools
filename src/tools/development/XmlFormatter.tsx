@@ -3,6 +3,8 @@ import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { Checkbox } from '../../components/ui/Checkbox';
 import xmlFormatter from 'xml-formatter';
 
 const TOOL_ID = 'xml-format';
@@ -63,30 +65,25 @@ export const XmlFormatter: React.FC<XmlFormatterProps> = ({ tabId }) => {
             onClear={handleClear}
         >
             <div className="space-y-6 h-full flex flex-col">
-                <div className="flex flex-wrap gap-4 p-4 glass-panel rounded-xl items-center">
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Indentation</label>
-                        <select
-                            value={options.indentation}
-                            onChange={(e) => setToolData(effectiveId, { options: { ...options, indentation: e.target.value } })}
-                            className="glass-input h-9 text-xs w-32"
-                        >
-                            <option value="  ">2 Spaces</option>
-                            <option value="    ">4 Spaces</option>
-                            <option value={'\t'}>Tab</option>
-                        </select>
-                    </div>
+                <div className="flex flex-wrap gap-8 p-4 glass-panel rounded-xl items-center">
+                    <Select
+                        label="Indentation"
+                        value={options.indentation}
+                        onChange={(e) => setToolData(effectiveId, { options: { ...options, indentation: e.target.value } })}
+                        className="w-40"
+                        options={[
+                            { label: '2 Spaces', value: '  ' },
+                            { label: '4 Spaces', value: '    ' },
+                            { label: 'Tab', value: '\t' }
+                        ]}
+                    />
 
-                    <div className="flex items-center space-x-2 pt-4">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={options.collapseContent}
-                                onChange={(e) => setToolData(effectiveId, { options: { ...options, collapseContent: e.target.checked } })}
-                                className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
-                            />
-                            <span className="text-xs font-bold text-foreground-secondary">Collapse Content</span>
-                        </label>
+                    <div className="pt-5">
+                        <Checkbox
+                            label="Collapse Content"
+                            checked={options.collapseContent}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, collapseContent: e.target.checked } })}
+                        />
                     </div>
                 </div>
 

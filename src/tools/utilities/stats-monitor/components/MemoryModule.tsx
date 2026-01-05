@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {type MemoryStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { BrainCircuit, X, Info, Database, HardDrive } from 'lucide-react';
+import { useStatsStore } from '../store/statsStore';
 
 interface MemoryModuleProps {
   data: MemoryStats;
@@ -151,17 +152,63 @@ const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const MemoryModule: React.FC<MemoryModuleProps> = React.memo(({ data }) => {
-  const [history, setHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const { chartHistory, updateChartHistory } = useStatsStore();
+  const [history, setHistory] = useState<number[]>(chartHistory.memory || Array(MAX_POINTS).fill(0));
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const historyRef = useRef<number[]>(chartHistory.memory || Array(MAX_POINTS).fill(0));
+  const isRestoringRef = useRef(false);
 
   const usedPercent = useMemo(() => (data.active / data.total) * 100, [data.active, data.total]);
 
+  // Restore history from store on mount
   useEffect(() => {
+    if (chartHistory.memory && chartHistory.memory.length > 0) {
+      isRestoringRef.current = true;
+      const restoredHistory = chartHistory.memory;
+      historyRef.current = restoredHistory;
+      setHistory(restoredHistory);
+      setTimeout(() => {
+        isRestoringRef.current = false;
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isRestoringRef.current) return;
+    
     setHistory(prev => {
       const newData = [...prev.slice(1), usedPercent];
+      historyRef.current = newData;
+      
+      // Debounce store update (save every 2 seconds)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        updateChartHistory('memory', historyRef.current);
+      }, 2000);
+      
       return newData;
     });
-  }, [usedPercent]);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [usedPercent, updateChartHistory]);
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      updateChartHistory('memory', historyRef.current);
+    };
+  }, [updateChartHistory]);
 
   const usedGB = useMemo(() => (data.active / 1024 / 1024 / 1024).toFixed(1), [data.active]);
   const totalGB = useMemo(() => (data.total / 1024 / 1024 / 1024).toFixed(1), [data.total]);

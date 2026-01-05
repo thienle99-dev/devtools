@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
+import { Checkbox } from '../../components/ui/Checkbox';
 
 const TOOL_ID = 'chmod-calculator';
 
@@ -98,36 +100,27 @@ export const ChmodCalculator: React.FC<ChmodCalculatorProps> = ({ tabId }) => {
     };
 
     const PermissionGroup = ({ label, prefix }: { label: string, prefix: string }) => (
-        <div className="glass-panel p-4 flex flex-col items-center space-y-3">
-            <h4 className="font-bold text-foreground-muted uppercase tracking-wider text-xs">{label}</h4>
-            <div className="space-y-2">
-                <label className="flex items-center space-x-3 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={options[prefix + 'r']}
-                        onChange={() => handleCheckboxChange(prefix + 'r')}
-                        className="rounded border-border-glass bg-glass-input text-emerald-400 focus:ring-emerald-400"
-                    />
-                    <span className="text-sm font-medium">Read (4)</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={options[prefix + 'w']}
-                        onChange={() => handleCheckboxChange(prefix + 'w')}
-                        className="rounded border-border-glass bg-glass-input text-orange-400 focus:ring-orange-400"
-                    />
-                    <span className="text-sm font-medium">Write (2)</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={options[prefix + 'x']}
-                        onChange={() => handleCheckboxChange(prefix + 'x')}
-                        className="rounded border-border-glass bg-glass-input text-blue-400 focus:ring-blue-400"
-                    />
-                    <span className="text-sm font-medium">Execute (1)</span>
-                </label>
+        <div className="glass-panel p-6 flex flex-col items-center space-y-4">
+            <h4 className="font-bold text-foreground-muted uppercase tracking-[0.2em] text-xs">{label}</h4>
+            <div className="space-y-4 w-full">
+                <Checkbox
+                    label="Read (4)"
+                    checked={options[prefix + 'r']}
+                    onChange={() => handleCheckboxChange(prefix + 'r')}
+                    className="w-full"
+                />
+                <Checkbox
+                    label="Write (2)"
+                    checked={options[prefix + 'w']}
+                    onChange={() => handleCheckboxChange(prefix + 'w')}
+                    className="w-full"
+                />
+                <Checkbox
+                    label="Execute (1)"
+                    checked={options[prefix + 'x']}
+                    onChange={() => handleCheckboxChange(prefix + 'x')}
+                    className="w-full"
+                />
             </div>
         </div>
     );
@@ -141,30 +134,26 @@ export const ChmodCalculator: React.FC<ChmodCalculatorProps> = ({ tabId }) => {
             <div className="max-w-2xl mx-auto space-y-8 py-8 px-4">
 
                 {/* Outputs */}
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2 text-center">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em]">Octal</label>
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => handleOctalChange(e.target.value)}
-                            className="glass-input text-center text-3xl font-mono tracking-widest w-full py-4 text-primary"
-                            maxLength={3}
-                        />
-                    </div>
-                    <div className="space-y-2 text-center">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em]">Symbolic</label>
-                        <input
-                            type="text"
-                            value={output}
-                            readOnly
-                            className="glass-input text-center text-3xl font-mono tracking-wider w-full py-4 text-foreground-secondary"
-                        />
-                    </div>
+                <div className="grid grid-cols-2 gap-8">
+                    <Input
+                        label="Octal"
+                        value={input}
+                        onChange={(e) => handleOctalChange(e.target.value)}
+                        className="text-center text-3xl font-mono tracking-widest py-8 h-auto text-primary"
+                        maxLength={3}
+                        fullWidth
+                    />
+                    <Input
+                        label="Symbolic"
+                        value={output}
+                        readOnly
+                        className="text-center text-3xl font-mono tracking-wider py-8 h-auto text-foreground-secondary"
+                        fullWidth
+                    />
                 </div>
 
                 {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <PermissionGroup label="Owner" prefix="o" />
                     <PermissionGroup label="Group" prefix="g" />
                     <PermissionGroup label="Public" prefix="p" />
@@ -173,3 +162,4 @@ export const ChmodCalculator: React.FC<ChmodCalculatorProps> = ({ tabId }) => {
         </ToolPane>
     );
 };
+

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 import cronstrue from 'cronstrue';
 
 const TOOL_ID = 'crontab-generator';
@@ -96,11 +97,11 @@ export const CrontabGenerator: React.FC<CrontabGeneratorProps> = ({ tabId }) => 
 
                 {/* Main Display */}
                 <div className="text-center space-y-4">
-                    <input
-                        type="text"
+                    <Input
                         value={input}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        className="glass-input text-center text-3xl font-mono tracking-widest w-full py-4"
+                        className="text-center text-3xl font-mono tracking-widest py-8 h-auto"
+                        fullWidth
                     />
                     <div className="text-xl font-medium text-primary min-h-[1.5rem] transition-all">
                         {meta?.desc}
@@ -113,7 +114,7 @@ export const CrontabGenerator: React.FC<CrontabGeneratorProps> = ({ tabId }) => 
                         <button
                             key={p.label}
                             onClick={() => handleInputChange(p.value)}
-                            className="px-3 py-1 rounded-full text-xs bg-glass-input hover:bg-glass-input-focus border border-border-glass transition-colors"
+                            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-foreground-secondary transition-all"
                         >
                             {p.label}
                         </button>
@@ -121,20 +122,19 @@ export const CrontabGenerator: React.FC<CrontabGeneratorProps> = ({ tabId }) => 
                 </div>
 
                 {/* Simple Builders */}
-                <div className="grid grid-cols-5 gap-2 text-center">
+                <div className="grid grid-cols-5 gap-3">
                     {['Minute', 'Hour', 'Day', 'Month', 'Weekday'].map((label, i) => {
                         const key = label.toLowerCase();
                         const val = Object.values(options)[i];
                         return (
-                            <div key={label} className="space-y-1">
-                                <label className="text-[10px] uppercase font-bold text-foreground-muted">{label}</label>
-                                <input
-                                    type="text"
-                                    value={val}
-                                    onChange={(e) => handlePartChange(key, e.target.value)}
-                                    className="glass-input w-full text-center font-mono text-sm"
-                                />
-                            </div>
+                            <Input
+                                key={label}
+                                label={label}
+                                value={val as string}
+                                onChange={(e) => handlePartChange(key, e.target.value)}
+                                className="text-center font-mono text-xs uppercase"
+                                fullWidth
+                            />
                         );
                     })}
                 </div>

@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { NetworkStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { Network, ArrowDown, ArrowUp, X, Info, Wifi, Globe } from 'lucide-react';
+import { useStatsStore } from '../store/statsStore';
 
 interface NetworkModuleProps {
   data: NetworkStats;
@@ -152,9 +153,14 @@ const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data }) => {
-  const [rxHistory, setRxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
-  const [txHistory, setTxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const { chartHistory, updateChartHistory } = useStatsStore();
+  const [rxHistory, setRxHistory] = useState<number[]>(chartHistory.network?.rx || Array(MAX_POINTS).fill(0));
+  const [txHistory, setTxHistory] = useState<number[]>(chartHistory.network?.tx || Array(MAX_POINTS).fill(0));
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rxHistoryRef = useRef<number[]>(chartHistory.network?.rx || Array(MAX_POINTS).fill(0));
+  const txHistoryRef = useRef<number[]>(chartHistory.network?.tx || Array(MAX_POINTS).fill(0));
+  const isRestoringRef = useRef(false);
 
   // Determine active interface
   const activeStats = useMemo(() => 
@@ -169,12 +175,63 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
   const rxSec = activeStats?.rx_sec ?? 0;
   const txSec = activeStats?.tx_sec ?? 0;
 
+  // Restore history from store on mount
   useEffect(() => {
-    if (!activeStats) return;
+    if (chartHistory.network?.rx && chartHistory.network.rx.length > 0) {
+      isRestoringRef.current = true;
+      setRxHistory(chartHistory.network.rx);
+    }
+    if (chartHistory.network?.tx && chartHistory.network.tx.length > 0) {
+      setTxHistory(chartHistory.network.tx);
+    }
+    setTimeout(() => {
+      isRestoringRef.current = false;
+    }, 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    setRxHistory(prev => [...prev.slice(1), rxSec]);
-    setTxHistory(prev => [...prev.slice(1), txSec]);
-  }, [rxSec, txSec, activeStats]);
+  useEffect(() => {
+    if (!activeStats || isRestoringRef.current) return;
+
+    let newRxHistory: number[];
+    let newTxHistory: number[];
+    
+    setRxHistory(prev => {
+      newRxHistory = [...prev.slice(1), rxSec];
+      rxHistoryRef.current = newRxHistory;
+      return newRxHistory;
+    });
+    
+    setTxHistory(prev => {
+      newTxHistory = [...prev.slice(1), txSec];
+      txHistoryRef.current = newTxHistory;
+      return newTxHistory;
+    });
+    
+    // Debounce store update (save every 2 seconds)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      updateChartHistory('network', { rx: rxHistoryRef.current, tx: txHistoryRef.current });
+    }, 2000);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [rxSec, txSec, activeStats, updateChartHistory]);
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      updateChartHistory('network', { rx: rxHistoryRef.current, tx: txHistoryRef.current });
+    };
+  }, [updateChartHistory]);
 
   const formatSpeed = useCallback((bytesPerSec: number) => {
     if (bytesPerSec > 1024 * 1024) {

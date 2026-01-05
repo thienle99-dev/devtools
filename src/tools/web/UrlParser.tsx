@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 
 const TOOL_ID = 'url-parser';
 
@@ -86,12 +87,12 @@ export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">URL String</label>
                     <div className="flex space-x-2">
-                        <input
+                        <Input
                             type="text"
                             value={input}
                             onChange={(e) => handleInputChange(e.target.value)}
-                            className="glass-input w-full"
                             placeholder="https://example.com:8080/path?query=123#hash"
+                            fullWidth
                         />
                     </div>
                 </div>
@@ -110,7 +111,13 @@ export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
                         ].map((item) => (
                             <div key={item.label} className="flex flex-col space-y-1">
                                 <label className="text-[10px] text-foreground-muted uppercase">{item.label}</label>
-                                <input type="text" readOnly value={item.value || ''} className="glass-input w-full text-sm font-mono text-foreground-secondary py-1" />
+                                <Input 
+                                    type="text" 
+                                    readOnly 
+                                    value={item.value || ''} 
+                                    className="text-sm font-mono text-foreground-secondary py-1"
+                                    fullWidth
+                                />
                             </div>
                         ))}
                     </div>
@@ -120,9 +127,25 @@ export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
                         {Object.keys(options.params || {}).length > 0 ? (
                             <div className="space-y-2">
                                 {Object.entries(options.params).map(([key, value]) => (
-                                    <div key={key} className="flex space-x-2">
-                                        <input type="text" readOnly value={key} className="glass-input w-1/3 text-sm font-bold text-right border-none bg-transparent" />
-                                        <input type="text" readOnly value={value as string} className="glass-input flex-1 text-sm font-mono text-foreground-secondary" />
+                                    <div key={key} className="flex space-x-2 items-center">
+                                        <div className="w-1/3">
+                                            <Input 
+                                                type="text" 
+                                                readOnly 
+                                                value={key} 
+                                                className="!border-none !bg-transparent !shadow-none text-sm font-bold text-right" 
+                                                fullWidth
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <Input 
+                                                type="text" 
+                                                readOnly 
+                                                value={value as string} 
+                                                className="text-sm font-mono text-foreground-secondary" 
+                                                fullWidth
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>

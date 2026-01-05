@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 
 const TOOL_ID = 'ipv4-converter';
 
@@ -96,49 +97,45 @@ export const Ipv4Converter: React.FC<Ipv4ConverterProps> = ({ tabId }) => {
             onClear={handleClear}
         >
             <div className="max-w-2xl mx-auto space-y-6 py-6 px-4">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">IP Address (Dot-decimal)</label>
-                    <input
-                        type="text"
-                        value={options.ipv4}
-                        onChange={(e) => handleInputChange(e.target.value, 'ip')}
-                        className="glass-input w-full font-mono"
-                        placeholder="192.168.1.1"
-                    />
-                </div>
+                <Input
+                    label="IP Address (Dot-decimal)"
+                    type="text"
+                    value={options.ipv4}
+                    onChange={(e) => handleInputChange(e.target.value, 'ip')}
+                    className="font-mono"
+                    placeholder="192.168.1.1"
+                    fullWidth
+                />
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Decimal (Integer)</label>
-                    <input
-                        type="text"
-                        value={options.decimal}
-                        onChange={(e) => handleInputChange(e.target.value, 'decimal')}
-                        className="glass-input w-full font-mono"
-                        placeholder="3232235777"
-                    />
-                </div>
+                <Input
+                    label="Decimal (Integer)"
+                    type="text"
+                    value={options.decimal}
+                    onChange={(e) => handleInputChange(e.target.value, 'decimal')}
+                    className="font-mono"
+                    placeholder="3232235777"
+                    fullWidth
+                />
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Hexadecimal</label>
-                    <input
-                        type="text"
-                        value={options.hex}
-                        onChange={(e) => handleInputChange(e.target.value, 'hex')}
-                        className="glass-input w-full font-mono"
-                        placeholder="0xC0A80101"
-                    />
-                </div>
+                <Input
+                    label="Hexadecimal"
+                    type="text"
+                    value={options.hex}
+                    onChange={(e) => handleInputChange(e.target.value, 'hex')}
+                    className="font-mono"
+                    placeholder="0xC0A80101"
+                    fullWidth
+                />
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Binary</label>
-                    <input
-                        type="text"
-                        value={options.binary}
-                        onChange={(e) => handleInputChange(e.target.value, 'binary')}
-                        className="glass-input w-full font-mono"
-                        placeholder="11000000 10101000 00000001 00000001"
-                    />
-                </div>
+                <Input
+                    label="Binary"
+                    type="text"
+                    value={options.binary}
+                    onChange={(e) => handleInputChange(e.target.value, 'binary')}
+                    className="font-mono"
+                    placeholder="11000000 10101000 00000001 00000001"
+                    fullWidth
+                />
             </div>
         </ToolPane>
     );

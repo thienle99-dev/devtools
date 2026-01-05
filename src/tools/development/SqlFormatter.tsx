@@ -3,6 +3,7 @@ import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
 import { format as sqlFormatter } from 'sql-formatter';
 
 const TOOL_ID = 'sql-format';
@@ -70,47 +71,44 @@ export const SqlFormatter: React.FC<SqlFormatterProps> = ({ tabId }) => {
         >
             <div className="space-y-6 h-full flex flex-col">
                 {/* Options Toolbar */}
-                <div className="flex flex-wrap gap-4 p-4 glass-panel rounded-xl items-center">
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Dialect</label>
-                        <select
-                            value={options.language}
-                            onChange={(e) => updateOption('language', e.target.value)}
-                            className="glass-input h-9 text-xs w-32"
-                        >
-                            <option value="sql">Standard SQL</option>
-                            <option value="mysql">MySQL</option>
-                            <option value="postgresql">PostgreSQL</option>
-                            <option value="sqlite">SQLite</option>
-                            <option value="mariadb">MariaDB</option>
-                            <option value="tsql">T-SQL (SQL Server)</option>
-                        </select>
-                    </div>
+                <div className="flex flex-wrap gap-6 p-4 glass-panel rounded-xl items-center">
+                    <Select
+                        label="Dialect"
+                        value={options.language}
+                        onChange={(e) => updateOption('language', e.target.value)}
+                        className="w-44"
+                        options={[
+                            { label: 'Standard SQL', value: 'sql' },
+                            { label: 'MySQL', value: 'mysql' },
+                            { label: 'PostgreSQL', value: 'postgresql' },
+                            { label: 'SQLite', value: 'sqlite' },
+                            { label: 'MariaDB', value: 'mariadb' },
+                            { label: 'T-SQL (SQL Server)', value: 'tsql' }
+                        ]}
+                    />
 
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Keywords</label>
-                        <select
-                            value={options.keywordCase}
-                            onChange={(e) => updateOption('keywordCase', e.target.value)}
-                            className="glass-input h-9 text-xs w-28"
-                        >
-                            <option value="preserve">Preserve</option>
-                            <option value="upper">UPPERCASE</option>
-                            <option value="lower">lowercase</option>
-                        </select>
-                    </div>
+                    <Select
+                        label="Keywords"
+                        value={options.keywordCase}
+                        onChange={(e) => updateOption('keywordCase', e.target.value)}
+                        className="w-32"
+                        options={[
+                            { label: 'Preserve', value: 'preserve' },
+                            { label: 'UPPERCASE', value: 'upper' },
+                            { label: 'lowercase', value: 'lower' }
+                        ]}
+                    />
 
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Indent</label>
-                        <select
-                            value={options.tabWidth}
-                            onChange={(e) => updateOption('tabWidth', parseInt(e.target.value))}
-                            className="glass-input h-9 text-xs w-20"
-                        >
-                            <option value="2">2 Spaces</option>
-                            <option value="4">4 Spaces</option>
-                        </select>
-                    </div>
+                    <Select
+                        label="Indent"
+                        value={options.tabWidth}
+                        onChange={(e) => updateOption('tabWidth', parseInt(e.target.value))}
+                        className="w-24"
+                        options={[
+                            { label: '2 Spaces', value: 2 },
+                            { label: '4 Spaces', value: 4 }
+                        ]}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 h-full min-h-0">

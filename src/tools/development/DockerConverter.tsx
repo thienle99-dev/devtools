@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
+import { TextArea } from '../../components/ui/TextArea';
 import composerize from 'composerize';
 
 const TOOL_ID = 'docker-converter';
@@ -56,24 +57,22 @@ export const DockerConverter: React.FC<DockerConverterProps> = ({ tabId }) => {
         >
             <div className="space-y-6 h-full flex flex-col">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 h-full min-h-0">
-                    <div className="space-y-3 flex flex-col h-full min-h-0">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Docker Run Command</label>
-                        <textarea
-                            value={input}
-                            onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
-                            className="glass-input flex-1 min-h-[200px] font-mono text-xs leading-relaxed p-4 resize-none"
-                            placeholder={"docker run -d -p 80:80 --name web nginx"}
-                        />
-                    </div>
-                    <div className="space-y-3 flex flex-col h-full min-h-0">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">docker-compose.yml</label>
-                        <textarea
-                            value={output}
-                            readOnly
-                            className="glass-input flex-1 min-h-[200px] font-mono text-xs leading-relaxed p-4 resize-none bg-black/20"
-                            placeholder="version: '3'..."
-                        />
-                    </div>
+                    <TextArea
+                        label="Docker Run Command"
+                        value={input}
+                        onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
+                        className="flex-1 min-h-[300px] font-mono text-xs leading-relaxed resize-none"
+                        placeholder={"docker run -d -p 80:80 --name web nginx"}
+                        fullWidth
+                    />
+                    <TextArea
+                        label="docker-compose.yml"
+                        value={output}
+                        readOnly
+                        className="flex-1 min-h-[300px] font-mono text-xs leading-relaxed resize-none bg-black/40"
+                        placeholder="version: '3'..."
+                        fullWidth
+                    />
                 </div>
 
                 <div className="flex justify-end">

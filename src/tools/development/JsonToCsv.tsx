@@ -3,6 +3,8 @@ import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { Checkbox } from '../../components/ui/Checkbox';
 import Papa from 'papaparse';
 
 const TOOL_ID = 'json-to-csv';
@@ -79,43 +81,32 @@ export const JsonToCsv: React.FC<JsonToCsvProps> = ({ tabId }) => {
         >
             <div className="space-y-6 h-full flex flex-col">
                 {/* Options */}
-                <div className="flex flex-wrap gap-4 p-4 glass-panel rounded-xl items-center">
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-foreground-muted tracking-wider">Delimiter</label>
-                        <select
-                            value={options.delimiter}
-                            onChange={(e) => setToolData(effectiveId, { options: { ...options, delimiter: e.target.value } })}
-                            className="glass-input h-9 text-xs w-24"
-                        >
-                            <option value=",">Comma (,)</option>
-                            <option value=";">Semi-colon (;)</option>
-                            <option value="\t">Tab</option>
-                            <option value="|">Pipe (|)</option>
-                        </select>
-                    </div>
+                <div className="flex flex-wrap gap-8 p-4 glass-panel rounded-xl items-center">
+                    <Select
+                        label="Delimiter"
+                        value={options.delimiter}
+                        onChange={(e) => setToolData(effectiveId, { options: { ...options, delimiter: e.target.value } })}
+                        className="w-40"
+                        options={[
+                            { label: 'Comma (,)', value: ',' },
+                            { label: 'Semi-colon (;)', value: ';' },
+                            { label: 'Tab', value: '\t' },
+                            { label: 'Pipe (|)', value: '|' }
+                        ]}
+                    />
 
-                    <div className="flex items-center space-x-2 pt-4">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={options.header}
-                                onChange={(e) => setToolData(effectiveId, { options: { ...options, header: e.target.checked } })}
-                                className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
-                            />
-                            <span className="text-xs font-bold text-foreground-secondary">Include Header</span>
-                        </label>
-                    </div>
+                    <div className="flex gap-6 pt-5">
+                        <Checkbox
+                            label="Include Header"
+                            checked={options.header}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, header: e.target.checked } })}
+                        />
 
-                    <div className="flex items-center space-x-2 pt-4">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={options.quotes}
-                                onChange={(e) => setToolData(effectiveId, { options: { ...options, quotes: e.target.checked } })}
-                                className="rounded border-border-glass bg-glass-input text-primary focus:ring-primary"
-                            />
-                            <span className="text-xs font-bold text-foreground-secondary">Quote Values</span>
-                        </label>
+                        <Checkbox
+                            label="Quote Values"
+                            checked={options.quotes}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, quotes: e.target.checked } })}
+                        />
                     </div>
                 </div>
 

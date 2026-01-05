@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import type { GPUStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { MonitorPlay, X, Info, Thermometer, MemoryStick } from 'lucide-react';
+import { useStatsStore } from '../store/statsStore';
 
 interface GPUModuleProps {
   data: GPUStats;
@@ -148,8 +149,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const GPUModule: React.FC<GPUModuleProps> = React.memo(({ data }) => {
-    const [history, setHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+    const { chartHistory, updateChartHistory } = useStatsStore();
+    const [history, setHistory] = useState<number[]>(chartHistory.gpu || Array(MAX_POINTS).fill(0));
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const historyRef = useRef<number[]>(chartHistory.gpu || Array(MAX_POINTS).fill(0));
+    const isRestoringRef = useRef(false);
     
     // Usually take the first distinct GPU or the one with highest load?
     // For simplicity, let's take the first one or if multiple, maybe aggregate?
@@ -157,10 +162,51 @@ export const GPUModule: React.FC<GPUModuleProps> = React.memo(({ data }) => {
 
     const utilizationGpu = controller?.utilizationGpu ?? 0;
 
+    // Restore history from store on mount
     useEffect(() => {
-        if (!controller) return;
-        setHistory(prev => [...prev.slice(1), utilizationGpu]);
-    }, [utilizationGpu, controller]);
+      if (chartHistory.gpu && chartHistory.gpu.length > 0) {
+        isRestoringRef.current = true;
+        setHistory(chartHistory.gpu);
+        setTimeout(() => {
+          isRestoringRef.current = false;
+        }, 100);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (!controller || isRestoringRef.current) return;
+        setHistory(prev => {
+          const newData = [...prev.slice(1), utilizationGpu];
+          historyRef.current = newData;
+          
+          // Debounce store update (save every 2 seconds)
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+          saveTimeoutRef.current = setTimeout(() => {
+            updateChartHistory('gpu', historyRef.current);
+          }, 2000);
+          
+          return newData;
+        });
+        
+        return () => {
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+        };
+    }, [utilizationGpu, controller, updateChartHistory]);
+
+    // Save on unmount
+    useEffect(() => {
+      return () => {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        updateChartHistory('gpu', historyRef.current);
+      };
+    }, [updateChartHistory]);
 
     if (!controller) return null;
 

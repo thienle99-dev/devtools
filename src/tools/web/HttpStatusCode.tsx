@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
+import { Search } from 'lucide-react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 
 const TOOL_ID = 'http-status-codes';
 
@@ -63,13 +65,14 @@ export const HttpStatusCode: React.FC<HttpStatusCodeProps> = ({ tabId }) => {
             onClear={() => setSearch('')}
         >
             <div className="max-w-4xl mx-auto space-y-6 py-6 px-4">
-                <input
+                <Input
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search codes..."
-                    className="glass-input w-full"
+                    icon={Search}
                     autoFocus
+                    fullWidth
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

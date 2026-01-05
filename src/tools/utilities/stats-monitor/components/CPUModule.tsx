@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import type { CPUStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { Cpu, X, Info, Zap, Activity } from 'lucide-react';
+import { useStatsStore } from '../store/statsStore';
 
 interface CPUModuleProps {
   data: CPUStats;
@@ -159,17 +160,65 @@ const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const CPUModule: React.FC<CPUModuleProps> = React.memo(({ data }) => {
-  const [history, setHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const { chartHistory, updateChartHistory } = useStatsStore();
+  const [history, setHistory] = useState<number[]>(chartHistory.cpu || Array(MAX_POINTS).fill(0));
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentLoad = data.load.currentLoad;
 
+  const isRestoringRef = useRef(false);
+
+  // Restore history from store on mount
   useEffect(() => {
+    if (chartHistory.cpu && chartHistory.cpu.length > 0) {
+      isRestoringRef.current = true;
+      const restoredHistory = chartHistory.cpu;
+      historyRef.current = restoredHistory;
+      setHistory(restoredHistory);
+      // Reset flag after a short delay
+      setTimeout(() => {
+        isRestoringRef.current = false;
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isRestoringRef.current) return;
+    
     setHistory(prev => {
       const newData = [...prev.slice(1), currentLoad];
+      historyRef.current = newData;
+      
+      // Debounce store update (save every 2 seconds)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        updateChartHistory('cpu', historyRef.current);
+      }, 2000);
+      
       return newData;
     });
-  }, [currentLoad]);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [currentLoad, updateChartHistory]);
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      // Save immediately on unmount with current history from ref
+      updateChartHistory('cpu', historyRef.current);
+    };
+  }, [updateChartHistory]);
 
   const load = useMemo(() => Math.round(currentLoad), [currentLoad]);
   

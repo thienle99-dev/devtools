@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { CodeEditor } from '../../components/ui/CodeEditor';
+import { TextArea } from '../../components/ui/TextArea';
 
 const TOOL_ID = 'jwt-parser';
 
@@ -73,11 +74,12 @@ export const JwtParser: React.FC<JwtParserProps> = ({ tabId }) => {
                         {options.isValid === false && input && <span className="text-xs text-red-500 font-bold">Invalid JWT</span>}
                         {options.isValid === true && <span className="text-xs text-emerald-500 font-bold">Valid Format</span>}
                     </div>
-                    <textarea
+                    <TextArea
                         value={input}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        className={`glass-input w-full min-h-[80px] font-mono text-xs break-all ${options.isValid === false ? 'border-red-500/30 bg-red-500/5' : ''}`}
+                        className={`font-mono text-xs break-all ${options.isValid === false ? 'border-red-500/30 bg-red-500/5' : ''}`}
                         placeholder="ey..."
+                        fullWidth
                     />
                 </div>
 

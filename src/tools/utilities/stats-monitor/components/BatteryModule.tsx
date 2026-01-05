@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { BatteryStats } from '../../../../types/stats';
 import { Battery, BatteryCharging, Plug, Zap, ChevronDown, ChevronUp, X, Info } from 'lucide-react';
 import { LightweightGraph } from './LightweightGraph';
+import { useStatsStore } from '../store/statsStore';
 
 interface BatteryModuleProps {
   data: BatteryStats;
@@ -173,27 +174,97 @@ const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
 const MAX_POINTS = 20;
 
 export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data }) => {
-  const [consumptionHistory, setConsumptionHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
-  const [chargingHistory, setChargingHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const { chartHistory, updateChartHistory } = useStatsStore();
+  const [consumptionHistory, setConsumptionHistory] = useState<number[]>(chartHistory.battery?.consumption || Array(MAX_POINTS).fill(0));
+  const [chargingHistory, setChargingHistory] = useState<number[]>(chartHistory.battery?.charging || Array(MAX_POINTS).fill(0));
   const [showDetails, setShowDetails] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const consumptionHistoryRef = useRef<number[]>(chartHistory.battery?.consumption || Array(MAX_POINTS).fill(0));
+  const chargingHistoryRef = useRef<number[]>(chartHistory.battery?.charging || Array(MAX_POINTS).fill(0));
+  const isRestoringRef = useRef(false);
 
   const powerConsumption = data.powerConsumptionRate ?? 0; // mW
   const chargingPower = data.chargingPower ?? 0; // mW
 
+  // Restore history from store on mount
   useEffect(() => {
-    if (data.powerConsumptionRate !== undefined && data.powerConsumptionRate > 0) {
-      setConsumptionHistory(prev => [...prev.slice(1), powerConsumption]);
+    if (chartHistory.battery?.consumption && chartHistory.battery.consumption.length > 0) {
+      isRestoringRef.current = true;
+      setConsumptionHistory(chartHistory.battery.consumption);
     }
-  }, [powerConsumption, data.powerConsumptionRate]);
+    if (chartHistory.battery?.charging && chartHistory.battery.charging.length > 0) {
+      setChargingHistory(chartHistory.battery.charging);
+    }
+    setTimeout(() => {
+      isRestoringRef.current = false;
+    }, 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (data.isCharging && data.chargingPower !== undefined && data.chargingPower > 0) {
-      setChargingHistory(prev => [...prev.slice(1), chargingPower]);
-    } else {
-      setChargingHistory(prev => [...prev.slice(1), 0]);
+    if (data.powerConsumptionRate === undefined || data.powerConsumptionRate <= 0 || isRestoringRef.current) return;
+    
+    let newConsumptionHistory: number[];
+    
+    setConsumptionHistory(prev => {
+      newConsumptionHistory = [...prev.slice(1), powerConsumption];
+      consumptionHistoryRef.current = newConsumptionHistory;
+      return newConsumptionHistory;
+    });
+    
+    // Debounce store update (save every 2 seconds)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [chargingPower, data.isCharging, data.chargingPower]);
+    saveTimeoutRef.current = setTimeout(() => {
+      updateChartHistory('battery', { consumption: consumptionHistoryRef.current, charging: chargingHistoryRef.current });
+    }, 2000);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [powerConsumption, data.powerConsumptionRate, chargingHistory, updateChartHistory]);
+
+  useEffect(() => {
+    if (isRestoringRef.current) return;
+    
+    let newChargingHistory: number[];
+    
+    setChargingHistory(prev => {
+      newChargingHistory = data.isCharging && data.chargingPower !== undefined && data.chargingPower > 0
+        ? [...prev.slice(1), chargingPower]
+        : [...prev.slice(1), 0];
+      chargingHistoryRef.current = newChargingHistory;
+      return newChargingHistory;
+    });
+    
+    // Debounce store update (save every 2 seconds)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      updateChartHistory('battery', { consumption: consumptionHistoryRef.current, charging: chargingHistoryRef.current });
+    }, 2000);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [chargingPower, data.isCharging, data.chargingPower, consumptionHistory, updateChartHistory]);
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      updateChartHistory('battery', { consumption: consumptionHistoryRef.current, charging: chargingHistoryRef.current });
+    };
+  }, [updateChartHistory]);
 
   const formatPower = useCallback((mW: number) => {
     if (mW >= 1000) {

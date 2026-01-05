@@ -1,5 +1,8 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { TextArea } from '../../components/ui/TextArea';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 
@@ -53,14 +56,6 @@ export const MacGenerator: React.FC<MacGeneratorProps> = ({ tabId }) => {
                 } else {
                     const byte = Math.floor(Math.random() * 256);
                     let hex = byte.toString(16).padStart(2, '0');
-                    if (i === 0 && prefixBytes.length === 0) {
-                        // Ensure Unicast (bit 0 of byte 0 is 0) and Locally Administered (bit 1 of byte 0)
-                        // Actually, standard random generator usually sets locally administered bit (0x02) to 1 for "private", or 0 for "public" (if valid OUI).
-                        // Let's just generate completely random bytes, but maybe force unicast (last bit of first byte = 0) to look real?
-                        // "Normally" random MACs should probably set the "Locally Administered" bit (bit 1 of first byte) to 1.
-                        // x2, x6, xA, xE
-                        // Let's keep it truly random for now or just generic.
-                    }
                     macBytes.push(hex);
                 }
             }
@@ -85,68 +80,63 @@ export const MacGenerator: React.FC<MacGeneratorProps> = ({ tabId }) => {
             actions={<Button variant="primary" onClick={generateMac}>Generate</Button>}
         >
             <div className="max-w-2xl mx-auto space-y-6 py-6 px-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Quantity</label>
-                        <input
-                            type="number"
-                            min="1" max="1000"
-                            value={options.quantity}
-                            onChange={(e) => setToolData(effectiveId, { options: { ...options, quantity: parseInt(e.target.value) } })}
-                            className="glass-input w-full"
-                        />
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                        label="Quantity"
+                        type="number"
+                        min="1" max="1000"
+                        value={options.quantity}
+                        onChange={(e) => setToolData(effectiveId, { options: { ...options, quantity: parseInt(e.target.value) } })}
+                        fullWidth
+                    />
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Prefix (OUI) - Optional</label>
-                        <input
-                            type="text"
-                            value={options.prefix}
-                            onChange={(e) => setToolData(effectiveId, { options: { ...options, prefix: e.target.value } })}
-                            className="glass-input w-full"
-                            placeholder="00:1A:2B"
-                        />
-                    </div>
+                    <Input
+                        label="Prefix (OUI) - Optional"
+                        type="text"
+                        value={options.prefix}
+                        onChange={(e) => setToolData(effectiveId, { options: { ...options, prefix: e.target.value } })}
+                        placeholder="00:1A:2B"
+                        fullWidth
+                    />
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Format</label>
-                        <select
-                            value={options.separator}
-                            onChange={(e) => setToolData(effectiveId, { options: { ...options, separator: e.target.value } })}
-                            className="glass-input w-full"
-                        >
-                            <option value=":">Colon (MM:MM:MM:SS:SS:SS)</option>
-                            <option value="-">Dash (MM-MM-MM-SS-SS-SS)</option>
-                            <option value="">None (MMMMMMSSSSSS)</option>
-                        </select>
-                    </div>
+                    <Select
+                        label="Format"
+                        value={options.separator}
+                        onChange={(e) => setToolData(effectiveId, { options: { ...options, separator: e.target.value } })}
+                        options={[
+                            { label: 'Colon (MM:MM:MM:SS:SS:SS)', value: ':' },
+                            { label: 'Dash (MM-MM-MM-SS-SS-SS)', value: '-' },
+                            { label: 'None (MMMMMMSSSSSS)', value: '' }
+                        ]}
+                        fullWidth
+                    />
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Casing</label>
-                        <select
-                            value={options.casing}
-                            onChange={(e) => setToolData(effectiveId, { options: { ...options, casing: e.target.value } })}
-                            className="glass-input w-full"
-                        >
-                            <option value="upper">Uppercase</option>
-                            <option value="lower">Lowercase</option>
-                        </select>
-                    </div>
+                    <Select
+                        label="Casing"
+                        value={options.casing}
+                        onChange={(e) => setToolData(effectiveId, { options: { ...options, casing: e.target.value } })}
+                        options={[
+                            { label: 'Uppercase', value: 'upper' },
+                            { label: 'Lowercase', value: 'lower' }
+                        ]}
+                        fullWidth
+                    />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Generated MACs</label>
-                    <div className="relative">
-                        <textarea
+                    <div className="relative group">
+                        <TextArea
                             readOnly
                             value={output}
-                            className="glass-input w-full min-h-[200px] font-mono leading-relaxed"
+                            className="min-h-[200px] font-mono leading-relaxed"
+                            fullWidth
                         />
                         {output && (
                             <Button
                                 variant="glass"
                                 size="sm"
-                                className="absolute top-2 right-2"
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => navigator.clipboard.writeText(output)}
                             >
                                 Copy

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 
@@ -46,25 +47,29 @@ export const SlugGenerator: React.FC<SlugGeneratorProps> = ({ tabId }) => {
         >
             <div className="max-w-3xl mx-auto space-y-8 py-8 px-4">
                 <div className="space-y-4">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Input Text</label>
-                    <input
+                    <Input
+                        label="Input Text"
                         type="text"
                         value={input}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        className="glass-input w-full text-lg"
+                        className="text-lg"
                         placeholder="Hello World! This is a Title."
+                        fullWidth
                     />
                 </div>
 
                 <div className="space-y-4">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Slug Output</label>
-                    <div className="flex space-x-2">
-                        <input
-                            type="text"
-                            readOnly
-                            value={output}
-                            className="glass-input w-full font-mono text-lg text-primary bg-primary/5"
-                        />
+                    <div className="flex space-x-2 items-center">
+                        <div className="flex-1">
+                            <Input
+                                type="text"
+                                readOnly
+                                value={output}
+                                className="font-mono text-lg text-primary bg-primary/5"
+                                fullWidth
+                            />
+                        </div>
                         <Button variant="glass" onClick={() => navigator.clipboard.writeText(output)}>Copy</Button>
                     </div>
                 </div>
