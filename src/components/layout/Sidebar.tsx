@@ -108,14 +108,14 @@ export const Sidebar: React.FC = React.memo(() => {
 
             {/* Enhanced Search Section */}
             <div className="px-5 pt-2 pb-4">
-                <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted pointer-events-none transition-colors" />
+                <div className="relative group">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/70 group-focus-within:text-foreground-muted pointer-events-none transition-colors duration-200 z-10" />
                     <input
                         type="text"
                         placeholder="Search tools... (⌘K)"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="sidebar-search-input w-full pl-10 pr-3.5 py-2.5 text-sm rounded-lg bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass focus:border-border-glass-hover transition-all duration-200"
+                        className="sidebar-search-input w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 hover:border-white/30 dark:hover:border-white/20 focus:border-indigo-400/50 dark:focus:border-indigo-500/50 focus:bg-white/15 dark:focus:bg-white/10 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200 placeholder:text-foreground-muted/60 text-foreground shadow-sm hover:shadow-md focus:shadow-lg"
                     />
                 </div>
                 {/* Category Filter for Search (UI Select component) */}

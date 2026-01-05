@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import { Share2, Trash2, Copy, Download } from 'lucide-react';
+import { Trash2, Copy, Download } from 'lucide-react';
 
 interface ToolPaneProps {
     title: string;
@@ -58,9 +58,6 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
-                    <button className="glass-button-primary !p-2.5">
-                        <Share2 className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
 
