@@ -5,6 +5,7 @@ import { useXnapperStore } from '../../../store/xnapperStore';
 import type { ExportFormat } from '../../../store/xnapperStore';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
+import { generateFinalImage } from '../utils/exportUtils';
 
 export const ExportPanel: React.FC = () => {
     const {
@@ -13,6 +14,10 @@ export const ExportPanel: React.FC = () => {
         setExportFormat,
         exportQuality,
         setExportQuality,
+        autoBalance,
+        redactionAreas,
+        background,
+        backgroundPadding,
     } = useXnapperStore();
 
     const [filename, setFilename] = useState('');
@@ -29,8 +34,16 @@ export const ExportPanel: React.FC = () => {
 
         setIsSaving(true);
         try {
+            // Generate final processed image
+            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                autoBalance,
+                redactionAreas,
+                background,
+                backgroundPadding,
+            });
+
             const result = await (window as any).screenshotAPI?.saveFile(
-                currentScreenshot.dataUrl,
+                processedDataUrl,
                 {
                     filename: filename || `screenshot-${Date.now()}.${exportFormat}`,
                     format: exportFormat,
@@ -56,8 +69,16 @@ export const ExportPanel: React.FC = () => {
         if (!currentScreenshot) return;
 
         try {
+            // Generate final processed image
+            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                autoBalance,
+                redactionAreas,
+                background,
+                backgroundPadding,
+            });
+
             // Convert data URL to blob
-            const response = await fetch(currentScreenshot.dataUrl);
+            const response = await fetch(processedDataUrl);
             const blob = await response.blob();
 
             // Copy to clipboard

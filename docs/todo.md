@@ -694,13 +694,13 @@
 
 - [x] Integrate Tesseract.js for OCR
 - [x] Implement regex pattern detection (email, IP, API keys)
-- [ ] Create RedactionPanel component
+- [x] Create RedactionPanel component
 - [x] Implement redaction tools (blur, pixelate, solid overlay)
-- [ ] Implement manual redaction area selection
-- [ ] Create BackgroundPanel component
+- [x] Implement manual redaction area selection
+- [x] Create BackgroundPanel component
 - [x] Implement gradient background generator
 - [x] Implement image background support with blur effect
-- [ ] Add background preview thumbnails
+- [x] Add background preview thumbnails
 
 ### 8.3 Phase 3: Annotations
 

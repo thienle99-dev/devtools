@@ -1,11 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useXnapperStore } from '../../store/xnapperStore';
 import { CaptureSection } from './components/CaptureSection';
 import { PreviewSection } from './components/PreviewSection';
 import { ExportPanel } from './components/ExportPanel';
+import { RedactionPanel } from './components/RedactionPanel';
+import { BackgroundPanel } from './components/BackgroundPanel';
+import { Shield, Palette, Download } from 'lucide-react';
+import { cn } from '../../utils/cn';
+
+type SidePanel = 'redaction' | 'background' | 'export';
 
 export const Xnapper: React.FC = () => {
     const { currentScreenshot } = useXnapperStore();
+    const [activePanel, setActivePanel] = useState<SidePanel>('export');
+
+    const panels: Array<{ id: SidePanel; label: string; icon: any }> = [
+        { id: 'redaction', label: 'Redaction', icon: Shield },
+        { id: 'background', label: 'Background', icon: Palette },
+        { id: 'export', label: 'Export', icon: Download },
+    ];
 
     return (
         <div className="h-full flex flex-col">
@@ -27,16 +40,40 @@ export const Xnapper: React.FC = () => {
                         <CaptureSection />
                     </div>
                 ) : (
-                    /* Preview and export mode - screenshot captured */
-                    <div className="h-full grid grid-cols-[1fr,400px]">
+                    /* Preview and edit mode - screenshot captured */
+                    <div className="h-full flex">
                         {/* Preview */}
-                        <div className="border-r border-border-glass">
+                        <div className="flex-1 border-r border-border-glass">
                             <PreviewSection />
                         </div>
 
-                        {/* Export panel */}
-                        <div className="overflow-y-auto">
-                            <ExportPanel />
+                        {/* Side panel */}
+                        <div className="w-[380px] flex flex-col">
+                            {/* Panel tabs */}
+                            <div className="flex border-b border-border-glass">
+                                {panels.map(({ id, label, icon: Icon }) => (
+                                    <button
+                                        key={id}
+                                        onClick={() => setActivePanel(id)}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all text-sm font-medium border-b-2",
+                                            activePanel === id
+                                                ? "border-indigo-500 text-indigo-400 bg-indigo-500/5"
+                                                : "border-transparent text-foreground-secondary hover:text-foreground hover:bg-glass-panel/50"
+                                        )}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Panel content */}
+                            <div className="flex-1 overflow-y-auto">
+                                {activePanel === 'redaction' && <RedactionPanel />}
+                                {activePanel === 'background' && <BackgroundPanel />}
+                                {activePanel === 'export' && <ExportPanel />}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -49,6 +86,8 @@ export const Xnapper: React.FC = () => {
                         onClick={() => {
                             useXnapperStore.getState().setCurrentScreenshot(null);
                             useXnapperStore.getState().setShowPreview(false);
+                            useXnapperStore.getState().clearRedactionAreas();
+                            useXnapperStore.getState().setBackground(null);
                         }}
                         className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
                     >

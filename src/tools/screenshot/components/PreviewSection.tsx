@@ -3,9 +3,19 @@ import { ZoomIn, ZoomOut, RotateCcw, Sparkles } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { applyAutoBalance } from '../utils/imageEnhancement';
+import { applyRedaction } from '../utils/redaction';
+import { applyGradientBackground, applyImageBackground, applySolidBackground, addPaddingToScreenshot } from '../utils/backgroundGenerator';
 
 export const PreviewSection: React.FC = () => {
-    const { currentScreenshot, autoBalance, setAutoBalance } = useXnapperStore();
+    const {
+        currentScreenshot,
+        autoBalance,
+        setAutoBalance,
+        redactionAreas,
+        background,
+        backgroundPadding,
+    } = useXnapperStore();
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [zoom, setZoom] = useState(1);
     const [processedDataUrl, setProcessedDataUrl] = useState<string | null>(null);
@@ -13,26 +23,92 @@ export const PreviewSection: React.FC = () => {
     useEffect(() => {
         if (!currentScreenshot || !canvasRef.current) return;
 
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        const processImage = async () => {
+            const canvas = canvasRef.current!;
+            const ctx = canvas.getContext('2d')!;
 
-        const img = new Image();
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
+            const img = new Image();
+            img.onload = async () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
 
-            if (autoBalance) {
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const enhanced = applyAutoBalance(imageData);
-                ctx.putImageData(enhanced, 0, 0);
-            }
+                // Apply auto-balance
+                if (autoBalance) {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const enhanced = applyAutoBalance(imageData);
+                    ctx.putImageData(enhanced, 0, 0);
+                }
 
-            setProcessedDataUrl(canvas.toDataURL('image/png'));
+                // Apply redactions
+                for (const area of redactionAreas) {
+                    applyRedaction(ctx, area);
+                }
+
+                // If background is set, create a new canvas with background
+                if (background && backgroundPadding > 0) {
+                    const finalCanvas = addPaddingToScreenshot(canvas, backgroundPadding, background);
+
+                    // If it's an image background, we need to handle it differently
+                    if (background.type === 'image') {
+                        const bgCanvas = document.createElement('canvas');
+                        bgCanvas.width = finalCanvas.width;
+                        bgCanvas.height = finalCanvas.height;
+                        const bgCtx = bgCanvas.getContext('2d')!;
+
+                        await applyImageBackground(
+                            bgCtx,
+                            bgCanvas.width,
+                            bgCanvas.height,
+                            background.imageUrl,
+                            background.blur,
+                            background.opacity
+                        );
+
+                        // Draw screenshot on top
+                        bgCtx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                        bgCtx.shadowBlur = 20;
+                        bgCtx.shadowOffsetX = 0;
+                        bgCtx.shadowOffsetY = 10;
+                        bgCtx.drawImage(canvas, backgroundPadding, backgroundPadding);
+
+                        setProcessedDataUrl(bgCanvas.toDataURL('image/png'));
+                    } else {
+                        setProcessedDataUrl(finalCanvas.toDataURL('image/png'));
+                    }
+                } else if (background && backgroundPadding === 0) {
+                    // Background without padding - just apply to existing canvas
+                    const bgCanvas = document.createElement('canvas');
+                    bgCanvas.width = canvas.width;
+                    bgCanvas.height = canvas.height;
+                    const bgCtx = bgCanvas.getContext('2d')!;
+
+                    if (background.type === 'solid') {
+                        applySolidBackground(bgCtx, bgCanvas.width, bgCanvas.height, background.color);
+                    } else if ('colors' in background) {
+                        applyGradientBackground(bgCtx, bgCanvas.width, bgCanvas.height, background);
+                    } else if (background.type === 'image') {
+                        await applyImageBackground(
+                            bgCtx,
+                            bgCanvas.width,
+                            bgCanvas.height,
+                            background.imageUrl,
+                            background.blur,
+                            background.opacity
+                        );
+                    }
+
+                    bgCtx.drawImage(canvas, 0, 0);
+                    setProcessedDataUrl(bgCanvas.toDataURL('image/png'));
+                } else {
+                    setProcessedDataUrl(canvas.toDataURL('image/png'));
+                }
+            };
+            img.src = currentScreenshot.dataUrl;
         };
-        img.src = currentScreenshot.dataUrl;
-    }, [currentScreenshot, autoBalance]);
+
+        processImage();
+    }, [currentScreenshot, autoBalance, redactionAreas, background, backgroundPadding]);
 
     if (!currentScreenshot) {
         return (
@@ -60,6 +136,11 @@ export const PreviewSection: React.FC = () => {
                     <span className="text-xs text-foreground-muted">
                         {Math.round((currentScreenshot.dataUrl.length * 3) / 4 / 1024)} KB
                     </span>
+                    {redactionAreas.length > 0 && (
+                        <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                            {redactionAreas.length} redaction{redactionAreas.length > 1 ? 's' : ''}
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
