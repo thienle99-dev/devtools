@@ -88,6 +88,7 @@ const MacLookup = React.lazy(() => import('./network/MacLookup').then(m => ({ de
 const SqlFormatter = React.lazy(() => import('./development/SqlFormatter').then(m => ({ default: m.SqlFormatter })));
 const JsonToCsv = React.lazy(() => import('./development/JsonToCsv').then(m => ({ default: m.JsonToCsv })));
 const XmlFormatter = React.lazy(() => import('./development/XmlFormatter').then(m => ({ default: m.XmlFormatter })));
+const YamlFormatter = React.lazy(() => import('./development/YamlFormatter').then(m => ({ default: m.YamlFormatter })));
 const RegexTester = React.lazy(() => import('./development/RegexTester').then(m => ({ default: m.RegexTester })));
 const CrontabGenerator = React.lazy(() => import('./development/CrontabGenerator').then(m => ({ default: m.CrontabGenerator })));
 const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
@@ -110,6 +111,16 @@ export const TOOLS: ToolDefinition[] = [
         icon: Code2,
         component: XmlFormatter,
         keywords: ['xml', 'format', 'prettify']
+    },
+    {
+        id: 'yaml-format',
+        name: 'YAML Formatter',
+        path: '/yaml-format',
+        description: 'Prettify, minify and validate YAML data',
+        category: 'formatters',
+        icon: FileJson,
+        component: YamlFormatter,
+        keywords: ['yaml', 'yml', 'format', 'minify', 'prettify', 'validate']
     },
     {
         id: 'json-format',

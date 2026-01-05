@@ -208,7 +208,7 @@
 - [x] JSON minify (JsonFormatter tool)
 - [x] JSON to CSV
 - [x] SQL prettify and format
-- [ ] YAML prettify and format
+- [x] YAML prettify and format
 - [x] XML formatter
 - [x] Regex Tester
 - [x] Crontab generator
