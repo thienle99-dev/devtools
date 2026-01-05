@@ -106,15 +106,15 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={handleBackdropClick}
         >
-            <div className="w-full max-w-2xl bg-surface border border-border rounded-xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-2xl glass-panel border border-[var(--color-glass-border)] rounded-xl shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
+                <div className="flex items-center justify-between p-6 border-b border-[var(--color-glass-border)]">
                     <h2 className="text-lg font-semibold text-foreground">
                         Clipboard Settings
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-surface-elevated text-foreground-muted hover:text-foreground transition-colors"
+                        className="p-2 rounded-lg hover:bg-[var(--color-glass-button-hover)] text-foreground-muted hover:text-foreground transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -128,9 +128,9 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                             Maximum History Items
                         </label>
                         <select
-                            className="w-full px-3 py-2 bg-surface-elevated border border-border rounded-lg 
-                                     text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 
-                                     focus:border-accent transition-all"
+                            className="w-full px-3 py-2 glass-input border border-[var(--color-glass-border)] rounded-lg 
+                                     text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 
+                                     focus:border-indigo-500/50 transition-all"
                             value={localMaxItems}
                             onChange={(e) => setLocalMaxItems(Number(e.target.value))}
                         >
@@ -151,9 +151,9 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                             Auto-clear items older than
                         </label>
                         <select
-                            className="w-full px-3 py-2 bg-surface-elevated border border-border rounded-lg 
-                                     text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 
-                                     focus:border-accent transition-all"
+                            className="w-full px-3 py-2 glass-input border border-[var(--color-glass-border)] rounded-lg 
+                                     text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 
+                                     focus:border-indigo-500/50 transition-all"
                             value={localSettings.autoClearDays}
                             onChange={(e) => setLocalSettings({ ...localSettings, autoClearDays: Number(e.target.value) })}
                         >
@@ -173,7 +173,7 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                className="w-4 h-4 rounded border-border text-accent focus:ring-accent/50"
+                                className="w-4 h-4 rounded border-[var(--color-glass-border)] text-indigo-400 focus:ring-indigo-500/50"
                                 checked={localSettings.excludeDuplicates}
                                 onChange={(e) => setLocalSettings({ ...localSettings, excludeDuplicates: e.target.checked })}
                             />
@@ -193,7 +193,7 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                className="w-4 h-4 rounded border-border text-accent focus:ring-accent/50"
+                                className="w-4 h-4 rounded border-[var(--color-glass-border)] text-indigo-400 focus:ring-indigo-500/50"
                                 checked={localSettings.enableMonitoring}
                                 onChange={(e) => setLocalSettings({ ...localSettings, enableMonitoring: e.target.checked })}
                             />
@@ -213,7 +213,7 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                className="w-4 h-4 rounded border-border text-accent focus:ring-accent/50"
+                                className="w-4 h-4 rounded border-[var(--color-glass-border)] text-indigo-400 focus:ring-indigo-500/50"
                                 checked={localSettings.clearOnQuit}
                                 onChange={(e) => setLocalSettings({ ...localSettings, clearOnQuit: e.target.checked })}
                             />
@@ -236,9 +236,9 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                         <div className="space-y-2">
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 bg-surface-elevated border border-border rounded-lg 
+                                className="w-full px-3 py-2 glass-input border border-[var(--color-glass-border)] rounded-lg 
                                          text-foreground text-sm focus:outline-none focus:ring-2 
-                                         focus:ring-accent/50 focus:border-accent transition-all"
+                                         focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                                 placeholder="Enter app name (e.g., Safari, Google Sheets)"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
@@ -261,7 +261,7 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                                     {localSettings.ignoredApps.map((app, index) => (
                                         <span
                                             key={index}
-                                            className="inline-flex items-center gap-1 px-2 py-1 bg-surface-elevated border border-border rounded text-xs text-foreground"
+                                            className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded text-xs text-foreground"
                                         >
                                             {app}
                                             <button
@@ -283,7 +283,7 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                     </div>
 
                     {/* Export/Import Section */}
-                    <div className="pt-4 border-t border-border">
+                    <div className="pt-4 border-t border-[var(--color-glass-border)]">
                         <h3 className="text-sm font-semibold text-foreground mb-4">Backup & Restore</h3>
                         <div className="grid grid-cols-2 gap-3">
                             <Button
@@ -326,7 +326,7 @@ export const ClipboardSettings: React.FC<ClipboardSettingsProps> = ({ onClose })
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-[var(--color-glass-border)]">
                     <Button variant="secondary" onClick={onClose}>
                         Cancel
                     </Button>

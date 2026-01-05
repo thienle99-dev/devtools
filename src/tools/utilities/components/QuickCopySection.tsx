@@ -3,6 +3,7 @@ import { Button } from '../../../components/ui/Button';
 import { useClipboard } from '../hooks/useClipboard';
 import { useClipboardStore } from '../../../store/clipboardStore';
 import { Copy, Check, Sparkles } from 'lucide-react';
+import { setLastCopiedContent } from '../utils/clipboardSync';
 
 export const QuickCopySection: React.FC = () => {
     const [text, setText] = useState('');
@@ -13,9 +14,14 @@ export const QuickCopySection: React.FC = () => {
     const handleCopy = async () => {
         if (!text.trim()) return;
 
-        const success = await copyToClipboard(text);
+        const trimmedText = text.trim();
+        const success = await copyToClipboard(trimmedText);
         if (success) {
-            addItem(text, 'text');
+            // Update last copied content để tránh monitor add lại
+            setLastCopiedContent(trimmedText, 'text');
+            
+            // Add item manually (monitor sẽ skip vì đã set lastCopiedContent)
+            addItem(trimmedText, 'text');
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }

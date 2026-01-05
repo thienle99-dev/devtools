@@ -35,12 +35,12 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={handleBackdropClick}
         >
-            <div className="w-full max-w-4xl max-h-[85vh] bg-surface border border-border rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-4xl max-h-[85vh] glass-panel border border-[var(--color-glass-border)] rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
+                <div className="flex items-center justify-between p-6 border-b border-[var(--color-glass-border)]">
                     <div>
                         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-accent" />
+                            <TrendingUp className="w-5 h-5 text-indigo-400" />
                             Clipboard Statistics
                         </h2>
                         <p className="text-sm text-foreground-muted mt-1">
@@ -49,7 +49,7 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-surface-elevated text-foreground-muted hover:text-foreground transition-colors"
+                        className="p-2 rounded-lg hover:bg-[var(--color-glass-button-hover)] text-foreground-muted hover:text-foreground transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -61,10 +61,10 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                         {/* Overview Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Total Items */}
-                            <div className="p-5 bg-surface-elevated border border-border rounded-xl">
+                            <div className="p-5 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded-xl">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-3 bg-accent/10 rounded-lg">
-                                        <FileText className="w-5 h-5 text-accent" />
+                                    <div className="p-3 bg-indigo-500/10 rounded-lg">
+                                        <FileText className="w-5 h-5 text-indigo-400" />
                                     </div>
                                     <div>
                                         <p className="text-2xl font-bold text-foreground">{stats.totalItems}</p>
@@ -74,7 +74,7 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                             </div>
 
                             {/* Total Copies */}
-                            <div className="p-5 bg-surface-elevated border border-border rounded-xl">
+                            <div className="p-5 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded-xl">
                                 <div className="flex items-center gap-3">
                                     <div className="p-3 bg-green-500/10 rounded-lg">
                                         <Copy className="w-5 h-5 text-green-500" />
@@ -87,7 +87,7 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                             </div>
 
                             {/* Average Copies */}
-                            <div className="p-5 bg-surface-elevated border border-border rounded-xl">
+                            <div className="p-5 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded-xl">
                                 <div className="flex items-center gap-3">
                                     <div className="p-3 bg-blue-500/10 rounded-lg">
                                         <TrendingUp className="w-5 h-5 text-blue-500" />
@@ -103,9 +103,9 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                         </div>
 
                         {/* Items by Type */}
-                        <div className="p-5 bg-surface-elevated border border-border rounded-xl">
+                        <div className="p-5 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded-xl">
                             <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-accent" />
+                                <FileText className="w-4 h-4 text-indigo-400" />
                                 Items by Type
                             </h3>
                             <div className="space-y-3">
@@ -122,9 +122,9 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                                                     {count} ({percentage.toFixed(0)}%)
                                                 </span>
                                             </div>
-                                            <div className="h-2 bg-surface rounded-full overflow-hidden">
+                                            <div className="h-2 bg-[var(--color-glass-panel)] rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-accent rounded-full transition-all duration-300"
+                                                    className="h-full bg-indigo-500 rounded-full transition-all duration-300"
                                                     style={{ width: `${percentage}%` }}
                                                 />
                                             </div>
@@ -135,9 +135,9 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                         </div>
 
                         {/* Items by Day */}
-                        <div className="p-5 bg-surface-elevated border border-border rounded-xl">
+                        <div className="p-5 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded-xl">
                             <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-accent" />
+                                <Calendar className="w-4 h-4 text-indigo-400" />
                                 Activity (Last 7 Days)
                             </h3>
                             <div className="space-y-3">
@@ -150,7 +150,7 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                                                 <span className="text-sm text-foreground">{day}</span>
                                                 <span className="text-sm font-medium text-foreground-muted">{count} items</span>
                                             </div>
-                                            <div className="h-2 bg-surface rounded-full overflow-hidden">
+                                            <div className="h-2 bg-[var(--color-glass-panel)] rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full bg-green-500 rounded-full transition-all duration-300"
                                                     style={{ width: `${percentage}%` }}
@@ -163,9 +163,9 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                         </div>
 
                         {/* Most Copied Items */}
-                        <div className="p-5 bg-surface-elevated border border-border rounded-xl">
+                        <div className="p-5 bg-[var(--color-glass-input)] border border-[var(--color-glass-border)] rounded-xl">
                             <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4 text-accent" />
+                                <TrendingUp className="w-4 h-4 text-indigo-400" />
                                 Most Copied Items
                             </h3>
                             <div className="space-y-2">
@@ -177,9 +177,9 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                                     stats.mostCopiedItems.map((item, index) => (
                                         <div
                                             key={item.id}
-                                            className="flex items-center gap-3 p-3 bg-surface rounded-lg hover:bg-surface-elevated transition-colors"
+                                            className="flex items-center gap-3 p-3 bg-[var(--color-glass-panel)] rounded-lg hover:bg-[var(--color-glass-button-hover)] transition-colors"
                                         >
-                                            <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-accent/10 text-accent rounded-full text-xs font-bold">
+                                            <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-indigo-500/10 text-indigo-400 rounded-full text-xs font-bold">
                                                 {index + 1}
                                             </div>
                                             <div className="flex-shrink-0">
@@ -204,7 +204,7 @@ export const ClipboardStatistics: React.FC<ClipboardStatisticsProps> = ({ onClos
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-[var(--color-glass-border)]">
                     <Button variant="secondary" onClick={onClose}>
                         Close
                     </Button>

@@ -3,10 +3,26 @@ import { useClipboard } from './useClipboard';
 import { useClipboardStore } from '../../../store/clipboardStore';
 import { getSourceApp } from '../utils/clipboardUtils';
 
+// Shared ref để track clipboard content và tránh duplicate khi copy từ internal
+let globalLastClipboardRef = '';
+
 export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []) => {
     const { readClipboard } = useClipboard();
     const addItem = useClipboardStore((state) => state.addItem);
-    const lastClipboardRef = useRef<string>('');
+    const lastClipboardRef = useRef<string>(globalLastClipboardRef);
+    
+    // Expose ref globally để clipboardSync có thể update
+    useEffect(() => {
+        (window as any).__clipboardMonitorRef = lastClipboardRef;
+        return () => {
+            delete (window as any).__clipboardMonitorRef;
+        };
+    }, []);
+    
+    // Sync với global ref
+    useEffect(() => {
+        lastClipboardRef.current = globalLastClipboardRef;
+    }, []);
 
     useEffect(() => {
         if (!enabled) return;
@@ -20,7 +36,30 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
                 if ((window as any).ipcRenderer?.clipboard?.readImage) {
                     try {
                         const base64Image = await (window as any).ipcRenderer.clipboard.readImage();
-                        if (base64Image && base64Image !== lastClipboardRef.current) {
+                        if (base64Image) {
+                            // Normalize base64 để so sánh
+                            const normalizeBase64 = (base64: string): string => {
+                                const match = base64.match(/data:image\/[^;]+;base64,(.+)/);
+                                return match ? match[1] : base64;
+                            };
+                            
+                            const normalizedImage = normalizeBase64(base64Image);
+                            const normalizedLastRef = normalizeBase64(lastClipboardRef.current || '');
+                            
+                            // Check if giống với last clipboard hoặc lastCopiedContent
+                            const lastCopied = (window as any).__lastCopiedContent || '';
+                            const normalizedLastCopied = normalizeBase64(lastCopied);
+                            
+                            if (normalizedImage === normalizedLastRef || normalizedImage === normalizedLastCopied) {
+                                // Skip duplicate
+                                if (normalizedImage === normalizedLastCopied) {
+                                    setTimeout(() => {
+                                        (window as any).__lastCopiedContent = '';
+                                    }, 1000);
+                                }
+                                return;
+                            }
+                            
                             // Check if current app is in ignore list for images
                             if (sourceApp && ignoredApps.includes(sourceApp)) {
                                 return; // Skip if app is ignored
@@ -34,6 +73,7 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
                             }
                             addItem(base64Image, 'image', metadata);
                             lastClipboardRef.current = base64Image;
+                            globalLastClipboardRef = base64Image;
                             return; // Found image, skip text check
                         }
                     } catch (imageError) {
@@ -42,8 +82,8 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
                     }
                 }
 
-                // Fallback to browser API for images
-                if (navigator.clipboard && navigator.clipboard.read) {
+                // Fallback to browser API for images (chỉ dùng nếu Electron API không có)
+                if (!(window as any).ipcRenderer?.clipboard?.readImage && navigator.clipboard && navigator.clipboard.read) {
                     try {
                         const clipboardItems = await navigator.clipboard.read();
                         for (const clipboardItem of clipboardItems) {
@@ -60,7 +100,30 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
 
                                     reader.onloadend = () => {
                                         const base64 = reader.result as string;
-                                        if (base64 && base64 !== lastClipboardRef.current) {
+                                        if (base64) {
+                                            // Normalize base64 để so sánh
+                                            const normalizeBase64 = (base64: string): string => {
+                                                const match = base64.match(/data:image\/[^;]+;base64,(.+)/);
+                                                return match ? match[1] : base64;
+                                            };
+                                            
+                                            const normalizedImage = normalizeBase64(base64);
+                                            const normalizedLastRef = normalizeBase64(lastClipboardRef.current || '');
+                                            
+                                            // Check if giống với last clipboard hoặc lastCopiedContent
+                                            const lastCopied = (window as any).__lastCopiedContent || '';
+                                            const normalizedLastCopied = normalizeBase64(lastCopied);
+                                            
+                                            if (normalizedImage === normalizedLastRef || normalizedImage === normalizedLastCopied) {
+                                                // Skip duplicate
+                                                if (normalizedImage === normalizedLastCopied) {
+                                                    setTimeout(() => {
+                                                        (window as any).__lastCopiedContent = '';
+                                                    }, 1000);
+                                                }
+                                                return;
+                                            }
+                                            
                                             const metadata: Record<string, any> = {
                                                 mimeType: type,
                                                 length: blob.size,
@@ -70,6 +133,7 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
                                             }
                                             addItem(base64, 'image', metadata);
                                             lastClipboardRef.current = base64;
+                                            globalLastClipboardRef = base64;
                                         }
                                     };
 
@@ -91,19 +155,40 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
                 }
 
                 const current = await readClipboard();
-                if (current && current !== lastClipboardRef.current && current.trim().length > 0) {
-                    // Detect if it's a URL/link
-                    const urlPattern = /^https?:\/\/.+/i;
-                    const type = urlPattern.test(current.trim()) ? 'link' : 'text';
-
-                    const metadata: Record<string, any> = type === 'link' ? { url: current } : {};
-                    if (sourceApp) {
-                        metadata.sourceApp = sourceApp;
-                    }
-
-                    addItem(current, type, metadata);
-                    lastClipboardRef.current = current;
+                if (!current || current === lastClipboardRef.current) {
+                    return;
                 }
+                
+                const trimmedCurrent = current.trim();
+                if (trimmedCurrent.length === 0) {
+                    return;
+                }
+                
+                // Normalize để so sánh với lastCopiedContent
+                const normalizedCurrent = trimmedCurrent;
+                const lastCopied = (window as any).__lastCopiedContent?.trim() || '';
+                
+                // Skip nếu giống với content vừa copy từ Clipboard Manager (tránh duplicate)
+                if (lastCopied && normalizedCurrent === lastCopied) {
+                    // Clear flag sau khi skip
+                    setTimeout(() => {
+                        (window as any).__lastCopiedContent = '';
+                    }, 1000);
+                    return;
+                }
+
+                // Detect if it's a URL/link
+                const urlPattern = /^https?:\/\/.+/i;
+                const type = urlPattern.test(trimmedCurrent) ? 'link' : 'text';
+
+                const metadata: Record<string, any> = type === 'link' ? { url: current } : {};
+                if (sourceApp) {
+                    metadata.sourceApp = sourceApp;
+                }
+
+                addItem(current, type, metadata);
+                lastClipboardRef.current = current;
+                globalLastClipboardRef = current;
             } catch (error) {
                 // Silently fail - clipboard permission might not be granted
                 console.debug('Clipboard monitoring error:', error);

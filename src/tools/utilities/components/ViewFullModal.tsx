@@ -66,16 +66,16 @@ export const ViewFullModal: React.FC<ViewFullModalProps> = ({ item, onClose }) =
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={handleBackdropClick}
         >
-            <div className="w-full max-w-5xl max-h-[90vh] bg-surface border border-border rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-5xl max-h-[90vh] glass-panel border border-[var(--color-glass-border)] rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
+                <div className="flex items-center justify-between p-6 border-b border-[var(--color-glass-border)]">
                     <div>
                         <h2 className="text-lg font-semibold text-foreground">
                             {getTypeLabel()} Content
                         </h2>
                         <div className="flex items-center gap-3 mt-1 text-sm text-foreground-muted">
                             {item.type === 'image' && item.metadata?.mimeType && (
-                                <span className="px-2 py-0.5 bg-surface-elevated rounded text-xs font-medium">
+                                <span className="px-2 py-0.5 bg-[var(--color-glass-input)] rounded text-xs font-medium">
                                     {item.metadata.mimeType.toUpperCase()}
                                 </span>
                             )}
@@ -94,7 +94,7 @@ export const ViewFullModal: React.FC<ViewFullModalProps> = ({ item, onClose }) =
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-surface-elevated text-foreground-muted hover:text-foreground transition-colors"
+                        className="p-2 rounded-lg hover:bg-[var(--color-glass-button-hover)] text-foreground-muted hover:text-foreground transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -105,7 +105,7 @@ export const ViewFullModal: React.FC<ViewFullModalProps> = ({ item, onClose }) =
                     {item.type === 'image' ? (
                         <div className="space-y-4">
                             <div
-                                className={`relative rounded-lg border border-border overflow-hidden bg-surface-elevated ${imageZoom ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+                                className={`relative rounded-lg border border-[var(--color-glass-border)] overflow-hidden bg-[var(--color-glass-input)] ${imageZoom ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
                                 onClick={() => setImageZoom(!imageZoom)}
                             >
                                 <img
@@ -115,11 +115,11 @@ export const ViewFullModal: React.FC<ViewFullModalProps> = ({ item, onClose }) =
                                     style={{ maxHeight: imageZoom ? 'none' : '60vh' }}
                                 />
                             </div>
-                            <div className="flex items-center justify-between text-xs text-foreground-muted bg-surface-elevated p-3 rounded-lg border border-border">
+                            <div className="flex items-center justify-between text-xs text-foreground-muted bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
                                 <span>Click image to {imageZoom ? 'zoom out' : 'zoom in'}</span>
                                 <button
                                     onClick={handleDownloadImage}
-                                    className="px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors"
+                                    className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded hover:bg-indigo-500/20 transition-colors"
                                 >
                                     Download Image
                                 </button>
@@ -131,23 +131,23 @@ export const ViewFullModal: React.FC<ViewFullModalProps> = ({ item, onClose }) =
                                 href={item.content}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block text-accent hover:underline break-all text-lg font-medium"
+                                className="block text-indigo-400 hover:underline break-all text-lg font-medium"
                             >
                                 {item.content}
                             </a>
-                            <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-mono bg-surface-elevated p-4 rounded-lg border border-border">
+                            <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-mono bg-[var(--color-glass-input)] p-4 rounded-lg border border-[var(--color-glass-border)]">
                                 {item.content}
                             </pre>
                         </div>
                     ) : (
-                        <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-mono bg-surface-elevated p-4 rounded-lg border border-border">
+                        <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-mono bg-[var(--color-glass-input)] p-4 rounded-lg border border-[var(--color-glass-border)]">
                             {item.content}
                         </pre>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-[var(--color-glass-border)]">
                     <Button variant="secondary" onClick={onClose}>
                         Close
                     </Button>

@@ -94,43 +94,87 @@ export const useClipboardStore = create<ClipboardStore>()(
             },
 
             addItem: (content, type, metadata) => set((state) => {
+                // Normalize content for comparison
+                const normalizeContent = (content: string, itemType: string): string => {
+                    if (itemType === 'text' || itemType === 'link') {
+                        return content.trim();
+                    }
+                    if (itemType === 'image') {
+                        // Normalize base64: extract pure base64 data (remove data:image/...;base64, prefix)
+                        const base64Match = content.match(/data:image\/[^;]+;base64,(.+)/);
+                        if (base64Match) {
+                            return base64Match[1]; // Return pure base64
+                        }
+                        // If already pure base64, return as-is
+                        return content;
+                    }
+                    return content; // Keep files as-is
+                };
+
+                const normalizedContent = normalizeContent(content, type);
+
                 // Check for duplicates if enabled
                 if (state.settings.excludeDuplicates) {
-                    const lastItem = state.items[0];
-                    if (lastItem && lastItem.content === content) {
-                        // Increment copy count instead of adding duplicate
+                    // Check all items, not just the last one
+                    const existingItem = state.items.find(item => {
+                        const normalizedItemContent = normalizeContent(item.content, item.type);
+                        return normalizedItemContent === normalizedContent && item.type === type;
+                    });
+
+                    if (existingItem) {
+                        // Move to top and update copy count and timestamp
+                        const updatedItems = state.items.filter(item => item.id !== existingItem.id);
+                        return {
+                            items: [
+                                { 
+                                    ...existingItem, 
+                                    copyCount: existingItem.copyCount + 1, 
+                                    timestamp: Date.now(),
+                                    // Update metadata if provided
+                                    ...(metadata?.sourceApp && { sourceApp: metadata.sourceApp }),
+                                    ...(metadata && { metadata: { ...existingItem.metadata, ...metadata } })
+                                },
+                                ...updatedItems
+                            ],
+                        };
+                    }
+                } else {
+                    // Even if excludeDuplicates is disabled, still check for exact matches
+                    // to update copy count (but don't move to top)
+                    const existingItem = state.items.find(item => {
+                        const normalizedItemContent = normalizeContent(item.content, item.type);
+                        return normalizedItemContent === normalizedContent && item.type === type;
+                    });
+
+                    if (existingItem) {
                         return {
                             items: state.items.map(item =>
-                                item.id === lastItem.id
-                                    ? { ...item, copyCount: item.copyCount + 1, timestamp: Date.now() }
+                                item.id === existingItem.id
+                                    ? { 
+                                        ...item, 
+                                        copyCount: item.copyCount + 1, 
+                                        timestamp: Date.now(),
+                                        // Update metadata if provided
+                                        ...(metadata?.sourceApp && { sourceApp: metadata.sourceApp }),
+                                        ...(metadata && { metadata: { ...item.metadata, ...metadata } })
+                                    }
                                     : item
                             ),
                         };
                     }
                 }
 
-                // Check if item already exists (for updating copy count)
-                const existingItem = state.items.find(item => item.content === content);
-                if (existingItem) {
-                    return {
-                        items: state.items.map(item =>
-                            item.id === existingItem.id
-                                ? { ...item, copyCount: item.copyCount + 1, timestamp: Date.now() }
-                                : item
-                        ),
-                    };
-                }
-
+                // Use normalized content for storage (but keep original for display)
                 const newItem: ClipboardItem = {
                     id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    content,
+                    content: normalizedContent, // Store normalized version
                     type,
                     timestamp: Date.now(),
                     pinned: false,
                     copyCount: 1,
                     sourceApp: metadata?.sourceApp,
                     metadata: {
-                        length: type === 'text' ? content.length : undefined,
+                        length: type === 'text' ? normalizedContent.length : undefined,
                         ...metadata,
                     },
                 };

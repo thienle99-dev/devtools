@@ -3,6 +3,7 @@ import { FileText, Image as ImageIcon, Link as LinkIcon, File, Copy, Pin, Trash2
 import type { ClipboardItem } from '../../../store/clipboardStore';
 import { useClipboard } from '../hooks/useClipboard';
 import { formatDistanceToNow } from 'date-fns';
+import { setLastCopiedContent } from '../utils/clipboardSync';
 
 interface ClipboardItemCardProps {
     item: ClipboardItem;
@@ -27,18 +28,24 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
 
     const handleCopy = async (asPlainText = false) => {
         let success = false;
+        let copiedContent = '';
 
         if (item.type === 'image') {
             success = await copyImageToClipboard(item.content, item.metadata?.mimeType);
+            copiedContent = item.content; // Use full base64 for images
         } else {
             let content = item.content;
             if (asPlainText) {
                 content = content.replace(/[\r\n]+/g, ' ').trim();
             }
             success = await copyToClipboard(content);
+            copiedContent = content;
         }
 
         if (success) {
+            // Update last copied content để tránh monitor add lại
+            setLastCopiedContent(copiedContent, item.type);
+            
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
             setShowPlainTextOption(false);
