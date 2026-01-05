@@ -1,20 +1,95 @@
 appId: com.devtools.app
 productName: DevTools App
+copyright: Copyright © 2026 DevTools App
 directories:
   output: dist-electron/pack
+  buildResources: build
 files:
   - dist
   - dist-electron
   - package.json
+  - "!**/*.{ts,tsx,jsx,map}"
+  - "!node_modules/**/*"
+  - "!src/**/*"
+  - "!electron/**/*"
+  - "!docs/**/*"
+  - "!*.{md,yml,yaml,json}"
+
+# Windows Configuration
 win:
-  target: nsis
-  icon: public/electron-vite.svg
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+  icon: public/icon.png
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  requestedExecutionLevel: asInvoker
+  signAndEditExecutable: false
+  signDlls: false
+
+# NSIS Installer Configuration
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: DevTools App
+  installerIcon: public/icon.png
+  uninstallerIcon: public/icon.png
+  installerHeaderIcon: public/icon.png
+  deleteAppDataOnUninstall: false
+
+# macOS Configuration
 mac:
-  target: dmg
-  icon: public/electron-vite.svg
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: public/icon.png
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  # Code signing - uses environment variables
+  # Set APPLE_IDENTITY environment variable for code signing
+  # Example: export APPLE_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+  # Notarization is configured via environment variables:
+  # APPLE_TEAM_ID, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD
+  # See build/README.md for details
+
+# DMG Configuration
+dmg:
+  title: ${productName} ${version}
+  icon: public/icon.png
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+  # background: build/dmg-background.png  # Optional: Create custom DMG background image
+  format: UDZO
+
+# Linux Configuration
 linux:
-  target: AppImage
-  icon: public/electron-vite.svg
+  target:
+    - AppImage
+    - deb
+  icon: public/icon.png
+  category: Development
+  synopsis: Developer Tools Application
+  description: A comprehensive developer tools application with multiple utilities
+
+# Publishing Configuration (for auto-updater)
+publish:
+  provider: generic
+  url: ${UPDATE_SERVER_URL}

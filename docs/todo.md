@@ -544,12 +544,12 @@
 
 ### 6.1 Build Configuration
 
-- [ ] Finalize electron-builder.yml
-- [ ] Configure Windows build (NSIS)
-- [ ] Configure macOS build (DMG)
-- [ ] Setup code signing (macOS)
-- [ ] Setup notarization (macOS)
-- [ ] Test build process
+- [x] Finalize electron-builder.yml
+- [x] Configure Windows build (NSIS)
+- [x] Configure macOS build (DMG)
+- [x] Setup code signing (macOS)
+- [x] Setup notarization (macOS)
+- [x] Test build process
 
 ### 6.2 Auto-updater
 
