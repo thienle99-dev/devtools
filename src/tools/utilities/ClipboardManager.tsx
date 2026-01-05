@@ -38,6 +38,8 @@ export const ClipboardManager: React.FC = () => {
     });
     const [selectedItem, setSelectedItem] = useState<ClipboardItem | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showStatistics, setShowStatistics] = useState(false);
     const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -187,29 +189,91 @@ export const ClipboardManager: React.FC = () => {
                 if ((window as any).ipcRenderer) {
                     (window as any).ipcRenderer.send('hide-window');
                 }
+            } else if (e.key === ' ' && filteredItems[selectedIndex]) {
+                // Space bar: Toggle selection
+                e.preventDefault();
+                const item = filteredItems[selectedIndex];
+                setSelectedItems(prev => {
+                    const next = new Set(prev);
+                    if (next.has(item.id)) {
+                        next.delete(item.id);
+                    } else {
+                        next.add(item.id);
+                        setIsSelectionMode(true);
+                    }
+                    if (next.size === 0) {
+                        setIsSelectionMode(false);
+                    }
+                    return next;
+                });
             } else if (e.key === 'Escape') {
                 if (showSettings) {
                     setShowSettings(false);
                 } else if (selectedItem) {
                     setSelectedItem(null);
+                } else if (isSelectionMode) {
+                    // Clear selection mode
+                    setSelectedItems(new Set());
+                    setIsSelectionMode(false);
                 } else {
                     searchInputRef.current?.blur();
                 }
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'a' && isSelectionMode) {
+                // Cmd+A: Select all visible items
+                e.preventDefault();
+                setSelectedItems(new Set(filteredItems.map(item => item.id)));
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'd' && selectedItems.size > 0) {
+                // Cmd+D: Bulk delete selected items
+                e.preventDefault();
+                selectedItems.forEach(id => removeItem(id));
+                setSelectedItems(new Set());
+                setIsSelectionMode(false);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [filteredItems, selectedIndex, showSettings, selectedItem, copyToClipboard]);
+    }, [filteredItems, selectedIndex, showSettings, selectedItem, copyToClipboard, isSelectionMode, selectedItems, removeItem]);
 
     const handleClearAll = () => {
         if (showClearConfirm) {
             clearAll();
             setShowClearConfirm(false);
+            setSelectedItems(new Set());
+            setIsSelectionMode(false);
         } else {
             setShowClearConfirm(true);
             setTimeout(() => setShowClearConfirm(false), 3000);
         }
+    };
+
+    // Bulk actions
+    const handleBulkDelete = () => {
+        selectedItems.forEach(id => removeItem(id));
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
+    };
+
+    const handleBulkPin = () => {
+        selectedItems.forEach(id => pinItem(id));
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
+    };
+
+    const handleBulkUnpin = () => {
+        selectedItems.forEach(id => unpinItem(id));
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
+    };
+
+    const handleSelectAll = () => {
+        setSelectedItems(new Set(filteredItems.map(item => item.id)));
+        setIsSelectionMode(true);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
     };
 
     return (
@@ -239,6 +303,51 @@ export const ClipboardManager: React.FC = () => {
                         />
                     </div>
 
+                    {/* Bulk Actions Bar */}
+                    {isSelectionMode && selectedItems.size > 0 && (
+                        <div className="flex-shrink-0 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-indigo-400">
+                                        {selectedItems.size} item{selectedItems.size > 1 ? 's' : ''} selected
+                                    </span>
+                                    <button
+                                        onClick={handleSelectAll}
+                                        className="text-xs text-foreground-muted hover:text-foreground transition-colors"
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        onClick={handleDeselectAll}
+                                        className="text-xs text-foreground-muted hover:text-foreground transition-colors"
+                                    >
+                                        Deselect All
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleBulkPin}
+                                        className="px-2 py-1 text-xs bg-surface-elevated border border-border rounded hover:bg-accent/10 hover:border-accent/50 transition-colors"
+                                    >
+                                        Pin
+                                    </button>
+                                    <button
+                                        onClick={handleBulkUnpin}
+                                        className="px-2 py-1 text-xs bg-surface-elevated border border-border rounded hover:bg-accent/10 hover:border-accent/50 transition-colors"
+                                    >
+                                        Unpin
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="px-2 py-1 text-xs bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 transition-colors"
+                                    >
+                                        Delete ({selectedItems.size})
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Clear Confirmation */}
                     {showClearConfirm && (
                         <div className="flex-shrink-0 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
@@ -265,11 +374,28 @@ export const ClipboardManager: React.FC = () => {
                         <ClipboardList
                             items={filteredItems}
                             selectedIndex={selectedIndex}
+                            selectedItems={selectedItems}
+                            isSelectionMode={isSelectionMode}
                             onPin={pinItem}
                             onUnpin={unpinItem}
                             onDelete={removeItem}
                             onViewFull={setSelectedItem}
                             onSelect={(index) => setSelectedIndex(index)}
+                            onToggleSelect={(id) => {
+                                setSelectedItems(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(id)) {
+                                        next.delete(id);
+                                    } else {
+                                        next.add(id);
+                                        setIsSelectionMode(true);
+                                    }
+                                    if (next.size === 0) {
+                                        setIsSelectionMode(false);
+                                    }
+                                    return next;
+                                });
+                            }}
                         />
                     </div>
 

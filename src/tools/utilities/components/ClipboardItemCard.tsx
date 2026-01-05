@@ -8,19 +8,25 @@ import { setLastCopiedContent } from '../utils/clipboardSync';
 interface ClipboardItemCardProps {
     item: ClipboardItem;
     isSelected?: boolean;
+    isChecked?: boolean;
+    isSelectionMode?: boolean;
     onPin: (id: string) => void;
     onUnpin: (id: string) => void;
     onDelete: (id: string) => void;
     onViewFull: (item: ClipboardItem) => void;
+    onToggleSelect?: () => void;
 }
 
 export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
     item,
     isSelected = false,
+    isChecked = false,
+    isSelectionMode = false,
     onPin,
     onUnpin,
     onDelete,
     onViewFull,
+    onToggleSelect,
 }) => {
     const { copyToClipboard, copyImageToClipboard } = useClipboard();
     const [copied, setCopied] = useState(false);
@@ -96,12 +102,39 @@ export const ClipboardItemCard: React.FC<ClipboardItemCardProps> = ({
                            ? 'border-indigo-500/40 bg-indigo-500/5 hover:border-indigo-500/60' 
                            : 'border-[var(--color-glass-border)] hover:border-indigo-500/30 hover:bg-[var(--color-glass-button-hover)]'
                        }
-                       ${isSelected ? 'ring-2 ring-indigo-500/50 border-indigo-500 shadow-lg' : ''}`}
-            onClick={() => handleCopy()}
+                       ${isSelected ? 'ring-2 ring-indigo-500/50 border-indigo-500 shadow-lg' : ''}
+                       ${isChecked ? 'ring-2 ring-indigo-500/50 border-indigo-500/70 bg-indigo-500/5' : ''}`}
+            onClick={(e) => {
+                if (isSelectionMode && onToggleSelect) {
+                    e.stopPropagation();
+                    onToggleSelect();
+                } else {
+                    handleCopy();
+                }
+            }}
         >
             <div className="p-3">
                 {/* Header */}
                 <div className="flex items-start gap-3 mb-2">
+                    {/* Selection Checkbox */}
+                    {isSelectionMode && (
+                        <div className="flex-shrink-0 pt-1">
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleSelect?.();
+                                }}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all
+                                    ${isChecked 
+                                        ? 'bg-indigo-500 border-indigo-500' 
+                                        : 'border-foreground-muted/30 hover:border-indigo-500/50'
+                                    }`}
+                            >
+                                {isChecked && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Type Icon or Image Thumbnail */}
                     {item.type === 'image' ? (
                         <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-[var(--color-glass-input)] border border-[var(--color-glass-border)]">

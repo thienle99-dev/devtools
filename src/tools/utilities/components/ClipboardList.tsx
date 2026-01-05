@@ -6,21 +6,27 @@ import { Clipboard, Sparkles, Pin } from 'lucide-react';
 interface ClipboardListProps {
     items: ClipboardItem[];
     selectedIndex?: number;
+    selectedItems?: Set<string>;
+    isSelectionMode?: boolean;
     onPin: (id: string) => void;
     onUnpin: (id: string) => void;
     onDelete: (id: string) => void;
     onViewFull: (item: ClipboardItem) => void;
     onSelect?: (index: number) => void;
+    onToggleSelect?: (id: string) => void;
 }
 
 export const ClipboardList: React.FC<ClipboardListProps> = ({
     items,
     selectedIndex = -1,
+    selectedItems = new Set(),
+    isSelectionMode = false,
     onPin,
     onUnpin,
     onDelete,
     onViewFull,
     onSelect,
+    onToggleSelect,
 }) => {
     const pinnedItems = items.filter(item => item.pinned);
     const recentItems = items.filter(item => !item.pinned);
@@ -63,10 +69,13 @@ export const ClipboardList: React.FC<ClipboardListProps> = ({
                                 <ClipboardItemCard
                                     item={item}
                                     isSelected={selectedIndex === index}
+                                    isChecked={selectedItems.has(item.id)}
+                                    isSelectionMode={isSelectionMode}
                                     onPin={onPin}
                                     onUnpin={onUnpin}
                                     onDelete={onDelete}
                                     onViewFull={onViewFull}
+                                    onToggleSelect={() => onToggleSelect?.(item.id)}
                                 />
                             </div>
                         ))}
@@ -96,10 +105,13 @@ export const ClipboardList: React.FC<ClipboardListProps> = ({
                                     <ClipboardItemCard
                                         item={item}
                                         isSelected={selectedIndex === globalIndex}
+                                        isChecked={selectedItems.has(item.id)}
+                                        isSelectionMode={isSelectionMode}
                                         onPin={onPin}
                                         onUnpin={onUnpin}
                                         onDelete={onDelete}
                                         onViewFull={onViewFull}
+                                        onToggleSelect={() => onToggleSelect?.(item.id)}
                                     />
                                 </div>
                             );
