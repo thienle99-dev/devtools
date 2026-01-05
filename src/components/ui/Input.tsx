@@ -55,11 +55,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
                         
                         // Variants
                         variant === 'glass' && [
-                            "bg-white/5 border border-white/10 rounded-lg",
-                            "hover:bg-white/10 hover:border-white/20",
+                            "bg-white/5 border border-border-glass rounded-lg",
+                            "hover:bg-white/10 hover:border-indigo-500/30",
                             "focus:bg-white/10 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10",
-                            // Light mode
-                            "dark:bg-black/20 dark:border-white/10",
+                            "dark:bg-black/20",
                         ],
                         
                         variant === 'filled' && [

@@ -3,6 +3,7 @@ import { format, isValid, parseISO, fromUnixTime } from 'date-fns';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 
 const TOOL_ID = 'date-time';
 
@@ -98,43 +99,23 @@ export const DateConverter: React.FC<DateConverterProps> = ({ tabId }) => {
             onClear={handleClear}
             actions={<Button variant="glass" size="sm" onClick={handleNow}>Now</Button>}
         >
-            <div className="max-w-3xl mx-auto space-y-6 py-6 px-4">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Input (ISO, Unix, or Text)</label>
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => handleInputChange(e.target.value)}
-                        className="glass-input w-full"
-                        placeholder="e.g. 1698500000 or 2023-10-29T10:00:00Z"
-                    />
-                </div>
+            <div className="max-w-3xl mx-auto space-y-6 py-8 px-4">
+                <Input
+                    label="Input (ISO, Unix, or Text)"
+                    value={input}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    placeholder="e.g. 1698500000 or 2023-10-29T10:00:00Z"
+                    fullWidth
+                    className="text-lg"
+                />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Human Readable</label>
-                        <input type="text" readOnly value={values.readable || ''} className="glass-input w-full bg-black/10 text-foreground-secondary" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">ISO 8601</label>
-                        <input type="text" readOnly value={values.iso || ''} className="glass-input w-full bg-black/10 text-foreground-secondary" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">UTC / GMT</label>
-                        <input type="text" readOnly value={values.utc || ''} className="glass-input w-full bg-black/10 text-foreground-secondary" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Local Time</label>
-                        <input type="text" readOnly value={values.local || ''} className="glass-input w-full bg-black/10 text-foreground-secondary" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Unix Timestamp (Seconds)</label>
-                        <input type="text" readOnly value={values.unix || ''} className="glass-input w-full bg-black/10 text-foreground-secondary" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Unix Timestamp (Milliseconds)</label>
-                        <input type="text" readOnly value={values.unix_ms || ''} className="glass-input w-full bg-black/10 text-foreground-secondary" />
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input label="Human Readable" readOnly value={values.readable || ''} fullWidth className="text-foreground-secondary font-medium" />
+                    <Input label="ISO 8601" readOnly value={values.iso || ''} fullWidth className="text-foreground-secondary font-mono text-xs" />
+                    <Input label="UTC / GMT" readOnly value={values.utc || ''} fullWidth className="text-foreground-secondary font-mono text-xs" />
+                    <Input label="Local Time" readOnly value={values.local || ''} fullWidth className="text-foreground-secondary font-mono text-xs" />
+                    <Input label="Unix Timestamp (Seconds)" readOnly value={values.unix || ''} fullWidth className="text-foreground-secondary font-mono" />
+                    <Input label="Unix Timestamp (Milliseconds)" readOnly value={values.unix_ms || ''} fullWidth className="text-foreground-secondary font-mono" />
                 </div>
             </div>
         </ToolPane>

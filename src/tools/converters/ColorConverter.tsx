@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 
 const TOOL_ID = 'color-converter';
 
@@ -96,53 +97,58 @@ export const ColorConverter: React.FC<ColorConverterProps> = ({ tabId }) => {
             description="Convert colors between Hex, RGB, and HSL"
             onClear={handleClear}
         >
-            <div className="max-w-2xl mx-auto space-y-8 py-8 px-4">
-                <div className="flex justify-center mb-8">
+            <div className="max-w-xl mx-auto space-y-8 py-8 px-4">
+                <div className="flex justify-center mb-4">
                     <div
-                        className="w-32 h-32 rounded-full shadow-2xl border-4 border-white/10"
+                        className="w-32 h-32 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-4 border-white/10 transition-transform hover:scale-105 duration-300"
                         style={{ backgroundColor: values.hex }}
                     />
                 </div>
 
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Hex Color</label>
-                        <div className="flex items-center space-x-2">
-                            <input type="color" value={values.hex} onChange={(e) => updateFromHex(e.target.value)} className="w-10 h-10 rounded glass-input p-0 border-0 cursor-pointer overflow-hidden" />
-                            <input
-                                type="text"
+                <div className="space-y-6">
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">Hex Color</label>
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 glass-panel shrink-0">
+                                <input 
+                                    type="color" 
+                                    value={values.hex} 
+                                    onChange={(e) => updateFromHex(e.target.value)} 
+                                    className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] cursor-pointer" 
+                                />
+                            </div>
+                            <Input
                                 value={values.hex}
                                 onChange={(e) => updateFromHex(e.target.value)}
-                                className="glass-input flex-1 font-mono uppercase"
+                                className="font-mono uppercase text-lg"
                                 placeholder="#000000"
+                                fullWidth
                             />
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">RGB</label>
-                        <div className="flex space-x-2">
-                            <input type="number" value={values.r} onChange={e => updateFromRgb(e.target.value, values.g, values.b)} className="glass-input w-1/3" placeholder="R" min="0" max="255" />
-                            <input type="number" value={values.g} onChange={e => updateFromRgb(values.r, e.target.value, values.b)} className="glass-input w-1/3" placeholder="G" min="0" max="255" />
-                            <input type="number" value={values.b} onChange={e => updateFromRgb(values.r, values.g, e.target.value)} className="glass-input w-1/3" placeholder="B" min="0" max="255" />
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-[0.2em] pl-1">RGB Values</label>
+                        <div className="grid grid-cols-3 gap-3">
+                            <Input type="number" value={values.r} onChange={e => updateFromRgb(e.target.value, values.g, values.b)} placeholder="R" min="0" max="255" className="text-center font-mono" fullWidth />
+                            <Input type="number" value={values.g} onChange={e => updateFromRgb(values.r, e.target.value, values.b)} placeholder="G" min="0" max="255" className="text-center font-mono" fullWidth />
+                            <Input type="number" value={values.b} onChange={e => updateFromRgb(values.r, values.g, e.target.value)} placeholder="B" min="0" max="255" className="text-center font-mono" fullWidth />
                         </div>
-                        <input
-                            type="text"
+                        <Input
                             value={values.rgb}
                             readOnly
-                            className="glass-input w-full mt-2 font-mono text-foreground-secondary"
+                            className="font-mono text-foreground-secondary"
+                            fullWidth
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">HSL</label>
-                        <input
-                            type="text"
-                            value={values.hsl}
-                            readOnly
-                            className="glass-input w-full font-mono text-foreground-secondary"
-                        />
-                    </div>
+                    <Input
+                        label="HSL"
+                        value={values.hsl}
+                        readOnly
+                        className="font-mono text-foreground-secondary"
+                        fullWidth
+                    />
                 </div>
             </div>
         </ToolPane>

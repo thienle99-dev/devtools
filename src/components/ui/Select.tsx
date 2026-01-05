@@ -54,22 +54,22 @@ export const Select: React.FC<SelectProps> = ({
                         
                         // Variants (matching Input)
                         variant === 'glass' && [
-                            "bg-white/5 border border-white/10 rounded-lg",
-                            "hover:bg-white/10 hover:border-white/20",
+                            "bg-white/5 border border-border-glass rounded-lg",
+                            "hover:bg-white/10 hover:border-indigo-500/30",
                             "focus:bg-white/10 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10",
-                            "dark:bg-black/20 dark:border-white/10",
+                            "dark:bg-black/20",
                         ],
                         
                         variant === 'filled' && [
-                            "bg-black/5 border-transparent rounded-lg",
-                            "hover:bg-black/10",
+                            "bg-black/5 border border-transparent rounded-lg",
+                            "hover:bg-black/10 hover:border-border-glass",
                             "focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20",
                             "dark:bg-white/10 dark:focus:bg-black/40",
                         ],
                         
                         variant === 'outline' && [
                             "bg-transparent border border-border-glass rounded-lg",
-                            "hover:border-foreground-muted",
+                            "hover:border-foreground-muted hover:border-indigo-500/30",
                             "focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10",
                         ],
                         
@@ -85,7 +85,7 @@ export const Select: React.FC<SelectProps> = ({
                             key={opt.value} 
                             value={opt.value} 
                             disabled={opt.disabled}
-                            className="bg-gray-900 text-foreground" // Fallback for dropdown background
+                            className="bg-white dark:bg-slate-900 text-foreground"
                         >
                             {opt.label}
                         </option>

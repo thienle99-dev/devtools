@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
+import { Input } from '../../components/ui/Input';
 
 const TOOL_ID = 'number-base';
 
@@ -85,49 +86,41 @@ export const NumberBaseConverter: React.FC<NumberBaseConverterProps> = ({ tabId 
             onClear={handleClear}
         >
             <div className="max-w-3xl mx-auto space-y-8 py-8 px-4">
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Decimal (Base 10)</label>
-                    <input
-                        type="text"
-                        value={values.decimal}
-                        onChange={(e) => updateAll('decimal', e.target.value)}
-                        className="glass-input w-full text-lg font-mono tracking-wide"
-                        placeholder="0"
-                    />
-                </div>
+                <Input
+                    label="Decimal (Base 10)"
+                    value={values.decimal}
+                    onChange={(e) => updateAll('decimal', e.target.value)}
+                    className="text-lg font-mono tracking-wide"
+                    placeholder="0"
+                    fullWidth
+                />
 
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Hexadecimal (Base 16)</label>
-                    <input
-                        type="text"
-                        value={values.hex}
-                        onChange={(e) => updateAll('hex', e.target.value)}
-                        className="glass-input w-full text-lg font-mono tracking-wide"
-                        placeholder="00"
-                    />
-                </div>
+                <Input
+                    label="Hexadecimal (Base 16)"
+                    value={values.hex}
+                    onChange={(e) => updateAll('hex', e.target.value)}
+                    className="text-lg font-mono tracking-wide"
+                    placeholder="00"
+                    fullWidth
+                />
 
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Octal (Base 8)</label>
-                    <input
-                        type="text"
-                        value={values.octal}
-                        onChange={(e) => updateAll('octal', e.target.value)}
-                        className="glass-input w-full text-lg font-mono tracking-wide"
-                        placeholder="0"
-                    />
-                </div>
+                <Input
+                    label="Octal (Base 8)"
+                    value={values.octal}
+                    onChange={(e) => updateAll('octal', e.target.value)}
+                    className="text-lg font-mono tracking-wide"
+                    placeholder="0"
+                    fullWidth
+                />
 
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-foreground-muted uppercase tracking-widest pl-1">Binary (Base 2)</label>
-                    <input
-                        type="text"
-                        value={values.binary}
-                        onChange={(e) => updateAll('binary', e.target.value)}
-                        className="glass-input w-full text-lg font-mono tracking-wide"
-                        placeholder="0000"
-                    />
-                </div>
+                <Input
+                    label="Binary (Base 2)"
+                    value={values.binary}
+                    onChange={(e) => updateAll('binary', e.target.value)}
+                    className="text-lg font-mono tracking-wide"
+                    placeholder="0000"
+                    fullWidth
+                />
             </div>
         </ToolPane>
     );

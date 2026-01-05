@@ -32,7 +32,7 @@
 
   --color-glass-panel: rgba(255, 255, 255, 0.75);
   --color-glass-panel-light: rgba(255, 255, 255, 0.5);
-  --color-glass-border: rgba(0, 0, 0, 0.08);
+  --color-glass-border: rgba(0, 0, 0, 0.15);
   --color-glass-border-hover: rgba(0, 0, 0, 0.15);
   --color-glass-button: rgba(255, 255, 255, 0.6);
   --color-glass-button-hover: rgba(255, 255, 255, 0.8);
