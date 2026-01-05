@@ -13,7 +13,8 @@ import {
     FileImage,
     Settings,
     Clipboard,
-    Activity
+    Activity,
+    Trash2
 } from 'lucide-react';
 
 
@@ -93,6 +94,7 @@ const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator')
 const DockerConverter = React.lazy(() => import('./development/DockerConverter').then(m => ({ default: m.DockerConverter })));
 const ClipboardManager = React.lazy(() => import('./utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
 const StatsMonitor = React.lazy(() => import('./utilities/stats-monitor/StatsMonitor').then(m => ({ default: m.default })));
+const SystemCleaner = React.lazy(() => import('./utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -501,6 +503,16 @@ export const TOOLS: ToolDefinition[] = [
         component: StatsMonitor,
         keywords: ['cpu', 'memory', 'disk', 'network', 'battery', 'gpu', 'stats', 'monitor'],
         shortcut: 'Ctrl+Shift+M'
+    },
+    {
+        id: 'system-cleaner',
+        name: 'System Cleaner',
+        path: '/system-cleaner',
+        description: 'Comprehensive system cleaning and optimization suite',
+        category: 'utilities',
+        icon: Trash2,
+        component: SystemCleaner,
+        keywords: ['cleaner', 'junk', 'optimization', 'malware', 'protection', 'maintenance', 'system'],
     },
 
     // Settings (Special tool - not in any category)

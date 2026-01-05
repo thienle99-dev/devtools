@@ -151,7 +151,8 @@ export const TabBar: React.FC = React.memo(() => {
         return tabs.filter(tab => !tab.isPreview); // Filter out preview tabs
     }, [tabs]);
 
-    if (tabs.length === 0) return null;
+    // Hide TabBar if no active tabs (only preview tabs exist)
+    if (sortedTabs.length === 0) return null;
 
     return (
         <div className="tab-bar-container h-11 flex items-center w-full z-20 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm">
@@ -176,7 +177,6 @@ export const TabBar: React.FC = React.memo(() => {
                 <div className="flex items-end h-full gap-1">
                     {sortedTabs.map((tab, index) => {
                         const isActive = tab.id === activeTabId;
-                        const isPreview = tab.isPreview ?? false;
                         const Icon = getToolIcon(tab.toolId);
                         const isFirst = index === 0;
                         const isLast = index === sortedTabs.length - 1;
@@ -198,34 +198,27 @@ export const TabBar: React.FC = React.memo(() => {
                                     "min-w-[140px] max-w-[240px] relative",
                                     isActive 
                                         ? "tab-item-chrome-active bg-[var(--color-glass-panel)]" 
-                                        : isPreview
-                                        ? "tab-item-chrome-preview bg-[var(--color-glass-button)]/50 opacity-60 hover:opacity-80"
                                         : "tab-item-chrome-inactive hover:bg-[var(--color-glass-button)]",
                                     isFirst && "tab-item-first",
                                     isLast && "tab-item-last"
                                 )}
-                                title={tab.description || tab.title + (isPreview ? ' (Preview - Click to activate)' : '')}
+                                title={tab.description || tab.title}
                             >
                                 {/* Tool Icon */}
                                 {Icon && (
                                     <Icon className={cn(
                                         "w-4 h-4 shrink-0 transition-opacity",
-                                        isActive ? "opacity-100 text-indigo-400" : isPreview ? "opacity-40" : "opacity-50 group-hover:opacity-70"
+                                        isActive ? "opacity-100 text-indigo-400" : "opacity-50 group-hover:opacity-70"
                                     )} />
                                 )}
 
                                 {/* Tab Title */}
                                 <span className={cn(
                                     "text-sm truncate flex-1 font-medium transition-colors",
-                                    isActive ? "text-foreground" : isPreview ? "text-foreground-muted" : "text-foreground-secondary group-hover:text-foreground"
+                                    isActive ? "text-foreground" : "text-foreground-secondary group-hover:text-foreground"
                                 )}>
                                     {tab.title}
                                 </span>
-
-                                {/* Preview Indicator */}
-                                {isPreview && (
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400/60 shrink-0 animate-pulse" />
-                                )}
 
                                 {/* Close Button */}
                                 <button

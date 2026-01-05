@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
+import { setupCleanerHandlers } from './cleaner'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -765,6 +766,7 @@ app.whenReady().then(() => {
     }
   });
 
+  setupCleanerHandlers();
   createTray();
   createWindow();
 })

@@ -47,3 +47,9 @@ electron.contextBridge.exposeInMainWorld("statsAPI", {
 	getBluetoothStats: () => electron.ipcRenderer.invoke("get-bluetooth-stats"),
 	getTimeZonesStats: () => electron.ipcRenderer.invoke("get-timezones-stats")
 });
+electron.contextBridge.exposeInMainWorld("cleanerAPI", {
+	getPlatform: () => electron.ipcRenderer.invoke("cleaner:get-platform"),
+	scanJunk: () => electron.ipcRenderer.invoke("cleaner:scan-junk"),
+	runCleanup: (categories) => electron.ipcRenderer.invoke("cleaner:run-cleanup", categories),
+	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram")
+});

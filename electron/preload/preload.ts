@@ -55,3 +55,10 @@ contextBridge.exposeInMainWorld('statsAPI', {
   getBluetoothStats: () => ipcRenderer.invoke('get-bluetooth-stats'),
   getTimeZonesStats: () => ipcRenderer.invoke('get-timezones-stats'),
 })
+
+contextBridge.exposeInMainWorld('cleanerAPI', {
+  getPlatform: () => ipcRenderer.invoke('cleaner:get-platform'),
+  scanJunk: () => ipcRenderer.invoke('cleaner:scan-junk'),
+  runCleanup: (categories: string[]) => ipcRenderer.invoke('cleaner:run-cleanup', categories),
+  freeRam: () => ipcRenderer.invoke('cleaner:free-ram'),
+})

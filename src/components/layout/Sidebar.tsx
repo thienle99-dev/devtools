@@ -12,10 +12,14 @@ import { motion } from 'framer-motion';
 
 export const Sidebar: React.FC = React.memo(() => {
     const openTab = useTabStore(state => state.openTab);
+    const setActiveTab = useTabStore(state => state.setActiveTab);
     const activeTabId = useTabStore(state => state.activeTabId);
     const tabs = useTabStore(state => state.tabs);
     const navigate = useNavigate();
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+    
+    // Count preview tabs
+    const previewTabsCount = useMemo(() => tabs.filter(t => t.isPreview).length, [tabs]);
 
     const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -91,22 +95,15 @@ export const Sidebar: React.FC = React.memo(() => {
                                     key={tool.id}
                                     onClick={(e) => {
                                         e.preventDefault();
+                                        e.stopPropagation();
                                         if (e.altKey) {
                                             // Alt+Click: Force new tab and activate immediately
                                             openTab(tool.id, tool.path, tool.name, tool.description, true, false);
                                             navigate(tool.path);
                                         } else {
-                                            // Normal click: Check if preview tab exists, if so activate it; otherwise create preview
-                                            const existingPreviewTab = tabs.find(t => t.toolId === tool.id && t.isPreview);
-                                            if (existingPreviewTab) {
-                                                // Activate existing preview tab
-                                                setActiveTab(existingPreviewTab.id);
-                                                navigate(tool.path);
-                                            } else {
-                                                // Create preview tab (not shown in TabBar, not activated)
-                                                openTab(tool.id, tool.path, tool.name, tool.description, false, true);
-                                                // Don't navigate - keep current tab active
-                                            }
+                                            // Single click: Activate immediately (no preview)
+                                            openTab(tool.id, tool.path, tool.name, tool.description, false, false);
+                                            navigate(tool.path);
                                         }
                                     }}
                                     title={tool.description + (shortcut ? ` (${shortcut})` : '')}
@@ -166,22 +163,15 @@ export const Sidebar: React.FC = React.memo(() => {
                                     key={tool.id}
                                     onClick={(e) => {
                                         e.preventDefault();
+                                        e.stopPropagation();
                                         if (e.altKey) {
                                             // Alt+Click: Force new tab and activate immediately
                                             openTab(tool.id, tool.path, tool.name, tool.description, true, false);
                                             navigate(tool.path);
                                         } else {
-                                            // Normal click: Check if preview tab exists, if so activate it; otherwise create preview
-                                            const existingPreviewTab = tabs.find(t => t.toolId === tool.id && t.isPreview);
-                                            if (existingPreviewTab) {
-                                                // Activate existing preview tab
-                                                setActiveTab(existingPreviewTab.id);
-                                                navigate(tool.path);
-                                            } else {
-                                                // Create preview tab (not shown in TabBar, not activated)
-                                                openTab(tool.id, tool.path, tool.name, tool.description, false, true);
-                                                // Don't navigate - keep current tab active
-                                            }
+                                            // Single click: Activate immediately (no preview)
+                                            openTab(tool.id, tool.path, tool.name, tool.description, false, false);
+                                            navigate(tool.path);
                                         }
                                     }}
                                             title={tool.description + (shortcut ? ` (${shortcut})` : '')}
@@ -217,7 +207,30 @@ export const Sidebar: React.FC = React.memo(() => {
             </nav>
 
             {/* Enhanced Footer - Settings Button */}
-            <div className="px-5 py-4 border-t border-border-glass/50 bg-[var(--color-glass-panel)]/50">
+            <div className="px-5 py-4 border-t border-border-glass/50 bg-[var(--color-glass-panel)]/50 space-y-2">
+                {/* Preview Tabs Indicator */}
+                {previewTabsCount > 0 && (
+                    <div className="px-3.5 py-2 text-xs text-foreground-muted flex items-center justify-between bg-[var(--color-glass-input)]/50 rounded-lg">
+                        <span>{previewTabsCount} preview tab{previewTabsCount > 1 ? 's' : ''}</span>
+                        <button
+                            onClick={() => {
+                                // Activate first preview tab
+                                const firstPreview = tabs.find(t => t.isPreview);
+                                if (firstPreview) {
+                                    setActiveTab(firstPreview.id);
+                                    const allTools = CATEGORIES.flatMap(c => getToolsByCategory(c.id));
+                                    const tool = allTools.find(t => t.id === firstPreview.toolId);
+                                    if (tool) {
+                                        navigate(tool.path);
+                                    }
+                                }
+                            }}
+                            className="text-indigo-400 hover:text-indigo-300 transition-colors text-xs underline"
+                        >
+                            Activate
+                        </button>
+                    </div>
+                )}
                 <div
                     onClick={(e) => {
                         e.preventDefault();

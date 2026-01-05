@@ -31,7 +31,7 @@ export const useTabStore = create<TabStore>()(
             activeTabId: null,
 
             openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean, isPreview?: boolean) => {
-                const { tabs, activeTabId } = get();
+                const { tabs } = get();
 
                 // Check if a tab with this toolId already exists unless forceNew is true
                 if (!forceNew) {
@@ -60,10 +60,12 @@ export const useTabStore = create<TabStore>()(
                     isPreview: isPreview ?? false
                 };
 
-                // If preview, don't set as active; otherwise activate immediately
+                // If preview, remove all other preview tabs first, then add new preview tab
                 if (isPreview) {
+                    // Remove all preview tabs (keep only active tabs)
+                    const activeTabs = tabs.filter(t => !t.isPreview);
                     set({
-                        tabs: [...tabs, newTab]
+                        tabs: [...activeTabs, newTab]
                         // Don't change activeTabId - keep current tab active
                     });
                 } else {
