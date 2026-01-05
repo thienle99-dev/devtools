@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BatteryStats } from '../../../../types/stats';
-import { Battery, BatteryCharging, BatteryWarning, Plug } from 'lucide-react';
+import { Battery, BatteryCharging, Plug } from 'lucide-react';
 
 interface BatteryModuleProps {
   data: BatteryStats;
@@ -9,17 +9,17 @@ interface BatteryModuleProps {
 export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
   if (!data.hasBattery) {
       return (
-        <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col gap-4 opacity-50">
+        <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4 opacity-50">
              <div className="flex items-center gap-2">
-                <div className="p-2 bg-gray-500/10 rounded-lg">
-                    <Plug className="w-5 h-5 text-gray-400" />
+                <div className="p-2 bg-gray-500/10 dark:bg-gray-500/10 rounded-lg">
+                    <Plug className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </div>
                 <div>
-                    <h3 className="text-sm font-medium text-white/90">Power</h3>
-                    <p className="text-xs text-white/50">AC Connected</p>
+                    <h3 className="text-sm font-medium text-foreground">Power</h3>
+                    <p className="text-xs text-foreground-muted">AC Connected</p>
                 </div>
              </div>
-             <div className="text-xs text-white/50 text-center py-4">
+             <div className="text-xs text-foreground-muted text-center py-4">
                 No battery detected
              </div>
         </div>
@@ -28,7 +28,6 @@ export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
 
   const percent = data.percent;
   const isCharging = data.isCharging;
-  const timeRemaining = data.timeRemaining; // in minutes? systeminformation docs say minutes usually
 
   // Determine color based on percent
   const getColor = (pct: number) => {
@@ -47,55 +46,55 @@ export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
   const color = getColor(percent);
 
   return (
-    <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col gap-4">
+    <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-green-500/10 rounded-lg">
+          <div className="p-2 bg-green-500/10 dark:bg-green-500/10 rounded-lg">
             {isCharging ? (
-                 <BatteryCharging className="w-5 h-5 text-green-400" />
+                 <BatteryCharging className="w-5 h-5 text-green-500 dark:text-green-400" />
             ) : (
-                 <Battery className="w-5 h-5 text-green-400" />
+                 <Battery className="w-5 h-5 text-green-500 dark:text-green-400" />
             )}
            
           </div>
           <div>
-            <h3 className="text-sm font-medium text-white/90">Battery</h3>
-            <p className="text-xs text-white/50">{isCharging ? 'Charging' : 'Discharging'}</p>
+            <h3 className="text-sm font-medium text-foreground">Battery</h3>
+            <p className="text-xs text-foreground-muted">{isCharging ? 'Charging' : 'Discharging'}</p>
           </div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold font-mono" style={{ color }}>{percent}%</div>
-          <div className="text-xs text-white/50">
+          <div className="text-xs text-foreground-muted">
             {isCharging ? 'AC Connected' : (data.timeRemaining > 0 ? formatTime(data.timeRemaining) : '...')}
           </div>
         </div>
       </div>
 
-      <div className="w-full bg-white/10 rounded-full h-8 overflow-hidden relative border border-white/5">
+      <div className="w-full bg-[var(--color-glass-input)] rounded-full h-8 overflow-hidden relative border border-[var(--color-glass-border)]">
          <div 
              className="h-full transition-all duration-500 relative"
              style={{ width: `${percent}%`, backgroundColor: color }}
          >
             {/* Battery glare effect */}
-            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
+            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20 dark:bg-white/20"></div>
          </div>
          {/* Bolt icon centered if charging? */}
          {isCharging && (
              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                 <BatteryCharging className="w-4 h-4 text-white drop-shadow-md" />
+                 <BatteryCharging className="w-4 h-4 text-white dark:text-white drop-shadow-md" />
              </div>
          )}
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-white/5 p-2 rounded flex justify-between">
-            <span className="text-white/50">Cycles</span>
-            <span className="text-white/90">{data.cycleCount}</span>
+        <div className="bg-[var(--color-glass-input)] p-2 rounded flex justify-between">
+            <span className="text-foreground-muted">Cycles</span>
+            <span className="text-foreground">{data.cycleCount}</span>
         </div>
-        <div className="bg-white/5 p-2 rounded flex justify-between">
-            <span className="text-white/50">Health</span>
+        <div className="bg-[var(--color-glass-input)] p-2 rounded flex justify-between">
+            <span className="text-foreground-muted">Health</span>
              {/* Simple health calc if maxCapacity and designedCapacity exist */}
-            <span className="text-white/90">
+            <span className="text-foreground">
                 {data.maxCapacity && data.designedCapacity 
                     ? Math.round((data.maxCapacity / data.designedCapacity) * 100) + '%'
                     : 'N/A'

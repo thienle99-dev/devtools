@@ -16,8 +16,8 @@ const StatsMonitor: React.FC = () => {
 
   if (!metrics) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-white/50">
-        <Activity className="w-12 h-12 mb-4 animate-pulse text-white/20" />
+      <div className="flex flex-col items-center justify-center h-full text-foreground-muted">
+        <Activity className="w-12 h-12 mb-4 animate-pulse text-foreground-muted opacity-50" />
         <p>Initializing system sensors...</p>
         <p className="text-sm mt-2">Checking Electron IPC permissions...</p>
       </div>
@@ -33,20 +33,20 @@ const StatsMonitor: React.FC = () => {
            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
             System Monitor
           </h1>
-          <p className="text-white/50 text-sm">Real-time performance metrics</p>
+          <p className="text-foreground-muted text-sm">Real-time performance metrics</p>
         </div>
         
         <div className="flex gap-2">
             {/* Quick toggles for modules */}
-            <div className="bg-black/20 p-1 rounded-lg flex items-center gap-1 border border-white/5 overflow-x-auto max-w-[400px]">
+            <div className="bg-[var(--color-glass-input)] p-1 rounded-lg flex items-center gap-1 border border-[var(--color-glass-border)] overflow-x-auto max-w-[400px]">
                 {allModules.map(mod => (
                     <button
                         key={mod}
                         onClick={() => toggleModule(mod)}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
                             enabledModules.includes(mod) 
-                                ? 'bg-white/10 text-white shadow-sm' 
-                                : 'text-white/40 hover:text-white/70'
+                                ? 'bg-[var(--color-glass-button-hover)] text-foreground shadow-sm' 
+                                : 'text-foreground-muted hover:text-foreground'
                         }`}
                     >
                         {mod.toUpperCase()}
@@ -54,7 +54,7 @@ const StatsMonitor: React.FC = () => {
                 ))}
             </div>
             
-            <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/50 hover:text-white">
+            <button className="p-2 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground">
                 <Settings className="w-5 h-5" />
             </button>
         </div>

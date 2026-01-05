@@ -53,26 +53,26 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
   const color = getColor(usedPercent);
 
   return (
-        <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col gap-4">
+        <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-violet-500/10 rounded-lg">
-            <HardDrive className="w-5 h-5 text-violet-400" />
+          <div className="p-2 bg-violet-500/10 dark:bg-violet-500/10 rounded-lg">
+            <HardDrive className="w-5 h-5 text-violet-500 dark:text-violet-400" />
           </div>
           <div>
-            <h3 className="text-sm font-medium text-white/90">Disk</h3>
-             <p className="text-xs text-white/50">{primaryDisk ? primaryDisk.fs : 'Unknown'}</p>
+            <h3 className="text-sm font-medium text-foreground">Disk</h3>
+             <p className="text-xs text-foreground-muted">{primaryDisk ? primaryDisk.fs : 'Unknown'}</p>
           </div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold font-mono" style={{ color }}>{usedPercent}%</div>
-          <div className="text-xs text-white/50">Used</div>
+          <div className="text-xs text-foreground-muted">Used</div>
         </div>
       </div>
 
        <div className="grid grid-cols-2 gap-2">
         {/* Read Graph */}
-        <div className="h-16 w-full bg-black/20 rounded-lg overflow-hidden relative">
+        <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
             <Graph 
                 data={readHistory} 
                 labels={Array(MAX_POINTS).fill('')} 
@@ -80,11 +80,11 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
                 height={64}
                 min={0}
             />
-             <div className="absolute bottom-1 right-1 text-[10px] text-white/30">Read: {data.ioStats ? formatSpeed(data.ioStats.rIO_sec) : 'N/A'}</div>
+             <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Read: {data.ioStats ? formatSpeed(data.ioStats.rIO_sec) : 'N/A'}</div>
         </div>
         
         {/* Write Graph */}
-        <div className="h-16 w-full bg-black/20 rounded-lg overflow-hidden relative">
+        <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
             <Graph 
                 data={writeHistory} 
                 labels={Array(MAX_POINTS).fill('')} 
@@ -92,12 +92,12 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
                 height={64}
                 min={0}
             />
-            <div className="absolute bottom-1 right-1 text-[10px] text-white/30">Write: {data.ioStats ? formatSpeed(data.ioStats.wIO_sec) : 'N/A'}</div>
+            <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Write: {data.ioStats ? formatSpeed(data.ioStats.wIO_sec) : 'N/A'}</div>
         </div>
       </div>
 
        {primaryDisk && (
-        <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+        <div className="w-full bg-[var(--color-glass-input)] rounded-full h-1.5 overflow-hidden">
             <div 
                 className="h-full rounded-full transition-all duration-500"
                 style={{ width: `${primaryDisk.use}%`, backgroundColor: color }}
@@ -105,7 +105,7 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
         </div>
        )}
 
-      <div className="flex items-center justify-between text-xs text-white/50 px-1">
+      <div className="flex items-center justify-between text-xs text-foreground-muted px-1">
         <span>Free: {primaryDisk ? (primaryDisk.available / 1024 / 1024 / 1024).toFixed(0) : 0} GB</span>
         <span>Total: {primaryDisk ? (primaryDisk.size / 1024 / 1024 / 1024).toFixed(0) : 0} GB</span>
       </div>
