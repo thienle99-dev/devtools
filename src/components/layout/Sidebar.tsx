@@ -92,11 +92,21 @@ export const Sidebar: React.FC = React.memo(() => {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         if (e.altKey) {
-                                            openTab(tool.id, tool.path, tool.name, tool.description, true);
+                                            // Alt+Click: Force new tab and activate immediately
+                                            openTab(tool.id, tool.path, tool.name, tool.description, true, false);
                                             navigate(tool.path);
                                         } else {
-                                            openTab(tool.id, tool.path, tool.name, tool.description, false);
-                                            navigate(tool.path);
+                                            // Normal click: Check if preview tab exists, if so activate it; otherwise create preview
+                                            const existingPreviewTab = tabs.find(t => t.toolId === tool.id && t.isPreview);
+                                            if (existingPreviewTab) {
+                                                // Activate existing preview tab
+                                                setActiveTab(existingPreviewTab.id);
+                                                navigate(tool.path);
+                                            } else {
+                                                // Create preview tab (not shown in TabBar, not activated)
+                                                openTab(tool.id, tool.path, tool.name, tool.description, false, true);
+                                                // Don't navigate - keep current tab active
+                                            }
                                         }
                                     }}
                                     title={tool.description + (shortcut ? ` (${shortcut})` : '')}
@@ -152,20 +162,28 @@ export const Sidebar: React.FC = React.memo(() => {
                                     const shortcut = toolShortcuts[tool.id] || tool.shortcut;
 
                                     return (
-                                        <div
-                                            key={tool.id}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                if (e.altKey) {
-                                                    // Alt+Click: Force new tab
-                                                    openTab(tool.id, tool.path, tool.name, tool.description, true);
-                                                    navigate(tool.path);
-                                                } else {
-                                                    // Normal click: Open or switch to existing tab
-                                                    openTab(tool.id, tool.path, tool.name, tool.description, false);
-                                                    navigate(tool.path);
-                                                }
-                                            }}
+                                <div
+                                    key={tool.id}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (e.altKey) {
+                                            // Alt+Click: Force new tab and activate immediately
+                                            openTab(tool.id, tool.path, tool.name, tool.description, true, false);
+                                            navigate(tool.path);
+                                        } else {
+                                            // Normal click: Check if preview tab exists, if so activate it; otherwise create preview
+                                            const existingPreviewTab = tabs.find(t => t.toolId === tool.id && t.isPreview);
+                                            if (existingPreviewTab) {
+                                                // Activate existing preview tab
+                                                setActiveTab(existingPreviewTab.id);
+                                                navigate(tool.path);
+                                            } else {
+                                                // Create preview tab (not shown in TabBar, not activated)
+                                                openTab(tool.id, tool.path, tool.name, tool.description, false, true);
+                                                // Don't navigate - keep current tab active
+                                            }
+                                        }
+                                    }}
                                             title={tool.description + (shortcut ? ` (${shortcut})` : '')}
                                             className={cn(
                                                 "sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
@@ -203,7 +221,8 @@ export const Sidebar: React.FC = React.memo(() => {
                 <div
                     onClick={(e) => {
                         e.preventDefault();
-                        openTab('settings', '/settings', 'Settings', 'Customize your experience and manage application preferences', false);
+                        // Settings always activates immediately (not preview)
+                        openTab('settings', '/settings', 'Settings', 'Customize your experience and manage application preferences', false, false);
                         navigate('/settings');
                     }}
                     className={cn(

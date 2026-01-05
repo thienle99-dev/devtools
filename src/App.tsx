@@ -20,6 +20,7 @@ const PageLoader = () => (
 
 const MainLayout = () => {
   const openTab = useTabStore(state => state.openTab);
+  const setActiveTab = useTabStore(state => state.setActiveTab);
   const tabs = useTabStore(state => state.tabs);
   const activeTabId = useTabStore(state => state.activeTabId);
   const location = useLocation();
@@ -33,11 +34,14 @@ const MainLayout = () => {
     // If we are on a tool path (including settings), ensure tab is open
     const tool = TOOLS.find(t => t.path === location.pathname);
     if (tool) {
-      // Check if tab already exists to avoid unnecessary work
+      // Check if tab already exists (including preview tabs)
       const existingTab = tabs.find(t => t.toolId === tool.id);
       if (!existingTab) {
-        // "openTab" handles switching if exists
-        openTab(tool.id, tool.path, tool.name, tool.description);
+        // URL sync should create active tab (not preview) - user navigated directly
+        openTab(tool.id, tool.path, tool.name, tool.description, false, false);
+      } else if (existingTab.isPreview) {
+        // If existing tab is preview, activate it when URL matches
+        setActiveTab(existingTab.id);
       }
     }
   }, [location.pathname, openTab, tabs]);
@@ -202,9 +206,9 @@ function App() {
         if (configHasShift !== e.shiftKey) continue;
         if (configHasAlt !== e.altKey) continue;
 
-        // If matched
+        // If matched - keyboard shortcuts should activate immediately (not preview)
         e.preventDefault();
-        openTab(tool.id, tool.path, tool.name, tool.description);
+        openTab(tool.id, tool.path, tool.name, tool.description, false, false);
         return; // Handle only one
       }
     };

@@ -7,13 +7,14 @@ export interface Tab {
     title: string;
     path: string;
     description?: string;
+    isPreview?: boolean; // True if tab is in preview state (not yet activated)
 }
 
 interface TabStore {
     tabs: Tab[];
     activeTabId: string | null;
 
-    openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean) => void;
+    openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean, isPreview?: boolean) => void;
     closeTab: (tabId: string) => void;
     setActiveTab: (tabId: string) => void;
     reorderTabs: (tabs: Tab[]) => void;
@@ -29,14 +30,22 @@ export const useTabStore = create<TabStore>()(
             tabs: [],
             activeTabId: null,
 
-            openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean) => {
-                const { tabs } = get();
+            openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean, isPreview?: boolean) => {
+                const { tabs, activeTabId } = get();
 
                 // Check if a tab with this toolId already exists unless forceNew is true
                 if (!forceNew) {
-                    const existingTab = tabs.find(t => t.toolId === toolId);
+                    const existingTab = tabs.find(t => t.toolId === toolId && !t.isPreview);
                     if (existingTab) {
-                        set({ activeTabId: existingTab.id });
+                        // If existing tab is preview, activate it; otherwise just switch to it
+                        if (existingTab.isPreview) {
+                            set({
+                                tabs: tabs.map(t => t.id === existingTab.id ? { ...t, isPreview: false } : t),
+                                activeTabId: existingTab.id
+                            });
+                        } else {
+                            set({ activeTabId: existingTab.id });
+                        }
                         return;
                     }
                 }
@@ -47,13 +56,22 @@ export const useTabStore = create<TabStore>()(
                     toolId,
                     title,
                     path,
-                    description
+                    description,
+                    isPreview: isPreview ?? false
                 };
 
-                set({
-                    tabs: [...tabs, newTab],
-                    activeTabId: newTab.id
-                });
+                // If preview, don't set as active; otherwise activate immediately
+                if (isPreview) {
+                    set({
+                        tabs: [...tabs, newTab]
+                        // Don't change activeTabId - keep current tab active
+                    });
+                } else {
+                    set({
+                        tabs: [...tabs, newTab],
+                        activeTabId: newTab.id
+                    });
+                }
             },
 
             closeTab: (tabId: string) => {
@@ -86,7 +104,12 @@ export const useTabStore = create<TabStore>()(
             },
 
             setActiveTab: (tabId: string) => {
-                set({ activeTabId: tabId });
+                const { tabs } = get();
+                // When activating a tab, remove preview status
+                set({
+                    tabs: tabs.map(t => t.id === tabId ? { ...t, isPreview: false } : t),
+                    activeTabId: tabId
+                });
             },
 
             reorderTabs: (tabs: Tab[]) => {

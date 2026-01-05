@@ -56,9 +56,9 @@ export const Switch: React.FC<SwitchProps> = ({
                 
                 {/* Switch Track */}
                 <div className={cn(
-                    "w-11 h-6 rounded-full border border-black/10 dark:border-white/20 transition-colors duration-200 ease-in-out bg-black/5 dark:bg-white/10",
+                    "w-11 h-6 rounded-full border border-border-glass transition-colors duration-200 ease-in-out bg-black/5 dark:bg-white/10",
                     // Hover state
-                    "group-hover:border-black/20 dark:group-hover:border-white/30 group-hover:bg-black/10 dark:group-hover:bg-white/20",
+                    "group-hover:bg-black/10 dark:group-hover:bg-white/20 hover:border-indigo-500/30",
                     // Focus state
                     "peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-focus:ring-offset-2 peer-focus:ring-offset-transparent",
                     // Checked state

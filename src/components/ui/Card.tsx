@@ -20,8 +20,8 @@ export const Card: React.FC<CardProps> = ({
             "rounded-3xl transition-all duration-300",
             variant === 'default' && "glass-panel",
             variant === 'light' && "glass-panel-light",
-            variant === 'dark' && "bg-black/60 backdrop-blur-3xl border border-white/5",
-            interactive && "hover:border-white/20 hover:translate-y-[-2px] cursor-pointer",
+            variant === 'dark' && "bg-black/60 backdrop-blur-3xl border border-border-glass",
+            interactive && "hover:border-indigo-500/30 hover:translate-y-[-2px] cursor-pointer",
             className
         )}>
             {children}
