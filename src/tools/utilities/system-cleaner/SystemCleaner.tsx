@@ -13,15 +13,18 @@ import {
     FileText,
     Copy,
     Activity as ActivityIcon,
-    Database
+    Database,
+    Settings
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { useSystemCleanerStore } from './store/systemCleanerStore';
+import { useSettingsStore } from './store/settingsStore';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 // Import views
 import { SmartScan } from './views/SmartScan';
+import { useSmartScan } from './hooks/useSmartScan';
 import { PerformanceView } from './views/PerformanceView';
 import { StartupView } from './views/StartupView';
 import { UninstallerView } from './views/UninstallerView';
@@ -33,12 +36,17 @@ import { MaintenanceView } from './views/MaintenanceView';
 import { HealthMonitorView } from './views/HealthMonitorView';
 import { ProtectionView } from './views/ProtectionView';
 import { BackupManagementView } from './views/BackupManagementView';
+import { SettingsView } from './views/SettingsView';
+import { WelcomeScreen } from './components/WelcomeScreen';
 
 // --- Main Component ---
 
 export const SystemCleaner: React.FC = () => {
     const [activeTab, setActiveTab] = useState('smart-scan');
+    const [showWelcome, setShowWelcome] = useState(false);
     const { platformInfo, setPlatformInfo } = useSystemCleanerStore();
+    const { settings, hasCompletedOnboarding } = useSettingsStore();
+    const { runSmartScan } = useSmartScan();
     
     // Load platform info on mount
     useEffect(() => {
@@ -54,6 +62,26 @@ export const SystemCleaner: React.FC = () => {
         };
         loadPlatform();
     }, [platformInfo, setPlatformInfo]);
+
+    // Check if welcome screen should be shown
+    useEffect(() => {
+        if (!hasCompletedOnboarding && platformInfo) {
+            setShowWelcome(true);
+        }
+    }, [hasCompletedOnboarding, platformInfo]);
+
+    // Auto scan on launch if enabled
+    useEffect(() => {
+        if (hasCompletedOnboarding && settings.autoScanOnLaunch && !platformInfo) {
+            // Wait for platform to load
+            const timer = setTimeout(() => {
+                if (platformInfo) {
+                    runSmartScan();
+                }
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [hasCompletedOnboarding, settings.autoScanOnLaunch, platformInfo]);
     
     // Start health monitoring for tray widget
     useEffect(() => {
@@ -112,6 +140,7 @@ export const SystemCleaner: React.FC = () => {
         { id: 'maintenance', name: 'Maintenance', icon: Wrench },
         { id: 'backups', name: 'Backups', icon: Database },
         { id: 'health', name: 'Health', icon: ActivityIcon },
+        { id: 'settings', name: 'Settings', icon: Settings },
     ];
 
     return (
@@ -119,6 +148,7 @@ export const SystemCleaner: React.FC = () => {
             title="System Cleaner"
             description={`Premium system maintenance and optimization suite${platform ? ` for ${isWindows ? 'Windows' : isMacOS ? 'macOS' : platform}` : ''}`}
         >
+            {showWelcome && <WelcomeScreen onComplete={() => setShowWelcome(false)} />}
             <div className="flex h-full gap-8 overflow-hidden">
                 {/* Sidebar Navigation */}
                 <div className="w-56 flex flex-col space-y-1 shrink-0">
@@ -191,7 +221,24 @@ export const SystemCleaner: React.FC = () => {
                     ))}
 
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Monitoring</div>
-                    {tabs.slice(11).map((tab) => (
+                    {tabs.slice(11, 12).map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
+                                activeTab === tab.id 
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                    : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
+                            )}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            <span>{tab.name}</span>
+                        </button>
+                    ))}
+                    
+                    <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">System</div>
+                    {tabs.slice(12).map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -232,6 +279,7 @@ export const SystemCleaner: React.FC = () => {
                                 {activeTab === 'maintenance' && <MaintenanceView />}
                                 {activeTab === 'backups' && <BackupManagementView />}
                                 {activeTab === 'health' && <HealthMonitorView />}
+                                {activeTab === 'settings' && <SettingsView />}
                             </motion.div>
                         </AnimatePresence>
                     </div>
