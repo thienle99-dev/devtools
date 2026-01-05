@@ -12,6 +12,8 @@ import { GlobalClipboardMonitor } from './components/GlobalClipboardMonitor';
 import { AppErrorBoundary } from './components/layout/AppErrorBoundary';
 import { TOOLS } from './tools/registry';
 import { useClipboardStore } from './store/clipboardStore';
+import { usePlatform } from './hooks/usePlatform';
+
 
 // Loading fallback component
 const PageLoader = () => (
@@ -77,7 +79,7 @@ const MainLayout = () => {
       if (settings.clearOnQuit) {
         // Clear system clipboard
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText('').catch(() => {});
+          navigator.clipboard.writeText('').catch(() => { });
         }
       }
     };
@@ -169,7 +171,7 @@ function App() {
         e.preventDefault();
         e.stopPropagation();
         if (activeTabId && tabs.length > 0) {
-            closeTab(activeTabId);
+          closeTab(activeTabId);
         }
         return;
       }
@@ -177,34 +179,34 @@ function App() {
       // Cycle Tabs: Ctrl+Tab (Next) or Ctrl+Shift+Tab (Prev)
       // Note: Browsers might trap Ctrl+Tab. In Electron renderer it usually bubbles if not handled by menu.
       if (e.ctrlKey && e.key === 'Tab') { // Standard is Ctrl+Tab even on Mac often, or Cmd+Option+Right? Let's stick to Control+Tab for now like VSCode
-         // Actually on Mac VSCode uses Ctrl+Tab too.
-         e.preventDefault();
-         const currentIndex = tabs.findIndex(t => t.id === activeTabId);
-         if (currentIndex === -1) return;
+        // Actually on Mac VSCode uses Ctrl+Tab too.
+        e.preventDefault();
+        const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+        if (currentIndex === -1) return;
 
-         if (e.shiftKey) {
-            // Previous
-            const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-            setActiveTab(tabs[prevIndex].id);
-         } else {
-            // Next
-            const nextIndex = (currentIndex + 1) % tabs.length;
-            setActiveTab(tabs[nextIndex].id);
-         }
-         return;
+        if (e.shiftKey) {
+          // Previous
+          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+          setActiveTab(tabs[prevIndex].id);
+        } else {
+          // Next
+          const nextIndex = (currentIndex + 1) % tabs.length;
+          setActiveTab(tabs[nextIndex].id);
+        }
+        return;
       }
 
       // Switch by Number: Ctrl+1..9
       if (eventHasPrimary && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '9') {
-         e.preventDefault();
-         const index = parseInt(e.key) - 1;
-         if (index < tabs.length) {
-             setActiveTab(tabs[index].id);
-         } else if (e.key === '9' && tabs.length > 0) {
-             // Ctrl+9 often goes to last tab
-             setActiveTab(tabs[tabs.length - 1].id);
-         }
-         return;
+        e.preventDefault();
+        const index = parseInt(e.key) - 1;
+        if (index < tabs.length) {
+          setActiveTab(tabs[index].id);
+        } else if (e.key === '9' && tabs.length > 0) {
+          // Ctrl+9 often goes to last tab
+          setActiveTab(tabs[tabs.length - 1].id);
+        }
+        return;
       }
 
       // --- Tool Shortcuts ---
@@ -218,7 +220,7 @@ function App() {
         const modifiers = parts.slice(0, parts.length - 1);
 
         const eventKey = e.key.toLowerCase();
-        
+
         // Check key match
         if (eventKey !== key) continue;
 
@@ -231,7 +233,7 @@ function App() {
 
         // const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0; // Moved up
         // const eventHasPrimary = isMac ? e.metaKey : e.ctrlKey; // Moved up
-        
+
         if (configHasCtrl !== eventHasPrimary) continue;
         if (configHasShift !== e.shiftKey) continue;
         if (configHasAlt !== e.altKey) continue;
@@ -246,6 +248,8 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const { isMac } = usePlatform();
 
   return (
     <Router>
@@ -293,3 +297,4 @@ function App() {
 }
 
 export default App;
+
