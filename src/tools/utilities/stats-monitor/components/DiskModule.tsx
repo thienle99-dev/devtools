@@ -15,13 +15,14 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
 
   const rIO_sec = data.ioStats?.rIO_sec ?? 0;
   const wIO_sec = data.ioStats?.wIO_sec ?? 0;
+  const hasIOStats = data.ioStats !== null && data.ioStats !== undefined;
 
   useEffect(() => {
-    if (data.ioStats) {
+    if (hasIOStats) {
       setReadHistory(prev => [...prev.slice(1), rIO_sec]);
       setWriteHistory(prev => [...prev.slice(1), wIO_sec]);
     }
-  }, [rIO_sec, wIO_sec, data.ioStats]);
+  }, [rIO_sec, wIO_sec, hasIOStats]);
 
   const formatSpeed = useCallback((bytesPerSec: number) => {
     if (bytesPerSec > 1024 * 1024) {
@@ -49,8 +50,17 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
     return '#8b5cf6'; // violet-500
   }, [usedPercent]);
 
-  const readSpeed = useMemo(() => data.ioStats ? formatSpeed(rIO_sec) : 'N/A', [data.ioStats, rIO_sec, formatSpeed]);
-  const writeSpeed = useMemo(() => data.ioStats ? formatSpeed(wIO_sec) : 'N/A', [data.ioStats, wIO_sec, formatSpeed]);
+  const readSpeed = useMemo(() => {
+    if (!hasIOStats) return 'N/A';
+    if (rIO_sec === 0 || isNaN(rIO_sec)) return '0 B/s';
+    return formatSpeed(rIO_sec);
+  }, [hasIOStats, rIO_sec, formatSpeed]);
+  
+  const writeSpeed = useMemo(() => {
+    if (!hasIOStats) return 'N/A';
+    if (wIO_sec === 0 || isNaN(wIO_sec)) return '0 B/s';
+    return formatSpeed(wIO_sec);
+  }, [hasIOStats, wIO_sec, formatSpeed]);
 
   return (
         <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">

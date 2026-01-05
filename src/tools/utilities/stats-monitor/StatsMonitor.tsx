@@ -21,6 +21,23 @@ const ModuleSkeleton = () => (
   </div>
 );
 
+// Skeleton cho module selector tabs
+const ModuleSelectorSkeleton = () => (
+  <div className="flex items-center gap-3 mb-4">
+    <div className="flex-1 bg-[var(--color-glass-panel)] rounded-xl p-1.5 border border-[var(--color-glass-border)] shadow-sm">
+      <div className="flex items-center gap-1.5">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-10 w-20 bg-[var(--color-glass-input)] rounded-lg animate-pulse"
+            style={{ animationDelay: `${i * 50}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const INTERVAL_PRESETS = [
   { label: '1s', value: 1000 },
   { label: '2s', value: 2000 },
@@ -60,7 +77,11 @@ const StatsMonitor: React.FC = () => {
   }, [preferences.updateInterval]);
 
   // Helper function để render module selector
-  const renderModuleSelector = () => {
+  const renderModuleSelector = (isLoading = false) => {
+    if (isLoading) {
+      return <ModuleSelectorSkeleton />;
+    }
+
     return (
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1 bg-[var(--color-glass-panel)] rounded-xl p-1.5 border border-[var(--color-glass-border)] shadow-sm">
@@ -74,16 +95,20 @@ const StatsMonitor: React.FC = () => {
                   key={mod}
                   onClick={() => toggleModule(mod)}
                   className={`
-                    px-4 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap
-                    flex items-center gap-2 min-w-fit
+                    px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap
+                    flex items-center gap-2 min-w-fit relative
                     ${isEnabled 
-                      ? `${colors.bg} ${colors.text} border-2 ${colors.border} shadow-sm scale-105` 
-                      : 'bg-transparent text-foreground-muted border-2 border-transparent hover:bg-[var(--color-glass-input)] hover:text-foreground hover:border-[var(--color-glass-border)]'
+                      ? `${colors.bg} ${colors.text} shadow-sm border ${colors.border}` 
+                      : 'bg-transparent text-foreground-muted/60 border border-transparent hover:bg-[var(--color-glass-input)] hover:text-foreground-muted hover:border-[var(--color-glass-border)]'
                     }
                   `}
                 >
-                  <span className={`w-2 h-2 rounded-full ${isEnabled ? colors.dot : 'bg-foreground-muted'}`} />
-                  {mod.toUpperCase()}
+                  <span 
+                    className={`w-2 h-2 rounded-full transition-colors duration-200 shrink-0 ${
+                      isEnabled ? colors.dot : 'bg-foreground-muted/40'
+                    }`} 
+                  />
+                  <span className="font-semibold">{mod.toUpperCase()}</span>
                 </button>
               );
             })}
@@ -163,7 +188,7 @@ const StatsMonitor: React.FC = () => {
   }
 
   // Hiển thị loading khi đang khởi tạo
-  if (!metrics) {
+  if (!metrics && hasEnabledModules) {
     return (
       <div className="h-full flex flex-col p-6 gap-6 overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
@@ -183,6 +208,13 @@ const StatsMonitor: React.FC = () => {
         </div>
 
         {renderModuleSelector()}
+
+        {/* Loading skeletons cho modules */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {enabledModules.map((mod) => (
+            <ModuleSkeleton key={mod} />
+          ))}
+        </div>
 
         <div className="flex-1 flex flex-col items-center justify-center text-foreground-muted">
           <Activity className="w-12 h-12 mb-4 animate-pulse text-foreground-muted opacity-50" />
@@ -214,43 +246,43 @@ const StatsMonitor: React.FC = () => {
       {renderModuleSelector()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {enabledModules.includes('cpu') && metrics.cpu && (
+        {enabledModules.includes('cpu') && metrics?.cpu && (
           <Suspense fallback={<ModuleSkeleton />}>
             <CPUModule data={metrics.cpu} />
           </Suspense>
         )}
         
-        {enabledModules.includes('memory') && metrics.memory && (
+        {enabledModules.includes('memory') && metrics?.memory && (
           <Suspense fallback={<ModuleSkeleton />}>
             <MemoryModule data={metrics.memory} />
           </Suspense>
         )}
 
-        {enabledModules.includes('network') && metrics.network && (
+        {enabledModules.includes('network') && metrics?.network && (
           <Suspense fallback={<ModuleSkeleton />}>
             <NetworkModule data={metrics.network} />
           </Suspense>
         )}
 
-        {enabledModules.includes('disk') && metrics.disk && (
+        {enabledModules.includes('disk') && metrics?.disk && (
           <Suspense fallback={<ModuleSkeleton />}>
             <DiskModule data={metrics.disk} />
           </Suspense>
         )}
 
-        {enabledModules.includes('gpu') && metrics.gpu && (
+        {enabledModules.includes('gpu') && metrics?.gpu && (
           <Suspense fallback={<ModuleSkeleton />}>
             <GPUModule data={metrics.gpu} />
           </Suspense>
         )}
 
-        {enabledModules.includes('battery') && metrics.battery && (
+        {enabledModules.includes('battery') && metrics?.battery && (
           <Suspense fallback={<ModuleSkeleton />}>
             <BatteryModule data={metrics.battery} />
           </Suspense>
         )}
 
-        {enabledModules.includes('sensors') && metrics.sensors && (
+        {enabledModules.includes('sensors') && metrics?.sensors && (
           <Suspense fallback={<ModuleSkeleton />}>
             <SensorsModule data={metrics.sensors} />
           </Suspense>

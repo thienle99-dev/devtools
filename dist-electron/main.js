@@ -426,11 +426,38 @@ app.whenReady().then(() => {
 		};
 	});
 	ipcMain.handle("get-disk-stats", async () => {
-		const [fsSize, ioStats] = await Promise.all([si.fsSize(), si.disksIO()]);
-		return {
-			fsSize,
-			ioStats
-		};
+		try {
+			const [fsSize, ioStatsRaw] = await Promise.all([si.fsSize(), si.disksIO()]);
+			let ioStats = null;
+			if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
+				const firstDisk = ioStatsRaw[0];
+				ioStats = {
+					rIO: firstDisk.rIO || 0,
+					wIO: firstDisk.wIO || 0,
+					tIO: firstDisk.tIO || 0,
+					rIO_sec: firstDisk.rIO_sec || 0,
+					wIO_sec: firstDisk.wIO_sec || 0,
+					tIO_sec: firstDisk.tIO_sec || 0
+				};
+			} else if (ioStatsRaw && typeof ioStatsRaw === "object" && !Array.isArray(ioStatsRaw)) ioStats = {
+				rIO: ioStatsRaw.rIO || 0,
+				wIO: ioStatsRaw.wIO || 0,
+				tIO: ioStatsRaw.tIO || 0,
+				rIO_sec: ioStatsRaw.rIO_sec || 0,
+				wIO_sec: ioStatsRaw.wIO_sec || 0,
+				tIO_sec: ioStatsRaw.tIO_sec || 0
+			};
+			return {
+				fsSize,
+				ioStats
+			};
+		} catch (error) {
+			console.error("Error fetching disk stats:", error);
+			return {
+				fsSize: await si.fsSize().catch(() => []),
+				ioStats: null
+			};
+		}
 	});
 	ipcMain.handle("get-gpu-stats", async () => {
 		return await si.graphics();
