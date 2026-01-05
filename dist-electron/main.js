@@ -146,7 +146,7 @@ function setupCleanerHandlers() {
 	ipcMain.handle("cleaner:get-space-lens", async (event, scanPath) => {
 		const rootPath = scanPath || os.homedir();
 		const sender = event.sender;
-		return await scanDirectoryForLens(rootPath, 0, 2, (progress) => {
+		return await scanDirectoryForLens(rootPath, 0, 1, (progress) => {
 			if (sender && !sender.isDestroyed()) sender.send("cleaner:space-lens-progress", progress);
 		});
 	});
@@ -1412,21 +1412,20 @@ async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress)
 		const items = await fs.readdir(dirPath, { withFileTypes: true });
 		const children = [];
 		let totalSize = 0;
-		const totalItems = items.length;
+		const itemsToProcess = items.filter((item) => !item.name.startsWith(".") && ![
+			"node_modules",
+			"Library",
+			"AppData",
+			"System",
+			".git",
+			".DS_Store"
+		].includes(item.name));
+		const totalItemsToProcess = itemsToProcess.length;
 		let processedItems = 0;
-		for (const item of items) {
+		for (const item of itemsToProcess) {
 			const childPath = path.join(dirPath, item.name);
-			if (item.name.startsWith(".") || [
-				"node_modules",
-				"Library",
-				"AppData",
-				"System"
-			].includes(item.name)) {
-				processedItems++;
-				continue;
-			}
 			if (onProgress) {
-				const progressPercent = Math.floor(processedItems / totalItems * 100);
+				const progressPercent = Math.floor(processedItems / totalItemsToProcess * 100);
 				const itemType = item.isDirectory() ? "directory" : "file";
 				onProgress({
 					currentPath: item.name,
@@ -1442,8 +1441,12 @@ async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress)
 					totalSize += childNode.size;
 				}
 			} else try {
-				const s = await fs.stat(childPath);
-				const size = item.isDirectory() ? await getDirSize(childPath) : s.size;
+				let size = (await fs.stat(childPath)).size;
+				if (item.isDirectory()) try {
+					size = await getDirSize(childPath);
+				} catch (e) {
+					size = 0;
+				}
 				childNode = {
 					name: item.name,
 					path: childPath,
@@ -1453,10 +1456,13 @@ async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress)
 				};
 				children.push(childNode);
 				totalSize += size;
-			} catch (e) {}
+			} catch (e) {
+				processedItems++;
+				continue;
+			}
 			if (childNode && onProgress) onProgress({
 				currentPath: item.name,
-				progress: Math.floor((processedItems + 1) / totalItems * 100),
+				progress: Math.floor((processedItems + 1) / totalItemsToProcess * 100),
 				status: `Scanned: ${item.name}`,
 				item: childNode
 			});

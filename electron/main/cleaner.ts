@@ -106,11 +106,11 @@ export function setupCleanerHandlers() {
         };
     });
 
-    // Space Lens
+    // Space Lens - Optimized: only scan 1 level deep, use fast size calculation
     ipcMain.handle('cleaner:get-space-lens', async (event, scanPath: string) => {
         const rootPath = scanPath || os.homedir();
         const sender = event.sender;
-        return await scanDirectoryForLens(rootPath, 0, 2, (progress) => {
+        return await scanDirectoryForLens(rootPath, 0, 1, (progress) => {
             // Send progress updates to renderer
             if (sender && !sender.isDestroyed()) {
                 sender.send('cleaner:space-lens-progress', progress);
@@ -1548,6 +1548,42 @@ async function getDirSize(dirPath: string): Promise<number> {
     return size;
 }
 
+// Limited depth version for faster calculation at max depth
+async function getDirSizeLimited(dirPath: string, maxDepth: number, currentDepth: number = 0): Promise<number> {
+    if (currentDepth >= maxDepth) {
+        // At max depth, just return 0
+        return 0;
+    }
+    
+    let size = 0;
+    try {
+        const files = await fs.readdir(dirPath, { withFileTypes: true });
+        for (const file of files) {
+            // Skip hidden files and system directories at all levels
+            if (file.name.startsWith('.') || ['node_modules', 'Library', 'AppData', 'System', '.git', '.DS_Store'].includes(file.name)) {
+                continue;
+            }
+            
+            const filePath = path.join(dirPath, file.name);
+            try {
+                if (file.isDirectory()) {
+                    size += await getDirSizeLimited(filePath, maxDepth, currentDepth + 1);
+                } else {
+                    const stats = await fs.stat(filePath).catch(() => null);
+                    if (stats) size += stats.size;
+                }
+            } catch (e) {
+                // Skip files/dirs that can't be accessed
+                continue;
+            }
+        }
+    } catch (e) {
+        // Directory can't be read, return 0
+        return 0;
+    }
+    return size;
+}
+
 async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDepth: number, onProgress?: (progress: { currentPath: string; progress: number; status: string; item?: any }) => void): Promise<any> {
     try {
         const stats = await fs.stat(dirPath);
@@ -1568,21 +1604,21 @@ async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDe
         const items = await fs.readdir(dirPath, { withFileTypes: true });
         const children: any[] = [];
         let totalSize = 0;
-        const totalItems = items.length;
+        
+        // Filter out items to skip before processing for accurate progress
+        const itemsToProcess = items.filter(item => 
+            !item.name.startsWith('.') && 
+            !['node_modules', 'Library', 'AppData', 'System', '.git', '.DS_Store'].includes(item.name)
+        );
+        const totalItemsToProcess = itemsToProcess.length;
         let processedItems = 0;
         
-        for (const item of items) {
+        for (const item of itemsToProcess) {
             const childPath = path.join(dirPath, item.name);
             
-            // Skip hidden files and system directories
-            if (item.name.startsWith('.') || ['node_modules', 'Library', 'AppData', 'System'].includes(item.name)) {
-                processedItems++;
-                continue;
-            }
-            
-            // Update progress
+            // Update progress based on actual items being processed
             if (onProgress) {
-                const progressPercent = Math.floor((processedItems / totalItems) * 100);
+                const progressPercent = Math.floor((processedItems / totalItemsToProcess) * 100);
                 const itemType = item.isDirectory() ? 'directory' : 'file';
                 onProgress({ 
                     currentPath: item.name, 
@@ -1594,15 +1630,30 @@ async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDe
             let childNode: any = null;
             
             if (currentDepth < maxDepth) {
+                // Recursive scan: get full structure
                 childNode = await scanDirectoryForLens(childPath, currentDepth + 1, maxDepth, onProgress);
                 if (childNode) { 
                     children.push(childNode); 
                     totalSize += childNode.size; 
                 }
             } else {
+                // At max depth: calculate size accurately but only for direct children
                 try {
                     const s = await fs.stat(childPath);
-                    const size = item.isDirectory() ? await getDirSize(childPath) : s.size;
+                    let size = s.size;
+                    
+                    if (item.isDirectory()) {
+                        // Calculate size by recursively summing ALL children (files + nested directories)
+                        // Use getDirSize to get accurate total size including all nested folders
+                        // This ensures folder size is correct even when it contains nested folders
+                        try {
+                            size = await getDirSize(childPath);
+                        } catch (e) {
+                            // Fallback: use 0 if directory can't be read
+                            size = 0;
+                        }
+                    }
+                    
                     childNode = { 
                         name: item.name, 
                         path: childPath, 
@@ -1612,14 +1663,18 @@ async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDe
                     };
                     children.push(childNode);
                     totalSize += size;
-                } catch (e) {}
+                } catch (e) {
+                    // Skip items that can't be accessed
+                    processedItems++;
+                    continue;
+                }
             }
             
             // Emit item khi scan xong
             if (childNode && onProgress) {
                 onProgress({ 
                     currentPath: item.name, 
-                    progress: Math.floor(((processedItems + 1) / totalItems) * 100), 
+                    progress: Math.floor(((processedItems + 1) / totalItemsToProcess) * 100), 
                     status: `Scanned: ${item.name}`,
                     item: childNode
                 });

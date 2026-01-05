@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown, Download, Camera, FolderPlus } from 'lucide-react';
+import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown, Download, Camera, FolderPlus, Check, Square, ChevronRight as ChevronRightIcon, MoreVertical } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
@@ -24,6 +24,11 @@ export const SpaceLensView: React.FC = () => {
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [snapshots, setSnapshots] = useState<any[]>([]);
     const [homeDir, setHomeDir] = useState<string>('');
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [showActionsMenu, setShowActionsMenu] = useState(false);
+    const actionsMenuRef = useRef<HTMLDivElement>(null);
     const scanCancelRef = useRef(false);
     const progressCleanupRef = useRef<(() => void) | null>(null);
 
@@ -41,6 +46,20 @@ export const SpaceLensView: React.FC = () => {
         };
         getHomeDir();
     }, []);
+
+    // Close actions menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+                setShowActionsMenu(false);
+            }
+        };
+
+        if (showActionsMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showActionsMenu]);
 
     const scanSpace = async (pathStr = '') => {
         setIsScanning(true);
@@ -162,6 +181,197 @@ export const SpaceLensView: React.FC = () => {
             setIsScanning(false);
             toast.error(`Failed to delete ${node.name}`);
         }
+    };
+
+    // Bulk delete
+    const handleBulkDelete = useCallback(async () => {
+        if (selectedItems.size === 0) return;
+        const paths = Array.from(selectedItems);
+        const nodeNames = spaceLensData?.children
+            ?.filter(node => paths.includes(node.path))
+            .map(node => node.name)
+            .join(', ') || '';
+        
+        if (!confirm(`Are you sure you want to delete ${selectedItems.size} item(s)?\n\n${nodeNames}`)) return;
+        
+        const currentPath = spaceLensData?.path || '';
+        setIsScanning(true);
+        try {
+            const res = await (window as any).cleanerAPI.runCleanup(paths);
+            setIsScanning(false);
+            if (res.success) {
+                toast.success(`Deleted ${selectedItems.size} item(s)`);
+                setSelectedItems(new Set());
+                setIsSelectionMode(false);
+                await scanSpace(currentPath);
+            } else {
+                toast.error(`Failed to delete: ${res.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            setIsScanning(false);
+            toast.error('Failed to delete items');
+        }
+    }, [selectedItems, spaceLensData]);
+
+    // Keyboard navigation and selection
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Only handle when not typing in input
+            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            const nodes = spaceLensData?.children || [];
+            if (nodes.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedIndex(prev => Math.min(prev + 1, nodes.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedIndex(prev => Math.max(prev - 1, 0));
+            } else if (e.key === ' ' && selectedIndex >= 0 && nodes[selectedIndex]) {
+                // Space bar: Toggle selection
+                e.preventDefault();
+                const node = nodes[selectedIndex];
+                setSelectedItems(prev => {
+                    const next = new Set(prev);
+                    if (next.has(node.path)) {
+                        next.delete(node.path);
+                    } else {
+                        next.add(node.path);
+                        setIsSelectionMode(true);
+                    }
+                    if (next.size === 0) {
+                        setIsSelectionMode(false);
+                    }
+                    return next;
+                });
+            } else if (e.key === 'Escape') {
+                if (isSelectionMode) {
+                    setSelectedItems(new Set());
+                    setIsSelectionMode(false);
+                }
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'a' && isSelectionMode) {
+                // Cmd+A: Select all visible items
+                e.preventDefault();
+                setSelectedItems(new Set(nodes.map(node => node.path)));
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'd' && selectedItems.size > 0) {
+                // Cmd+D: Bulk delete
+                e.preventDefault();
+                handleBulkDelete();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [spaceLensData, selectedIndex, isSelectionMode, selectedItems, handleBulkDelete]);
+
+    const handleSelectAll = () => {
+        const nodes = spaceLensData?.children || [];
+        setSelectedItems(new Set(nodes.map(node => node.path)));
+        setIsSelectionMode(true);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
+    };
+
+    // Build breadcrumb from history and current path
+    const buildBreadcrumb = () => {
+        if (!spaceLensData) return [];
+        
+        const breadcrumbs: Array<{ name: string; path: string }> = [];
+        const path = spaceLensData.path;
+        
+        // Handle root cases
+        if (!path || path === '/' || path === 'Root directory' || path.trim() === '') {
+            breadcrumbs.push({ name: 'Root', path: '' });
+            return breadcrumbs;
+        }
+        
+        // Normalize path separators
+        const normalizedPath = path.replace(/\\/g, '/');
+        
+        // Handle absolute paths (starting with /)
+        const isAbsolute = normalizedPath.startsWith('/');
+        const parts = normalizedPath.split('/').filter(p => p && p.trim() !== '');
+        
+        // Build breadcrumb segments
+        if (isAbsolute) {
+            // Start with root
+            breadcrumbs.push({ name: 'Root', path: '/' });
+        }
+        
+        let currentPath = isAbsolute ? '/' : '';
+        parts.forEach((part, index) => {
+            if (isAbsolute) {
+                currentPath = currentPath === '/' ? `/${part}` : `${currentPath}/${part}`;
+            } else {
+                currentPath = index === 0 ? part : `${currentPath}/${part}`;
+            }
+            breadcrumbs.push({
+                name: part,
+                path: currentPath
+            });
+        });
+        
+        return breadcrumbs;
+    };
+
+    const handleBreadcrumbClick = async (path: string) => {
+        if (isScanning) return;
+        
+        // Navigate to the clicked path
+        // If path is empty or '/', go to root
+        if (!path || path === '' || path === '/') {
+            // Clear history and scan root
+            setHistory([]);
+            await scanSpace('');
+            return;
+        }
+        
+        // Normalize path for comparison
+        const normalizedPath = path.replace(/\\/g, '/');
+        
+        // Find the path in history
+        const targetIndex = history.findIndex(h => {
+            const normalizedHistoryPath = h.path.replace(/\\/g, '/');
+            return normalizedHistoryPath === normalizedPath || normalizedHistoryPath === normalizedPath + '/';
+        });
+        
+        if (targetIndex >= 0) {
+            // Navigate to history node - truncate history to this point
+            const newHistory = history.slice(0, targetIndex);
+            setHistory(newHistory);
+            await scanSpace(path);
+        } else {
+            // Path not in history, scan it directly
+            // Truncate history to remove any paths that are deeper than the target
+            const newHistory = history.filter(h => {
+                const normalizedHistoryPath = h.path.replace(/\\/g, '/');
+                return normalizedHistoryPath.startsWith(normalizedPath + '/') || normalizedHistoryPath === normalizedPath;
+            });
+            setHistory(newHistory);
+            await scanSpace(path);
+        }
+    };
+
+    const handleToggleSelect = (path: string) => {
+        setSelectedItems(prev => {
+            const next = new Set(prev);
+            if (next.has(path)) {
+                next.delete(path);
+            } else {
+                next.add(path);
+                setIsSelectionMode(true);
+            }
+            if (next.size === 0) {
+                setIsSelectionMode(false);
+            }
+            return next;
+        });
     };
 
     const navigateTo = async (node: SpaceLensNode) => {
@@ -346,12 +556,38 @@ export const SpaceLensView: React.FC = () => {
                     )}
                     <div>
                         <h2 className="text-2xl font-bold">Space Lens</h2>
-                        <div className="flex items-center gap-2 text-sm text-foreground-muted">
-                            <span className="truncate max-w-md">
-                                {spaceLensData?.path || 'Analyzing storage structure...'}
-                            </span>
+                        <div className="flex items-center gap-2 text-sm">
+                            {spaceLensData ? (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    {buildBreadcrumb().map((crumb, index, array) => (
+                                        <React.Fragment key={crumb.path || 'root'}>
+                                            <button
+                                                onClick={() => handleBreadcrumbClick(crumb.path)}
+                                                disabled={isScanning}
+                                                className={cn(
+                                                    "text-foreground-muted hover:text-foreground transition-colors truncate max-w-[200px]",
+                                                    index === array.length - 1 
+                                                        ? "font-semibold text-foreground" 
+                                                        : "hover:underline",
+                                                    isScanning && "opacity-50 cursor-not-allowed"
+                                                )}
+                                                title={crumb.path || 'Root'}
+                                            >
+                                                {crumb.name}
+                                            </button>
+                                            {index < array.length - 1 && (
+                                                <ChevronRightIcon className="w-3.5 h-3.5 text-foreground-muted/50 flex-shrink-0" />
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="text-foreground-muted">
+                                    Analyzing storage structure...
+                                </span>
+                            )}
                             {spaceLensData && (
-                                <span className="text-xs bg-white/5 px-2 py-0.5 rounded">
+                                <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-foreground-muted">
                                     {spaceLensData.children?.length || 0} items
                                 </span>
                             )}
@@ -359,7 +595,31 @@ export const SpaceLensView: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-border-glass">
+                    {/* Selection Mode Toggle */}
+                    {spaceLensData && spaceLensData.children && spaceLensData.children.length > 0 && (
+                        <Button
+                            variant={isSelectionMode ? "primary" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                if (isSelectionMode) {
+                                    setSelectedItems(new Set());
+                                    setIsSelectionMode(false);
+                                } else {
+                                    setIsSelectionMode(true);
+                                }
+                            }}
+                            disabled={isScanning}
+                            title={isSelectionMode ? "Exit Selection Mode" : "Enter Selection Mode (Space bar)"}
+                            className={cn(
+                                "h-8",
+                                isSelectionMode && "bg-indigo-500 hover:bg-indigo-600 text-white"
+                            )}
+                        >
+                            <Square className={cn("w-4 h-4 mr-2", isSelectionMode && "fill-current")} />
+                            {isSelectionMode ? "Cancel" : "Select"}
+                        </Button>
+                    )}
+                    <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-border-glass h-8">
                         {(['grid', 'list', 'tree', 'detail', 'compact'] as ViewMode[]).map(mode => {
                             const icons = { grid: LayoutGrid, list: List, tree: GitBranch, detail: FileText, compact: Minimize2 };
                             const Icon = icons[mode];
@@ -368,7 +628,7 @@ export const SpaceLensView: React.FC = () => {
                                     key={mode}
                                     onClick={() => setViewMode(mode)}
                                     className={cn(
-                                        "p-1.5 rounded transition-colors",
+                                        "h-6 w-6 flex items-center justify-center rounded transition-colors",
                                         viewMode === mode 
                                             ? "bg-indigo-500 text-white" 
                                             : "text-foreground-muted hover:text-foreground hover:bg-white/5"
@@ -380,79 +640,134 @@ export const SpaceLensView: React.FC = () => {
                             );
                         })}
                     </div>
-                    {spaceLensData && (
-                        <>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const snapshot = createSnapshot(spaceLensData, spaceLensData.path);
-                                    setSnapshots([...snapshots, snapshot]);
-                                    toast.success('Snapshot created');
-                                }}
-                                disabled={isScanning}
-                                title="Create Snapshot"
-                            >
-                                <Camera className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const json = exportSpaceLensToJSON(spaceLensData);
-                                    downloadFile(json, `space-lens-${Date.now()}.json`, 'application/json');
-                                    toast.success('Exported to JSON');
-                                }}
-                                disabled={isScanning}
-                                title="Export JSON"
-                            >
-                                <Download className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const csv = exportSpaceLensToCSV(spaceLensData);
-                                    downloadFile(csv, `space-lens-${Date.now()}.csv`, 'text/csv');
-                                    toast.success('Exported to CSV');
-                                }}
-                                disabled={isScanning}
-                                title="Export CSV"
-                            >
-                                <Download className="w-4 h-4" />
-                            </Button>
-                        </>
-                    )}
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleSelectFolder}
-                        disabled={isScanning}
-                        title="Select Folder to Scan"
-                    >
-                        <FolderPlus className="w-4 h-4 mr-2" />
-                        Select Folder
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => scanSpace(spaceLensData?.path)}
-                        disabled={isScanning}
-                    >
-                        <RefreshCw className={cn("w-4 h-4 mr-2", isScanning && "animate-spin")} />
-                        Refresh
-                    </Button>
+                    {/* Actions Dropdown */}
+                    <div className="relative" ref={actionsMenuRef}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowActionsMenu(!showActionsMenu)}
+                            disabled={isScanning}
+                            title="More Actions"
+                            className="h-8 w-8 p-0"
+                        >
+                            <MoreVertical className="w-4 h-4" />
+                        </Button>
+                        {showActionsMenu && (
+                            <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] glass-panel rounded-lg py-1 text-sm font-sans select-none overflow-hidden flex flex-col shadow-xl border border-border-glass">
+                                {spaceLensData && (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                const snapshot = createSnapshot(spaceLensData, spaceLensData.path);
+                                                setSnapshots([...snapshots, snapshot]);
+                                                toast.success('Snapshot created');
+                                                setShowActionsMenu(false);
+                                            }}
+                                            disabled={isScanning}
+                                            className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
+                                        >
+                                            <Camera className="w-4 h-4 opacity-70" />
+                                            <span>Create Snapshot</span>
+                                        </button>
+                                        <div className="h-px bg-[var(--color-glass-border)] my-1" />
+                                        <button
+                                            onClick={() => {
+                                                const json = exportSpaceLensToJSON(spaceLensData);
+                                                downloadFile(json, `space-lens-${Date.now()}.json`, 'application/json');
+                                                toast.success('Exported to JSON');
+                                                setShowActionsMenu(false);
+                                            }}
+                                            disabled={isScanning}
+                                            className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
+                                        >
+                                            <Download className="w-4 h-4 opacity-70" />
+                                            <span>Export JSON</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const csv = exportSpaceLensToCSV(spaceLensData);
+                                                downloadFile(csv, `space-lens-${Date.now()}.csv`, 'text/csv');
+                                                toast.success('Exported to CSV');
+                                                setShowActionsMenu(false);
+                                            }}
+                                            disabled={isScanning}
+                                            className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
+                                        >
+                                            <Download className="w-4 h-4 opacity-70" />
+                                            <span>Export CSV</span>
+                                        </button>
+                                        <div className="h-px bg-[var(--color-glass-border)] my-1" />
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        handleSelectFolder();
+                                        setShowActionsMenu(false);
+                                    }}
+                                    disabled={isScanning}
+                                    className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
+                                >
+                                    <FolderPlus className="w-4 h-4 opacity-70" />
+                                    <span>Select Folder</span>
+                                </button>
+                                {spaceLensData && (
+                                    <button
+                                        onClick={() => {
+                                            scanSpace(spaceLensData.path);
+                                            setShowActionsMenu(false);
+                                        }}
+                                        disabled={isScanning}
+                                        className="w-full px-4 py-2 text-left text-foreground hover:bg-[var(--color-glass-button-hover)] flex items-center gap-2 transition-colors duration-150"
+                                    >
+                                        <RefreshCw className={cn("w-4 h-4 opacity-70", isScanning && "animate-spin")} />
+                                        <span>Refresh</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* Bulk Actions Bar */}
+            {isSelectionMode && selectedItems.size > 0 && (
+                <div className="flex-shrink-0 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-indigo-400">
+                                {selectedItems.size} item{selectedItems.size > 1 ? 's' : ''} selected
+                            </span>
+                            <button
+                                onClick={handleSelectAll}
+                                className="text-xs text-foreground-muted hover:text-foreground transition-colors"
+                            >
+                                Select All
+                            </button>
+                            <button
+                                onClick={handleDeselectAll}
+                                className="text-xs text-foreground-muted hover:text-foreground transition-colors"
+                            >
+                                Deselect All
+                            </button>
+                        </div>
+                        <button
+                            onClick={handleBulkDelete}
+                            className="px-3 py-1.5 text-xs bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 transition-colors font-medium"
+                        >
+                            Delete ({selectedItems.size})
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="flex-1 overflow-auto pr-2 custom-scrollbar">
                 {spaceLensData && spaceLensData.children && spaceLensData.children.length > 0 ? (
                     <>
-                        {viewMode === 'grid' && <GridView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
-                        {viewMode === 'list' && <ListView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
-                        {viewMode === 'tree' && <TreeView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} expandedNodes={expandedNodes} setExpandedNodes={setExpandedNodes} />}
-                        {viewMode === 'detail' && <DetailView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
-                        {viewMode === 'compact' && <CompactView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} />}
+                        {viewMode === 'grid' && <GridView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
+                        {viewMode === 'list' && <ListView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
+                        {viewMode === 'tree' && <TreeView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} expandedNodes={expandedNodes} setExpandedNodes={setExpandedNodes} selectedItems={selectedItems} isSelectionMode={isSelectionMode} onToggleSelect={handleToggleSelect} />}
+                        {viewMode === 'detail' && <DetailView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
+                        {viewMode === 'compact' && <CompactView nodes={spaceLensData.children} parentSize={spaceLensData.size} onNavigate={navigateTo} onDelete={handleDelete} isScanning={isScanning} selectedItems={selectedItems} isSelectionMode={isSelectionMode} selectedIndex={selectedIndex} onToggleSelect={handleToggleSelect} />}
                     </>
                 ) : isScanning ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
@@ -475,12 +790,16 @@ export const SpaceLensView: React.FC = () => {
 };
 
 // Grid View (Default)
-const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
     onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
     isScanning: boolean;
+    selectedItems?: Set<string>;
+    isSelectionMode?: boolean;
+    selectedIndex?: number;
+    onToggleSelect?: (path: string) => void;
 }) => {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
@@ -493,17 +812,44 @@ const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.01 }}
                         whileHover={{ scale: 1.02, y: -4 }}
-                        onClick={() => !isScanning && onNavigate(node)}
+                        onClick={(e) => {
+                            if (isSelectionMode && onToggleSelect) {
+                                e.stopPropagation();
+                                onToggleSelect(node.path);
+                            } else if (!isScanning) {
+                                onNavigate(node);
+                            }
+                        }}
                         className={cn(
                             "group relative p-4 rounded-2xl border transition-all overflow-hidden",
                             node.type === 'dir' 
                                 ? "bg-white/5 border-border-glass cursor-pointer hover:bg-white/10" 
                                 : "bg-white/[0.02] border-border-glass/50",
-                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75",
+                            selectedIndex === i && "ring-2 ring-indigo-500/50",
+                            selectedItems.has(node.path) && "ring-2 ring-indigo-500 border-indigo-500/70 bg-indigo-500/5"
                         )}
                     >
                         <div className="absolute bottom-0 left-0 h-1 bg-indigo-500/40 transition-all group-hover:bg-indigo-500/60" style={{ width: `${Math.max(percentage, 2)}%` }} />
-                        {!isScanning && (
+                        {isSelectionMode && (
+                            <div className="absolute top-2 left-2 z-20">
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleSelect?.(node.path);
+                                    }}
+                                    className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shadow-lg",
+                                        selectedItems.has(node.path)
+                                            ? "bg-indigo-500 border-indigo-500 ring-2 ring-indigo-500/50"
+                                            : "border-foreground-muted/50 hover:border-indigo-500/70 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+                                    )}
+                                >
+                                    {selectedItems.has(node.path) && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                                </div>
+                            </div>
+                        )}
+                        {!isScanning && !isSelectionMode && (
                             <button 
                                 onClick={(e) => onDelete(e, node)}
                                 className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white z-10"
@@ -538,12 +884,16 @@ const GridView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
 };
 
 // List View
-const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
     onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
     isScanning: boolean;
+    selectedItems?: Set<string>;
+    isSelectionMode?: boolean;
+    selectedIndex?: number;
+    onToggleSelect?: (path: string) => void;
 }) => {
     return (
         <div className="space-y-2 pb-8">
@@ -555,16 +905,43 @@ const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.02 }}
-                        onClick={() => !isScanning && node.type === 'dir' && onNavigate(node)}
+                        onClick={(e) => {
+                            if (isSelectionMode && onToggleSelect) {
+                                e.stopPropagation();
+                                onToggleSelect(node.path);
+                            } else if (!isScanning && node.type === 'dir') {
+                                onNavigate(node);
+                            }
+                        }}
                         className={cn(
                             "group relative p-4 rounded-xl border transition-all cursor-pointer",
                             node.type === 'dir' 
                                 ? "bg-white/5 border-border-glass hover:bg-white/10" 
                                 : "bg-white/[0.02] border-border-glass/50",
-                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75",
+                            selectedIndex === i && "ring-2 ring-indigo-500/50",
+                            selectedItems.has(node.path) && "ring-2 ring-indigo-500 border-indigo-500/70 bg-indigo-500/5"
                         )}
                     >
-                        <div className="flex items-center gap-4">
+                        {isSelectionMode && (
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20">
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleSelect?.(node.path);
+                                    }}
+                                    className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shadow-lg",
+                                        selectedItems.has(node.path)
+                                            ? "bg-indigo-500 border-indigo-500 ring-2 ring-indigo-500/50"
+                                            : "border-foreground-muted/50 hover:border-indigo-500/70 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+                                    )}
+                                >
+                                    {selectedItems.has(node.path) && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                                </div>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-4" style={{ paddingLeft: isSelectionMode ? '2.5rem' : '0' }}>
                             <div className={cn(
                                 "p-2 rounded-lg transition-colors",
                                 node.type === 'dir' 
@@ -599,7 +976,7 @@ const ListView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
 };
 
 // Tree View
-const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expandedNodes, setExpandedNodes }: {
+const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expandedNodes, setExpandedNodes, selectedItems = new Set(), isSelectionMode = false, onToggleSelect }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
@@ -607,6 +984,9 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
     isScanning: boolean;
     expandedNodes: Set<string>;
     setExpandedNodes: React.Dispatch<React.SetStateAction<Set<string>>>;
+    selectedItems?: Set<string>;
+    isSelectionMode?: boolean;
+    onToggleSelect?: (path: string) => void;
 }) => {
     const toggleExpand = (path: string) => {
         const newExpanded = new Set(expandedNodes);
@@ -628,10 +1008,34 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
                 <div
                     className={cn(
                         "group flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors",
-                        level > 0 && "ml-6"
+                        level > 0 && "ml-6",
+                        selectedItems.has(node.path) && "ring-2 ring-indigo-500 border-indigo-500/70 bg-indigo-500/5"
                     )}
-                    onClick={() => node.type === 'dir' && !isScanning && onNavigate(node)}
+                    onClick={(e) => {
+                        if (isSelectionMode && onToggleSelect) {
+                            e.stopPropagation();
+                            onToggleSelect(node.path);
+                        } else if (node.type === 'dir' && !isScanning) {
+                            onNavigate(node);
+                        }
+                    }}
                 >
+                    {isSelectionMode && (
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleSelect?.(node.path);
+                            }}
+                            className={cn(
+                                "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all flex-shrink-0 shadow-lg",
+                                selectedItems.has(node.path)
+                                    ? "bg-indigo-500 border-indigo-500 ring-2 ring-indigo-500/50"
+                                    : "border-foreground-muted/50 hover:border-indigo-500/70 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+                            )}
+                        >
+                            {selectedItems.has(node.path) && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                         {hasChildren && (
                             <button
@@ -660,7 +1064,7 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
                         <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
                         </div>
-                        {!isScanning && (
+                        {!isScanning && !isSelectionMode && (
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -690,12 +1094,16 @@ const TreeView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, expande
 };
 
 // Detail View
-const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
     onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
     isScanning: boolean;
+    selectedItems?: Set<string>;
+    isSelectionMode?: boolean;
+    selectedIndex?: number;
+    onToggleSelect?: (path: string) => void;
 }) => {
     return (
         <div className="space-y-3 pb-8">
@@ -707,11 +1115,38 @@ const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
                         className={cn(
                             "p-4 rounded-xl border border-border-glass bg-white/5 hover:bg-white/10 transition-colors group",
                             node.type === 'dir' && !isScanning && "cursor-pointer",
-                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75",
+                            selectedIndex === i && "ring-2 ring-indigo-500/50",
+                            selectedItems.has(node.path) && "ring-2 ring-indigo-500 border-indigo-500/70 bg-indigo-500/5"
                         )}
-                        onClick={() => !isScanning && node.type === 'dir' && onNavigate(node)}
+                        onClick={(e) => {
+                            if (isSelectionMode && onToggleSelect) {
+                                e.stopPropagation();
+                                onToggleSelect(node.path);
+                            } else if (!isScanning && node.type === 'dir') {
+                                onNavigate(node);
+                            }
+                        }}
                     >
-                        <div className="flex items-start gap-4">
+                        {isSelectionMode && (
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20">
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleSelect?.(node.path);
+                                    }}
+                                    className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all shadow-lg",
+                                        selectedItems.has(node.path)
+                                            ? "bg-indigo-500 border-indigo-500 ring-2 ring-indigo-500/50"
+                                            : "border-foreground-muted/50 hover:border-indigo-500/70 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+                                    )}
+                                >
+                                    {selectedItems.has(node.path) && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                                </div>
+                            </div>
+                        )}
+                        <div className="flex items-start gap-4" style={{ paddingLeft: isSelectionMode ? '2.5rem' : '0' }}>
                             <div className={cn(
                                 "p-3 rounded-xl transition-colors",
                                 node.type === 'dir' 
@@ -743,7 +1178,7 @@ const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
                                     <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400" style={{ width: `${percentage}%` }} />
                                 </div>
                             </div>
-                            {!isScanning && (
+                            {!isScanning && !isSelectionMode && (
                                 <button 
                                     onClick={(e) => onDelete(e, node)}
                                     className="p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white"
@@ -760,12 +1195,16 @@ const DetailView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
 };
 
 // Compact View
-const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
+const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning, selectedItems = new Set(), isSelectionMode = false, selectedIndex = -1, onToggleSelect }: {
     nodes: SpaceLensNode[];
     parentSize: number;
     onNavigate: (node: SpaceLensNode) => void;
     onDelete: (e: React.MouseEvent, node: SpaceLensNode) => void;
     isScanning: boolean;
+    selectedItems?: Set<string>;
+    isSelectionMode?: boolean;
+    selectedIndex?: number;
+    onToggleSelect?: (path: string) => void;
 }) => {
     return (
         <div className="space-y-1 pb-8">
@@ -774,13 +1213,38 @@ const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
                 return (
                     <div
                         key={`${node.path}-${i}`}
-                        onClick={() => !isScanning && node.type === 'dir' && onNavigate(node)}
+                        onClick={(e) => {
+                            if (isSelectionMode && onToggleSelect) {
+                                e.stopPropagation();
+                                onToggleSelect(node.path);
+                            } else if (!isScanning && node.type === 'dir') {
+                                onNavigate(node);
+                            }
+                        }}
                         className={cn(
                             "group flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-sm",
                             node.type === 'dir' && !isScanning && "cursor-pointer",
-                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75"
+                            isScanning && node.type === 'dir' && "pointer-events-none opacity-75",
+                            selectedIndex === i && "ring-2 ring-indigo-500/50",
+                            selectedItems.has(node.path) && "ring-2 ring-indigo-500 border-indigo-500/70 bg-indigo-500/5"
                         )}
                     >
+                        {isSelectionMode && (
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleSelect?.(node.path);
+                                }}
+                                className={cn(
+                                    "w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all flex-shrink-0 shadow-md",
+                                    selectedItems.has(node.path)
+                                        ? "bg-indigo-500 border-indigo-500 ring-2 ring-indigo-500/50"
+                                        : "border-foreground-muted/50 hover:border-indigo-500/70 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+                                )}
+                            >
+                                {selectedItems.has(node.path) && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                            </div>
+                        )}
                         <div className={cn(
                             "p-1 rounded",
                             node.type === 'dir' 
@@ -794,7 +1258,7 @@ const CompactView = ({ nodes, parentSize, onNavigate, onDelete, isScanning }: {
                         <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-indigo-500" style={{ width: `${percentage}%` }} />
                         </div>
-                        {!isScanning && (
+                        {!isScanning && !isSelectionMode && (
                             <button 
                                 onClick={(e) => onDelete(e, node)}
                                 className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-500/10 rounded"
