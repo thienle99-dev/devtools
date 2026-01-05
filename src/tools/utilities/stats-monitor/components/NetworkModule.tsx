@@ -1,17 +1,160 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { NetworkStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
-import { Network, ArrowDown, ArrowUp } from 'lucide-react';
+import { Network, ArrowDown, ArrowUp, X, Info, Wifi, Globe } from 'lucide-react';
 
 interface NetworkModuleProps {
   data: NetworkStats;
 }
+
+interface DetailModalProps {
+  data: NetworkStats;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  const formatBytes = (bytes: number) => {
+    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${bytes} B`;
+  };
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+    if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+    return `${bytesPerSec.toFixed(0)} B/s`;
+  };
+
+  const activeStats = data.stats.find(s => s.operstate === 'up') || data.stats[0];
+  const activeInterface = data.interfaces.find(i => i.iface === activeStats?.iface);
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[var(--color-glass-panel)] rounded-xl border border-[var(--color-glass-border)] shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-[var(--color-glass-border)]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500/10 dark:bg-purple-500/10 rounded-lg">
+              <Network className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Network Details</h3>
+              <p className="text-xs text-foreground-muted">{activeInterface?.ifaceName || activeStats?.iface || 'Unknown'}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1">
+          <div className="space-y-4">
+            {/* Active Interface */}
+            {activeInterface && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Wifi className="w-4 h-4 text-purple-500" />
+                  Interface Information
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Interface</p>
+                    <p className="text-sm font-bold text-foreground">{activeInterface.ifaceName || activeInterface.iface}</p>
+                  </div>
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Type</p>
+                    <p className="text-sm font-bold text-foreground capitalize">{activeInterface.type || 'Unknown'}</p>
+                  </div>
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">IPv4</p>
+                    <p className="text-sm font-mono text-foreground">{activeInterface.ip4 || 'N/A'}</p>
+                  </div>
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">MAC Address</p>
+                    <p className="text-sm font-mono text-foreground">{activeInterface.mac || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Traffic Statistics */}
+            {activeStats && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 text-purple-500" />
+                  Traffic Statistics
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ArrowDown className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-foreground-muted">Download</span>
+                    </div>
+                    <p className="text-lg font-bold text-foreground">{formatSpeed(activeStats.rx_sec)}</p>
+                    <p className="text-xs text-foreground-muted mt-1">Total: {formatBytes(activeStats.rx_bytes)}</p>
+                  </div>
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ArrowUp className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs text-foreground-muted">Upload</span>
+                    </div>
+                    <p className="text-lg font-bold text-foreground">{formatSpeed(activeStats.tx_sec)}</p>
+                    <p className="text-xs text-foreground-muted mt-1">Total: {formatBytes(activeStats.tx_bytes)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* All Interfaces */}
+            {data.interfaces.length > 1 && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Globe className="w-4 h-4 text-purple-500" />
+                  All Interfaces ({data.interfaces.length})
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {data.interfaces.map((iface, index) => (
+                    <div key={index} className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-foreground">{iface.ifaceName || iface.iface}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${iface.internal ? 'bg-amber-500/20 text-amber-500' : 'bg-green-500/20 text-green-500'}`}>
+                          {iface.internal ? 'Internal' : 'External'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-foreground-muted">
+                        <span>IPv4: {iface.ip4 || 'N/A'}</span>
+                        <span>Type: {iface.type || 'Unknown'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data }) => {
   const [rxHistory, setRxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [txHistory, setTxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Determine active interface
   const activeStats = useMemo(() => 
@@ -46,8 +189,23 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
   const rxSpeed = useMemo(() => activeStats ? formatSpeed(rxSec) : '0 B/s', [activeStats, rxSec, formatSpeed]);
   const txSpeed = useMemo(() => activeStats ? formatSpeed(txSec) : '0 B/s', [activeStats, txSec, formatSpeed]);
 
+  // Close modal on Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isModalOpen]);
+
   return (
-    <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
+    <>
+    <div 
+      className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4 cursor-pointer hover:bg-[var(--color-glass-button-hover)] transition-colors"
+      onClick={() => setIsModalOpen(true)}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-purple-500/10 dark:bg-purple-500/10 rounded-lg">
@@ -98,7 +256,12 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
         <span>IP: {activeInterface?.ip4 || 'N/A'}</span>
         <span>MAC: {activeInterface?.mac || 'N/A'}</span>
       </div>
+      <div className="flex justify-end">
+        <Info className="w-3 h-3 text-foreground-muted opacity-50" />
+      </div>
     </div>
+    <DetailModal data={data} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   );
 });
 

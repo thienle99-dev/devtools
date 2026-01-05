@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import CryptoJS from 'crypto-js';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
@@ -84,13 +85,14 @@ export const HmacGenerator: React.FC<HmacGeneratorProps> = ({ tabId }) => {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Secret Key</label>
-                    <input
+                    <Input
+                        label="Secret Key"
                         type="text"
                         value={options.key}
                         onChange={(e) => update(input, e.target.value, options.algo)}
-                        className="glass-input w-full font-mono"
+                        className="font-mono"
                         placeholder="Enter secret key..."
+                        fullWidth
                     />
                 </div>
 
@@ -106,12 +108,13 @@ export const HmacGenerator: React.FC<HmacGeneratorProps> = ({ tabId }) => {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">HMAC Output</label>
-                    <input
+                    <Input
+                        label="HMAC Output"
                         type="text"
                         readOnly
                         value={output}
-                        className="glass-input w-full font-mono text-primary bg-primary/5"
+                        className="font-mono text-primary bg-primary/5"
+                        fullWidth
                     />
                 </div>
             </div>

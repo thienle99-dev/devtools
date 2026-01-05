@@ -3,6 +3,7 @@ import { UAParser } from 'ua-parser-js';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
+import { TextArea } from '../../components/ui/TextArea';
 
 const TOOL_ID = 'user-agent-parser';
 
@@ -81,11 +82,12 @@ export const UserAgentParser: React.FC<UserAgentParserProps> = ({ tabId }) => {
             <div className="max-w-4xl mx-auto space-y-8 py-6 px-4">
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">User Agent String</label>
-                    <textarea
+                    <TextArea
                         value={input}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        className="glass-input w-full min-h-[80px] text-sm font-mono p-3 leading-relaxed"
+                        className="min-h-[80px] text-sm font-mono leading-relaxed"
                         placeholder="Mozilla/5.0..."
+                        fullWidth
                     />
                 </div>
 

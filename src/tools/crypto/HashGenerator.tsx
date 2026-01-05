@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import CryptoJS from 'crypto-js';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
@@ -82,13 +83,16 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                     {Object.entries(values).map(([algo, hash]) => (hash ? (
                         <div key={algo} className="space-y-1">
                             <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">{algo.toUpperCase()}</label>
-                            <div className="flex space-x-2">
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={hash as string}
-                                    className="glass-input w-full font-mono text-xs text-foreground-secondary"
-                                />
+                            <div className="flex space-x-2 items-center">
+                                <div className="flex-1">
+                                    <Input
+                                        type="text"
+                                        readOnly
+                                        value={hash as string}
+                                        className="font-mono text-xs text-foreground-secondary"
+                                        fullWidth
+                                    />
+                                </div>
                                 <Button
                                     variant="glass"
                                     size="sm"

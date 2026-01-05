@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import bcrypt from 'bcryptjs';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
@@ -89,12 +90,12 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Input Password</label>
                         <div className="flex items-center space-x-2">
                             <label className="text-xs text-foreground-muted">Salt Rounds:</label>
-                            <input
+                            <Input
                                 type="number"
                                 min="4" max="31"
                                 value={options.rounds}
                                 onChange={(e) => setToolData(effectiveId, { options: { ...options, rounds: parseInt(e.target.value) } })}
-                                className="glass-input w-16 text-center py-1"
+                                className="w-16 text-center py-1"
                             />
                         </div>
                     </div>
@@ -117,13 +118,16 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
 
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Generated Hash</label>
-                    <div className="flex space-x-2">
-                        <input
-                            type="text"
-                            readOnly
-                            value={output}
-                            className="glass-input w-full font-mono text-sm bg-black/20"
-                        />
+                    <div className="flex space-x-2 items-center">
+                        <div className="flex-1">
+                            <Input
+                                type="text"
+                                readOnly
+                                value={output}
+                                className="font-mono text-sm bg-black/20"
+                                fullWidth
+                            />
+                        </div>
                         <Button variant="glass" onClick={() => navigator.clipboard.writeText(output)}>Copy</Button>
                     </div>
                 </div>
@@ -131,12 +135,13 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
                 <div className="pt-8 border-t border-border-glass space-y-4">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-foreground-muted">Compare Hash</h3>
                     <div className="space-y-2">
-                        <input
+                        <Input
                             type="text"
                             value={options.compareHash}
                             onChange={(e) => setToolData(effectiveId, { options: { ...options, compareHash: e.target.value }, meta: { isMatch: null } })}
-                            className={`glass-input w-full font-mono text-sm ${meta?.isMatch === true ? 'border-emerald-500/50 bg-emerald-500/10' : meta?.isMatch === false ? 'border-red-500/50 bg-red-500/10' : ''}`}
+                            className={`font-mono text-sm ${meta?.isMatch === true ? 'border-emerald-500/50 bg-emerald-500/10' : meta?.isMatch === false ? 'border-red-500/50 bg-red-500/10' : ''}`}
                             placeholder="Paste hash to compare with input password..."
+                            fullWidth
                         />
                         <Button
                             variant="secondary"
@@ -146,6 +151,7 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
                         >
                             Compare Password to Hash
                         </Button>
+
 
                         {meta?.isMatch != null && (
                             <div className={`p-3 rounded-lg text-center font-bold ${meta.isMatch ? 'text-emerald-400' : 'text-red-400'}`}>

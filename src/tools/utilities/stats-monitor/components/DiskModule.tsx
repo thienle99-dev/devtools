@@ -1,17 +1,172 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiskStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
-import { HardDrive } from 'lucide-react';
+import { HardDrive, X, Info, Database, Activity } from 'lucide-react';
 
 interface DiskModuleProps {
   data: DiskStats;
 }
+
+interface DetailModalProps {
+  data: DiskStats;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  const formatBytes = (bytes: number) => {
+    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${bytes} B`;
+  };
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+    if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+    return `${bytesPerSec.toFixed(0)} B/s`;
+  };
+
+  const primaryDisk = data.fsSize && data.fsSize.length > 0 
+    ? (data.fsSize.find(d => d.mount === '/' || d.mount === 'C:') || data.fsSize[0])
+    : null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[var(--color-glass-panel)] rounded-xl border border-[var(--color-glass-border)] shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-[var(--color-glass-border)]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-violet-500/10 dark:bg-violet-500/10 rounded-lg">
+              <HardDrive className="w-5 h-5 text-violet-500 dark:text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Disk Details</h3>
+              <p className="text-xs text-foreground-muted">{primaryDisk?.fs || 'Storage Information'}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1">
+          <div className="space-y-4">
+            {/* Primary Disk */}
+            {primaryDisk && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Database className="w-4 h-4 text-violet-500" />
+                  Primary Disk
+                </h4>
+                <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-foreground-muted">Usage</span>
+                    <span className="text-sm font-bold text-foreground">{primaryDisk.use.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-foreground-muted/20 rounded-full h-2 mb-3">
+                    <div 
+                      className="bg-violet-500 h-2 rounded-full transition-all"
+                      style={{ width: `${primaryDisk.use}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-foreground-muted">Used: </span>
+                      <span className="text-foreground font-medium">{formatBytes(primaryDisk.used)}</span>
+                    </div>
+                    <div>
+                      <span className="text-foreground-muted">Free: </span>
+                      <span className="text-foreground font-medium">{formatBytes(primaryDisk.available)}</span>
+                    </div>
+                    <div>
+                      <span className="text-foreground-muted">Total: </span>
+                      <span className="text-foreground font-medium">{formatBytes(primaryDisk.size)}</span>
+                    </div>
+                    <div>
+                      <span className="text-foreground-muted">Mount: </span>
+                      <span className="text-foreground font-medium">{primaryDisk.mount}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* IO Statistics */}
+            {data.ioStats && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-violet-500" />
+                  I/O Statistics
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Read Speed</p>
+                    <p className="text-lg font-bold text-foreground">{formatSpeed(data.ioStats.rIO_sec)}</p>
+                    <p className="text-xs text-foreground-muted mt-1">Total: {data.ioStats.rIO.toLocaleString()} ops</p>
+                  </div>
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Write Speed</p>
+                    <p className="text-lg font-bold text-foreground">{formatSpeed(data.ioStats.wIO_sec)}</p>
+                    <p className="text-xs text-foreground-muted mt-1">Total: {data.ioStats.wIO.toLocaleString()} ops</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* All Disks */}
+            {data.fsSize && data.fsSize.length > 1 && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 text-violet-500" />
+                  All Disks ({data.fsSize.length})
+                </h4>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {data.fsSize.map((disk, index) => (
+                    <div key={index} className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-foreground">{disk.fs}</span>
+                        <span className="text-xs font-bold text-foreground">{disk.use.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-foreground-muted/20 rounded-full h-1.5 mb-2">
+                        <div 
+                          className="bg-violet-500 h-1.5 rounded-full transition-all"
+                          style={{ width: `${disk.use}%` }}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs text-foreground-muted">
+                        <span>Used: {formatBytes(disk.used)}</span>
+                        <span>Free: {formatBytes(disk.available)}</span>
+                        <span>Total: {formatBytes(disk.size)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MAX_POINTS = 20; // Giảm từ 30 xuống 20 để tiết kiệm memory
 
 export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
   const [readHistory, setReadHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [writeHistory, setWriteHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const rIO_sec = data.ioStats?.rIO_sec ?? 0;
   const wIO_sec = data.ioStats?.wIO_sec ?? 0;
@@ -62,8 +217,23 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
     return formatSpeed(wIO_sec);
   }, [hasIOStats, wIO_sec, formatSpeed]);
 
+  // Close modal on Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isModalOpen]);
+
   return (
-        <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
+    <>
+    <div 
+      className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4 cursor-pointer hover:bg-[var(--color-glass-button-hover)] transition-colors"
+      onClick={() => setIsModalOpen(true)}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-violet-500/10 dark:bg-violet-500/10 rounded-lg">
@@ -117,7 +287,12 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
         <span>Free: {primaryDisk ? (primaryDisk.available / 1024 / 1024 / 1024).toFixed(0) : 0} GB</span>
         <span>Total: {primaryDisk ? (primaryDisk.size / 1024 / 1024 / 1024).toFixed(0) : 0} GB</span>
       </div>
+      <div className="flex justify-end">
+        <Info className="w-3 h-3 text-foreground-muted opacity-50" />
+      </div>
     </div>
+    <DetailModal data={data} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   );
 });
 

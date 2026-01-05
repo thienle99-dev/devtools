@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import CryptoJS from 'crypto-js';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
@@ -92,15 +93,17 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
         >
             <div className="space-y-6 h-full flex flex-col">
                 <div className="flex-none">
-                    <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 mb-2 block">Secret Key</label>
-                    <input
+                    <Input
+                        label="Secret Key"
                         type="text" // Or password if we want to hide it, but tools usually show it
                         value={options.key}
                         onChange={handleKeyChange}
-                        className="glass-input w-full font-mono"
+                        className="font-mono"
                         placeholder="Enter encryption/decryption key..."
+                        fullWidth
                     />
                 </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 h-full min-h-0">
                     <div className="space-y-3 flex flex-col h-full min-h-0">

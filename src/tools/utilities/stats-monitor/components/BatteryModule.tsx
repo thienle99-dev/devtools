@@ -1,11 +1,174 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { BatteryStats } from '../../../../types/stats';
-import { Battery, BatteryCharging, Plug, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Battery, BatteryCharging, Plug, Zap, ChevronDown, ChevronUp, X, Info } from 'lucide-react';
 import { LightweightGraph } from './LightweightGraph';
 
 interface BatteryModuleProps {
   data: BatteryStats;
 }
+
+interface DetailModalProps {
+  data: BatteryStats;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  const formatPower = (mW: number) => {
+    if (mW >= 1000) return `${(mW / 1000).toFixed(2)} W`;
+    return `${mW.toFixed(0)} mW`;
+  };
+
+  const formatCapacity = (mAh: number, unit: string) => {
+    if (unit === 'mWh') {
+      if (mAh >= 1000) return `${(mAh / 1000).toFixed(2)} Wh`;
+      return `${mAh.toFixed(0)} mWh`;
+    }
+    if (mAh >= 1000) return `${(mAh / 1000).toFixed(2)} Ah`;
+    return `${mAh.toFixed(0)} mAh`;
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[var(--color-glass-panel)] rounded-xl border border-[var(--color-glass-border)] shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-[var(--color-glass-border)]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500/10 dark:bg-green-500/10 rounded-lg">
+              <Battery className="w-5 h-5 text-green-500 dark:text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Battery Details</h3>
+              <p className="text-xs text-foreground-muted">{data.model || 'Battery Information'}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1">
+          <div className="space-y-4">
+            {/* Status */}
+            <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {data.isCharging ? (
+                    <BatteryCharging className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Battery className="w-4 h-4 text-foreground-muted" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">Status</span>
+                </div>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  data.isCharging ? 'bg-green-500/20 text-green-500' : 'bg-amber-500/20 text-amber-500'
+                }`}>
+                  {data.isCharging ? 'Charging' : 'Discharging'}
+                </span>
+              </div>
+            </div>
+
+            {/* Capacity Information */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                <Info className="w-4 h-4 text-green-500" />
+                Capacity Information
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                  <p className="text-xs text-foreground-muted mb-1">Current</p>
+                  <p className="text-lg font-bold text-foreground">{formatCapacity(data.currentCapacity, data.capacityUnit)}</p>
+                </div>
+                <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                  <p className="text-xs text-foreground-muted mb-1">Maximum</p>
+                  <p className="text-lg font-bold text-foreground">{formatCapacity(data.maxCapacity, data.capacityUnit)}</p>
+                </div>
+                <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                  <p className="text-xs text-foreground-muted mb-1">Designed</p>
+                  <p className="text-lg font-bold text-foreground">{formatCapacity(data.designedCapacity, data.capacityUnit)}</p>
+                </div>
+                <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                  <p className="text-xs text-foreground-muted mb-1">Health</p>
+                  <p className="text-lg font-bold text-foreground">{((data.maxCapacity / data.designedCapacity) * 100).toFixed(1)}%</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Power Information */}
+            {(data.powerConsumptionRate !== undefined || data.chargingPower !== undefined) && (
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                  <Zap className="w-4 h-4 text-green-500" />
+                  Power Information
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {data.powerConsumptionRate !== undefined && (
+                    <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                      <p className="text-xs text-foreground-muted mb-1">Consumption</p>
+                      <p className="text-lg font-bold text-foreground">{formatPower(data.powerConsumptionRate)}</p>
+                    </div>
+                  )}
+                  {data.chargingPower !== undefined && data.isCharging && (
+                    <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                      <p className="text-xs text-foreground-muted mb-1">Charging Power</p>
+                      <p className="text-lg font-bold text-foreground">{formatPower(data.chargingPower)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Additional Info */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
+                <Info className="w-4 h-4 text-green-500" />
+                Additional Information
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {data.voltage && (
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Voltage</p>
+                    <p className="text-sm font-medium text-foreground">{data.voltage.toFixed(2)} V</p>
+                  </div>
+                )}
+                {data.cycleCount !== -1 && (
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Cycle Count</p>
+                    <p className="text-sm font-medium text-foreground">{data.cycleCount.toLocaleString()}</p>
+                  </div>
+                )}
+                {data.timeRemaining > 0 && (
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Time Remaining</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {Math.floor(data.timeRemaining / 60)}h {data.timeRemaining % 60}m
+                    </p>
+                  </div>
+                )}
+                {data.manufacturer && (
+                  <div className="bg-[var(--color-glass-input)] p-3 rounded-lg border border-[var(--color-glass-border)]">
+                    <p className="text-xs text-foreground-muted mb-1">Manufacturer</p>
+                    <p className="text-sm font-medium text-foreground">{data.manufacturer}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MAX_POINTS = 20;
 
@@ -13,6 +176,7 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
   const [consumptionHistory, setConsumptionHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [chargingHistory, setChargingHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [showDetails, setShowDetails] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const powerConsumption = data.powerConsumptionRate ?? 0; // mW
   const chargingPower = data.chargingPower ?? 0; // mW
@@ -101,8 +265,23 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
   // Tính max power để scale graph (ước tính max 100W cho laptop)
   const maxPower = useMemo(() => 100000, []); // 100W = 100000mW
 
+  // Close modal on Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isModalOpen]);
+
   return (
-    <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
+    <>
+    <div 
+      className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4 cursor-pointer hover:bg-[var(--color-glass-button-hover)] transition-colors"
+      onClick={() => setIsModalOpen(true)}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-green-500/10 dark:bg-green-500/10 rounded-lg">
@@ -305,7 +484,12 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
           )}
         </div>
       )}
+      <div className="flex justify-end">
+        <Info className="w-3 h-3 text-foreground-muted opacity-50" />
+      </div>
     </div>
+    <DetailModal data={data} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   );
 });
 
