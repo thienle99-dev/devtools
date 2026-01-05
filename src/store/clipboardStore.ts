@@ -9,6 +9,7 @@ export interface ClipboardItem {
     pinned: boolean;
     copyCount: number; // Số lần copy
     sourceApp?: string; // App nguồn (từ Electron)
+    categories?: string[]; // Categories/tags
     metadata?: {
         length?: number;
         mimeType?: string;
@@ -35,10 +36,20 @@ interface ClipboardSettings {
     clearOnQuit: boolean; // Xóa clipboard khi quit
 }
 
+interface ClipboardStatistics {
+    totalItems: number;
+    totalCopies: number;
+    mostCopiedItems: ClipboardItem[];
+    itemsByType: Record<string, number>;
+    itemsByDay: Record<string, number>;
+}
+
 interface ClipboardStore {
     items: ClipboardItem[];
     maxItems: number;
     settings: ClipboardSettings;
+    isLoading: boolean;
+    availableCategories: string[];
 
     // Actions
     addItem: (content: string, type: 'text' | 'image' | 'link' | 'file', metadata?: any) => void;
@@ -51,6 +62,16 @@ interface ClipboardStore {
     getSortedItems: () => ClipboardItem[];
     searchItems: (query: string, mode: SearchMode) => ClipboardItem[];
     incrementCopyCount: (id: string) => void;
+    setLoading: (loading: boolean) => void;
+
+    // Categories/Tags
+    addCategory: (category: string) => void;
+    removeCategory: (category: string) => void;
+    addItemToCategory: (itemId: string, category: string) => void;
+    removeItemFromCategory: (itemId: string, category: string) => void;
+
+    // Statistics
+    getStatistics: () => ClipboardStatistics;
 }
 
 export const useClipboardStore = create<ClipboardStore>()(
@@ -58,6 +79,8 @@ export const useClipboardStore = create<ClipboardStore>()(
         (set, get) => ({
             items: [],
             maxItems: 200, // Maccy default
+            isLoading: false,
+            availableCategories: [],
             settings: {
                 autoClearDays: 0,
                 excludeDuplicates: true,
@@ -189,6 +212,92 @@ export const useClipboardStore = create<ClipboardStore>()(
                     item.id === id ? { ...item, copyCount: item.copyCount + 1 } : item
                 ),
             })),
+
+            setLoading: (loading) => set({ isLoading: loading }),
+
+            // Categories/Tags
+            addCategory: (category) => set((state) => ({
+                availableCategories: state.availableCategories.includes(category)
+                    ? state.availableCategories
+                    : [...state.availableCategories, category],
+            })),
+
+            removeCategory: (category) => set((state) => ({
+                availableCategories: state.availableCategories.filter(c => c !== category),
+                items: state.items.map(item => ({
+                    ...item,
+                    categories: item.categories?.filter(c => c !== category),
+                })),
+            })),
+
+            addItemToCategory: (itemId, category) => set((state) => {
+                // Add category to available list if not exists
+                const categories = state.availableCategories.includes(category)
+                    ? state.availableCategories
+                    : [...state.availableCategories, category];
+
+                return {
+                    availableCategories: categories,
+                    items: state.items.map(item =>
+                        item.id === itemId
+                            ? {
+                                ...item,
+                                categories: item.categories
+                                    ? item.categories.includes(category)
+                                        ? item.categories
+                                        : [...item.categories, category]
+                                    : [category],
+                            }
+                            : item
+                    ),
+                };
+            }),
+
+            removeItemFromCategory: (itemId, category) => set((state) => ({
+                items: state.items.map(item =>
+                    item.id === itemId
+                        ? {
+                            ...item,
+                            categories: item.categories?.filter(c => c !== category),
+                        }
+                        : item
+                ),
+            })),
+
+            // Statistics
+            getStatistics: () => {
+                const { items } = get();
+
+                // Most copied items (top 10)
+                const mostCopied = [...items]
+                    .sort((a, b) => b.copyCount - a.copyCount)
+                    .slice(0, 10);
+
+                // Items by type
+                const itemsByType = items.reduce((acc, item) => {
+                    acc[item.type] = (acc[item.type] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>);
+
+                // Items by day (last 7 days)
+                const now = Date.now();
+                const itemsByDay = items.reduce((acc, item) => {
+                    const daysAgo = Math.floor((now - item.timestamp) / (24 * 60 * 60 * 1000));
+                    if (daysAgo < 7) {
+                        const key = daysAgo === 0 ? 'Today' : `${daysAgo}d ago`;
+                        acc[key] = (acc[key] || 0) + 1;
+                    }
+                    return acc;
+                }, {} as Record<string, number>);
+
+                return {
+                    totalItems: items.length,
+                    totalCopies: items.reduce((sum, item) => sum + item.copyCount, 0),
+                    mostCopiedItems: mostCopied,
+                    itemsByType,
+                    itemsByDay,
+                };
+            },
         }),
         {
             name: 'clipboard-manager-storage',

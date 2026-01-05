@@ -61,7 +61,7 @@ export const Sidebar: React.FC = React.memo(() => {
 
                             {/* Enhanced Tool Items */}
                             <div className="space-y-1">
-                                {tools.map((tool) => {
+                                {tools.filter(tool => tool.id !== 'settings').map((tool) => {
                                     const isActive = activeTab?.toolId === tool.id;
                                     const Icon = tool.icon;
 
@@ -102,7 +102,7 @@ export const Sidebar: React.FC = React.memo(() => {
             </nav>
 
             {/* Enhanced Footer - Settings Button */}
-            <div className="px-5 py-4 border-t border-border-glass bg-[var(--color-glass-panel)]/50">
+            <div className="px-5 py-4 border-t border-border-glass/50 bg-[var(--color-glass-panel)]/50">
                 <div
                     onClick={(e) => {
                         e.preventDefault();

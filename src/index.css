@@ -486,19 +486,15 @@ body {
     background-color: var(--color-glass-panel);
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
-    border-right: 0.5px solid var(--color-glass-border);
-    box-shadow:
-      2px 0 8px rgba(0, 0, 0, 0.1),
-      inset -1px 0 0 rgba(255, 255, 255, 0.05);
+    border-right: none; /* Removed border for seamless design */
+    box-shadow: none; /* Removed shadow for seamless design */
   }
 
   /* Light mode for sidebar */
   :root.light .sidebar-macos {
     background-color: rgba(255, 255, 255, 0.7);
-    border-right-color: rgba(0, 0, 0, 0.08);
-    box-shadow:
-      2px 0 8px rgba(0, 0, 0, 0.05),
-      inset -1px 0 0 rgba(0, 0, 0, 0.03);
+    border-right: none; /* Removed border for seamless design */
+    box-shadow: none; /* Removed shadow for seamless design */
   }
 
   /* ============================================
@@ -670,6 +666,7 @@ body {
     -webkit-backdrop-filter: blur(20px);
     border: none;
     box-shadow: none;
+    isolation: isolate; /* Create new stacking context for tabs */
   }
 
   /* Light mode tab bar container */
@@ -721,6 +718,7 @@ body {
     border-bottom: none !important;
     background-color: transparent;
     box-sizing: border-box;
+    isolation: isolate; /* Create new stacking context */
     transition:
       background-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
       color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -755,6 +753,7 @@ body {
     border-bottom: none !important;
     color: var(--color-text-primary);
     z-index: 2;
+    position: relative; /* Ensure z-index works */
   }
 
   /* Light mode inactive */
@@ -779,7 +778,8 @@ body {
     border-top-left-radius: 0.5rem;
     border-top-right-radius: 0.5rem;
     color: var(--color-text-primary);
-    z-index: 10;
+    z-index: 5;
+    position: relative; /* Ensure z-index works */
     box-shadow: none !important;
     margin-bottom: 0 !important;
     margin-top: 0 !important;
@@ -894,7 +894,7 @@ body {
     color: #5f6368;
     cursor: pointer;
     transition: all 0.15s ease;
-    z-index: 20;
+    z-index: 30; /* Ensure scroll buttons are above tabs */
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 

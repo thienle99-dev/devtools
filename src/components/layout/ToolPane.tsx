@@ -24,7 +24,7 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
             {/* Header */}
-            <div className="px-8 py-5 flex items-center justify-between backdrop-blur-md sticky top-0 z-10 bg-[var(--color-glass-50)]">
+            <div className="px-8 py-5 flex items-center justify-between backdrop-blur-md sticky top-0 z-10 bg-[var(--color-glass-50)] relative">
                 <div>
                     <h2 className="text-2xl font-bold text-foreground tracking-tight leading-none">{title}</h2>
                     {description && <p className="text-xs font-medium text-foreground-muted truncate mt-2 uppercase tracking-wider">{description}</p>}

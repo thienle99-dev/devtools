@@ -153,12 +153,12 @@ export const TabBar: React.FC = React.memo(() => {
     if (tabs.length === 0) return null;
 
     return (
-        <div className="tab-bar-container h-11 flex items-center w-full z-10 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm">
+        <div className="tab-bar-container h-11 flex items-center w-full z-20 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm">
             {/* Left scroll button */}
             {canScrollLeft && (
                 <button
                     onClick={scrollLeft}
-                    className="tab-scroll-button tab-scroll-button-left absolute left-0 z-20 h-full px-2 flex items-center hover:bg-[var(--color-glass-button-hover)] transition-colors"
+                    className="tab-scroll-button tab-scroll-button-left absolute left-0 z-30 h-full px-2 flex items-center hover:bg-[var(--color-glass-button-hover)] transition-colors"
                     aria-label="Scroll left"
                 >
                     <ChevronLeft className="w-4 h-4 text-foreground-muted hover:text-foreground" />
@@ -239,7 +239,7 @@ export const TabBar: React.FC = React.memo(() => {
             {canScrollRight && (
                 <button
                     onClick={scrollRight}
-                    className="tab-scroll-button tab-scroll-button-right absolute right-0 z-20 h-full px-2 flex items-center hover:bg-[var(--color-glass-button-hover)] transition-colors"
+                    className="tab-scroll-button tab-scroll-button-right absolute right-0 z-30 h-full px-2 flex items-center hover:bg-[var(--color-glass-button-hover)] transition-colors"
                     aria-label="Scroll right"
                 >
                     <ChevronRight className="w-4 h-4 text-foreground-muted hover:text-foreground" />

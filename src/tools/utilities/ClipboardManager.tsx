@@ -7,8 +7,11 @@ import { SearchAndFilter } from './components/SearchAndFilter';
 import { ClipboardList } from './components/ClipboardList';
 import { ViewFullModal } from './components/ViewFullModal';
 import { ClipboardSettings } from './components/ClipboardSettings';
+import { ClipboardStatistics } from './components/ClipboardStatistics';
+import { CategoryManager } from './components/CategoryManager';
 import { useToolStore } from '../../store/toolStore';
 import { useClipboard } from './hooks/useClipboard';
+import { Loader2 } from 'lucide-react';
 
 const TOOL_ID = 'clipboard-manager';
 
@@ -18,6 +21,7 @@ export const ClipboardManager: React.FC = () => {
     // Clipboard store
     const items = useClipboardStore((state) => state.items);
     const settings = useClipboardStore((state) => state.settings);
+    const isLoading = useClipboardStore((state) => state.isLoading);
     const pinItem = useClipboardStore((state) => state.pinItem);
     const unpinItem = useClipboardStore((state) => state.unpinItem);
     const removeItem = useClipboardStore((state) => state.removeItem);
@@ -34,6 +38,9 @@ export const ClipboardManager: React.FC = () => {
     const [selectedItem, setSelectedItem] = useState<ClipboardItem | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [showSettings, setShowSettings] = useState(false);
+    const [showStatistics, setShowStatistics] = useState(false);
+    const [showCategoryManager, setShowCategoryManager] = useState(false);
+    const [categoryItemId, setCategoryItemId] = useState<string | undefined>(undefined);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const searchInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -200,6 +207,8 @@ export const ClipboardManager: React.FC = () => {
                         onFilterChange={setFilters}
                         onClearAll={handleClearAll}
                         onOpenSettings={() => setShowSettings(true)}
+                        onOpenStatistics={() => setShowStatistics(true)}
+                        onOpenCategories={() => setShowCategoryManager(true)}
                         searchInputRef={searchInputRef}
                     />
 
@@ -209,6 +218,14 @@ export const ClipboardManager: React.FC = () => {
                             <p className="text-sm text-red-500 font-medium">
                                 Click "Clear All" again to confirm deletion of all clipboard items
                             </p>
+                        </div>
+                    )}
+
+                    {/* Loading State */}
+                    {isLoading && (
+                        <div className="flex items-center justify-center gap-2 p-4 bg-surface-elevated border border-border rounded-lg">
+                            <Loader2 className="w-4 h-4 text-accent animate-spin" />
+                            <span className="text-sm text-foreground-muted">Loading clipboard items...</span>
                         </div>
                     )}
 
@@ -252,6 +269,20 @@ export const ClipboardManager: React.FC = () => {
 
             {showSettings && (
                 <ClipboardSettings onClose={() => setShowSettings(false)} />
+            )}
+
+            {showStatistics && (
+                <ClipboardStatistics onClose={() => setShowStatistics(false)} />
+            )}
+
+            {showCategoryManager && (
+                <CategoryManager
+                    itemId={categoryItemId}
+                    onClose={() => {
+                        setShowCategoryManager(false);
+                        setCategoryItemId(undefined);
+                    }}
+                />
             )}
         </>
     );

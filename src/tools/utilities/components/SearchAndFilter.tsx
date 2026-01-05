@@ -1,5 +1,5 @@
 import React, { useState, RefObject } from 'react';
-import { Search, Filter, Settings, Trash2 } from 'lucide-react';
+import { Search, Filter, Settings, Trash2, TrendingUp, Tag } from 'lucide-react';
 import type { FilterOptions, SearchMode } from '../../../store/clipboardStore';
 
 interface SearchAndFilterProps {
@@ -9,6 +9,8 @@ interface SearchAndFilterProps {
     onFilterChange: (filters: FilterOptions) => void;
     onClearAll: () => void;
     onOpenSettings: () => void;
+    onOpenStatistics?: () => void;
+    onOpenCategories?: () => void;
     searchInputRef?: RefObject<HTMLInputElement | null>;
 }
 
@@ -19,6 +21,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     onFilterChange,
     onClearAll,
     onOpenSettings,
+    onOpenStatistics,
+    onOpenCategories,
     searchInputRef,
 }) => {
     const [showFilters, setShowFilters] = useState(false);
@@ -54,6 +58,32 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 >
                     <Filter className="w-5 h-5" />
                 </button>
+
+                {/* Statistics */}
+                {onOpenStatistics && (
+                    <button
+                        onClick={onOpenStatistics}
+                        className="p-3 rounded-xl border bg-surface-elevated border-border 
+                                 text-foreground-muted hover:text-foreground hover:border-accent/50
+                                 transition-all duration-200"
+                        title="Statistics"
+                    >
+                        <TrendingUp className="w-5 h-5" />
+                    </button>
+                )}
+
+                {/* Categories */}
+                {onOpenCategories && (
+                    <button
+                        onClick={onOpenCategories}
+                        className="p-3 rounded-xl border bg-surface-elevated border-border 
+                                 text-foreground-muted hover:text-foreground hover:border-accent/50
+                                 transition-all duration-200"
+                        title="Categories"
+                    >
+                        <Tag className="w-5 h-5" />
+                    </button>
+                )}
 
                 {/* Settings */}
                 <button
