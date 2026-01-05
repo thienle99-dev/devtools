@@ -9,6 +9,7 @@ interface SettingsStore {
     minimizeToTray: boolean;
     startMinimized: boolean;
     launchAtLogin: boolean;
+    sidebarCollapsed: boolean;
 
     toolShortcuts: Record<string, string>;
     setToolShortcut: (toolId: string, shortcut: string | null) => void;
@@ -19,6 +20,8 @@ interface SettingsStore {
     setMinimizeToTray: (value: boolean) => void;
     setStartMinimized: (value: boolean) => void;
     setLaunchAtLogin: (value: boolean) => void;
+    setSidebarCollapsed: (collapsed: boolean) => void;
+    toggleSidebar: () => void;
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -31,6 +34,7 @@ export const useSettingsStore = create<SettingsStore>()(
             minimizeToTray: true,
             startMinimized: false,
             launchAtLogin: false,
+            sidebarCollapsed: false,
             toolShortcuts: {},
 
             setToolShortcut: (toolId, shortcut) => set((state) => {
@@ -62,6 +66,8 @@ export const useSettingsStore = create<SettingsStore>()(
                 set({ launchAtLogin });
                 (window as any).ipcRenderer?.invoke('store-set', 'launchAtLogin', launchAtLogin);
             },
+            setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+            toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
         }),
         {
             name: 'antigravity-settings',

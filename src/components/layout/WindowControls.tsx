@@ -33,7 +33,7 @@ export const WindowControls: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center px-4 h-9 select-none drag bg-transparent">
+        <div className="flex items-center px-4 h-9 select-none drag rounded-[10px] bg-transparent">
             {/* Title / Drag Area */}
             <div className="flex-1 text-center text-xs font-medium text-foreground-muted tracking-wider uppercase flex items-center gap-2">
                  <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">DEVTOOLS</span>

@@ -133,6 +133,20 @@ function App() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
+  // Global Sidebar Toggle Shortcut (Cmd+B / Ctrl+B)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle sidebar with Cmd+B (Mac) or Ctrl+B (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        useSettingsStore.getState().toggleSidebar();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Global Tool Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -233,10 +247,10 @@ function App() {
   }, []);
 
   return (
-    <Router>
+    <Router >
       <GlobalClipboardMonitor />
       <TrayController />
-      <div className="flex flex-col h-screen bg-app-gradient rounded-[6px] text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
+      <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
         <WindowControls />
 
         <div className="flex-1 flex overflow-hidden relative">
