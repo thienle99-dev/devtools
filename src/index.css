@@ -144,6 +144,15 @@ body {
   --color-border-glass: var(--color-glass-border);
   --color-bg-glass-panel: var(--color-glass-panel);
   --color-bg-glass-hover: var(--color-glass-button-hover);
+
+  --transition-base: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
 }
 
 @layer components {

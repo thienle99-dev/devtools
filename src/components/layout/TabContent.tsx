@@ -1,4 +1,5 @@
 import React, { Suspense, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTabStore } from '../../store/tabStore';
 import { getToolById } from '../../tools/registry';
 
@@ -60,22 +61,33 @@ export const TabContent: React.FC = React.memo(() => {
 
     return (
         <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area h-full w-full">
-            <Suspense fallback={
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4 mx-auto" />
-                        <p className="text-sm text-foreground-muted">Loading tool...</p>
-                    </div>
-                </div>
-            }>
-                {/* 
-                  Pass tabId to component. 
-                  Removing 'key' allows React to reuse the component instance if the tool type is the same,
-                  making tab switching much faster for the same tool type.
-                  Isolated state is still maintained because ToolComponent uses useToolState(tabId).
-                */}
-                <ToolComponent tabId={activeTab.id} />
-            </Suspense>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="h-full w-full flex flex-col"
+                >
+                    <Suspense fallback={
+                        <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4 mx-auto" />
+                                <p className="text-sm text-foreground-muted">Loading tool...</p>
+                            </div>
+                        </div>
+                    }>
+                        {/* 
+                          Pass tabId to component. 
+                          Removing 'key' allows React to reuse the component instance if the tool type is the same,
+                          making tab switching much faster for the same tool type.
+                          Isolated state is still maintained because ToolComponent uses useToolState(tabId).
+                        */}
+                        <ToolComponent tabId={activeTab.id} />
+                    </Suspense>
+                </motion.div>
+            </AnimatePresence>
         </div>
     );
 });

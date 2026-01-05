@@ -8,6 +8,7 @@ import {
 import { cn } from '../../utils/cn';
 import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 import { useSettingsStore } from '../../store/settingsStore';
+import { motion } from 'framer-motion';
 
 export const Sidebar: React.FC = React.memo(() => {
     const openTab = useTabStore(state => state.openTab);
@@ -15,6 +16,8 @@ export const Sidebar: React.FC = React.memo(() => {
     const tabs = useTabStore(state => state.tabs);
     const navigate = useNavigate();
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+
+    const [searchQuery, setSearchQuery] = React.useState('');
 
     // Global shortcut for Search (Cmd+K)
     useEffect(() => {
@@ -29,8 +32,31 @@ export const Sidebar: React.FC = React.memo(() => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Filter tools based on search
+    const filteredContent = useMemo(() => {
+        if (!searchQuery.trim()) return null;
+
+        const query = searchQuery.toLowerCase();
+        const allCategories = CATEGORIES.map(c => getToolsByCategory(c.id)).flat();
+        // Remove duplicates and settings
+        const uniqueTools = Array.from(new Set(allCategories.map(t => t.id)))
+            .map(id => allCategories.find(t => t.id === id)!)
+            .filter(t => t.id !== 'settings');
+        
+        return uniqueTools.filter(tool => 
+            tool.name.toLowerCase().includes(query) || 
+            tool.description.toLowerCase().includes(query) ||
+            tool.keywords?.some(k => k.toLowerCase().includes(query))
+        );
+    }, [searchQuery]);
+
     return (
-        <aside className="w-64 h-full sidebar-macos flex flex-col transition-all duration-300 z-20">
+        <motion.aside 
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="w-64 h-full sidebar-macos flex flex-col z-20"
+        >
             {/* Enhanced Search Section */}
             <div className="px-5 pt-5 pb-4">
                 <div className="relative">
@@ -38,6 +64,8 @@ export const Sidebar: React.FC = React.memo(() => {
                     <input
                         type="text"
                         placeholder="Search tools... (⌘K)"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="sidebar-search-input w-full pl-10 pr-3.5 py-2.5 text-sm rounded-lg bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass focus:border-border-glass-hover transition-all duration-200"
                     />
                 </div>
@@ -45,7 +73,61 @@ export const Sidebar: React.FC = React.memo(() => {
 
             {/* Enhanced Navigation */}
             <nav className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar pb-4">
-                {CATEGORIES.map((category) => {
+                {filteredContent ? (
+                    <div className="space-y-1">
+                         {filteredContent.length === 0 ? (
+                             <div className="text-center text-xs text-foreground-muted py-8">
+                                 No tools found
+                             </div>
+                         ) : filteredContent.map(tool => {
+                            const isActive = activeTab?.toolId === tool.id;
+                            const Icon = tool.icon;
+                            // Get configured or default shortcut
+                            const toolShortcuts = useSettingsStore.getState().toolShortcuts;
+                            const shortcut = toolShortcuts[tool.id] || tool.shortcut;
+
+                            return (
+                                <div
+                                    key={tool.id}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (e.altKey) {
+                                            openTab(tool.id, tool.path, tool.name, tool.description, true);
+                                            navigate(tool.path);
+                                        } else {
+                                            openTab(tool.id, tool.path, tool.name, tool.description, false);
+                                            navigate(tool.path);
+                                        }
+                                    }}
+                                    title={tool.description + (shortcut ? ` (${shortcut})` : '')}
+                                    className={cn(
+                                        "sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
+                                        isActive
+                                            ? "sidebar-nav-item-active"
+                                            : "sidebar-nav-item-inactive"
+                                    )}
+                                >
+                                    {Icon && (
+                                        <Icon className={cn(
+                                            "w-4 h-4 shrink-0 transition-opacity",
+                                            isActive ? "opacity-100" : "opacity-50 group-hover:opacity-70"
+                                        )} />
+                                    )}
+                                    <span className="truncate flex-1 font-medium">{tool.name}</span>
+                                    {shortcut && (
+                                        <span className={cn(
+                                            "text-[10px] opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded font-mono",
+                                            isActive && "opacity-70 bg-black/5 dark:bg-white/10 text-foreground"
+                                        )}>
+                                            {shortcut.replace('Ctrl', 'Win').replace('Cmd', '⌘').replace('Shift', '⇧').replace('Alt', 'Alt').split('+').map(k => k.trim()).join('+').replace('Win+⇧', 'Win+⇧').replace(/\+/g, '')}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                         })}
+                    </div>
+                ) : (
+                    CATEGORIES.map((category) => {
                     const tools = getToolsByCategory(category.id);
 
                     // Skip Favorites/Recent if empty for now
@@ -86,7 +168,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                             }}
                                             title={tool.description + (shortcut ? ` (${shortcut})` : '')}
                                             className={cn(
-                                                "sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer",
+                                                "sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
                                                 isActive
                                                     ? "sidebar-nav-item-active"
                                                     : "sidebar-nav-item-inactive"
@@ -113,7 +195,7 @@ export const Sidebar: React.FC = React.memo(() => {
                             </div>
                         </div>
                     );
-                })}
+                }))}
             </nav>
 
             {/* Enhanced Footer - Settings Button */}
@@ -133,7 +215,7 @@ export const Sidebar: React.FC = React.memo(() => {
                     <span>Settings</span>
                 </div>
             </div>
-        </aside>
+        </motion.aside>
     );
 });
 
