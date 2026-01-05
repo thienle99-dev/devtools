@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { createHash } from 'node:crypto';
 
 export interface BackupInfo {
     id: string;

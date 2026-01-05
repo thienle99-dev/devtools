@@ -264,20 +264,26 @@ export interface HealthAlert {
 
 // Error types
 export class CleanerError extends Error {
+    code: string;
+    details?: unknown;
     constructor(
         message: string,
-        public code: string,
-        public details?: unknown
+        code: string,
+        details?: unknown
     ) {
         super(message);
         this.name = 'CleanerError';
+        this.code = code;
+        this.details = details;
     }
 }
 
 export class SafetyError extends CleanerError {
-    constructor(message: string, public blockedFiles: string[]) {
+    blockedFiles: string[];
+    constructor(message: string, blockedFiles: string[]) {
         super(message, 'SAFETY_ERROR');
         this.name = 'SafetyError';
+        this.blockedFiles = blockedFiles;
     }
 }
 
@@ -325,7 +331,7 @@ export interface CleanerAPI {
 
 declare global {
     interface Window {
-        cleanerAPI: CleanerAPI;
+        cleanerAPI?: CleanerAPI;
     }
 }
 

@@ -5,7 +5,6 @@ import { Button } from '../../../../components/ui/Button';
 import { Checkbox } from '../../../../components/ui/Checkbox';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import { formatSize } from '../utils/formatUtils';
 import { retryWithBackoff, isRetryableError, processBatchWithRecovery } from '../utils/errorRecovery';
 import { fileListCache } from '../utils/cacheUtils';
 import { toast } from 'sonner';
@@ -41,8 +40,8 @@ export const DuplicatesView: React.FC = () => {
                     shouldRetry: isRetryableError 
                 }
             );
-            setDuplicates(dups);
-            fileListCache.set(cacheKey, dups);
+            setDuplicates(dups as any);
+            fileListCache.set(cacheKey, dups as any);
             setProgress(100);
         } catch (error) {
             toast.error(`Failed to scan for duplicates: ${(error as Error).message}`);

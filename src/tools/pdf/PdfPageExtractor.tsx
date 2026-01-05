@@ -114,7 +114,7 @@ export const PdfPageExtractor: React.FC<PdfPageExtractorProps> = ({ tabId }) => 
             pages.forEach(page => newPdf.addPage(page));
 
             const pdfBytes = await newPdf.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: URL.createObjectURL(pdfBlob),

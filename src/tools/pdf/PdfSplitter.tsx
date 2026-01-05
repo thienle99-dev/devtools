@@ -88,7 +88,7 @@ export const PdfSplitter: React.FC<PdfSplitterProps> = ({ tabId }) => {
                     const [page] = await newPdf.copyPages(sourcePdf, [i]);
                     newPdf.addPage(page);
                     const pdfBytes = await newPdf.save();
-                    blobs.push(new Blob([pdfBytes], { type: 'application/pdf' }));
+                    blobs.push(new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' }));
                 }
             } else if (splitMode === 'range') {
                 // Split by page range (e.g., "1-3,5-7")
@@ -103,7 +103,7 @@ export const PdfSplitter: React.FC<PdfSplitterProps> = ({ tabId }) => {
                         const pages = await newPdf.copyPages(sourcePdf, Array.from({ length: end - start + 1 }, (_, i) => start + i));
                         pages.forEach(page => newPdf.addPage(page));
                         const pdfBytes = await newPdf.save();
-                        blobs.push(new Blob([pdfBytes], { type: 'application/pdf' }));
+                        blobs.push(new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' }));
                     } else {
                         const pageNum = parseInt(rangeStr.trim()) - 1;
                         if (pageNum >= 0 && pageNum < totalPages) {
@@ -111,7 +111,7 @@ export const PdfSplitter: React.FC<PdfSplitterProps> = ({ tabId }) => {
                             const [page] = await newPdf.copyPages(sourcePdf, [pageNum]);
                             newPdf.addPage(page);
                             const pdfBytes = await newPdf.save();
-                            blobs.push(new Blob([pdfBytes], { type: 'application/pdf' }));
+                            blobs.push(new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' }));
                         }
                     }
                 }
@@ -130,7 +130,7 @@ export const PdfSplitter: React.FC<PdfSplitterProps> = ({ tabId }) => {
                     const pages = await newPdf.copyPages(sourcePdf, Array.from({ length: endPage - i }, (_, j) => i + j));
                     pages.forEach(page => newPdf.addPage(page));
                     const pdfBytes = await newPdf.save();
-                    blobs.push(new Blob([pdfBytes], { type: 'application/pdf' }));
+                    blobs.push(new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' }));
                 }
             }
 

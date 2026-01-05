@@ -35,23 +35,29 @@ export default defineConfig({
     // Code splitting optimization
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks: (id) => {
           // Split vendor libraries
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['framer-motion', 'sonner', 'lucide-react'],
-          'editor-vendor': ['@uiw/react-codemirror', '@codemirror/view'],
-          'codemirror-langs': [
-            '@codemirror/lang-json',
-            '@codemirror/lang-yaml',
-            '@codemirror/lang-xml',
-            '@codemirror/lang-sql',
-            '@codemirror/lang-javascript',
-            '@codemirror/lang-html',
-            '@codemirror/lang-css',
-          ],
-          'crypto-vendor': ['crypto-js', 'bcryptjs', 'uuid', 'ulid'],
-          'pdf-vendor': ['pdf-lib', 'jspdf'],
-          'parser-vendor': ['js-yaml', 'fast-xml-parser', 'papaparse', 'marked'],
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+            return 'react-vendor';
+          }
+          if (id.includes('framer-motion') || id.includes('sonner') || id.includes('lucide-react')) {
+            return 'ui-vendor';
+          }
+          if (id.includes('@uiw/react-codemirror') || id.includes('@codemirror/view')) {
+            return 'editor-vendor';
+          }
+          if (id.includes('@codemirror/lang-')) {
+            return 'codemirror-langs';
+          }
+          if (id.includes('crypto-js') || id.includes('bcryptjs') || id.includes('uuid') || id.includes('ulid')) {
+            return 'crypto-vendor';
+          }
+          if (id.includes('pdf-lib') || id.includes('jspdf')) {
+            return 'pdf-vendor';
+          }
+          if (id.includes('js-yaml') || id.includes('fast-xml-parser') || id.includes('papaparse') || id.includes('marked')) {
+            return 'parser-vendor';
+          }
         },
         // Optimize chunk file names
         chunkFileNames: 'assets/js/[name]-[hash].js',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, FolderOpen, RefreshCw } from 'lucide-react';
+import { Trash2, FolderOpen } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 import { Button } from '../../../../components/ui/Button';
 import { Checkbox } from '../../../../components/ui/Checkbox';

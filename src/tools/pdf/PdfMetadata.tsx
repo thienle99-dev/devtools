@@ -56,7 +56,13 @@ export const PdfMetadata: React.FC<PdfMetadataProps> = ({ tabId }) => {
                 title: pdfDoc.getTitle() || '',
                 author: pdfDoc.getAuthor() || '',
                 subject: pdfDoc.getSubject() || '',
-                keywords: pdfDoc.getKeywords()?.join(', ') || '',
+                keywords: (() => {
+                    const keywords = pdfDoc.getKeywords();
+                    if (Array.isArray(keywords)) {
+                        return keywords.join(', ');
+                    }
+                    return keywords || '';
+                })(),
                 creator: pdfDoc.getCreator() || '',
                 producer: pdfDoc.getProducer() || '',
                 creationDate: pdfDoc.getCreationDate()?.toString() || '',
@@ -65,7 +71,13 @@ export const PdfMetadata: React.FC<PdfMetadataProps> = ({ tabId }) => {
                 title: pdfDoc.getTitle() || '',
                 author: pdfDoc.getAuthor() || '',
                 subject: pdfDoc.getSubject() || '',
-                keywords: pdfDoc.getKeywords()?.join(', ') || '',
+                keywords: (() => {
+                    const keywords = pdfDoc.getKeywords();
+                    if (Array.isArray(keywords)) {
+                        return keywords.join(', ');
+                    }
+                    return keywords || '';
+                })(),
                 creator: pdfDoc.getCreator() || '',
                 producer: pdfDoc.getProducer() || '',
                 creationDate: '',
@@ -115,14 +127,14 @@ export const PdfMetadata: React.FC<PdfMetadataProps> = ({ tabId }) => {
             if (metadata.author) pdfDoc.setAuthor(metadata.author);
             if (metadata.subject) pdfDoc.setSubject(metadata.subject);
             if (metadata.keywords) {
-                const keywords = metadata.keywords.split(',').map(k => k.trim()).filter(k => k);
+                const keywords = metadata.keywords.split(',').map((k: string) => k.trim()).filter((k: string) => k);
                 pdfDoc.setKeywords(keywords);
             }
             if (metadata.creator) pdfDoc.setCreator(metadata.creator);
             if (metadata.producer) pdfDoc.setProducer(metadata.producer);
 
             const pdfBytes = await pdfDoc.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: 'Metadata updated successfully',

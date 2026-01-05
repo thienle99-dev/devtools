@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { PDFDocument, rgb, PDFPage } from 'pdf-lib';
+import { PDFDocument, rgb, PDFPage, degrees } from 'pdf-lib';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
@@ -163,7 +163,6 @@ export const PdfWatermarker: React.FC<PdfWatermarkerProps> = ({ tabId }) => {
 
             for (const pageIndex of pagesToWatermark) {
                 const page = pdfDoc.getPage(pageIndex);
-                const { width, height } = page.getSize();
                 const pos = getPosition(page);
 
                 if (watermarkType === 'text') {
@@ -197,7 +196,7 @@ export const PdfWatermarker: React.FC<PdfWatermarkerProps> = ({ tabId }) => {
             }
 
             const pdfBytes = await pdfDoc.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: URL.createObjectURL(pdfBlob),

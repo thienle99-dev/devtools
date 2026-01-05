@@ -5,15 +5,17 @@ directories:
   output: dist-electron/pack
   buildResources: build
 files:
-  - dist
-  - dist-electron
-  - package.json
+  - "dist/**/*"
+  - "dist-electron/**/*"
+  - "package.json"
   - "!**/*.{ts,tsx,jsx,map}"
   - "!node_modules/**/*"
   - "!src/**/*"
   - "!electron/**/*"
   - "!docs/**/*"
-  - "!*.{md,yml,yaml,json}"
+  - "!*.{md,yml,yaml}"
+  - "!*.json"
+  - "package.json"
 
 # Windows Configuration
 win:
@@ -26,7 +28,6 @@ win:
   artifactName: ${productName}-${version}-${arch}.${ext}
   requestedExecutionLevel: asInvoker
   signAndEditExecutable: false
-  signDlls: false
 
 # NSIS Installer Configuration
 nsis:
@@ -36,9 +37,9 @@ nsis:
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: DevTools App
-  installerIcon: public/icon.png
-  uninstallerIcon: public/icon.png
-  installerHeaderIcon: public/icon.png
+  # installerIcon: public/icon.png
+  # uninstallerIcon: public/icon.png
+  # installerHeaderIcon: public/icon.png
   deleteAppDataOnUninstall: false
 
 # macOS Configuration
@@ -90,6 +91,7 @@ linux:
   description: A comprehensive developer tools application with multiple utilities
 
 # Publishing Configuration (for auto-updater)
-publish:
-  provider: generic
-  url: ${UPDATE_SERVER_URL}
+# Uncomment and set UPDATE_SERVER_URL environment variable to enable auto-updates
+# publish:
+#   provider: generic
+#   url: ${UPDATE_SERVER_URL}

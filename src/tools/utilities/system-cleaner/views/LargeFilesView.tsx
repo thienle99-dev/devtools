@@ -45,8 +45,8 @@ export const LargeFilesView: React.FC = () => {
                     }
                 }
             );
-            setLargeFiles(files);
-            fileListCache.set(cacheKey, files);
+            setLargeFiles(files as any);
+            fileListCache.set(cacheKey, files as any);
             setProgress(100);
         } catch (error) {
             toast.error(`Failed to scan for large files: ${(error as Error).message}`);

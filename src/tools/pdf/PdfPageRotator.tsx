@@ -3,7 +3,7 @@ import { PDFDocument, degrees } from 'pdf-lib';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
-import { FileText, RotateCw } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 
 const TOOL_ID = 'pdf-page-rotator';
 
@@ -112,14 +112,15 @@ export const PdfPageRotator: React.FC<PdfPageRotatorProps> = ({ tabId }) => {
             }
 
             // Apply rotation
-            const rotationAngle = degrees(parseInt(rotation));
+            const rotationAngle = parseInt(rotation);
             pagesToRotate.forEach(pageIndex => {
                 const page = pdfDoc.getPage(pageIndex);
-                page.setRotation(page.getRotation().angle + rotationAngle.angle);
+                const currentRotation = page.getRotation();
+                page.setRotation(degrees(currentRotation.angle + rotationAngle));
             });
 
             const pdfBytes = await pdfDoc.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: URL.createObjectURL(pdfBlob),

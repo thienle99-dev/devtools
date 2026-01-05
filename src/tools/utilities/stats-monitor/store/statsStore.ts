@@ -116,17 +116,17 @@ export const useStatsStore = create<StatsStore>()(
           newHistory.cpu = history;
         } else if (moduleId === 'memory' && Array.isArray(history)) {
           newHistory.memory = history;
-        } else if (moduleId === 'network' && typeof history === 'object') {
-          if (history.rx) newHistory.network.rx = history.rx;
-          if (history.tx) newHistory.network.tx = history.tx;
-        } else if (moduleId === 'disk' && typeof history === 'object') {
-          if (history.read) newHistory.disk.read = history.read;
-          if (history.write) newHistory.disk.write = history.write;
+        } else if (moduleId === 'network' && typeof history === 'object' && !Array.isArray(history)) {
+          if ('rx' in history && Array.isArray(history.rx)) newHistory.network.rx = history.rx;
+          if ('tx' in history && Array.isArray(history.tx)) newHistory.network.tx = history.tx;
+        } else if (moduleId === 'disk' && typeof history === 'object' && !Array.isArray(history)) {
+          if ('read' in history && Array.isArray(history.read)) newHistory.disk.read = history.read;
+          if ('write' in history && Array.isArray(history.write)) newHistory.disk.write = history.write;
         } else if (moduleId === 'gpu' && Array.isArray(history)) {
           newHistory.gpu = history;
-        } else if (moduleId === 'battery' && typeof history === 'object') {
-          if (history.consumption) newHistory.battery.consumption = history.consumption;
-          if (history.charging) newHistory.battery.charging = history.charging;
+        } else if (moduleId === 'battery' && typeof history === 'object' && !Array.isArray(history)) {
+          if ('consumption' in history && Array.isArray(history.consumption)) newHistory.battery.consumption = history.consumption;
+          if ('charging' in history && Array.isArray(history.charging)) newHistory.battery.charging = history.charging;
         }
         
         return { chartHistory: newHistory };

@@ -132,7 +132,7 @@ export const PdfMerger: React.FC<PdfMergerProps> = ({ tabId }) => {
             }
 
             const pdfBytes = await mergedPdf.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: URL.createObjectURL(pdfBlob),

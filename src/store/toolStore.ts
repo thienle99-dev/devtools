@@ -26,7 +26,7 @@ interface ToolStore {
 
 export const useToolStore = create<ToolStore>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             tools: {},
             history: [],
             favorites: [],

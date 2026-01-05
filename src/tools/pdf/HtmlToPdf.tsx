@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
-import { FileText, Code2 } from 'lucide-react';
 
 const TOOL_ID = 'html-to-pdf';
 

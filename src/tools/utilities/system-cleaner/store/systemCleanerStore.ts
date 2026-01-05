@@ -1,24 +1,17 @@
 import { create } from 'zustand';
 import type {
-    Platform,
     PlatformInfo,
-    FileItem,
-    JunkFileResult,
-    LargeFile,
-    DuplicateGroup,
-    MalwareResult,
-    RAMStatus,
     SmartScanResult,
     SpaceLensNode,
-    HeavyApp,
     StartupItem,
     InstalledApp,
     PerformanceData,
-    PrivacyItem,
     PrivacyScanResult,
     BrowserScanResult,
     WifiNetwork,
-    BackupInfo
+    BackupInfo,
+    LargeFile,
+    DuplicateGroup
 } from '../types';
 
 export interface SystemCleanerState {

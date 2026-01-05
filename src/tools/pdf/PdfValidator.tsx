@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
 import { FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
@@ -30,7 +29,7 @@ interface ValidationResult {
 export const PdfValidator: React.FC<PdfValidatorProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
-    const [loadingAction, setLoadingAction] = useState<string | null>(null);
+    const [, setLoadingAction] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const data = toolData || {

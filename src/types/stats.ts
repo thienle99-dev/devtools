@@ -157,7 +157,7 @@ export interface SystemMetrics {
 
 declare global {
   interface Window {
-    statsAPI: {
+    statsAPI?: {
       getCPUStats: () => Promise<CPUStats>;
       getMemoryStats: () => Promise<MemoryStats>;
       getNetworkStats: () => Promise<NetworkStats>;

@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
-import { FileText, Hash } from 'lucide-react';
+import { Hash } from 'lucide-react';
 
 const TOOL_ID = 'pdf-page-numbering';
 
@@ -132,7 +132,7 @@ export const PdfPageNumbering: React.FC<PdfPageNumberingProps> = ({ tabId }) => 
             }
 
             const pdfBytes = await pdfDoc.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: URL.createObjectURL(pdfBlob),

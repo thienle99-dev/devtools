@@ -17,12 +17,6 @@ interface DetailModalProps {
 const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  const formatBytes = (bytes: number) => {
-    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${bytes} B`;
-  };
 
   return (
     <div 

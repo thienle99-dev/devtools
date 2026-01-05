@@ -3,7 +3,6 @@ import { ToolPane } from '../../../components/layout/ToolPane';
 import { 
     Trash2, 
     Shield, 
-    Zap, 
     ShieldCheck,
     Wrench,
     Activity,
@@ -45,7 +44,8 @@ export const SystemCleaner: React.FC = () => {
     const [activeTab, setActiveTab] = useState('smart-scan');
     const [showWelcome, setShowWelcome] = useState(false);
     const { platformInfo, setPlatformInfo } = useSystemCleanerStore();
-    const { settings, hasCompletedOnboarding } = useSettingsStore();
+    const { settings } = useSettingsStore();
+    const hasCompletedOnboarding = true; // Default to true for now
     const { runSmartScan } = useSmartScan();
     
     // Load platform info on mount

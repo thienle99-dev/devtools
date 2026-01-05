@@ -115,7 +115,7 @@ export const PdfPageReorder: React.FC<PdfPageReorderProps> = ({ tabId }) => {
             }
 
             const pdfBytes = await newPdf.save();
-            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
             setToolData(effectiveId, {
                 output: URL.createObjectURL(pdfBlob),

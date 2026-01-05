@@ -4,7 +4,6 @@ import { marked } from 'marked';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
-import { FileText, FileCode } from 'lucide-react';
 
 const TOOL_ID = 'markdown-to-pdf';
 

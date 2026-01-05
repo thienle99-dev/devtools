@@ -3,7 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
-import { FileText, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 const TOOL_ID = 'pdf-metadata-remover';
 
