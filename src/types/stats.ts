@@ -80,6 +80,9 @@ export interface BatteryStats {
   model: string;
   manufacturer: string;
   serial: string;
+  // Power metrics (mW)
+  powerConsumptionRate?: number; // Điện tiêu thụ trực tiếp
+  chargingPower?: number; // Điện sạc vào pin
 }
 
 export interface SensorStats {

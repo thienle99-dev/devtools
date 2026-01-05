@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { BatteryStats } from '../../../../types/stats';
-import { Battery, BatteryCharging, Plug } from 'lucide-react';
+import { Battery, BatteryCharging, Plug, Zap } from 'lucide-react';
+import { LightweightGraph } from './LightweightGraph';
 
 interface BatteryModuleProps {
   data: BatteryStats;
 }
 
-export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
+const MAX_POINTS = 20;
+
+export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data }) => {
+  const [consumptionHistory, setConsumptionHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+  const [chargingHistory, setChargingHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+
+  const powerConsumption = data.powerConsumptionRate ?? 0; // mW
+  const chargingPower = data.chargingPower ?? 0; // mW
+
+  useEffect(() => {
+    if (data.powerConsumptionRate !== undefined && data.powerConsumptionRate > 0) {
+      setConsumptionHistory(prev => [...prev.slice(1), powerConsumption]);
+    }
+  }, [powerConsumption, data.powerConsumptionRate]);
+
+  useEffect(() => {
+    if (data.isCharging && data.chargingPower !== undefined && data.chargingPower > 0) {
+      setChargingHistory(prev => [...prev.slice(1), chargingPower]);
+    } else {
+      setChargingHistory(prev => [...prev.slice(1), 0]);
+    }
+  }, [chargingPower, data.isCharging, data.chargingPower]);
+
+  const formatPower = useCallback((mW: number) => {
+    if (mW >= 1000) {
+      return `${(mW / 1000).toFixed(2)} W`;
+    }
+    return `${mW.toFixed(0)} mW`;
+  }, []);
   if (!data.hasBattery) {
       return (
         <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4 opacity-50">
@@ -36,14 +65,17 @@ export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
     return '#22c55e'; // green-500
   };
 
-  const formatTime = (minutes: number) => {
-      if (minutes < 0) return 'Calculating...';
-      const h = Math.floor(minutes / 60);
-      const m = minutes % 60;
-      return `${h}h ${m}m`;
-  };
+  const formatTime = useCallback((minutes: number) => {
+    if (minutes < 0) return 'Calculating...';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  }, []);
 
-  const color = getColor(percent);
+  const color = useMemo(() => getColor(percent), [percent]);
+
+  // Tính max power để scale graph (ước tính max 100W cho laptop)
+  const maxPower = useMemo(() => 100000, []); // 100W = 100000mW
 
   return (
     <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
@@ -66,6 +98,49 @@ export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
           <div className="text-2xl font-bold font-mono" style={{ color }}>{percent}%</div>
           <div className="text-xs text-foreground-muted">
             {isCharging ? 'AC Connected' : (data.timeRemaining > 0 ? formatTime(data.timeRemaining) : '...')}
+          </div>
+        </div>
+      </div>
+
+      {/* Power Consumption & Charging Graphs */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Power Consumption Graph */}
+        <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
+          <LightweightGraph 
+            data={consumptionHistory} 
+            color="#f59e0b" 
+            height={64}
+            min={0}
+            max={maxPower}
+          />
+          <div className="absolute bottom-1 left-1 flex items-center gap-1">
+            <Zap className="w-3 h-3 text-foreground-muted" />
+            <span className="text-[10px] text-foreground-muted">Consumption</span>
+          </div>
+          <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted font-mono">
+            {data.powerConsumptionRate !== undefined && data.powerConsumptionRate > 0 
+              ? formatPower(powerConsumption) 
+              : 'N/A'}
+          </div>
+        </div>
+        
+        {/* Charging Power Graph */}
+        <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
+          <LightweightGraph 
+            data={chargingHistory} 
+            color="#22c55e" 
+            height={64}
+            min={0}
+            max={maxPower}
+          />
+          <div className="absolute bottom-1 left-1 flex items-center gap-1">
+            <BatteryCharging className="w-3 h-3 text-foreground-muted" />
+            <span className="text-[10px] text-foreground-muted">Charging</span>
+          </div>
+          <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted font-mono">
+            {isCharging && data.chargingPower !== undefined && data.chargingPower > 0 
+              ? formatPower(chargingPower) 
+              : 'N/A'}
           </div>
         </div>
       </div>
@@ -104,6 +179,8 @@ export const BatteryModule: React.FC<BatteryModuleProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+});
+
+BatteryModule.displayName = 'BatteryModule';
 
 export default BatteryModule;

@@ -463,7 +463,27 @@ app.whenReady().then(() => {
 		return await si.graphics();
 	});
 	ipcMain.handle("get-battery-stats", async () => {
-		return await si.battery();
+		try {
+			const battery = await si.battery();
+			let powerConsumptionRate;
+			let chargingPower;
+			if ("powerConsumptionRate" in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === "number") powerConsumptionRate = battery.powerConsumptionRate;
+			if (battery.voltage && battery.voltage > 0) {
+				if (!battery.isCharging && battery.timeRemaining > 0 && battery.currentCapacity > 0) {
+					const estimatedCurrent = battery.currentCapacity / battery.timeRemaining * 60;
+					powerConsumptionRate = battery.voltage * estimatedCurrent;
+				}
+				if (battery.isCharging && battery.voltage > 0) chargingPower = battery.voltage * 2e3;
+			}
+			return {
+				...battery,
+				powerConsumptionRate,
+				chargingPower
+			};
+		} catch (error) {
+			console.error("Error fetching battery stats:", error);
+			return null;
+		}
 	});
 	ipcMain.handle("get-sensor-stats", async () => {
 		return await si.cpuTemperature();

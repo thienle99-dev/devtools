@@ -597,7 +597,46 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('get-battery-stats', async () => {
-    return await si.battery();
+    try {
+      const battery = await si.battery();
+      
+      // Tính toán power consumption và charging power
+      let powerConsumptionRate: number | undefined;
+      let chargingPower: number | undefined;
+      
+      // Nếu systeminformation có sẵn powerConsumptionRate
+      if ('powerConsumptionRate' in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === 'number') {
+        powerConsumptionRate = battery.powerConsumptionRate;
+      }
+      
+      // Nếu có voltage và currentCapacity, có thể ước tính
+      if (battery.voltage && battery.voltage > 0) {
+        // Ước tính power consumption dựa trên voltage và trạng thái
+        // Power (mW) = Voltage (V) * Current (mA)
+        // Nếu đang discharge, ước tính current từ capacity và time remaining
+        if (!battery.isCharging && battery.timeRemaining > 0 && battery.currentCapacity > 0) {
+          // Ước tính: current = (currentCapacity / timeRemaining) * 60 (mA)
+          const estimatedCurrent = (battery.currentCapacity / battery.timeRemaining) * 60;
+          powerConsumptionRate = battery.voltage * estimatedCurrent;
+        }
+        
+        // Nếu đang charge, ước tính charging power
+        if (battery.isCharging && battery.voltage > 0) {
+          // Ước tính charging current (thường 1-3A cho laptop)
+          const estimatedChargingCurrent = 2000; // 2A = 2000mA (ước tính)
+          chargingPower = battery.voltage * estimatedChargingCurrent;
+        }
+      }
+      
+      return {
+        ...battery,
+        powerConsumptionRate,
+        chargingPower,
+      };
+    } catch (error) {
+      console.error('Error fetching battery stats:', error);
+      return null;
+    }
   });
 
   ipcMain.handle('get-sensor-stats', async () => {
