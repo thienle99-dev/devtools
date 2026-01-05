@@ -448,12 +448,20 @@ const StartupView = () => {
 
             <div className="flex-1 overflow-auto space-y-2 pr-2 custom-scrollbar">
                 {startupItems.map((item, i) => {
+                    const isEnabled = item.enabled !== undefined ? item.enabled : true; // Default to enabled if undefined
+                    
                     const handleToggle = async () => {
                         try {
                             const res = await (window as any).cleanerAPI.toggleStartupItem(item);
                             if (res.success) {
                                 toast.success(`${res.enabled ? 'Enabled' : 'Disabled'} ${item.name}`);
-                                refreshItems();
+                                // Update local state immediately for better UX
+                                const updatedItems = startupItems.map((it, idx) => 
+                                    idx === i ? { ...it, enabled: res.enabled } : it
+                                );
+                                setStartupItems(updatedItems);
+                                // Refresh to get accurate state
+                                setTimeout(() => refreshItems(), 500);
                             } else {
                                 toast.error(`Failed to toggle ${item.name}: ${res.error || 'Unknown error'}`);
                             }
@@ -464,28 +472,43 @@ const StartupView = () => {
                     
                     return (
                         <Card key={i} className="p-3 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                            <div className="flex items-center gap-4">
-                                <div className="p-2 bg-amber-500/10 rounded-lg">
-                                    <Power className="w-5 h-5 text-amber-500" />
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <div className={cn(
+                                    "p-2 rounded-lg transition-colors",
+                                    isEnabled ? "bg-green-500/10" : "bg-gray-500/10"
+                                )}>
+                                    <Power className={cn(
+                                        "w-5 h-5 transition-colors",
+                                        isEnabled ? "text-green-500" : "text-gray-500"
+                                    )} />
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-medium">{item.name}</h4>
-                                    <p className="text-[10px] text-foreground-muted truncate max-w-sm">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-sm font-medium">{item.name}</h4>
+                                        <span className={cn(
+                                            "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                            isEnabled 
+                                                ? "bg-green-500/20 text-green-400" 
+                                                : "bg-gray-500/20 text-gray-400"
+                                        )}>
+                                            {isEnabled ? "Enabled" : "Disabled"}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-foreground-muted truncate max-w-sm mt-0.5">
                                         {item.type} • {item.path}
-                                        {item.enabled !== undefined && (
-                                            <span className={cn("ml-2", item.enabled ? "text-green-500" : "text-gray-500")}>
-                                                {item.enabled ? "• Enabled" : "• Disabled"}
-                                            </span>
-                                        )}
                                     </p>
                                 </div>
                             </div>
                             <Button 
-                                variant="ghost" 
+                                variant={isEnabled ? "outline" : "primary"}
                                 size="sm" 
                                 onClick={handleToggle}
+                                className={cn(
+                                    "min-w-[80px]",
+                                    isEnabled && "border-red-500/50 text-red-500 hover:bg-red-500/10 hover:border-red-500"
+                                )}
                             >
-                                {item.enabled === false ? 'Enable' : 'Disable'}
+                                {isEnabled ? 'Disable' : 'Enable'}
                             </Button>
                         </Card>
                     );
