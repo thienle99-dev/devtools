@@ -45,7 +45,8 @@ import {
     Container,
     Eraser,
     ScanLine,
-    Move
+    Move,
+    Camera
 } from 'lucide-react';
 
 
@@ -144,6 +145,7 @@ const DockerConverter = React.lazy(() => import('./development/DockerConverter')
 const ClipboardManager = React.lazy(() => import('./utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
 const StatsMonitor = React.lazy(() => import('./utilities/stats-monitor/StatsMonitor').then(m => ({ default: m.default })));
 const SystemCleaner = React.lazy(() => import('./utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
+const Xnapper = React.lazy(() => import('./screenshot/Xnapper'));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -769,6 +771,18 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-rose-500',
         component: SystemCleaner,
         keywords: ['cleaner', 'junk', 'optimization', 'malware', 'protection', 'maintenance', 'system'],
+    },
+    {
+        id: 'xnapper',
+        name: 'Screenshot Tool',
+        path: '/xnapper',
+        description: 'Capture, enhance, and export beautiful screenshots',
+        category: 'utilities',
+        icon: Camera,
+        color: 'text-purple-500',
+        component: Xnapper,
+        keywords: ['screenshot', 'capture', 'screen', 'image', 'xnapper', 'snap'],
+        shortcut: 'Ctrl+Shift+S'
     },
 
     // Settings (Special tool - not in any category)

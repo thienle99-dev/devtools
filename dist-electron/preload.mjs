@@ -96,3 +96,10 @@ electron.contextBridge.exposeInMainWorld("appManagerAPI", {
 	uninstallApp: (app) => electron.ipcRenderer.invoke("app-manager:uninstall-app", app),
 	killProcess: (pid) => electron.ipcRenderer.invoke("app-manager:kill-process", pid)
 });
+electron.contextBridge.exposeInMainWorld("screenshotAPI", {
+	getSources: () => electron.ipcRenderer.invoke("screenshot:get-sources"),
+	captureScreen: () => electron.ipcRenderer.invoke("screenshot:capture-screen"),
+	captureWindow: (sourceId) => electron.ipcRenderer.invoke("screenshot:capture-window", sourceId),
+	captureArea: () => electron.ipcRenderer.invoke("screenshot:capture-area"),
+	saveFile: (dataUrl, options) => electron.ipcRenderer.invoke("screenshot:save-file", dataUrl, options)
+});

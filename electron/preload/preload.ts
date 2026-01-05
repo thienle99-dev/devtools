@@ -106,3 +106,12 @@ contextBridge.exposeInMainWorld('appManagerAPI', {
   uninstallApp: (app: any) => ipcRenderer.invoke('app-manager:uninstall-app', app),
   killProcess: (pid: number) => ipcRenderer.invoke('app-manager:kill-process', pid),
 })
+
+contextBridge.exposeInMainWorld('screenshotAPI', {
+  getSources: () => ipcRenderer.invoke('screenshot:get-sources'),
+  captureScreen: () => ipcRenderer.invoke('screenshot:capture-screen'),
+  captureWindow: (sourceId: string) => ipcRenderer.invoke('screenshot:capture-window', sourceId),
+  captureArea: () => ipcRenderer.invoke('screenshot:capture-area'),
+  saveFile: (dataUrl: string, options: { filename?: string; format?: string }) =>
+    ipcRenderer.invoke('screenshot:save-file', dataUrl, options),
+})

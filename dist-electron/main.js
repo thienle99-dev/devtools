@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, Notification, Tray, app, clipboard, dialog, globalShortcut, ipcMain, nativeImage } from "electron";
+import { BrowserWindow, Menu, Notification, Tray, app, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, screen } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
@@ -156,7 +156,7 @@ function setupCleanerHandlers() {
 			if (sender && !sender.isDestroyed()) sender.send("cleaner:space-lens-progress", progress);
 		});
 	});
-	ipcMain.handle("cleaner:get-folder-size", async (event, folderPath) => {
+	ipcMain.handle("cleaner:get-folder-size", async (_, folderPath) => {
 		const cached = dirSizeCache.get(folderPath);
 		if (cached && Date.now() - cached.timestamp < CACHE_TTL) return {
 			size: cached.size,
@@ -184,7 +184,7 @@ function setupCleanerHandlers() {
 			};
 		}
 	});
-	ipcMain.handle("cleaner:clear-size-cache", async (event, folderPath) => {
+	ipcMain.handle("cleaner:clear-size-cache", async (_, folderPath) => {
 		if (folderPath) {
 			for (const key of dirSizeCache.keys()) if (key.startsWith(folderPath)) dirSizeCache.delete(key);
 		} else dirSizeCache.clear();
@@ -1875,6 +1875,123 @@ var deleteBackup = async (backupId) => {
 		};
 	}
 };
+function setupScreenshotHandlers(win$1) {
+	ipcMain.handle("screenshot:get-sources", async () => {
+		try {
+			return (await desktopCapturer.getSources({
+				types: ["window", "screen"],
+				thumbnailSize: {
+					width: 300,
+					height: 200
+				}
+			})).map((source) => ({
+				id: source.id,
+				name: source.name,
+				thumbnail: source.thumbnail.toDataURL(),
+				type: source.id.startsWith("screen") ? "screen" : "window"
+			}));
+		} catch (error) {
+			console.error("Failed to get sources:", error);
+			return [];
+		}
+	});
+	ipcMain.handle("screenshot:capture-screen", async () => {
+		try {
+			const sources = await desktopCapturer.getSources({
+				types: ["screen"],
+				thumbnailSize: screen.getPrimaryDisplay().size
+			});
+			if (sources.length === 0) throw new Error("No screens available");
+			const image = sources[0].thumbnail;
+			return {
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
+			};
+		} catch (error) {
+			console.error("Failed to capture screen:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:capture-window", async (_event, sourceId) => {
+		try {
+			const source = (await desktopCapturer.getSources({
+				types: ["window"],
+				thumbnailSize: {
+					width: 1920,
+					height: 1080
+				}
+			})).find((s) => s.id === sourceId);
+			if (!source) throw new Error("Window not found");
+			const image = source.thumbnail;
+			return {
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
+			};
+		} catch (error) {
+			console.error("Failed to capture window:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:capture-area", async () => {
+		try {
+			const sources = await desktopCapturer.getSources({
+				types: ["screen"],
+				thumbnailSize: screen.getPrimaryDisplay().size
+			});
+			if (sources.length === 0) throw new Error("No screens available");
+			const image = sources[0].thumbnail;
+			return {
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
+			};
+		} catch (error) {
+			console.error("Failed to capture area:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:save-file", async (_event, dataUrl, options) => {
+		try {
+			const { filename, format = "png" } = options;
+			const result = await dialog.showSaveDialog(win$1, {
+				defaultPath: filename || `screenshot-${Date.now()}.${format}`,
+				filters: [
+					{
+						name: "PNG Image",
+						extensions: ["png"]
+					},
+					{
+						name: "JPEG Image",
+						extensions: ["jpg", "jpeg"]
+					},
+					{
+						name: "WebP Image",
+						extensions: ["webp"]
+					}
+				]
+			});
+			if (result.canceled || !result.filePath) return {
+				success: false,
+				canceled: true
+			};
+			const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+			const buffer = Buffer.from(base64Data, "base64");
+			await fs.writeFile(result.filePath, buffer);
+			return {
+				success: true,
+				filePath: result.filePath
+			};
+		} catch (error) {
+			console.error("Failed to save screenshot:", error);
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	});
+}
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2371,6 +2488,7 @@ function createWindow() {
 		}
 	});
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
+	setupScreenshotHandlers(win);
 	ipcMain.on("tray-update-menu", (_event, items) => {
 		recentTools = items || [];
 		updateTrayMenu();

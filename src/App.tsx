@@ -12,7 +12,6 @@ import { GlobalClipboardMonitor } from './components/GlobalClipboardMonitor';
 import { AppErrorBoundary } from './components/layout/AppErrorBoundary';
 import { TOOLS } from './tools/registry';
 import { useClipboardStore } from './store/clipboardStore';
-import { usePlatform } from './hooks/usePlatform';
 
 
 // Loading fallback component
@@ -249,7 +248,7 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const { isMac } = usePlatform();
+  // const { isMac } = usePlatform();
 
   return (
     <Router>

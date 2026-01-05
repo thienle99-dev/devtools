@@ -679,16 +679,16 @@
 
 ### 8.1 Phase 1: Core Capture & Basic Processing
 
-- [ ] Setup Xnapper tool structure (`src/tools/screenshot/`)
-- [ ] Install dependencies (fabric, tesseract.js)
-- [ ] Create Xnapper store (`src/store/xnapperStore.ts`)
-- [ ] Implement Electron screen capture API integration
-- [ ] Create CaptureSection component (full screen, window, area selection)
-- [ ] Implement basic image preview
-- [ ] Implement auto-balance enhancement
-- [ ] Implement simple export (PNG/JPG)
-- [ ] Implement save to file functionality
-- [ ] Add to tools registry and sidebar
+- [x] Setup Xnapper tool structure (`src/tools/screenshot/`)
+- [x] Install dependencies (fabric, tesseract.js)
+- [x] Create Xnapper store (`src/store/xnapperStore.ts`)
+- [x] Implement Electron screen capture API integration
+- [x] Create CaptureSection component (full screen, window, area selection)
+- [x] Implement basic image preview
+- [x] Implement auto-balance enhancement
+- [x] Implement simple export (PNG/JPG)
+- [x] Implement save to file functionality
+- [x] Add to tools registry and sidebar
 
 ### 8.2 Phase 2: Redaction & Background
 

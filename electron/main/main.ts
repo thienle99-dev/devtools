@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
+import { setupScreenshotHandlers } from './screenshot'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -347,7 +348,7 @@ function updateTrayMenu() {
   if (healthMenuData) {
     const alertCount = healthMenuData.alerts.filter((a: any) => a.severity === 'critical' || a.severity === 'warning').length;
     const healthLabel = alertCount > 0 ? `🛡️ System Health (${alertCount} alerts)` : '🛡️ System Health';
-    
+
     const healthSubmenu: Electron.MenuItemConstructorOptions[] = [
       {
         label: '📊 Health Metrics',
@@ -362,39 +363,39 @@ function updateTrayMenu() {
         enabled: false,
       },
     ];
-    
+
     if (healthMenuData.disk) {
       healthSubmenu.push({
         label: `Disk: ${healthMenuData.disk.percentage.toFixed(1)}% used (${formatBytes(healthMenuData.disk.free)} free)`,
         enabled: false,
       });
     }
-    
+
     if (healthMenuData.battery) {
       healthSubmenu.push({
         label: `Battery: ${healthMenuData.battery.level.toFixed(0)}% ${healthMenuData.battery.charging ? '(Charging)' : ''}`,
         enabled: false,
       });
     }
-    
+
     healthSubmenu.push({ type: 'separator' });
-    
+
     if (healthMenuData.alerts.length > 0) {
       healthSubmenu.push({
         label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
         enabled: false,
       });
-      
+
       healthMenuData.alerts.slice(0, 5).forEach((alert: any) => {
         healthSubmenu.push({
           label: `${alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : '🔵'} ${alert.message.substring(0, 50)}${alert.message.length > 50 ? '...' : ''}`,
           enabled: false,
         });
       });
-      
+
       healthSubmenu.push({ type: 'separator' });
     }
-    
+
     healthSubmenu.push({
       label: '▸ Open Health Monitor',
       click: () => {
@@ -406,7 +407,7 @@ function updateTrayMenu() {
         }, 500);
       },
     });
-    
+
     healthSubmenu.push({
       label: '⚡ Quick Actions',
       submenu: [
@@ -476,7 +477,7 @@ function updateTrayMenu() {
         },
       ],
     });
-    
+
     template.push({
       label: healthLabel,
       submenu: healthSubmenu,
@@ -590,11 +591,11 @@ function createWindow() {
       properties: ['openDirectory'],
       title: 'Select Folder to Scan'
     });
-    
+
     if (result.canceled || result.filePaths.length === 0) {
       return { canceled: true, path: null };
     }
-    
+
     return { canceled: false, path: result.filePaths[0] };
   });
 
@@ -615,6 +616,9 @@ function createWindow() {
     }
   })
   ipcMain.handle('store-delete', (_event, key) => store.delete(key))
+
+  // Setup screenshot handlers
+  setupScreenshotHandlers(win);
 
   // Tray IPC
   ipcMain.on('tray-update-menu', (_event, items) => {
@@ -678,17 +682,17 @@ function createWindow() {
     if (healthMonitoringInterval) {
       clearInterval(healthMonitoringInterval);
     }
-    
+
     const updateHealth = async () => {
       try {
         const mem = await si.mem();
         const load = await si.currentLoad();
         const disk = await si.fsSize();
         const battery = await si.battery().catch(() => null);
-        
+
         const alerts: any[] = [];
         const rootDisk = disk.find(d => d.mount === '/' || d.mount === 'C:') || disk[0];
-        
+
         if (rootDisk) {
           const freePercent = (rootDisk.available / rootDisk.size) * 100;
           if (freePercent < 10) {
@@ -705,7 +709,7 @@ function createWindow() {
             });
           }
         }
-        
+
         if (load.currentLoad > 90) {
           alerts.push({
             type: 'high_cpu',
@@ -713,7 +717,7 @@ function createWindow() {
             message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
           });
         }
-        
+
         const memPercent = (mem.used / mem.total) * 100;
         if (memPercent > 90) {
           alerts.push({
@@ -722,7 +726,7 @@ function createWindow() {
             message: `High memory usage: ${memPercent.toFixed(1)}%`
           });
         }
-        
+
         healthMenuData = {
           cpu: load.currentLoad,
           ram: {
@@ -741,9 +745,9 @@ function createWindow() {
           } : null,
           alerts
         };
-        
+
         updateTrayMenu();
-        
+
         // Send notification for critical alerts
         const criticalAlerts = alerts.filter(a => a.severity === 'critical');
         if (criticalAlerts.length > 0 && win) {
@@ -759,11 +763,11 @@ function createWindow() {
         console.error('Health monitoring error:', e);
       }
     };
-    
+
     // Update immediately and then every 5 seconds
     updateHealth();
     healthMonitoringInterval = setInterval(updateHealth, 5000);
-    
+
     return { success: true };
   });
 
@@ -844,10 +848,10 @@ app.whenReady().then(() => {
             await window.cleanerAPI.startHealthMonitoring();
           }
         })()
-      `).catch(() => {});
+      `).catch(() => { });
     }
   }, 2000); // Wait for renderer to be ready
-  
+
   // Register Global Shortcuts
   try {
     // Toggle window shortcut
@@ -902,7 +906,7 @@ app.whenReady().then(() => {
         si.fsSize(),
         si.disksIO()
       ]);
-      
+
       // si.disksIO() returns an array, we need to aggregate or use the first disk
       let ioStats = null;
       if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
@@ -927,7 +931,7 @@ app.whenReady().then(() => {
           tIO_sec: ioStatsRaw.tIO_sec || 0,
         };
       }
-      
+
       return { fsSize, ioStats };
     } catch (error) {
       console.error('Error fetching disk stats:', error);
@@ -944,16 +948,16 @@ app.whenReady().then(() => {
   ipcMain.handle('get-battery-stats', async () => {
     try {
       const battery = await si.battery();
-      
+
       // Tính toán power consumption và charging power
       let powerConsumptionRate: number | undefined;
       let chargingPower: number | undefined;
-      
+
       // Nếu systeminformation có sẵn powerConsumptionRate
       if ('powerConsumptionRate' in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === 'number') {
         powerConsumptionRate = battery.powerConsumptionRate;
       }
-      
+
       // Nếu có voltage và currentCapacity, có thể ước tính
       if (battery.voltage && battery.voltage > 0) {
         // Ước tính power consumption dựa trên voltage và trạng thái
@@ -964,7 +968,7 @@ app.whenReady().then(() => {
           const estimatedCurrent = (battery.currentCapacity / battery.timeRemaining) * 60;
           powerConsumptionRate = battery.voltage * estimatedCurrent;
         }
-        
+
         // Nếu đang charge, ước tính charging power
         if (battery.isCharging && battery.voltage > 0) {
           // Ước tính charging current (thường 1-3A cho laptop)
@@ -972,7 +976,7 @@ app.whenReady().then(() => {
           chargingPower = battery.voltage * estimatedChargingCurrent;
         }
       }
-      
+
       return {
         ...battery,
         powerConsumptionRate,
@@ -1015,7 +1019,7 @@ app.whenReady().then(() => {
     try {
       const time = await si.time();
       const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       // Default time zones (có thể config từ preferences)
       const defaultZones = [
         'America/New_York',
@@ -1023,7 +1027,7 @@ app.whenReady().then(() => {
         'Asia/Tokyo',
         'Asia/Shanghai',
       ];
-      
+
       const zones = defaultZones.map(tz => {
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -1039,10 +1043,10 @@ app.whenReady().then(() => {
           month: 'short',
           day: 'numeric',
         });
-        
+
         const offset = getTimezoneOffset(tz);
         const cityName = tz.split('/').pop()?.replace('_', ' ') || tz;
-        
+
         return {
           timezone: tz,
           city: cityName,
@@ -1051,7 +1055,7 @@ app.whenReady().then(() => {
           offset,
         };
       });
-      
+
       return {
         local: {
           timezone: localTz,
@@ -1083,10 +1087,10 @@ app.whenReady().then(() => {
             try {
               const stats = await fs.stat(appPath);
               const appName = file.name.replace('.app', '');
-              const isSystemApp = appPath.startsWith('/System') || 
-                                  appPath.startsWith('/Library') ||
-                                  appName.startsWith('com.apple.');
-              
+              const isSystemApp = appPath.startsWith('/System') ||
+                appPath.startsWith('/Library') ||
+                appName.startsWith('com.apple.');
+
               apps.push({
                 id: `macos-${appName}-${stats.ino}`,
                 name: appName,
@@ -1113,16 +1117,16 @@ app.whenReady().then(() => {
           const { stdout } = await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
           const data = JSON.parse(stdout);
           const list = Array.isArray(data) ? data : [data];
-          
+
           for (const item of list) {
             if (item.DisplayName) {
               const publisher = item.Publisher || '';
               const installLocation = item.InstallLocation || '';
-              const isSystemApp = publisher.includes('Microsoft') || 
-                                  publisher.includes('Windows') ||
-                                  installLocation.includes('Windows\\') ||
-                                  installLocation.includes('Program Files\\Windows');
-              
+              const isSystemApp = publisher.includes('Microsoft') ||
+                publisher.includes('Windows') ||
+                installLocation.includes('Windows\\') ||
+                installLocation.includes('Program Files\\Windows');
+
               apps.push({
                 id: `win-${item.DisplayName}-${item.InstallDate || 'unknown'}`,
                 name: item.DisplayName,
@@ -1151,7 +1155,7 @@ app.whenReady().then(() => {
     try {
       const processes = await si.processes();
       const memInfo = await si.mem();
-      
+
       return processes.list.map((proc: any) => ({
         pid: proc.pid,
         name: proc.name,
@@ -1172,7 +1176,7 @@ app.whenReady().then(() => {
   ipcMain.handle('app-manager:uninstall-app', async (_event, app: any) => {
     try {
       const platform = process.platform;
-      
+
       if (platform === 'darwin') {
         // macOS: Remove .app bundle
         if (app.installLocation) {
@@ -1206,7 +1210,7 @@ app.whenReady().then(() => {
           return { success: false, error: (e as Error).message };
         }
       }
-      
+
       return { success: false, error: 'Unsupported platform' };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -1227,7 +1231,7 @@ app.whenReady().then(() => {
     try {
       let totalSize = 0;
       const files = await fs.readdir(dirPath, { withFileTypes: true });
-      
+
       for (const file of files) {
         const filePath = join(dirPath, file.name);
         try {
@@ -1241,7 +1245,7 @@ app.whenReady().then(() => {
           // Skip errors
         }
       }
-      
+
       return totalSize;
     } catch (e) {
       return 0;
@@ -1285,10 +1289,10 @@ function getTimezoneOffset(timezone: string): number {
   const now = new Date();
   // Get UTC time in milliseconds
   const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-  
+
   // Get time string in target timezone
-  const tzString = now.toLocaleString('en-US', { 
-    timeZone: timezone, 
+  const tzString = now.toLocaleString('en-US', {
+    timeZone: timezone,
     hour12: false,
     year: 'numeric',
     month: '2-digit',
@@ -1297,11 +1301,11 @@ function getTimezoneOffset(timezone: string): number {
     minute: '2-digit',
     second: '2-digit'
   });
-  
+
   // Parse the timezone time
   const tzDate = new Date(tzString);
   const tzTime = tzDate.getTime();
-  
+
   // Calculate offset in hours
   const offset = (tzTime - utcTime) / (1000 * 60 * 60);
   return offset;
