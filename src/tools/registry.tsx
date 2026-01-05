@@ -18,7 +18,8 @@ import {
     FileText,
     RotateCw,
     Archive,
-    CheckCircle2
+    CheckCircle2,
+    FileCode
 } from 'lucide-react';
 
 
@@ -75,6 +76,12 @@ const PdfMetadata = React.lazy(() => import('./pdf/PdfMetadata').then(m => ({ de
 const PdfBase64 = React.lazy(() => import('./pdf/PdfBase64').then(m => ({ default: m.PdfBase64 })));
 const PdfCompressor = React.lazy(() => import('./pdf/PdfCompressor').then(m => ({ default: m.PdfCompressor })));
 const PdfValidator = React.lazy(() => import('./pdf/PdfValidator').then(m => ({ default: m.PdfValidator })));
+const PdfPageReorder = React.lazy(() => import('./pdf/PdfPageReorder').then(m => ({ default: m.PdfPageReorder })));
+const PdfWatermarker = React.lazy(() => import('./pdf/PdfWatermarker').then(m => ({ default: m.PdfWatermarker })));
+const PdfPageNumbering = React.lazy(() => import('./pdf/PdfPageNumbering').then(m => ({ default: m.PdfPageNumbering })));
+const HtmlToPdf = React.lazy(() => import('./pdf/HtmlToPdf').then(m => ({ default: m.HtmlToPdf })));
+const MarkdownToPdf = React.lazy(() => import('./pdf/MarkdownToPdf').then(m => ({ default: m.MarkdownToPdf })));
+const PdfMetadataRemover = React.lazy(() => import('./pdf/PdfMetadataRemover').then(m => ({ default: m.PdfMetadataRemover })));
 
 const HashGenerator = React.lazy(() => import('./crypto/HashGenerator').then(m => ({ default: m.HashGenerator })));
 const UuidGenerator = React.lazy(() => import('./crypto/UuidGenerator').then(m => ({ default: m.UuidGenerator })));
@@ -349,6 +356,66 @@ export const TOOLS: ToolDefinition[] = [
         icon: CheckCircle2,
         component: PdfValidator,
         keywords: ['pdf', 'validate', 'check', 'verify', 'test']
+    },
+    {
+        id: 'pdf-page-reorder',
+        name: 'PDF Page Reorder',
+        path: '/pdf-page-reorder',
+        description: 'Reorder pages in a PDF',
+        category: 'pdf',
+        icon: FileText,
+        component: PdfPageReorder,
+        keywords: ['pdf', 'reorder', 'pages', 'sort']
+    },
+    {
+        id: 'pdf-watermarker',
+        name: 'PDF Watermarker',
+        path: '/pdf-watermarker',
+        description: 'Add text or image watermark to PDF',
+        category: 'pdf',
+        icon: FileImage,
+        component: PdfWatermarker,
+        keywords: ['pdf', 'watermark', 'text', 'image', 'brand']
+    },
+    {
+        id: 'pdf-page-numbering',
+        name: 'PDF Page Numbering',
+        path: '/pdf-page-numbering',
+        description: 'Add page numbers to PDF',
+        category: 'pdf',
+        icon: Hash,
+        component: PdfPageNumbering,
+        keywords: ['pdf', 'page', 'number', 'numbering', 'footer', 'header']
+    },
+    {
+        id: 'html-to-pdf',
+        name: 'HTML to PDF',
+        path: '/html-to-pdf',
+        description: 'Convert HTML content to PDF',
+        category: 'pdf',
+        icon: Code2,
+        component: HtmlToPdf,
+        keywords: ['pdf', 'html', 'convert', 'web']
+    },
+    {
+        id: 'markdown-to-pdf',
+        name: 'Markdown to PDF',
+        path: '/markdown-to-pdf',
+        description: 'Convert Markdown content to PDF',
+        category: 'pdf',
+        icon: FileCode,
+        component: MarkdownToPdf,
+        keywords: ['pdf', 'markdown', 'convert', 'md']
+    },
+    {
+        id: 'pdf-metadata-remover',
+        name: 'PDF Metadata Remover',
+        path: '/pdf-metadata-remover',
+        description: 'Remove all metadata from PDF',
+        category: 'pdf',
+        icon: Trash2,
+        component: PdfMetadataRemover,
+        keywords: ['pdf', 'metadata', 'remove', 'clean', 'privacy']
     },
 
     // Crypto

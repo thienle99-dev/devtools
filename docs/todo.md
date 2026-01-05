@@ -363,24 +363,24 @@
 - [ ] PDF to Text
 - [ ] PDF to HTML
 - [ ] PDF to Markdown
-- [ ] HTML to PDF
-- [ ] Markdown to PDF
+- [x] HTML to PDF
+- [x] Markdown to PDF
 - [ ] Word/DOCX to PDF
 - [ ] PDF to Word/DOCX
 - [x] PDF Merger
 - [x] PDF Splitter
 - [x] PDF Page Extractor
 - [x] PDF Page Rotator
-- [ ] PDF Page Reorder
+- [x] PDF Page Reorder
 - [x] PDF Compressor
 - [ ] PDF Optimizer
-- [ ] PDF Watermarker (text/image)
-- [ ] PDF Page Numbering
+- [x] PDF Watermarker (text/image)
+- [x] PDF Page Numbering
 - [ ] PDF Password Protector
 - [ ] PDF Password Remover
 - [ ] PDF Encryption
 - [ ] PDF Decryption
-- [ ] PDF Metadata Remover
+- [x] PDF Metadata Remover
 - [x] PDF Metadata Viewer
 - [x] PDF Metadata Editor
 - [ ] PDF Page Counter
