@@ -220,14 +220,18 @@ export const TabBar: React.FC = React.memo(() => {
                                     {tab.title}
                                 </span>
 
-                                {/* Close Button */}
+                                {/* Close Button - Always enabled, even for active/last tab */}
                                 <button
                                     onClick={(e) => handleCloseTab(e, tab.id)}
                                     className={cn(
-                                        "tab-close-button-chrome shrink-0 rounded-md p-1 transition-all duration-150 opacity-0 group-hover:opacity-100",
-                                        "hover:bg-red-500/20 hover:text-red-400"
+                                        "tab-close-button-chrome shrink-0 rounded-md p-1 transition-all duration-150",
+                                        sortedTabs.length > 1 ? "opacity-0 group-hover:opacity-100" : "opacity-60",
+                                        "hover:bg-red-500/20 hover:text-red-400",
+                                        "cursor-pointer"
                                     )}
                                     aria-label="Close tab"
+                                    title={sortedTabs.length === 1 ? "Close tab (last tab)" : "Close tab"}
+                                    type="button"
                                 >
                                     <X className="w-3.5 h-3.5" />
                                 </button>
