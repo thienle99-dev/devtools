@@ -716,6 +716,16 @@ body {
     display: none;
   }
 
+  /* Hide scrollbar for module selector */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Tab Item - Enhanced Glassmorphism Style */
   .tab-item-chrome {
     position: relative;

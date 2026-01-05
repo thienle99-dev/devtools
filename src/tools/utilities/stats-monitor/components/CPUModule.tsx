@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import type { CPUStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { Cpu } from 'lucide-react';
@@ -8,27 +8,28 @@ interface CPUModuleProps {
 }
 
 const MAX_POINTS = 30;
+const LABELS = Array(MAX_POINTS).fill('');
 
-export const CPUModule: React.FC<CPUModuleProps> = ({ data }) => {
+export const CPUModule: React.FC<CPUModuleProps> = React.memo(({ data }) => {
   const [history, setHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+
+  const currentLoad = data.load.currentLoad;
 
   useEffect(() => {
     setHistory(prev => {
-      const newData = [...prev.slice(1), data.load.currentLoad];
+      const newData = [...prev.slice(1), currentLoad];
       return newData;
     });
-  }, [data]);
+  }, [currentLoad]);
 
-  const load = Math.round(data.load.currentLoad);
+  const load = useMemo(() => Math.round(currentLoad), [currentLoad]);
   
   // Determine color based on load
-  const getColor = (load: number) => {
+  const color = useMemo(() => {
     if (load >= 90) return '#ef4444'; // red-500
     if (load >= 70) return '#f59e0b'; // amber-500
     return '#10b981'; // emerald-500
-  };
-
-  const color = getColor(load);
+  }, [load]);
 
   return (
     <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
@@ -51,7 +52,7 @@ export const CPUModule: React.FC<CPUModuleProps> = ({ data }) => {
       <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
          <Graph 
             data={history} 
-            labels={Array(MAX_POINTS).fill('')} 
+            labels={LABELS} 
             color={color} 
             height={64}
             max={100}
@@ -70,4 +71,6 @@ export const CPUModule: React.FC<CPUModuleProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+});
+
+CPUModule.displayName = 'CPUModule';

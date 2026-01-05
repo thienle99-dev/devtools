@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiskStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { HardDrive } from 'lucide-react';
@@ -8,26 +8,23 @@ interface DiskModuleProps {
 }
 
 const MAX_POINTS = 30;
+const LABELS = Array(MAX_POINTS).fill('');
 
-export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
+export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
   const [readHistory, setReadHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [writeHistory, setWriteHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
 
+  const rIO_sec = data.ioStats?.rIO_sec ?? 0;
+  const wIO_sec = data.ioStats?.wIO_sec ?? 0;
+
   useEffect(() => {
     if (data.ioStats) {
-      const ioStats = data.ioStats;
-      setReadHistory(prev => {
-        // Use log scale or just raw MB/s
-        return [...prev.slice(1), ioStats.rIO_sec || 0];
-      });
-
-      setWriteHistory(prev => {
-        return [...prev.slice(1), ioStats.wIO_sec || 0];
-      });
+      setReadHistory(prev => [...prev.slice(1), rIO_sec]);
+      setWriteHistory(prev => [...prev.slice(1), wIO_sec]);
     }
-  }, [data]);
+  }, [rIO_sec, wIO_sec, data.ioStats]);
 
-   const formatSpeed = (bytesPerSec: number) => {
+  const formatSpeed = useCallback((bytesPerSec: number) => {
     if (bytesPerSec > 1024 * 1024) {
       return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
     }
@@ -35,22 +32,26 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
       return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
     }
     return `${bytesPerSec.toFixed(0)} B/s`;
-  };
+  }, []);
 
   // Primary disk (usually C: or /)
-  const primaryDisk = data.fsSize && data.fsSize.length > 0 
-    ? (data.fsSize.find(d => d.mount === '/' || d.mount === 'C:') || data.fsSize[0])
-    : null;
-  const usedPercent = primaryDisk ? Math.round(primaryDisk.use) : 0;
+  const primaryDisk = useMemo(() => 
+    data.fsSize && data.fsSize.length > 0 
+      ? (data.fsSize.find(d => d.mount === '/' || d.mount === 'C:') || data.fsSize[0])
+      : null,
+    [data.fsSize]
+  );
+  const usedPercent = useMemo(() => primaryDisk ? Math.round(primaryDisk.use) : 0, [primaryDisk]);
   
   // Determine color based on usage
-  const getColor = (usage: number) => {
-    if (usage >= 90) return '#ef4444'; // red-500
-    if (usage >= 75) return '#f59e0b'; // amber-500
+  const color = useMemo(() => {
+    if (usedPercent >= 90) return '#ef4444'; // red-500
+    if (usedPercent >= 75) return '#f59e0b'; // amber-500
     return '#8b5cf6'; // violet-500
-  };
+  }, [usedPercent]);
 
-  const color = getColor(usedPercent);
+  const readSpeed = useMemo(() => data.ioStats ? formatSpeed(rIO_sec) : 'N/A', [data.ioStats, rIO_sec, formatSpeed]);
+  const writeSpeed = useMemo(() => data.ioStats ? formatSpeed(wIO_sec) : 'N/A', [data.ioStats, wIO_sec, formatSpeed]);
 
   return (
         <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
@@ -75,24 +76,24 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
             <Graph 
                 data={readHistory} 
-                labels={Array(MAX_POINTS).fill('')} 
+                labels={LABELS} 
                 color="#10b981" 
                 height={64}
                 min={0}
             />
-             <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Read: {data.ioStats ? formatSpeed(data.ioStats.rIO_sec) : 'N/A'}</div>
+             <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Read: {readSpeed}</div>
         </div>
         
         {/* Write Graph */}
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
             <Graph 
                 data={writeHistory} 
-                labels={Array(MAX_POINTS).fill('')} 
+                labels={LABELS} 
                 color="#f43f5e" 
                 height={64}
                 min={0}
             />
-            <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Write: {data.ioStats ? formatSpeed(data.ioStats.wIO_sec) : 'N/A'}</div>
+            <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Write: {writeSpeed}</div>
         </div>
       </div>
 
@@ -111,4 +112,6 @@ export const DiskModule: React.FC<DiskModuleProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+});
+
+DiskModule.displayName = 'DiskModule';

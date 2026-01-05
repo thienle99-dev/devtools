@@ -10,7 +10,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 ChartJS.register(
   CategoryScale,
@@ -33,7 +33,7 @@ interface GraphProps {
   label?: string;
 }
 
-export const Graph: React.FC<GraphProps> = ({ 
+export const Graph: React.FC<GraphProps> = React.memo(({ 
   data, 
   labels, 
   color, 
@@ -42,7 +42,7 @@ export const Graph: React.FC<GraphProps> = ({
   max = 100,
   label = 'Usage'
 }) => {
-  const chartData = {
+  const chartData = useMemo(() => ({
     labels,
     datasets: [{
       label,
@@ -54,9 +54,9 @@ export const Graph: React.FC<GraphProps> = ({
       pointRadius: 0,
       borderWidth: 2,
     }]
-  };
+  }), [data, labels, color, label]);
 
-  const options = {
+  const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     animation: {
@@ -74,11 +74,13 @@ export const Graph: React.FC<GraphProps> = ({
         max
       }
     }
-  };
+  }), [min, max]);
 
   return (
     <div style={{ height: `${height}px`, width: '100%' }}>
       <Line data={chartData} options={options} />
     </div>
   );
-};
+});
+
+Graph.displayName = 'Graph';

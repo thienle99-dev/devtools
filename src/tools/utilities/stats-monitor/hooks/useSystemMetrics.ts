@@ -4,9 +4,20 @@ import type { SystemMetrics } from '../../../../types/stats';
 export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (!enabled) return;
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      setMetrics(null);
+      return;
+    }
 
     const fetchMetrics = async () => {
       try {
@@ -27,16 +38,19 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
           window.statsAPI.getSensorStats(),
         ]);
 
-        setMetrics({ 
-          cpu, 
-          memory, 
-          network,
-          disk,
-          gpu,
-          battery,
-          sensors, 
-          timestamp: Date.now() 
-        });
+        // Only update if component is still mounted
+        if (isMountedRef.current) {
+          setMetrics({ 
+            cpu, 
+            memory, 
+            network,
+            disk,
+            gpu,
+            battery,
+            sensors, 
+            timestamp: Date.now() 
+          });
+        }
       } catch (error) {
         console.error('Failed to fetch metrics:', error);
       }
@@ -47,6 +61,7 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
 
     // Polling
     const poll = () => {
+      if (!isMountedRef.current) return;
       fetchMetrics();
       intervalRef.current = setTimeout(poll, interval);
     };
@@ -56,6 +71,7 @@ export const useSystemMetrics = (enabled: boolean, interval: number = 2000) => {
     return () => {
       if (intervalRef.current) {
         clearTimeout(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [enabled, interval]);

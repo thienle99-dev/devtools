@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {type MemoryStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { BrainCircuit } from 'lucide-react';
@@ -8,30 +8,30 @@ interface MemoryModuleProps {
 }
 
 const MAX_POINTS = 30;
+const LABELS = Array(MAX_POINTS).fill('');
 
-export const MemoryModule: React.FC<MemoryModuleProps> = ({ data }) => {
+export const MemoryModule: React.FC<MemoryModuleProps> = React.memo(({ data }) => {
   const [history, setHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
+
+  const usedPercent = useMemo(() => (data.active / data.total) * 100, [data.active, data.total]);
 
   useEffect(() => {
     setHistory(prev => {
-      const usedPercent = (data.active / data.total) * 100;
       const newData = [...prev.slice(1), usedPercent];
       return newData;
     });
-  }, [data]);
+  }, [usedPercent]);
 
-  const usedGB = (data.active / 1024 / 1024 / 1024).toFixed(1);
-  const totalGB = (data.total / 1024 / 1024 / 1024).toFixed(1);
-  const percentage = Math.round((data.active / data.total) * 100);
+  const usedGB = useMemo(() => (data.active / 1024 / 1024 / 1024).toFixed(1), [data.active]);
+  const totalGB = useMemo(() => (data.total / 1024 / 1024 / 1024).toFixed(1), [data.total]);
+  const percentage = useMemo(() => Math.round(usedPercent), [usedPercent]);
 
   // Determine color based on usage
-  const getColor = (usage: number) => {
-    if (usage >= 90) return '#ef4444'; // red-500
-    if (usage >= 75) return '#f59e0b'; // amber-500
+  const color = useMemo(() => {
+    if (percentage >= 90) return '#ef4444'; // red-500
+    if (percentage >= 75) return '#f59e0b'; // amber-500
     return '#3b82f6'; // blue-500
-  };
-
-  const color = getColor(percentage);
+  }, [percentage]);
 
   return (
     <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
@@ -54,7 +54,7 @@ export const MemoryModule: React.FC<MemoryModuleProps> = ({ data }) => {
       <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
          <Graph 
             data={history} 
-            labels={Array(MAX_POINTS).fill('')} 
+            labels={LABELS} 
             color={color} 
             height={64}
             max={100}
@@ -75,4 +75,6 @@ export const MemoryModule: React.FC<MemoryModuleProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+});
+
+MemoryModule.displayName = 'MemoryModule';

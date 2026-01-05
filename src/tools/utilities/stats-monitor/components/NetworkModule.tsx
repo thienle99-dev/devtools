@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { NetworkStats } from '../../../../types/stats';
 import { Graph } from './Graph';
 import { Network, ArrowDown, ArrowUp } from 'lucide-react';
@@ -8,29 +8,33 @@ interface NetworkModuleProps {
 }
 
 const MAX_POINTS = 30;
+const LABELS = Array(MAX_POINTS).fill('');
 
-export const NetworkModule: React.FC<NetworkModuleProps> = ({ data }) => {
+export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data }) => {
   const [rxHistory, setRxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
   const [txHistory, setTxHistory] = useState<number[]>(Array(MAX_POINTS).fill(0));
 
   // Determine active interface
-  const activeStats = data.stats.find(s => s.operstate === 'up') || data.stats[0];
-  const activeInterface = data.interfaces.find(i => i.iface === activeStats?.iface);
+  const activeStats = useMemo(() => 
+    data.stats.find(s => s.operstate === 'up') || data.stats[0],
+    [data.stats]
+  );
+  const activeInterface = useMemo(() => 
+    data.interfaces.find(i => i.iface === activeStats?.iface),
+    [data.interfaces, activeStats?.iface]
+  );
+
+  const rxSec = activeStats?.rx_sec ?? 0;
+  const txSec = activeStats?.tx_sec ?? 0;
 
   useEffect(() => {
     if (!activeStats) return;
 
-    setRxHistory(prev => {
-      // Log scale or simple KB/s for graph visualization
-      return [...prev.slice(1), activeStats.rx_sec];
-    });
+    setRxHistory(prev => [...prev.slice(1), rxSec]);
+    setTxHistory(prev => [...prev.slice(1), txSec]);
+  }, [rxSec, txSec, activeStats]);
 
-    setTxHistory(prev => {
-      return [...prev.slice(1), activeStats.tx_sec];
-    });
-  }, [activeStats]);
-
-  const formatSpeed = (bytesPerSec: number) => {
+  const formatSpeed = useCallback((bytesPerSec: number) => {
     if (bytesPerSec > 1024 * 1024) {
       return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
     }
@@ -38,10 +42,10 @@ export const NetworkModule: React.FC<NetworkModuleProps> = ({ data }) => {
       return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
     }
     return `${bytesPerSec} B/s`;
-  };
+  }, []);
 
-  const maxRx = Math.max(...rxHistory, 1024); // at least 1KB scale
-  const maxTx = Math.max(...txHistory, 1024);
+  const rxSpeed = useMemo(() => activeStats ? formatSpeed(rxSec) : '0 B/s', [activeStats, rxSec, formatSpeed]);
+  const txSpeed = useMemo(() => activeStats ? formatSpeed(txSec) : '0 B/s', [activeStats, txSec, formatSpeed]);
 
   return (
     <div className="bg-[var(--color-glass-panel)] p-4 rounded-xl border border-[var(--color-glass-border)] flex flex-col gap-4">
@@ -58,10 +62,10 @@ export const NetworkModule: React.FC<NetworkModuleProps> = ({ data }) => {
         <div className="text-right">
            <div className="flex flex-col items-end">
               <span className="text-xs text-emerald-500 dark:text-emerald-400 flex items-center gap-1">
-                <ArrowDown className="w-3 h-3" /> {activeStats ? formatSpeed(activeStats.rx_sec) : '0 B/s'}
+                <ArrowDown className="w-3 h-3" /> {rxSpeed}
               </span>
               <span className="text-xs text-blue-500 dark:text-blue-400 flex items-center gap-1">
-                <ArrowUp className="w-3 h-3" /> {activeStats ? formatSpeed(activeStats.tx_sec) : '0 B/s'}
+                <ArrowUp className="w-3 h-3" /> {txSpeed}
               </span>
            </div>
         </div>
@@ -72,11 +76,10 @@ export const NetworkModule: React.FC<NetworkModuleProps> = ({ data }) => {
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
             <Graph 
                 data={rxHistory} 
-                labels={Array(MAX_POINTS).fill('')} 
+                labels={LABELS} 
                 color="#10b981" 
                 height={64}
                 min={0}
-                // max={maxRx * 1.2} // Dynamic scale
             />
              <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Down</div>
         </div>
@@ -85,11 +88,10 @@ export const NetworkModule: React.FC<NetworkModuleProps> = ({ data }) => {
         <div className="h-16 w-full bg-black/10 dark:bg-black/20 rounded-lg overflow-hidden relative">
             <Graph 
                 data={txHistory} 
-                labels={Array(MAX_POINTS).fill('')} 
+                labels={LABELS} 
                 color="#3b82f6" 
                 height={64}
                 min={0}
-                // max={maxTx * 1.2} // Dynamic scale
             />
             <div className="absolute bottom-1 right-1 text-[10px] text-foreground-muted">Up</div>
         </div>
@@ -101,4 +103,6 @@ export const NetworkModule: React.FC<NetworkModuleProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+});
+
+NetworkModule.displayName = 'NetworkModule';

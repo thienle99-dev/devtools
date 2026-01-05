@@ -38,7 +38,7 @@ export const useStatsStore = create<StatsStore>()(
   persist(
     (set) => ({
       metrics: null,
-      enabledModules: ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'],
+      enabledModules: [], // Mặc định tất cả modules đều tắt
       moduleOrder: ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors'],
       widgets: [],
       preferences: {
