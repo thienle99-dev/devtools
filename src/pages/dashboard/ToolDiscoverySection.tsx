@@ -3,6 +3,7 @@ import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 import { useTabStore } from '../../store/tabStore';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { cn } from '../../utils/cn';
 
 export const ToolDiscoverySection: React.FC = () => {
     const openTab = useTabStore(state => state.openTab);
@@ -44,7 +45,9 @@ export const ToolDiscoverySection: React.FC = () => {
                                     }}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <category.icon className="w-4 h-4 opacity-70 group-hover:opacity-100" />
+                                        <div className={cn("p-1.5 rounded-lg bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors", category.color ? category.color.replace('text-', 'text-').replace('text-', 'bg-').replace('400', '500/10') : "bg-white/5")}>
+                                            <category.icon className={cn("w-4 h-4 opacity-80 group-hover:opacity-100 transition-opacity", category.color)} />
+                                        </div>
                                         <div>
                                             <p className="text-xs font-semibold tracking-wide text-foreground">{category.name}</p>
                                             <p className="text-[10px] text-foreground-muted mt-0.5">{tools.length} tools</p>
@@ -66,6 +69,10 @@ export const ToolDiscoverySection: React.FC = () => {
                             const allTools = CATEGORIES.flatMap(c => getToolsByCategory(c.id));
                             const tool = allTools.find(t => t.id === item.toolId);
                             if (!tool) return null;
+                            
+                            const category = CATEGORIES.find(c => c.id === tool.category);
+                            const colorClass = tool.color || category?.color;
+
                             return (
                                 <button
                                     key={tool.id}
@@ -74,7 +81,7 @@ export const ToolDiscoverySection: React.FC = () => {
                                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
                                 >
                                     <div className="flex items-center gap-2">
-                                        {tool.icon && <tool.icon className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />}
+                                        {tool.icon && <tool.icon className={cn("w-3.5 h-3.5 opacity-70 group-hover:opacity-100", colorClass)} />}
                                         <span className="font-medium truncate">{tool.name}</span>
                                     </div>
                                     <span className="text-[10px] text-foreground-muted">{item.count} uses</span>

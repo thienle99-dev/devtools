@@ -3,10 +3,13 @@ import {
     Code2,
     Box,
     Hash,
+    Link,
+    Lock,
+    Key,
+    Shield,
     Globe,
     Star,
     History,
-    FileJson,
     Database,
     Binary,
     Braces,
@@ -19,7 +22,30 @@ import {
     RotateCw,
     Archive,
     CheckCircle2,
-    FileCode
+    FileCode,
+    Type,
+    Calendar,
+    Palette,
+    FileDigit,
+    Scissors,
+    FileCheck,
+    FileUp,
+    ShieldCheck,
+    Code,
+    FileArchive,
+    Smartphone,
+    Server,
+    ArrowRightLeft,
+    Table2,
+    Network,
+    Fingerprint,
+    Search,
+    Percent,
+    Clock,
+    Container,
+    Eraser,
+    ScanLine,
+    Move
 } from 'lucide-react';
 
 
@@ -35,25 +61,27 @@ export interface ToolDefinition {
     component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>;
     keywords?: string[];
     shortcut?: string;
+    color?: string;
 }
 
 export interface CategoryDefinition {
     id: ToolCategory;
     name: string;
     icon: React.ElementType;
+    color?: string;
 }
 
 export const CATEGORIES: CategoryDefinition[] = [
-    { id: 'favorites', name: 'Favorites', icon: Star },
-    { id: 'recent', name: 'Recent', icon: History },
-    { id: 'converters', name: 'Converters', icon: Box },
-    { id: 'formatters', name: 'Formatters', icon: Code2 },
-    { id: 'crypto', name: 'Crypto', icon: Hash },
-    { id: 'web', name: 'Web', icon: Globe },
-    { id: 'network', name: 'Network', icon: Globe },
-    { id: 'pdf', name: 'PDF Tools', icon: FileText },
-    { id: 'utilities', name: 'Utilities', icon: Box },
-    { id: 'development', name: 'Dev Utils', icon: Code2 },
+    { id: 'favorites', name: 'Favorites', icon: Star, color: 'text-amber-400' },
+    { id: 'recent', name: 'Recent', icon: History, color: 'text-blue-400' },
+    { id: 'converters', name: 'Converters', icon: Box, color: 'text-emerald-400' },
+    { id: 'formatters', name: 'Formatters', icon: Code2, color: 'text-orange-400' },
+    { id: 'crypto', name: 'Crypto', icon: Hash, color: 'text-violet-400' },
+    { id: 'web', name: 'Web', icon: Globe, color: 'text-sky-400' },
+    { id: 'network', name: 'Network', icon: Globe, color: 'text-cyan-400' },
+    { id: 'pdf', name: 'PDF Tools', icon: FileText, color: 'text-rose-500' },
+    { id: 'utilities', name: 'Utilities', icon: Box, color: 'text-yellow-400' },
+    { id: 'development', name: 'Dev Utils', icon: Code2, color: 'text-pink-400' },
 ];
 
 // Lazy load all tool components for better performance
@@ -128,7 +156,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/xml-format',
         description: 'Prettify and format XML',
         category: 'formatters',
-        icon: Code2,
+        icon: FileCode,
+        color: 'text-orange-500',
         component: XmlFormatter,
         keywords: ['xml', 'format', 'prettify']
     },
@@ -138,7 +167,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/yaml-format',
         description: 'Prettify, minify and validate YAML data',
         category: 'formatters',
-        icon: FileJson,
+        icon: FileText,
+        color: 'text-red-400',
         component: YamlFormatter,
         keywords: ['yaml', 'yml', 'format', 'minify', 'prettify', 'validate']
     },
@@ -148,7 +178,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/json-format',
         description: 'Prettify, minify and validate JSON data',
         category: 'formatters',
-        icon: FileJson,
+        icon: Braces,
+        color: 'text-yellow-400',
         component: JsonFormatter,
         keywords: ['json', 'format', 'minify', 'prettier'],
         shortcut: 'Ctrl+Shift+J'
@@ -160,6 +191,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Prettify and format SQL queries',
         category: 'formatters',
         icon: Database,
+        color: 'text-blue-500',
         component: SqlFormatter,
         keywords: ['sql', 'format', 'prettify', 'query']
     },
@@ -171,7 +203,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/json-yaml',
         description: 'Convert between JSON and YAML formats',
         category: 'converters',
-        icon: Braces,
+        icon: ArrowRightLeft,
+        color: 'text-indigo-400',
         component: JsonYamlConverter,
         keywords: ['json', 'yaml', 'convert', 'transform']
     },
@@ -181,7 +214,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/json-xml',
         description: 'Convert between JSON and XML formats',
         category: 'converters',
-        icon: Braces,
+        icon: Code,
+        color: 'text-violet-400',
         component: JsonXmlConverter,
         keywords: ['json', 'xml', 'convert', 'transform']
     },
@@ -191,7 +225,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/json-csv',
         description: 'Convert JSON to CSV',
         category: 'converters',
-        icon: FileJson,
+        icon: Table2,
+        color: 'text-green-500',
         component: JsonToCsv,
         keywords: ['json', 'csv', 'convert', 'transform']
     },
@@ -201,7 +236,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/markdown-html',
         description: 'Convert Markdown to HTML',
         category: 'converters',
-        icon: Code2, // Or similar
+        icon: FileCode,
+        color: 'text-neutral-300',
         component: MarkdownHtmlConverter,
         keywords: ['markdown', 'html', 'preview', 'convert']
     },
@@ -211,7 +247,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/base64',
         description: 'Encode and decode Base64 strings',
         category: 'converters',
-        icon: Binary,
+        icon: Lock,
+        color: 'text-amber-500',
         component: Base64Converter,
         keywords: ['base64', 'encode', 'decode', 'string']
     },
@@ -221,7 +258,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/base64-file',
         description: 'Convert file to Base64 string',
         category: 'converters',
-        icon: Binary,
+        icon: FileArchive,
+        color: 'text-orange-400',
         component: Base64FileConverter,
         keywords: ['base64', 'file', 'image', 'upload']
     },
@@ -232,6 +270,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Convert numbers between Decimal, Hex, Octal and Binary',
         category: 'converters',
         icon: Binary,
+        color: 'text-cyan-400',
         component: NumberBaseConverter,
         keywords: ['base', 'hex', 'binary', 'decimal', 'octal', 'convert']
     },
@@ -241,7 +280,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/case-converter',
         description: 'Convert between different naming conventions',
         category: 'converters',
-        icon: Box, // Using Box for now as a generic icon
+        icon: Type,
+        color: 'text-pink-400',
         component: CaseConverter,
         keywords: ['case', 'camel', 'snake', 'kebab', 'pascal', 'upper', 'lower']
     },
@@ -251,7 +291,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/color-converter',
         description: 'Convert colors (Hex, RGB, HSL)',
         category: 'converters',
-        icon: Box, // Using Box or Palette if available
+        icon: Palette,
+        color: 'text-fuchsia-400',
         component: ColorConverter,
         keywords: ['color', 'hex', 'rgb', 'hsl', 'picker']
     },
@@ -261,7 +302,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/date-converter',
         description: 'Convert Dates (ISO, Unix, UTC)',
         category: 'converters',
-        icon: History,
+        icon: Calendar,
+        color: 'text-sky-400',
         component: DateConverter,
         keywords: ['date', 'time', 'timestamp', 'unix', 'iso']
     },
@@ -274,6 +316,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Convert multiple images to PDF, each image as one page',
         category: 'pdf',
         icon: FileImage,
+        color: 'text-purple-400',
         component: ImagesToPdfConverter,
         keywords: ['pdf', 'image', 'convert', 'merge', 'pages']
     },
@@ -283,7 +326,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-merger',
         description: 'Merge multiple PDF files into one',
         category: 'pdf',
-        icon: FileText,
+        icon: FileCheck,
+        color: 'text-indigo-500',
         component: PdfMerger,
         keywords: ['pdf', 'merge', 'combine', 'join']
     },
@@ -293,7 +337,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-splitter',
         description: 'Split PDF into multiple files',
         category: 'pdf',
-        icon: FileText,
+        icon: Scissors,
+        color: 'text-red-400',
         component: PdfSplitter,
         keywords: ['pdf', 'split', 'divide', 'separate']
     },
@@ -303,7 +348,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-page-extractor',
         description: 'Extract specific pages from a PDF',
         category: 'pdf',
-        icon: FileText,
+        icon: FileUp,
+        color: 'text-emerald-400',
         component: PdfPageExtractor,
         keywords: ['pdf', 'extract', 'pages', 'select']
     },
@@ -314,6 +360,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Rotate pages in a PDF',
         category: 'pdf',
         icon: RotateCw,
+        color: 'text-blue-400',
         component: PdfPageRotator,
         keywords: ['pdf', 'rotate', 'pages', 'orientation']
     },
@@ -324,6 +371,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Convert PDF to Base64 or decode Base64 to PDF',
         category: 'pdf',
         icon: Binary,
+        color: 'text-amber-500',
         component: PdfBase64,
         keywords: ['pdf', 'base64', 'encode', 'decode']
     },
@@ -334,6 +382,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'View and edit PDF metadata',
         category: 'pdf',
         icon: FileText,
+        color: 'text-gray-400',
         component: PdfMetadata,
         keywords: ['pdf', 'metadata', 'info', 'properties', 'edit']
     },
@@ -344,6 +393,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Compress PDF file size',
         category: 'pdf',
         icon: Archive,
+        color: 'text-orange-400',
         component: PdfCompressor,
         keywords: ['pdf', 'compress', 'reduce', 'size', 'optimize']
     },
@@ -354,6 +404,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Validate PDF file structure and metadata',
         category: 'pdf',
         icon: CheckCircle2,
+        color: 'text-green-500',
         component: PdfValidator,
         keywords: ['pdf', 'validate', 'check', 'verify', 'test']
     },
@@ -363,7 +414,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-page-reorder',
         description: 'Reorder pages in a PDF',
         category: 'pdf',
-        icon: FileText,
+        icon: Move,
+        color: 'text-cyan-400',
         component: PdfPageReorder,
         keywords: ['pdf', 'reorder', 'pages', 'sort']
     },
@@ -373,7 +425,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-watermarker',
         description: 'Add text or image watermark to PDF',
         category: 'pdf',
-        icon: FileImage,
+        icon: FileCode,
+        color: 'text-blue-300',
         component: PdfWatermarker,
         keywords: ['pdf', 'watermark', 'text', 'image', 'brand']
     },
@@ -383,7 +436,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-page-numbering',
         description: 'Add page numbers to PDF',
         category: 'pdf',
-        icon: Hash,
+        icon: FileDigit,
+        color: 'text-purple-300',
         component: PdfPageNumbering,
         keywords: ['pdf', 'page', 'number', 'numbering', 'footer', 'header']
     },
@@ -394,6 +448,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Convert HTML content to PDF',
         category: 'pdf',
         icon: Code2,
+        color: 'text-orange-600',
         component: HtmlToPdf,
         keywords: ['pdf', 'html', 'convert', 'web']
     },
@@ -404,6 +459,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Convert Markdown content to PDF',
         category: 'pdf',
         icon: FileCode,
+        color: 'text-sky-300',
         component: MarkdownToPdf,
         keywords: ['pdf', 'markdown', 'convert', 'md']
     },
@@ -413,7 +469,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/pdf-metadata-remover',
         description: 'Remove all metadata from PDF',
         category: 'pdf',
-        icon: Trash2,
+        icon: Eraser,
+        color: 'text-red-500',
         component: PdfMetadataRemover,
         keywords: ['pdf', 'metadata', 'remove', 'clean', 'privacy']
     },
@@ -425,7 +482,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/hash',
         description: 'Generate MD5, SHA1, SHA256 hashes',
         category: 'crypto',
-        icon: Hash,
+        icon: Fingerprint,
+        color: 'text-violet-500',
         component: HashGenerator,
         keywords: ['hash', 'md5', 'sha', 'crypto']
     },
@@ -435,7 +493,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/hmac',
         description: 'Keyed-hash message authentication code',
         category: 'crypto',
-        icon: Hash,
+        icon: ShieldCheck,
+        color: 'text-fuchsia-400',
         component: HmacGenerator,
         keywords: ['hmac', 'key', 'hash', 'security']
     },
@@ -445,7 +504,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/bcrypt',
         description: 'Generate and compare Bcrypt hashes',
         category: 'crypto',
-        icon: Hash,
+        icon: Shield,
+        color: 'text-pink-500',
         component: BcryptGenerator,
         keywords: ['bcrypt', 'password', 'hash', 'salt']
     },
@@ -455,7 +515,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/uuid',
         description: 'Generate unique identifiers',
         category: 'crypto',
-        icon: Hash, // fingerprint icon if available?
+        icon: ScanLine,
+        color: 'text-blue-400',
         component: UuidGenerator,
         keywords: ['uuid', 'ulid', 'guid', 'id'],
         shortcut: 'Ctrl+Shift+U'
@@ -466,7 +527,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/token-generator',
         description: 'Secure passwords and tokens',
         category: 'crypto',
-        icon: Hash, // Key icon?
+        icon: Key,
+        color: 'text-indigo-400',
         component: TokenGenerator,
         keywords: ['token', 'password', 'random', 'secure']
     },
@@ -476,7 +538,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/aes',
         description: 'Encrypt/Decrypt text with AES',
         category: 'crypto',
-        icon: Hash, // Lock icon?
+        icon: Lock,
+        color: 'text- emerald-500',
         component: AesEncryptor,
         keywords: ['aes', 'encrypt', 'decrypt', 'cipher']
     },
@@ -488,7 +551,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/url-encoder',
         description: 'Encode and decode URLs',
         category: 'web',
-        icon: Globe,
+        icon: Link,
+        color: 'text-sky-500',
         component: UrlEncoder,
         keywords: ['url', 'encode', 'decode', 'uri']
     },
@@ -498,7 +562,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/html-entity',
         description: 'Escape/Unescape HTML Entities',
         category: 'web',
-        icon: Code2,
+        icon: Code,
+        color: 'text-orange-500',
         component: HtmlEntityEncoder,
         keywords: ['html', 'entity', 'escape', 'unescape']
     },
@@ -509,6 +574,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Parse URL parameters and components',
         category: 'web',
         icon: Globe,
+        color: 'text-blue-400',
         component: UrlParser,
         keywords: ['url', 'parser', 'params', 'query']
     },
@@ -518,7 +584,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/jwt',
         description: 'Parse and inspect JSON Web Tokens',
         category: 'web',
-        icon: Hash,
+        icon: ShieldCheck,
+        color: 'text-violet-500',
         component: JwtParser,
         keywords: ['jwt', 'token', 'decode', 'jose']
     },
@@ -528,7 +595,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/user-agent',
         description: 'Parse User-Agent strings',
         category: 'web',
-        icon: Globe, // or Monitor/Smartphone icon
+        icon: Smartphone,
+        color: 'text-emerald-500',
         component: UserAgentParser,
         keywords: ['user', 'agent', 'browser', 'os', 'device']
     },
@@ -538,7 +606,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/basic-auth',
         description: 'Generate HTTP Basic Auth header',
         category: 'web',
-        icon: Hash,
+        icon: Lock,
+        color: 'text-rose-400',
         component: BasicAuthGenerator,
         keywords: ['auth', 'basic', 'header', 'http']
     },
@@ -548,7 +617,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/slug',
         description: 'Generate URL-friendly slugs',
         category: 'web',
-        icon: Globe,
+        icon: Link,
+        color: 'text-teal-400',
         component: SlugGenerator,
         keywords: ['slug', 'url', 'seo', 'string']
     },
@@ -558,7 +628,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/http-status',
         description: 'List of HTTP status codes',
         category: 'web',
-        icon: Globe,
+        icon: Server,
+        color: 'text-indigo-400',
         component: HttpStatusCode,
         keywords: ['http', 'status', 'code', 'error']
     },
@@ -568,7 +639,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/json-diff',
         description: 'Compare text or JSON',
         category: 'web',
-        icon: FileJson,
+        icon: ArrowRightLeft,
+        color: 'text-amber-500',
         component: JsonDiff,
         keywords: ['diff', 'compare', 'json', 'text']
     },
@@ -580,7 +652,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/ipv4-subnet',
         description: 'CIDR calculator and ranges',
         category: 'network',
-        icon: Globe,
+        icon: Network,
+        color: 'text-cyan-500',
         component: Ipv4SubnetCalculator,
         keywords: ['ip', 'subnet', 'cidr', 'network', 'mask']
     },
@@ -590,7 +663,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/ipv4-converter',
         description: 'Decimal, Binary, Hex converter',
         category: 'network',
-        icon: Binary,
+        icon: RotateCw,
+        color: 'text-blue-500',
         component: Ipv4Converter,
         keywords: ['ip', 'convert', 'decimal', 'binary', 'hex']
     },
@@ -600,7 +674,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/mac-generator',
         description: 'Generate Random MAC Addresses',
         category: 'network',
-        icon: Hash,
+        icon: Fingerprint,
+        color: 'text-purple-400',
         component: MacGenerator,
         keywords: ['mac', 'generator', 'address', 'network']
     },
@@ -610,7 +685,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/mac-lookup',
         description: 'Find vendor by MAC Address',
         category: 'network',
-        icon: Globe,
+        icon: Search,
+        color: 'text-orange-400',
         component: MacLookup,
         keywords: ['mac', 'lookup', 'vendor', 'oui']
     },
@@ -622,7 +698,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/regex-tester',
         description: 'Test regular expressions',
         category: 'development',
-        icon: Code2,
+        icon: Percent,
+        color: 'text-pink-500',
         component: RegexTester,
         keywords: ['regex', 'test', 'regexp', 'match']
     },
@@ -632,7 +709,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/crontab',
         description: 'Cron schedule generator',
         category: 'development',
-        icon: History,
+        icon: Clock,
+        color: 'text-blue-400',
         component: CrontabGenerator,
         keywords: ['cron', 'schedule', 'job', 'timer']
     },
@@ -642,7 +720,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/chmod',
         description: 'File permissions (chmod)',
         category: 'development',
-        icon: Binary,
+        icon: Lock,
+        color: 'text-red-400',
         component: ChmodCalculator,
         keywords: ['chmod', 'permission', 'octal', 'linux', 'unix']
     },
@@ -652,7 +731,8 @@ export const TOOLS: ToolDefinition[] = [
         path: '/docker-convert',
         description: 'Convert run to compose',
         category: 'development',
-        icon: Box,
+        icon: Container,
+        color: 'text-sky-500',
         component: DockerConverter,
         keywords: ['docker', 'compose', 'convert', 'container']
     },
@@ -663,6 +743,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Manage and browse clipboard history with search and organization',
         category: 'development',
         icon: Clipboard,
+        color: 'text-amber-500',
         component: ClipboardManager,
         keywords: ['clipboard', 'copy', 'paste', 'history', 'manager']
     },
@@ -673,6 +754,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Real-time system resource monitoring',
         category: 'utilities',
         icon: Activity,
+        color: 'text-emerald-500',
         component: StatsMonitor,
         keywords: ['cpu', 'memory', 'disk', 'network', 'battery', 'gpu', 'stats', 'monitor'],
         shortcut: 'Ctrl+Shift+M'
@@ -684,6 +766,7 @@ export const TOOLS: ToolDefinition[] = [
         description: 'Comprehensive system cleaning and optimization suite',
         category: 'utilities',
         icon: Trash2,
+        color: 'text-rose-500',
         component: SystemCleaner,
         keywords: ['cleaner', 'junk', 'optimization', 'malware', 'protection', 'maintenance', 'system'],
     },

@@ -182,6 +182,9 @@ export const Sidebar: React.FC = React.memo(() => {
                             // Get configured or default shortcut
                             const toolShortcuts = useSettingsStore.getState().toolShortcuts;
                             const shortcut = toolShortcuts[tool.id] || tool.shortcut;
+                            
+                            const category = CATEGORIES.find(c => c.id === tool.category);
+                            const colorClass = tool.color || category?.color || 'text-foreground-muted';
 
                             return (
                                 <div
@@ -210,7 +213,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                     {Icon && (
                                         <Icon className={cn(
                                             "w-4 h-4 shrink-0 transition-opacity",
-                                            isActive ? "opacity-100" : "opacity-50 group-hover:opacity-70"
+                                            isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
                                         )} />
                                     )}
                                     <span className="truncate flex-1 font-medium">{tool.name}</span>
@@ -265,9 +268,9 @@ export const Sidebar: React.FC = React.memo(() => {
                             {!sidebarCollapsed && (
                                 <div className="px-3 py-1.5 rounded-lg bg-[var(--color-glass-panel)]/85 border border-border-glass/80 shadow-sm relative overflow-hidden">
                                     {/* Left accent bar */}
-                                    <div className="absolute inset-y-1 left-1 w-[3px] rounded-full bg-gradient-to-b from-indigo-400/90 via-sky-400/90 to-emerald-400/90" />
+                                    <div className={cn("absolute inset-y-1 left-1 w-[3px] rounded-full bg-current opacity-70", category.color || "text-foreground")} />
                                     <h3 className="pl-3 text-[10px] font-semibold text-foreground uppercase tracking-[0.16em] flex items-center gap-2">
-                                        <category.icon className="w-3.5 h-3.5 text-foreground/80" />
+                                        <category.icon className={cn("w-3.5 h-3.5", category.color || "text-foreground/80")} />
                                         <span>{category.name}</span>
                                         <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/5 text-foreground/70 border border-border-glass/60">
                                             {visibleTools.length}
@@ -287,6 +290,8 @@ export const Sidebar: React.FC = React.memo(() => {
                                     // Get configured or default shortcut
                                     const toolShortcuts = useSettingsStore.getState().toolShortcuts;
                                     const shortcut = toolShortcuts[tool.id] || tool.shortcut;
+                                    
+                                    const colorClass = tool.color || category.color || 'text-foreground-muted';
 
                                     return (
                                 <div
@@ -319,7 +324,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                                 <Icon className={cn(
                                                     "shrink-0 transition-opacity",
                                                     sidebarCollapsed ? "w-5 h-5" : "w-4 h-4",
-                                                    isActive ? "opacity-100" : "opacity-50 group-hover:opacity-70"
+                                                    isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
                                                 )} />
                                             )}
                                             {!sidebarCollapsed && (
@@ -345,7 +350,11 @@ export const Sidebar: React.FC = React.memo(() => {
                     // Collapsed view: Show all tools as icons only
                     <div className="space-y-1">
                         {CATEGORIES
-                            .flatMap(category => getToolsByCategory(category.id))
+                            .flatMap(category => {
+                                const tools = getToolsByCategory(category.id);
+                                // Determine fallback color for tools in this category in expanded view
+                                return tools.map(t => ({...t, categoryColor: category.color}));
+                            })
                             .filter(tool => tool.id !== 'settings')
                             .map((tool, index, array) => {
                                 // Group by category for visual separation
@@ -354,6 +363,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                 
                                 const isActive = activeTab?.toolId === tool.id;
                                 const Icon = tool.icon;
+                                const colorClass = tool.color || tool.categoryColor || 'text-foreground-muted';
                                 
                                 return (
                                     <React.Fragment key={tool.id}>
@@ -378,7 +388,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                             {Icon && (
                                                 <Icon className={cn(
                                                     "w-5 h-5 shrink-0 transition-opacity",
-                                                    isActive ? "opacity-100" : "opacity-50 group-hover:opacity-70"
+                                                    isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
                                                 )} />
                                             )}
                                         </div>

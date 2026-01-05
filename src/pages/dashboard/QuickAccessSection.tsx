@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { useToolStore } from '../../store/toolStore';
 import { useTabStore } from '../../store/tabStore';
-import { getToolById } from '../../tools/registry';
+import { getToolById, CATEGORIES } from '../../tools/registry';
 import { useNavigate } from 'react-router-dom';
 import { Star, Clock, Plus, Settings } from 'lucide-react';
+import { cn } from '../../utils/cn';
 
 export const QuickAccessSection: React.FC = () => {
     const history = useToolStore(state => state.history);
@@ -62,22 +63,27 @@ export const QuickAccessSection: React.FC = () => {
                     <div className="space-y-1.5">
                         {recentTools.length === 0 ? (
                             <p className="text-xs text-foreground-muted italic">No recent tools yet. Start by using any tool from the sidebar.</p>
-                        ) : recentTools.map(tool => (
-                            <button
-                                key={tool.id}
-                                type="button"
-                                onClick={() => handleOpenTool(tool.id)}
-                                className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
-                            >
-                                <div className="flex items-center gap-2">
-                                    {tool.icon && <tool.icon className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />}
-                                    <span className="font-medium truncate">{tool.name}</span>
-                                </div>
-                                <span className="text-[10px] text-foreground-muted truncate max-w-[120px] group-hover:text-foreground-secondary">
-                                    {tool.description}
-                                </span>
-                            </button>
-                        ))}
+                        ) : recentTools.map(tool => {
+                            if (!tool) return null;
+                            const category = CATEGORIES.find(c => c.id === tool.category);
+                            const colorClass = tool.color || category?.color;
+                            return (
+                                <button
+                                    key={tool.id}
+                                    type="button"
+                                    onClick={() => handleOpenTool(tool.id)}
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        {tool.icon && <tool.icon className={cn("w-3.5 h-3.5 opacity-70 group-hover:opacity-100", colorClass)} />}
+                                        <span className="font-medium truncate">{tool.name}</span>
+                                    </div>
+                                    <span className="text-[10px] text-foreground-muted truncate max-w-[120px] group-hover:text-foreground-secondary">
+                                        {tool.description}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -92,30 +98,35 @@ export const QuickAccessSection: React.FC = () => {
                     <div className="space-y-1.5">
                         {favoriteTools.length === 0 ? (
                             <p className="text-xs text-foreground-muted italic">Mark tools as favorites from the sidebar to see them here.</p>
-                        ) : favoriteTools.map(tool => (
-                            <button
-                                key={tool.id}
-                                type="button"
-                                onClick={() => handleOpenTool(tool.id)}
-                                className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
-                            >
-                                <div className="flex items-center gap-2">
-                                    {tool.icon && <tool.icon className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />}
-                                    <span className="font-medium truncate">{tool.name}</span>
-                                </div>
+                        ) : favoriteTools.map(tool => {
+                            if (!tool) return null;
+                            const category = CATEGORIES.find(c => c.id === tool.category);
+                            const colorClass = tool.color || category?.color;
+                            return (
                                 <button
+                                    key={tool.id}
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleFavorite(tool.id);
-                                    }}
-                                    className="ml-2 text-amber-400 hover:text-amber-300"
-                                    aria-label="Toggle favorite"
+                                    onClick={() => handleOpenTool(tool.id)}
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
                                 >
-                                    <Star className="w-3.5 h-3.5 fill-amber-400" />
+                                    <div className="flex items-center gap-2">
+                                        {tool.icon && <tool.icon className={cn("w-3.5 h-3.5 opacity-70 group-hover:opacity-100", colorClass)} />}
+                                        <span className="font-medium truncate">{tool.name}</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleFavorite(tool.id);
+                                        }}
+                                        className="ml-2 text-amber-400 hover:text-amber-300"
+                                        aria-label="Toggle favorite"
+                                    >
+                                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                                    </button>
                                 </button>
-                            </button>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
