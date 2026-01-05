@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown, Download, Camera, TrendingUp } from 'lucide-react';
+import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown, Download, Camera, FolderPlus } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import type { SpaceLensNode } from '../types';
 import { formatSize } from '../utils/formatUtils';
-import { exportSpaceLensToJSON, exportSpaceLensToCSV, createSnapshot, compareSnapshots, downloadFile } from '../utils/spaceLensExport';
+import { exportSpaceLensToJSON, exportSpaceLensToCSV, createSnapshot, downloadFile } from '../utils/spaceLensExport';
 import { cn } from '../../../../utils/cn';
 import { toast } from 'sonner';
 
@@ -23,8 +23,24 @@ export const SpaceLensView: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [snapshots, setSnapshots] = useState<any[]>([]);
+    const [homeDir, setHomeDir] = useState<string>('');
     const scanCancelRef = useRef(false);
     const progressCleanupRef = useRef<(() => void) | null>(null);
+
+    // Get home directory on mount
+    useEffect(() => {
+        const getHomeDir = async () => {
+            try {
+                if ((window as any).ipcRenderer?.system?.getHomeDir) {
+                    const home = await (window as any).ipcRenderer.system.getHomeDir();
+                    setHomeDir(home);
+                }
+            } catch (error) {
+                console.error('Failed to get home directory:', error);
+            }
+        };
+        getHomeDir();
+    }, []);
 
     const scanSpace = async (pathStr = '') => {
         setIsScanning(true);
@@ -163,6 +179,24 @@ export const SpaceLensView: React.FC = () => {
         }
     };
 
+    const handleSelectFolder = async () => {
+        if (isScanning) return;
+        
+        try {
+            if ((window as any).ipcRenderer?.system?.selectFolder) {
+                const result = await (window as any).ipcRenderer.system.selectFolder();
+                if (!result.canceled && result.path) {
+                    setHistory([]); // Clear history when selecting new folder
+                    await scanSpace(result.path);
+                    toast.success(`Scanning folder: ${result.path.split(/[/\\]/).pop() || result.path}`);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to select folder:', error);
+            toast.error('Failed to select folder');
+        }
+    };
+
     useEffect(() => {
         return () => {
             if (progressCleanupRef.current) {
@@ -177,7 +211,7 @@ export const SpaceLensView: React.FC = () => {
                 title="Space Lens" 
                 icon={LayoutGrid} 
                 description="Visually explore your storage structure to find what's taking up space." 
-                onScan={() => scanSpace()} 
+                onScan={handleSelectFolder} 
                 isScanning={isScanning} 
                 progress={progress}
                 tips={[
@@ -187,7 +221,8 @@ export const SpaceLensView: React.FC = () => {
                     'Create snapshots to compare changes over time'
                 ]}
                 quickActions={[
-                    { label: 'Scan Home Directory', onClick: () => scanSpace(process.env.HOME || '') },
+                    { label: 'Select Folder', onClick: handleSelectFolder },
+                    { label: 'Scan Home Directory', onClick: () => scanSpace(homeDir || '') },
                     { label: 'Scan Root', onClick: () => scanSpace('/') }
                 ]}
             />
@@ -388,6 +423,16 @@ export const SpaceLensView: React.FC = () => {
                             </Button>
                         </>
                     )}
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleSelectFolder}
+                        disabled={isScanning}
+                        title="Select Folder to Scan"
+                    >
+                        <FolderPlus className="w-4 h-4 mr-2" />
+                        Select Folder
+                    </Button>
                     <Button 
                         variant="outline" 
                         size="sm" 

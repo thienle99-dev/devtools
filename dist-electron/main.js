@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, Notification, Tray, app, clipboard, globalShortcut, ipcMain, nativeImage } from "electron";
+import { BrowserWindow, Menu, Notification, Tray, app, clipboard, dialog, globalShortcut, ipcMain, nativeImage } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
@@ -2257,6 +2257,23 @@ function createWindow() {
 	});
 	win.on("unmaximize", () => {
 		win?.webContents.send("window-maximized", false);
+	});
+	ipcMain.handle("get-home-dir", () => {
+		return os.homedir();
+	});
+	ipcMain.handle("select-folder", async () => {
+		const result = await dialog.showOpenDialog(win, {
+			properties: ["openDirectory"],
+			title: "Select Folder to Scan"
+		});
+		if (result.canceled || result.filePaths.length === 0) return {
+			canceled: true,
+			path: null
+		};
+		return {
+			canceled: false,
+			path: result.filePaths[0]
+		};
 	});
 	ipcMain.handle("store-get", (_event, key) => store.get(key));
 	ipcMain.handle("store-set", (_event, key, value) => {

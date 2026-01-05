@@ -41,6 +41,10 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
+  },
+  system: {
+    getHomeDir: () => ipcRenderer.invoke('get-home-dir'),
+    selectFolder: () => ipcRenderer.invoke('select-folder'),
   }
 })
 

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog } from 'electron'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -6,6 +6,7 @@ import { randomUUID, createHash } from 'node:crypto'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import fs from 'node:fs/promises'
+import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
 import si from 'systeminformation'
 import Store from 'electron-store'
@@ -577,6 +578,25 @@ function createWindow() {
     win?.webContents.send('window-maximized', false);
   });
 
+
+  // Get Home Directory
+  ipcMain.handle('get-home-dir', () => {
+    return os.homedir();
+  });
+
+  // Select Folder Dialog
+  ipcMain.handle('select-folder', async () => {
+    const result = await dialog.showOpenDialog(win!, {
+      properties: ['openDirectory'],
+      title: 'Select Folder to Scan'
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true, path: null };
+    }
+    
+    return { canceled: false, path: result.filePaths[0] };
+  });
 
   // Handle Store IPC
   ipcMain.handle('store-get', (_event, key) => store.get(key))

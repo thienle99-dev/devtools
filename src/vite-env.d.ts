@@ -14,6 +14,10 @@ interface Window {
         tray: {
             updateMenu: (items: any[]) => void;
         };
+        system: {
+            getHomeDir: () => Promise<string>;
+            selectFolder: () => Promise<{ canceled: boolean; path: string | null }>;
+        };
     };
     appManagerAPI?: {
         getInstalledApps: () => Promise<any[]>;

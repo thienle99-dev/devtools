@@ -34,6 +34,10 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 		minimize: () => electron.ipcRenderer.send("window-minimize"),
 		maximize: () => electron.ipcRenderer.send("window-maximize"),
 		close: () => electron.ipcRenderer.send("window-close")
+	},
+	system: {
+		getHomeDir: () => electron.ipcRenderer.invoke("get-home-dir"),
+		selectFolder: () => electron.ipcRenderer.invoke("select-folder")
 	}
 });
 electron.contextBridge.exposeInMainWorld("statsAPI", {
