@@ -65,7 +65,7 @@ function createTray() {
   // icon.resize({ width: 16, height: 16 })
 
   tray = new Tray(icon.resize({ width: 22, height: 22 }))
-  tray.setToolTip('DevTools 2')
+  tray.setToolTip('DevTools')
 
   updateTrayMenu()
 

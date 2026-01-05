@@ -221,7 +221,7 @@ function App() {
     <Router>
       <GlobalClipboardMonitor />
       <TrayController />
-      <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
+      <div className="flex flex-col h-screen bg-app-gradient rounded-[6px] text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
         <WindowControls />
 
         <div className="flex-1 flex overflow-hidden relative">

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useDashboardStore } from './dashboardStore';
 
 interface ToolData {
     id: string;
@@ -12,19 +13,23 @@ interface ToolData {
 interface ToolStore {
     tools: Record<string, ToolData>;
     history: string[]; // IDs of used tools
+    favorites: string[]; // Favorite tool IDs
 
     setToolData: (id: string, data: Partial<ToolData>) => void;
     clearToolData: (id: string) => void;
     addToHistory: (id: string) => void;
     clearHistory: () => void;
     removeToolData: (id: string) => void;
+
+    toggleFavorite: (toolId: string) => void;
 }
 
 export const useToolStore = create<ToolStore>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             tools: {},
             history: [],
+            favorites: [],
 
             setToolData: (id, data) => set((state) => {
                 const existing = state.tools[id] || {
@@ -57,9 +62,20 @@ export const useToolStore = create<ToolStore>()(
                 }
             })),
 
-            addToHistory: (id) => set((state) => ({
-                history: [id, ...state.history.filter(h => h !== id)].slice(0, 50)
-            })),
+            addToHistory: (id) => {
+                // Track history locally
+                set((state) => ({
+                    history: [id, ...state.history.filter(h => h !== id)].slice(0, 50)
+                }));
+
+                // Track usage in dashboard store
+                try {
+                    const incrementUsage = useDashboardStore.getState().incrementUsage;
+                    incrementUsage(id);
+                } catch {
+                    // Ignore if dashboard store is not available for some reason
+                }
+            },
 
             clearHistory: () => set({ history: [] }),
 
@@ -67,6 +83,15 @@ export const useToolStore = create<ToolStore>()(
                 const newTools = { ...state.tools };
                 delete newTools[id];
                 return { tools: newTools };
+            }),
+
+            toggleFavorite: (toolId) => set((state) => {
+                const isFavorite = state.favorites.includes(toolId);
+                return {
+                    favorites: isFavorite
+                        ? state.favorites.filter(id => id !== toolId)
+                        : [...state.favorites, toolId],
+                };
             }),
         }),
         {

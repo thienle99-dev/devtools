@@ -1823,7 +1823,7 @@ function createTray() {
 		width: 22,
 		height: 22
 	}));
-	tray.setToolTip("DevTools 2");
+	tray.setToolTip("DevTools");
 	updateTrayMenu();
 	tray.on("double-click", () => {
 		toggleWindow();
