@@ -291,64 +291,64 @@
 
 #### Phase 1: Core Capture & Basic Processing
 
-- [ ] Setup Xnapper tool structure (`src/tools/screenshot/`)
-- [ ] Install dependencies (fabric, tesseract.js)
-- [ ] Create Xnapper store (`src/store/xnapperStore.ts`)
-- [ ] Implement Electron screen capture API integration
-- [ ] Create CaptureSection component (full screen, window, area selection)
-- [ ] Implement basic image preview
-- [ ] Implement auto-balance enhancement
-- [ ] Implement simple export (PNG/JPG)
-- [ ] Implement save to file functionality
-- [ ] Add to tools registry and sidebar
+- [x] Setup Xnapper tool structure (`src/tools/screenshot/`)
+- [x] Install dependencies (fabric, tesseract.js)
+- [x] Create Xnapper store (`src/store/xnapperStore.ts`)
+- [x] Implement Electron screen capture API integration
+- [x] Create CaptureSection component (full screen, window, area selection)
+- [x] Implement basic image preview
+- [x] Implement auto-balance enhancement
+- [x] Implement simple export (PNG/JPG)
+- [x] Implement save to file functionality
+- [x] Add to tools registry and sidebar
 
 #### Phase 2: Redaction & Background
 
-- [ ] Integrate Tesseract.js for OCR
-- [ ] Implement regex pattern detection (email, IP, API keys)
-- [ ] Create RedactionPanel component
-- [ ] Implement redaction tools (blur, pixelate, solid overlay)
-- [ ] Implement manual redaction area selection
-- [ ] Create BackgroundPanel component
-- [ ] Implement gradient background generator
-- [ ] Implement image background support with blur effect
-- [ ] Add background preview thumbnails
+- [x] Integrate Tesseract.js for OCR
+- [x] Implement regex pattern detection (email, IP, API keys)
+- [x] Create RedactionPanel component
+- [x] Implement redaction tools (blur, pixelate, solid overlay)
+- [x] Implement manual redaction area selection
+- [x] Create BackgroundPanel component
+- [x] Implement gradient background generator
+- [x] Implement image background support with blur effect
+- [x] Add background preview thumbnails
 
 #### Phase 3: Annotations
 
-- [ ] Integrate Fabric.js for canvas manipulation
-- [ ] Create PreviewSection with Fabric.js canvas
-- [ ] Implement arrow tool (straight, curved)
-- [ ] Implement text tool with font selection
-- [ ] Implement shape tools (rectangle, circle, ellipse)
-- [ ] Implement blur tool for selective blur
-- [ ] Implement crop tool for manual adjustment
-- [ ] Create AnnotationToolbar component
-- [ ] Implement undo/redo functionality
-- [ ] Add color picker and size controls
+- [x] Integrate Fabric.js for canvas manipulation
+- [x] Create PreviewSection with Fabric.js canvas
+- [x] Implement arrow tool (straight, curved)
+- [x] Implement text tool with font selection
+- [x] Implement shape tools (rectangle, circle, ellipse)
+- [x] Implement blur tool for selective blur
+- [x] Implement crop tool for manual adjustment
+- [x] Create AnnotationToolbar component
+- [x] Implement undo/redo functionality
+- [x] Add color picker and size controls
 
 #### Phase 4: Export & Share
 
-- [ ] Create ExportPanel component
-- [ ] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
-- [ ] Implement custom dimensions
-- [ ] Implement quality settings (compression level)
-- [ ] Implement format options (PNG, JPG, WebP)
-- [ ] Implement copy to clipboard functionality
-- [ ] Implement system share sheet integration (macOS)
-- [ ] Create HistoryPanel component
-- [ ] Implement screenshot history storage
+- [x] Create ExportPanel component
+- [x] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
+- [x] Implement custom dimensions
+- [x] Implement quality settings (compression level)
+- [x] Implement format options (PNG, JPG, WebP)
+- [x] Implement copy to clipboard functionality
+- [x] Implement system share sheet integration (macOS)
+- [x] Create HistoryPanel component
+- [x] Implement screenshot history storage
 
 #### Phase 5: Advanced Features
 
-- [ ] Implement templates system
-- [ ] Add preset saving functionality
+- [x] Implement templates system
+- [x] Add preset saving functionality
 - [ ] Implement batch processing (future)
 - [ ] Add cloud upload (Imgur, Cloudinary) - future
 - [ ] Implement AI background suggestions - future
-- [ ] Add keyboard shortcuts
-- [ ] Implement drag & drop image loading
-- [ ] Add image comparison mode
+- [x] Add keyboard shortcuts
+- [x] Implement drag & drop image loading
+- [x] Add image comparison mode
 
 ### 3.10 Data Tools
 
@@ -710,33 +710,33 @@
 - [x] Implement text tool with font selection
 - [x] Implement shape tools (rectangle, circle, ellipse)
 - [x] Implement blur tool for selective blur
-- [~] Implement crop tool for manual adjustment (Foundation laid, UI pending)
+- [x] Implement crop tool for manual adjustment
 - [x] Create AnnotationToolbar component
 - [x] Implement undo/redo functionality
 - [x] Add color picker and size controls
 
 ### 8.4 Phase 4: Export & Share
 
-- [ ] Create ExportPanel component
-- [ ] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
-- [ ] Implement custom dimensions
-- [ ] Implement quality settings (compression level)
-- [ ] Implement format options (PNG, JPG, WebP)
-- [ ] Implement copy to clipboard functionality
-- [ ] Implement system share sheet integration (macOS)
-- [ ] Create HistoryPanel component
-- [ ] Implement screenshot history storage
+- [x] Create ExportPanel component
+- [x] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
+- [x] Implement custom dimensions
+- [x] Implement quality settings (compression level)
+- [x] Implement format options (PNG, JPG, WebP)
+- [x] Implement copy to clipboard functionality
+- [x] Implement system share sheet integration (macOS)
+- [x] Create HistoryPanel component
+- [x] Implement screenshot history storage
 
 ### 8.5 Phase 5: Advanced Features
 
-- [ ] Implement templates system
-- [ ] Add preset saving functionality
+- [x] Implement templates system
+- [x] Add preset saving functionality
 - [ ] Implement batch processing (future)
 - [ ] Add cloud upload (Imgur, Cloudinary) - future
 - [ ] Implement AI background suggestions - future
-- [ ] Add keyboard shortcuts
-- [ ] Implement drag & drop image loading
-- [ ] Add image comparison mode
+- [x] Add keyboard shortcuts
+- [x] Implement drag & drop image loading
+- [x] Add image comparison mode
 
 ---
 
