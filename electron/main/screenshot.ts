@@ -141,24 +141,33 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                     reject(new Error('Area selection cancelled'));
                 });
 
+                // Get display bounds for manual fullscreen
+                const { width, height, x, y } = display.bounds;
+
                 // NOW create the window
                 selectionWindow = new BrowserWindow({
-                    fullscreen: true,
+                    x, y, width, height, // Set bounds manually
                     frame: false,
                     transparent: true,
-                    hasShadow: false, // Ensure no shadow
-                    backgroundColor: '#00000000', // Explicitly transparent
+                    hasShadow: false,
+                    backgroundColor: '#00000000',
                     alwaysOnTop: true,
                     skipTaskbar: true,
                     resizable: false,
-                    enableLargerThanScreen: true, // Allow covering multiple screens
+                    enableLargerThanScreen: true,
                     movable: false,
+                    acceptFirstMouse: true, // Handle first click
                     webPreferences: {
                         nodeIntegration: false,
                         contextIsolation: true,
                         preload: path.join(__dirname, '../preload/preload.js'),
                     }
                 });
+
+                // Ensure window is visible and focused
+                selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+                selectionWindow.show();
+                selectionWindow.focus(); // Crucial for keyboard events
 
                 // Load selection overlay HTML with lighter background
                 const selectionHTML = `
@@ -171,43 +180,143 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                                 width: 100vw;
                                 height: 100vh;
                                 cursor: crosshair;
-                                background: rgba(0, 0, 0, 0.1);
+                                background: transparent;
                                 overflow: hidden;
+                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                                user-select: none;
                             }
                             #selection {
                                 position: absolute;
                                 border: 2px solid #3b82f6;
-                                background: rgba(59, 130, 246, 0.1);
+                                background: rgba(59, 130, 246, 0.05);
                                 display: none;
-                                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
+                                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+                                z-index: 100;
+                                pointer-events: none;
+                            }
+                            #toolbar {
+                                position: absolute;
+                                display: none;
+                                background: #1a1b1e;
+                                padding: 6px;
+                                border-radius: 10px;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+                                z-index: 2000;
+                                display: flex;
+                                gap: 8px;
+                                align-items: center;
+                                pointer-events: auto;
+                                animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                            }
+                            @keyframes popIn {
+                                from { opacity: 0; transform: scale(0.95) translateY(5px); }
+                                to { opacity: 1; transform: scale(1) translateY(0); }
+                            }
+                            .btn {
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                padding: 0 16px;
+                                height: 36px;
+                                border-radius: 8px;
+                                border: none;
+                                font-size: 13px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.15s ease;
+                                color: white;
+                            }
+                            .btn-cancel {
+                                background: rgba(255,255,255,0.08);
+                                color: #e5e5e5;
+                            }
+                            .btn-cancel:hover { background: rgba(255,255,255,0.12); color: white; }
+                            .btn-capture {
+                                background: #3b82f6;
+                                color: white;
+                                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+                            }
+                            .btn-capture:hover { background: #2563eb; transform: translateY(-1px); }
+                            .btn-capture:active { transform: translateY(0); }
+                            #dimensions {
+                                position: absolute;
+                                top: -34px;
+                                left: 0;
+                                background: #3b82f6;
+                                color: white;
+                                padding: 4px 8px;
+                                border-radius: 6px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                                opacity: 0;
+                                transition: opacity 0.2s;
                             }
                             #instructions {
                                 position: absolute;
-                                top: 20px;
+                                top: 40px;
                                 left: 50%;
                                 transform: translateX(-50%);
-                                background: rgba(0, 0, 0, 0.8);
+                                background: rgba(0, 0, 0, 0.7);
+                                backdrop-filter: blur(10px);
                                 color: white;
-                                padding: 12px 24px;
-                                border-radius: 8px;
-                                font-family: system-ui, -apple-system, sans-serif;
-                                font-size: 14px;
-                                z-index: 1000;
+                                padding: 8px 16px;
+                                border-radius: 20px;
+                                font-size: 13px;
+                                font-weight: 500;
+                                pointer-events: none;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                                border: 1px solid rgba(255,255,255,0.1);
+                                opacity: 0.8;
                             }
+                            .hidden { display: none !important; }
                         </style>
                     </head>
                     <body>
-                        <div id="instructions">Drag to select area • ESC or Right-click to cancel</div>
-                        <div id="selection"></div>
+                        <div id="instructions">Click and drag to capture</div>
+                        <div id="selection">
+                            <div id="dimensions">0 x 0</div>
+                        </div>
+                        <div id="toolbar" class="hidden">
+                            <button class="btn btn-cancel" id="btn-cancel">Cancel</button>
+                            <button class="btn btn-capture" id="btn-capture">Capture</button>
+                        </div>
                         <script>
                             const selection = document.getElementById('selection');
+                            const toolbar = document.getElementById('toolbar');
+                            const dimensions = document.getElementById('dimensions');
+                            const btnCancel = document.getElementById('btn-cancel');
+                            const btnCapture = document.getElementById('btn-capture');
+                            
                             let startX, startY, isDrawing = false;
+                            let currentBounds = { x: 0, y: 0, width: 0, height: 0 };
+                            
+                            document.addEventListener('contextmenu', e => e.preventDefault());
+
+                            function capture() {
+                                if (currentBounds.width > 0 && currentBounds.height > 0) {
+                                    window.electronAPI.sendSelection(currentBounds);
+                                }
+                            }
+                            
+                            function cancel() {
+                                window.electronAPI.cancelSelection();
+                            }
+
+                            btnCapture.onclick = capture;
+                            btnCancel.onclick = cancel;
 
                             document.addEventListener('mousedown', (e) => {
-                                if (e.button !== 0) return; // Only left click
+                                if (e.target.closest('#toolbar')) return;
+                                if (e.button !== 0) {
+                                    if (e.button === 2) cancel();
+                                    return;
+                                }
                                 isDrawing = true;
                                 startX = e.clientX;
                                 startY = e.clientY;
+                                toolbar.classList.add('hidden');
+                                dimensions.style.opacity = '1';
                                 selection.style.left = startX + 'px';
                                 selection.style.top = startY + 'px';
                                 selection.style.width = '0px';
@@ -223,43 +332,35 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                                 const height = Math.abs(currentY - startY);
                                 const left = Math.min(startX, currentX);
                                 const top = Math.min(startY, currentY);
-                                
                                 selection.style.left = left + 'px';
                                 selection.style.top = top + 'px';
                                 selection.style.width = width + 'px';
                                 selection.style.height = height + 'px';
+                                dimensions.textContent = Math.round(width) + ' x ' + Math.round(height);
+                                currentBounds = { x: left, y: top, width, height };
                             });
 
                             document.addEventListener('mouseup', (e) => {
                                 if (!isDrawing) return;
                                 isDrawing = false;
-                                
-                                const currentX = e.clientX;
-                                const currentY = e.clientY;
-                                const width = Math.abs(currentX - startX);
-                                const height = Math.abs(currentY - startY);
-                                const left = Math.min(startX, currentX);
-                                const top = Math.min(startY, currentY);
-                                
-                                // Only capture if selection is large enough
-                                if (width > 10 && height > 10) {
-                                    window.electronAPI.sendSelection({ x: left, y: top, width, height });
+                                if (currentBounds.width > 10 && currentBounds.height > 10) {
+                                    toolbar.classList.remove('hidden');
+                                    const toolbarHeight = 60;
+                                    let top = currentBounds.y + currentBounds.height + 10;
+                                    if (top + toolbarHeight > window.innerHeight) top = currentBounds.y - toolbarHeight - 10;
+                                    let left = currentBounds.x + (currentBounds.width / 2) - 100;
+                                    left = Math.max(10, Math.min(window.innerWidth - 210, left));
+                                    toolbar.style.top = top + 'px';
+                                    toolbar.style.left = left + 'px';
                                 } else {
-                                    window.electronAPI.cancelSelection();
+                                    selection.style.display = 'none';
+                                    toolbar.classList.add('hidden');
                                 }
                             });
 
-                            // ESC to cancel
                             document.addEventListener('keydown', (e) => {
-                                if (e.key === 'Escape') {
-                                    window.electronAPI.cancelSelection();
-                                }
-                            });
-
-                            // Right-click to cancel
-                            document.addEventListener('contextmenu', (e) => {
-                                e.preventDefault();
-                                window.electronAPI.cancelSelection();
+                                if (e.key === 'Escape') cancel();
+                                if (e.key === 'Enter' && !toolbar.classList.contains('hidden')) capture();
                             });
                         </script>
                     </body>
@@ -268,13 +369,13 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
 
                 selectionWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(selectionHTML)}`);
 
-                // Auto-cancel after 60 seconds
+                // Auto-cancel after 2 minutes
                 setTimeout(() => {
                     if (selectionWindow && !selectionWindow.isDestroyed()) {
                         cleanup();
                         reject(new Error('Area selection timeout'));
                     }
-                }, 60000);
+                }, 120000);
             });
         } catch (error) {
             console.error('Failed to capture area:', error);

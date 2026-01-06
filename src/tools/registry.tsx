@@ -47,7 +47,8 @@ import {
     ScanLine,
     Move,
     Camera,
-    Package
+    Package,
+    Film
 } from 'lucide-react';
 
 
@@ -148,6 +149,7 @@ const StatsMonitor = React.lazy(() => import('./utilities/stats-monitor/StatsMon
 const ApplicationManager = React.lazy(() => import('./utilities/ApplicationManager').then(m => ({ default: m.default })));
 const SystemCleaner = React.lazy(() => import('./utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
 const Xnapper = React.lazy(() => import('./screenshot/Xnapper'));
+const VideoFrames = React.lazy(() => import('./media/VideoFrames'));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -796,6 +798,17 @@ export const TOOLS: ToolDefinition[] = [
         component: Xnapper,
         keywords: ['screenshot', 'capture', 'screen', 'image', 'xnapper', 'snap'],
         shortcut: 'Ctrl+Shift+S'
+    },
+    {
+        id: 'video-frames',
+        name: 'Video Frame Tools',
+        path: '/video-frames',
+        description: 'Extract frames from videos or create videos from images',
+        category: 'utilities',
+        icon: Film,
+        color: 'text-pink-500',
+        component: VideoFrames,
+        keywords: ['video', 'frames', 'extract', 'frames to video', 'animation', 'screen record', 'gif'],
     },
 
     // Settings (Special tool - not in any category)
