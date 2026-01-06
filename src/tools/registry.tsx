@@ -46,7 +46,8 @@ import {
     Eraser,
     ScanLine,
     Move,
-    Camera
+    Camera,
+    Package
 } from 'lucide-react';
 
 
@@ -144,6 +145,7 @@ const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator')
 const DockerConverter = React.lazy(() => import('./development/DockerConverter').then(m => ({ default: m.DockerConverter })));
 const ClipboardManager = React.lazy(() => import('./utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
 const StatsMonitor = React.lazy(() => import('./utilities/stats-monitor/StatsMonitor').then(m => ({ default: m.default })));
+const ApplicationManager = React.lazy(() => import('./utilities/ApplicationManager').then(m => ({ default: m.default })));
 const SystemCleaner = React.lazy(() => import('./utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
 const Xnapper = React.lazy(() => import('./screenshot/Xnapper'));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
@@ -760,6 +762,17 @@ export const TOOLS: ToolDefinition[] = [
         component: StatsMonitor,
         keywords: ['cpu', 'memory', 'disk', 'network', 'battery', 'gpu', 'stats', 'monitor'],
         shortcut: 'Ctrl+Shift+M'
+    },
+    {
+        id: 'application-manager',
+        name: 'Application Manager',
+        path: '/application-manager',
+        description: 'Manage installed applications and running processes',
+        category: 'utilities',
+        icon: Package,
+        color: 'text-blue-500',
+        component: ApplicationManager,
+        keywords: ['apps', 'processes', 'uninstall', 'cleanup', 'task manager', 'system apps'],
     },
     {
         id: 'system-cleaner',

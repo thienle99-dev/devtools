@@ -1945,116 +1945,10 @@ function setupScreenshotHandlers(win$1) {
 			if (sources.length === 0) throw new Error("No screens available");
 			const fullScreenImage = sources[0].thumbnail;
 			const display = screen.getPrimaryDisplay();
-			const selectionWindow = new BrowserWindow({
-				fullscreen: true,
-				frame: false,
-				transparent: true,
-				alwaysOnTop: true,
-				skipTaskbar: true,
-				resizable: false,
-				webPreferences: {
-					nodeIntegration: false,
-					contextIsolation: true,
-					preload: path.join(__dirname$1, "../preload/preload.js")
-				}
-			});
-			await selectionWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body {
-                            width: 100vw;
-                            height: 100vh;
-                            cursor: crosshair;
-                            background: rgba(0, 0, 0, 0.3);
-                            overflow: hidden;
-                        }
-                        #selection {
-                            position: absolute;
-                            border: 2px solid #3b82f6;
-                            background: rgba(59, 130, 246, 0.1);
-                            display: none;
-                        }
-                        #instructions {
-                            position: absolute;
-                            top: 20px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            background: rgba(0, 0, 0, 0.8);
-                            color: white;
-                            padding: 12px 24px;
-                            border-radius: 8px;
-                            font-family: system-ui, -apple-system, sans-serif;
-                            font-size: 14px;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div id="instructions">Drag to select area • Press ESC to cancel</div>
-                    <div id="selection"></div>
-                    <script>
-                        const selection = document.getElementById('selection');
-                        let startX, startY, isDrawing = false;
-
-                        document.addEventListener('mousedown', (e) => {
-                            isDrawing = true;
-                            startX = e.clientX;
-                            startY = e.clientY;
-                            selection.style.left = startX + 'px';
-                            selection.style.top = startY + 'px';
-                            selection.style.width = '0px';
-                            selection.style.height = '0px';
-                            selection.style.display = 'block';
-                        });
-
-                        document.addEventListener('mousemove', (e) => {
-                            if (!isDrawing) return;
-                            const currentX = e.clientX;
-                            const currentY = e.clientY;
-                            const width = Math.abs(currentX - startX);
-                            const height = Math.abs(currentY - startY);
-                            const left = Math.min(startX, currentX);
-                            const top = Math.min(startY, currentY);
-                            
-                            selection.style.left = left + 'px';
-                            selection.style.top = top + 'px';
-                            selection.style.width = width + 'px';
-                            selection.style.height = height + 'px';
-                        });
-
-                        document.addEventListener('mouseup', (e) => {
-                            if (!isDrawing) return;
-                            isDrawing = false;
-                            
-                            const currentX = e.clientX;
-                            const currentY = e.clientY;
-                            const width = Math.abs(currentX - startX);
-                            const height = Math.abs(currentY - startY);
-                            const left = Math.min(startX, currentX);
-                            const top = Math.min(startY, currentY);
-                            
-                            // Only capture if selection is large enough
-                            if (width > 10 && height > 10) {
-                                window.electronAPI.sendSelection({ x: left, y: top, width, height });
-                            } else {
-                                window.electronAPI.cancelSelection();
-                            }
-                        });
-
-                        document.addEventListener('keydown', (e) => {
-                            if (e.key === 'Escape') {
-                                window.electronAPI.cancelSelection();
-                            }
-                        });
-                    <\/script>
-                </body>
-                </html>
-            `)}`);
 			return new Promise((resolve, reject) => {
+				let selectionWindow = null;
 				const cleanup = () => {
-					selectionWindow.close();
+					if (selectionWindow && !selectionWindow.isDestroyed()) selectionWindow.close();
 					ipcMain.removeHandler("screenshot:area-selected");
 					ipcMain.removeHandler("screenshot:area-cancelled");
 				};
@@ -2077,8 +1971,125 @@ function setupScreenshotHandlers(win$1) {
 					cleanup();
 					reject(/* @__PURE__ */ new Error("Area selection cancelled"));
 				});
+				selectionWindow = new BrowserWindow({
+					fullscreen: true,
+					frame: false,
+					transparent: true,
+					alwaysOnTop: true,
+					skipTaskbar: true,
+					resizable: false,
+					webPreferences: {
+						nodeIntegration: false,
+						contextIsolation: true,
+						preload: path.join(__dirname$1, "../preload/preload.js")
+					}
+				});
+				selectionWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            body {
+                                width: 100vw;
+                                height: 100vh;
+                                cursor: crosshair;
+                                background: rgba(0, 0, 0, 0.1);
+                                overflow: hidden;
+                            }
+                            #selection {
+                                position: absolute;
+                                border: 2px solid #3b82f6;
+                                background: rgba(59, 130, 246, 0.1);
+                                display: none;
+                                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
+                            }
+                            #instructions {
+                                position: absolute;
+                                top: 20px;
+                                left: 50%;
+                                transform: translateX(-50%);
+                                background: rgba(0, 0, 0, 0.8);
+                                color: white;
+                                padding: 12px 24px;
+                                border-radius: 8px;
+                                font-family: system-ui, -apple-system, sans-serif;
+                                font-size: 14px;
+                                z-index: 1000;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div id="instructions">Drag to select area • ESC or Right-click to cancel</div>
+                        <div id="selection"></div>
+                        <script>
+                            const selection = document.getElementById('selection');
+                            let startX, startY, isDrawing = false;
+
+                            document.addEventListener('mousedown', (e) => {
+                                if (e.button !== 0) return; // Only left click
+                                isDrawing = true;
+                                startX = e.clientX;
+                                startY = e.clientY;
+                                selection.style.left = startX + 'px';
+                                selection.style.top = startY + 'px';
+                                selection.style.width = '0px';
+                                selection.style.height = '0px';
+                                selection.style.display = 'block';
+                            });
+
+                            document.addEventListener('mousemove', (e) => {
+                                if (!isDrawing) return;
+                                const currentX = e.clientX;
+                                const currentY = e.clientY;
+                                const width = Math.abs(currentX - startX);
+                                const height = Math.abs(currentY - startY);
+                                const left = Math.min(startX, currentX);
+                                const top = Math.min(startY, currentY);
+                                
+                                selection.style.left = left + 'px';
+                                selection.style.top = top + 'px';
+                                selection.style.width = width + 'px';
+                                selection.style.height = height + 'px';
+                            });
+
+                            document.addEventListener('mouseup', (e) => {
+                                if (!isDrawing) return;
+                                isDrawing = false;
+                                
+                                const currentX = e.clientX;
+                                const currentY = e.clientY;
+                                const width = Math.abs(currentX - startX);
+                                const height = Math.abs(currentY - startY);
+                                const left = Math.min(startX, currentX);
+                                const top = Math.min(startY, currentY);
+                                
+                                // Only capture if selection is large enough
+                                if (width > 10 && height > 10) {
+                                    window.electronAPI.sendSelection({ x: left, y: top, width, height });
+                                } else {
+                                    window.electronAPI.cancelSelection();
+                                }
+                            });
+
+                            // ESC to cancel
+                            document.addEventListener('keydown', (e) => {
+                                if (e.key === 'Escape') {
+                                    window.electronAPI.cancelSelection();
+                                }
+                            });
+
+                            // Right-click to cancel
+                            document.addEventListener('contextmenu', (e) => {
+                                e.preventDefault();
+                                window.electronAPI.cancelSelection();
+                            });
+                        <\/script>
+                    </body>
+                    </html>
+                `)}`);
 				setTimeout(() => {
-					if (!selectionWindow.isDestroyed()) {
+					if (selectionWindow && !selectionWindow.isDestroyed()) {
 						cleanup();
 						reject(/* @__PURE__ */ new Error("Area selection timeout"));
 					}
