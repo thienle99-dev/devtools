@@ -1938,13 +1938,20 @@ function setupScreenshotHandlers(win$1) {
 	});
 	ipcMain.handle("screenshot:capture-area", async () => {
 		try {
+			console.log("Capturing screen for area selection...");
 			const sources = await desktopCapturer.getSources({
 				types: ["screen"],
 				thumbnailSize: screen.getPrimaryDisplay().size
 			});
-			if (sources.length === 0) throw new Error("No screens available");
+			console.log(`Found ${sources.length} sources.`);
+			if (sources.length === 0) {
+				console.error("No screens available for capture.");
+				throw new Error("No screens available");
+			}
 			const fullScreenImage = sources[0].thumbnail;
 			const display = screen.getPrimaryDisplay();
+			console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
+			console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
 			return new Promise((resolve, reject) => {
 				let selectionWindow = null;
 				const cleanup = () => {
@@ -1975,9 +1982,13 @@ function setupScreenshotHandlers(win$1) {
 					fullscreen: true,
 					frame: false,
 					transparent: true,
+					hasShadow: false,
+					backgroundColor: "#00000000",
 					alwaysOnTop: true,
 					skipTaskbar: true,
 					resizable: false,
+					enableLargerThanScreen: true,
+					movable: false,
 					webPreferences: {
 						nodeIntegration: false,
 						contextIsolation: true,

@@ -84,18 +84,25 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
     ipcMain.handle('screenshot:capture-area', async () => {
         try {
             // First, capture the full screen
+            console.log('Capturing screen for area selection...');
             const sources = await desktopCapturer.getSources({
                 types: ['screen'],
                 thumbnailSize: screen.getPrimaryDisplay().size
             });
 
+            console.log(`Found ${sources.length} sources.`);
+
             if (sources.length === 0) {
+                console.error('No screens available for capture.');
                 throw new Error('No screens available');
             }
 
             const primaryScreen = sources[0];
             const fullScreenImage = primaryScreen.thumbnail;
             const display = screen.getPrimaryDisplay();
+
+            console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
+            console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
 
             // Wait for user selection - setup handlers FIRST
             return new Promise((resolve, reject) => {
@@ -139,9 +146,13 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                     fullscreen: true,
                     frame: false,
                     transparent: true,
+                    hasShadow: false, // Ensure no shadow
+                    backgroundColor: '#00000000', // Explicitly transparent
                     alwaysOnTop: true,
                     skipTaskbar: true,
                     resizable: false,
+                    enableLargerThanScreen: true, // Allow covering multiple screens
+                    movable: false,
                     webPreferences: {
                         nodeIntegration: false,
                         contextIsolation: true,

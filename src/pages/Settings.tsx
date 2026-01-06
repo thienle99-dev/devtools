@@ -7,8 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Switch } from '../components/ui/Switch';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Monitor, Type, WrapText, History, Trash2, Smartphone, Keyboard, Sun, Moon, Laptop, Shield, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, ExternalLink, Bell, Download, Upload, RotateCcw, Info, HelpCircle, BookOpen, MessageSquare, Github, Zap, Save, FileText, AlertTriangle, Sparkles, Settings as SettingsIcon, Database, Activity } from 'lucide-react';
-import { CATEGORIES, getToolsByCategory } from '../tools/registry';
+import { Monitor, WrapText, Sun, Moon, Laptop, Shield, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Bell, Download, Upload, RotateCcw, Info, Github, Zap, Trash2, Settings as SettingsIcon, Database, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 
@@ -25,8 +24,6 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
         fontSize, setFontSize,
         wordWrap, setWordWrap,
         theme, setTheme,
-        minimizeToTray, setMinimizeToTray,
-        startMinimized, setStartMinimized,
         notificationsEnabled, setNotificationsEnabled,
         notificationSound, setNotificationSound,
         toastDuration, setToastDuration,
@@ -808,7 +805,7 @@ interface PermissionItemProps {
     permissionKey: string;
     permission?: any;
     onCheck: () => void;
-    onTest: () => void;
+    onTest?: () => void;
     onRequest: () => void;
 }
 
@@ -822,68 +819,59 @@ const PermissionItem: React.FC<PermissionItemProps> = ({
 }) => {
     const status = permission?.status || 'unknown';
     const message = permission?.message;
+    const isLoading = permission?.checking;
 
     const getStatusIcon = () => {
+        if (isLoading) return <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />;
         switch (status) {
-            case 'granted':
-                return <CheckCircle2 className="w-5 h-5 text-green-400" />;
-            case 'denied':
-                return <XCircle className="w-5 h-5 text-red-400" />;
-            case 'loading':
-                return <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />;
-            case 'error':
-                return <AlertCircle className="w-5 h-5 text-amber-400" />;
-            default:
-                return <AlertCircle className="w-5 h-5 text-foreground-muted" />;
+            case 'authorized': return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+            case 'denied': return <XCircle className="w-5 h-5 text-red-500" />;
+            case 'restricted': return <AlertCircle className="w-5 h-5 text-amber-500" />;
+            default: return <AlertCircle className="w-5 h-5 text-gray-400" />;
         }
     };
 
     const getStatusColor = () => {
         switch (status) {
-            case 'granted':
-                return 'text-green-400';
-            case 'denied':
-                return 'text-red-400';
-            case 'loading':
-                return 'text-indigo-400';
-            case 'error':
-                return 'text-amber-400';
-            default:
-                return 'text-foreground-muted';
+            case 'authorized': return 'bg-emerald-500/10 border-emerald-500/20';
+            case 'denied': return 'bg-red-500/10 border-red-500/20';
+            case 'restricted': return 'bg-amber-500/10 border-amber-500/20';
+            default: return 'bg-gray-500/10 border-gray-500/20';
         }
     };
 
     return (
-        <div className="flex items-start justify-between p-4 border-b border-border-glass last:border-b-0">
-            <div className="flex items-start space-x-3 flex-1">
-                <div className="mt-0.5">{getStatusIcon()}</div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{name}</p>
-                    <p className="text-xs text-foreground-muted mt-0.5">{description}</p>
-                    {message && (
-                        <p className={`text-xs mt-1 ${getStatusColor()}`}>{message}</p>
-                    )}
+        <div className={cn(
+            "p-3 rounded-lg border flex items-center justify-between transition-all",
+            getStatusColor()
+        )}>
+            <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-white/50 dark:bg-black/20">
+                    {getStatusIcon()}
+                </div>
+                <div>
+                    <div className="font-medium flex items-center gap-2">
+                        {name}
+                        {status === 'authorized' && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Granted</span>}
+                        {status === 'denied' && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400">Denied</span>}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {message || description}
+                    </div>
                 </div>
             </div>
-            <div className="flex items-center gap-2 ml-4">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onCheck}
-                    disabled={status === 'loading'}
-                    className="text-xs"
-                >
-                    Check
+            <div className="flex items-center gap-2">
+                {onTest && (
+                    <Button variant="ghost" size="sm" onClick={onTest} disabled={isLoading}>
+                        Test
+                    </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={onCheck} disabled={isLoading} className="w-8 h-8 p-0">
+                    <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
                 </Button>
-                {status === 'denied' && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onRequest}
-                        className="text-xs"
-                    >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        Grant
+                {status !== 'authorized' && (
+                    <Button size="sm" onClick={onRequest} disabled={isLoading}>
+                        Request
                     </Button>
                 )}
             </div>
