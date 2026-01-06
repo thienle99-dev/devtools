@@ -20,8 +20,10 @@ interface PermissionsStore {
         // Common
         clipboard?: PermissionInfo;
         launchAtLogin?: PermissionInfo;
+        processManagement?: PermissionInfo;
+        appUninstall?: PermissionInfo;
     };
-    
+
     // Actions
     setPermission: (key: string, info: PermissionInfo) => void;
     setPermissions: (permissions: Record<string, PermissionInfo>) => void;
@@ -49,7 +51,7 @@ export const usePermissionsStore = create<PermissionsStore>((set, get) => ({
     setPermissions: (permissions) => set((state) => {
         const now = Date.now();
         const updated: Record<string, PermissionInfo> = {};
-        
+
         for (const [key, info] of Object.entries(permissions)) {
             updated[key] = {
                 ...info,
@@ -89,10 +91,10 @@ export const usePermissionsStore = create<PermissionsStore>((set, get) => ({
 
         try {
             let result: PermissionInfo;
-            
+
             if ((window as any).permissionsAPI) {
                 const api = (window as any).permissionsAPI;
-                
+
                 switch (key) {
                     case 'accessibility':
                         result = await api.checkAccessibility();
@@ -135,10 +137,10 @@ export const usePermissionsStore = create<PermissionsStore>((set, get) => ({
 
         try {
             let result: PermissionInfo;
-            
+
             if ((window as any).permissionsAPI) {
                 const api = (window as any).permissionsAPI;
-                
+
                 switch (key) {
                     case 'clipboard':
                         result = await api.testClipboard();

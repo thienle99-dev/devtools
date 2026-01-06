@@ -1,11 +1,12 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, X, Copy } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { AnnotationToolbar } from './AnnotationToolbar';
 import { CanvasPreview } from './CanvasPreview';
 import type { CanvasPreviewHandle } from './CanvasPreview';
 import { cropImage } from '../utils/crop';
+import { generateFinalImage } from '../utils/exportUtils';
 import { toast } from 'sonner';
 
 export const PreviewSection: React.FC = () => {
@@ -19,6 +20,15 @@ export const PreviewSection: React.FC = () => {
         cropBounds,
         setCropBounds,
         setCurrentScreenshot,
+        background,
+        backgroundPadding,
+        canvasData,
+        borderRadius,
+        shadowBlur,
+        shadowOpacity,
+        shadowOffsetX,
+        shadowOffsetY,
+        inset,
     } = useXnapperStore();
 
     const canvasPreviewRef = useRef<CanvasPreviewHandle>(null);
@@ -26,6 +36,8 @@ export const PreviewSection: React.FC = () => {
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [annotationCount, setAnnotationCount] = useState(0);
+    const [showCopyFlash, setShowCopyFlash] = useState(false);
+    const [isCopying, setIsCopying] = useState(false);
 
     // Handle history updates from CanvasPreview
     const handleHistoryChange = useCallback((undo: boolean, redo: boolean, count: number) => {
@@ -33,6 +45,51 @@ export const PreviewSection: React.FC = () => {
         setCanRedo(redo);
         setAnnotationCount(count);
     }, []);
+
+    // Double-click to copy
+    const handleDoubleClickCopy = async () => {
+        if (!currentScreenshot || isCopying || isCropping) return;
+
+        setIsCopying(true);
+        try {
+            // Generate final image with all effects
+            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                autoBalance,
+                redactionAreas,
+                background,
+                backgroundPadding,
+                annotations: canvasData || undefined,
+                borderRadius,
+                shadowBlur,
+                shadowOpacity,
+                shadowOffsetX,
+                shadowOffsetY,
+                inset,
+            });
+
+            // Convert to blob and copy
+            const response = await fetch(processedDataUrl);
+            const blob = await response.blob();
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    [blob.type]: blob,
+                }),
+            ]);
+
+            // Show visual feedback
+            setShowCopyFlash(true);
+            toast.success('Copied to clipboard!', {
+                icon: <Copy className="w-4 h-4" />,
+            });
+
+            setTimeout(() => setShowCopyFlash(false), 500);
+        } catch (error) {
+            console.error('Copy failed:', error);
+            toast.error('Failed to copy to clipboard');
+        } finally {
+            setIsCopying(false);
+        }
+    };
 
     if (!currentScreenshot) {
         return (
@@ -168,11 +225,27 @@ export const PreviewSection: React.FC = () => {
             />
 
             {/* Canvas Preview Area */}
-            <div className="flex-1 overflow-hidden relative">
+            <div
+                className="flex-1 overflow-hidden relative"
+                onDoubleClick={handleDoubleClickCopy}
+                style={{ cursor: isCopying ? 'wait' : 'default' }}
+            >
                 <CanvasPreview
                     ref={canvasPreviewRef}
                     onHistoryChange={handleHistoryChange}
                 />
+
+                {/* Copy Flash Feedback */}
+                {showCopyFlash && (
+                    <div className="absolute inset-0 bg-indigo-500/20 pointer-events-none animate-pulse z-50" />
+                )}
+
+                {/* Double-Click Hint (show when not cropping and not copying) */}
+                {!isCropping && !isCopying && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-sm text-white text-sm rounded-lg border border-white/10 pointer-events-none opacity-60 hover:opacity-100 transition-opacity">
+                        💡 Double-click to copy
+                    </div>
+                )}
 
                 {/* Crop Controls */}
                 {isCropping && (

@@ -1,26 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useXnapperStore } from '../../store/xnapperStore';
 import { CaptureSection } from './components/CaptureSection';
 import { PreviewSection } from './components/PreviewSection';
-import { ExportPanel } from './components/ExportPanel';
-import { RedactionPanel } from './components/RedactionPanel';
-import { BackgroundPanel } from './components/BackgroundPanel';
-import { HistoryPanel } from './components/HistoryPanel';
-import { Shield, Palette, Download, Clock } from 'lucide-react';
-import { cn } from '../../utils/cn';
-
-type SidePanel = 'redaction' | 'background' | 'export' | 'history';
+import { XnapperStylePanel } from './components/XnapperStylePanel';
 
 export const Xnapper: React.FC = () => {
     const { currentScreenshot } = useXnapperStore();
-    const [activePanel, setActivePanel] = useState<SidePanel>('export');
-
-    const panels: Array<{ id: SidePanel; label: string; icon: any }> = [
-        { id: 'redaction', label: 'Redaction', icon: Shield },
-        { id: 'background', label: 'Background', icon: Palette },
-        { id: 'export', label: 'Export', icon: Download },
-        { id: 'history', label: 'History', icon: Clock },
-    ];
 
     return (
         <div className="h-full flex flex-col">
@@ -45,39 +30,12 @@ export const Xnapper: React.FC = () => {
                     /* Preview and edit mode - screenshot captured */
                     <div className="h-full flex">
                         {/* Preview */}
-                        <div className="flex-1 border-r border-border-glass">
+                        <div className="flex-1">
                             <PreviewSection />
                         </div>
 
-                        {/* Side panel */}
-                        <div className="w-[380px] flex flex-col">
-                            {/* Panel tabs */}
-                            <div className="flex border-b border-border-glass">
-                                {panels.map(({ id, label, icon: Icon }) => (
-                                    <button
-                                        key={id}
-                                        onClick={() => setActivePanel(id)}
-                                        className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-3 px-1 transition-all text-xs font-medium border-b-2 hover:bg-white/5",
-                                            activePanel === id
-                                                ? "border-indigo-500 text-indigo-400 bg-indigo-500/5"
-                                                : "border-transparent text-foreground-secondary"
-                                        )}
-                                    >
-                                        <Icon className="w-3.5 h-3.5" />
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Panel content */}
-                            <div className="flex-1 overflow-y-auto">
-                                {activePanel === 'redaction' && <RedactionPanel />}
-                                {activePanel === 'background' && <BackgroundPanel />}
-                                {activePanel === 'export' && <ExportPanel />}
-                                {activePanel === 'history' && <HistoryPanel />}
-                            </div>
-                        </div>
+                        {/* Xnapper Style Panel - Always visible on right */}
+                        <XnapperStylePanel />
                     </div>
                 )}
             </div>

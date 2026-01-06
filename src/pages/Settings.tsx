@@ -333,6 +333,38 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                                 toast.info('Opening system settings...');
                             }}
                         />
+                        <PermissionItem
+                            name="Process Management"
+                            description="Required for Application Manager to view and kill running processes"
+                            permissionKey="processManagement"
+                            permission={permissions.processManagement || { status: 'unknown', message: 'Not checked yet' }}
+                            onCheck={() => checkPermission('processManagement')}
+                            onTest={() => {
+                                testPermission('processManagement');
+                                toast.info('Testing process management permission...');
+                            }}
+                            onRequest={() => {
+                                openSystemPreferences();
+                                toast.info('Opening system settings...');
+                            }}
+                        />
+                        {platform === 'darwin' && (
+                            <PermissionItem
+                                name="Application Uninstall"
+                                description="Required for Application Manager to uninstall applications (may require admin password)"
+                                permissionKey="appUninstall"
+                                permission={permissions.appUninstall || { status: 'unknown', message: 'Not checked yet' }}
+                                onCheck={() => checkPermission('appUninstall')}
+                                onTest={() => {
+                                    testPermission('appUninstall');
+                                    toast.info('Testing app uninstall permission...');
+                                }}
+                                onRequest={() => {
+                                    openSystemPreferences();
+                                    toast.info('Opening system settings...');
+                                }}
+                            />
+                        )}
                     </Card>
                 </section>
 

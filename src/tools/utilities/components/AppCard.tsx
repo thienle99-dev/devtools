@@ -4,7 +4,7 @@ import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { cn } from '../../../utils/cn';
 import type { InstalledApp } from '../../../types/application-manager';
-import { formatSize } from '../../system-cleaner/utils/formatUtils';
+import { formatSize } from '../system-cleaner/utils/formatUtils';
 
 interface AppCardProps {
     app: InstalledApp;
@@ -24,8 +24,8 @@ export const AppCard: React.FC<AppCardProps> = ({ app, onUninstall, disabled }) 
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className={cn(
                         "p-2.5 rounded-lg shrink-0",
-                        isSystemApp 
-                            ? "bg-amber-500/10 text-amber-400" 
+                        isSystemApp
+                            ? "bg-amber-500/10 text-amber-400"
                             : "bg-indigo-500/10 text-indigo-400"
                     )}>
                         <Package className="w-5 h-5" />

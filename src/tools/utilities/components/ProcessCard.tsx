@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { cn } from '../../../utils/cn';
 import type { RunningProcess, ProcessGroup } from '../../../types/application-manager';
 import { ProcessMetrics } from './ProcessMetrics';
-import { formatSize } from '../../system-cleaner/utils/formatUtils';
+import { formatSize } from '../system-cleaner/utils/formatUtils';
 
 interface ProcessCardProps {
     process: RunningProcess;
@@ -31,8 +31,8 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({ process, onKill, disab
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className={cn(
                         "p-2.5 rounded-lg shrink-0",
-                        isSystemProcess 
-                            ? "bg-amber-500/10 text-amber-400" 
+                        isSystemProcess
+                            ? "bg-amber-500/10 text-amber-400"
                             : "bg-indigo-500/10 text-indigo-400"
                     )}>
                         <Activity className="w-5 h-5" />
@@ -110,8 +110,8 @@ export const ProcessGroupCard: React.FC<ProcessGroupCardProps> = ({ group, onKil
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className={cn(
                         "p-2.5 rounded-lg shrink-0",
-                        isSystemProcess 
-                            ? "bg-amber-500/10 text-amber-400" 
+                        isSystemProcess
+                            ? "bg-amber-500/10 text-amber-400"
                             : "bg-indigo-500/10 text-indigo-400"
                     )}>
                         <Activity className="w-5 h-5" />

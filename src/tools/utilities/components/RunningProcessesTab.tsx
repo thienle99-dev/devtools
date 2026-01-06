@@ -7,7 +7,6 @@ import { ProcessCard, ProcessGroupCard } from './ProcessCard';
 import { useRunningProcesses } from '../hooks/useRunningProcesses';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
-import type { RunningProcess, ProcessGroup } from '../../../types/application-manager';
 
 interface RunningProcessesTabProps {
     onKill: (pid: number) => Promise<void>;
@@ -32,7 +31,7 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
     const filteredProcesses = useMemo(() => {
         if (!searchQuery.trim()) return processes;
         const query = searchQuery.toLowerCase();
-        return processes.filter(p => 
+        return processes.filter(p =>
             p.name.toLowerCase().includes(query) ||
             p.command?.toLowerCase().includes(query) ||
             p.user?.toLowerCase().includes(query)
@@ -42,7 +41,7 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
     const filteredGroups = useMemo(() => {
         if (!searchQuery.trim()) return groups;
         const query = searchQuery.toLowerCase();
-        return groups.filter(g => 
+        return groups.filter(g =>
             g.name.toLowerCase().includes(query) ||
             g.processes.some(p => p.command?.toLowerCase().includes(query))
         );

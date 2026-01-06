@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Package, Activity, RefreshCw } from 'lucide-react';
+import { Package, Activity } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { InstalledAppsTab } from './components/InstalledAppsTab';
 import { RunningProcessesTab } from './components/RunningProcessesTab';
