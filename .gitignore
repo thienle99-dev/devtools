@@ -16,7 +16,6 @@ node_modules
 dist
 dist-ssr
 dist-electron
-build
 out
 *.local
 

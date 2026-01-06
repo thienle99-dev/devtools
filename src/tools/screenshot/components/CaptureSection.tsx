@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Monitor, Square, MousePointer2, Camera } from 'lucide-react';
+import { Monitor, Square, MousePointer2, Camera, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { CaptureMode, CaptureSource } from '../types';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export const CaptureSection: React.FC = () => {
     const {
@@ -14,6 +15,9 @@ export const CaptureSection: React.FC = () => {
         setIsCapturing,
         setShowPreview,
         addToHistory,
+        history,
+        setCanvasData,
+        clearRedactionAreas,
     } = useXnapperStore();
 
     const [sources, setSources] = useState<CaptureSource[]>([]);
@@ -190,6 +194,47 @@ export const CaptureSection: React.FC = () => {
                     Capture Screenshot
                 </Button>
             </div>
+
+            {/* Recent History */}
+            {history.length > 0 && (
+                <div className="pt-8 border-t border-border-glass mt-8">
+                    <h3 className="text-sm font-semibold mb-4 text-foreground-secondary flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Recent Captures
+                    </h3>
+                    <div className="grid grid-cols-4 gap-3">
+                        {history.slice(0, 4).map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => {
+                                    setCurrentScreenshot(item);
+                                    setCanvasData(null);
+                                    clearRedactionAreas();
+                                    setShowPreview(true);
+                                }}
+                                className="group relative aspect-video bg-glass-panel rounded-lg overflow-hidden border border-border-glass hover:border-indigo-500 transition-all"
+                            >
+                                {item.dataUrl ? (
+                                    <img
+                                        src={item.dataUrl}
+                                        alt="Recent"
+                                        className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-black/20">
+                                        <Square className="w-6 h-6 opacity-30" />
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 flex items-end p-2 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] text-white font-medium truncate w-full text-left">
+                                        {format(new Date(item.timestamp), 'MMM d, h:mm a')}
+                                    </span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

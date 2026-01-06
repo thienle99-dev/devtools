@@ -5,10 +5,11 @@ import { PreviewSection } from './components/PreviewSection';
 import { ExportPanel } from './components/ExportPanel';
 import { RedactionPanel } from './components/RedactionPanel';
 import { BackgroundPanel } from './components/BackgroundPanel';
-import { Shield, Palette, Download } from 'lucide-react';
+import { HistoryPanel } from './components/HistoryPanel';
+import { Shield, Palette, Download, Clock } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-type SidePanel = 'redaction' | 'background' | 'export';
+type SidePanel = 'redaction' | 'background' | 'export' | 'history';
 
 export const Xnapper: React.FC = () => {
     const { currentScreenshot } = useXnapperStore();
@@ -18,6 +19,7 @@ export const Xnapper: React.FC = () => {
         { id: 'redaction', label: 'Redaction', icon: Shield },
         { id: 'background', label: 'Background', icon: Palette },
         { id: 'export', label: 'Export', icon: Download },
+        { id: 'history', label: 'History', icon: Clock },
     ];
 
     return (
@@ -56,13 +58,13 @@ export const Xnapper: React.FC = () => {
                                         key={id}
                                         onClick={() => setActivePanel(id)}
                                         className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all text-sm font-medium border-b-2",
+                                            "flex-1 flex items-center justify-center gap-2 py-3 px-1 transition-all text-xs font-medium border-b-2 hover:bg-white/5",
                                             activePanel === id
                                                 ? "border-indigo-500 text-indigo-400 bg-indigo-500/5"
-                                                : "border-transparent text-foreground-secondary hover:text-foreground hover:bg-glass-panel/50"
+                                                : "border-transparent text-foreground-secondary"
                                         )}
                                     >
-                                        <Icon className="w-4 h-4" />
+                                        <Icon className="w-3.5 h-3.5" />
                                         {label}
                                     </button>
                                 ))}
@@ -73,6 +75,7 @@ export const Xnapper: React.FC = () => {
                                 {activePanel === 'redaction' && <RedactionPanel />}
                                 {activePanel === 'background' && <BackgroundPanel />}
                                 {activePanel === 'export' && <ExportPanel />}
+                                {activePanel === 'history' && <HistoryPanel />}
                             </div>
                         </div>
                     </div>

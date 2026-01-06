@@ -620,6 +620,19 @@ function createWindow() {
   // Setup screenshot handlers
   setupScreenshotHandlers(win);
 
+  // Window settings IPC handlers
+  ipcMain.on('window-set-opacity', (_event, opacity: number) => {
+    if (win) {
+      win.setOpacity(Math.max(0.5, Math.min(1.0, opacity)));
+    }
+  });
+
+  ipcMain.on('window-set-always-on-top', (_event, alwaysOnTop: boolean) => {
+    if (win) {
+      win.setAlwaysOnTop(alwaysOnTop);
+    }
+  });
+
   // ========== Permissions IPC Handlers ==========
   
   // Check all permissions

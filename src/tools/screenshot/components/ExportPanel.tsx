@@ -5,7 +5,7 @@ import { useXnapperStore } from '../../../store/xnapperStore';
 import type { ExportFormat } from '../../../store/xnapperStore';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
-import { generateFinalImage } from '../utils/exportUtils';
+import { generateFinalImage, SOCIAL_PRESETS, type SocialPreset, type OutputConfig } from '../utils/exportUtils';
 
 export const ExportPanel: React.FC = () => {
     const {
@@ -18,16 +18,36 @@ export const ExportPanel: React.FC = () => {
         redactionAreas,
         background,
         backgroundPadding,
+        canvasData,
     } = useXnapperStore();
 
     const [filename, setFilename] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    // Resize / Preset State
+    const [resizeMode, setResizeMode] = useState<'original' | 'preset' | 'custom'>('original');
+    const [selectedPreset, setSelectedPreset] = useState<SocialPreset | null>(null);
+    const [customWidth, setCustomWidth] = useState<number | ''>('');
+    const [customHeight, setCustomHeight] = useState<number | ''>('');
 
     const formats: Array<{ format: ExportFormat; label: string; description: string }> = [
         { format: 'png', label: 'PNG', description: 'Lossless, best quality' },
         { format: 'jpg', label: 'JPG', description: 'Smaller file size' },
         { format: 'webp', label: 'WebP', description: 'Modern format' },
     ];
+
+    const getOutputConfig = (): OutputConfig | undefined => {
+        if (resizeMode === 'original') return undefined;
+
+        const config: OutputConfig = {};
+        if (resizeMode === 'preset' && selectedPreset) {
+            config.preset = selectedPreset;
+        } else if (resizeMode === 'custom') {
+            if (customWidth) config.width = Number(customWidth);
+            if (customHeight) config.height = Number(customHeight);
+        }
+        return Object.keys(config).length > 0 ? config : undefined;
+    };
 
     const handleSave = async () => {
         if (!currentScreenshot) return;
@@ -40,6 +60,8 @@ export const ExportPanel: React.FC = () => {
                 redactionAreas,
                 background,
                 backgroundPadding,
+                annotations: canvasData || undefined,
+                outputConfig: getOutputConfig(),
             });
 
             const result = await (window as any).screenshotAPI?.saveFile(
@@ -75,6 +97,8 @@ export const ExportPanel: React.FC = () => {
                 redactionAreas,
                 background,
                 backgroundPadding,
+                annotations: canvasData || undefined,
+                outputConfig: getOutputConfig(),
             });
 
             // Convert data URL to blob
@@ -152,6 +176,72 @@ export const ExportPanel: React.FC = () => {
                     />
                 </div>
             )}
+
+            {/* Resize / Presets */}
+            <div>
+                <h3 className="text-lg font-semibold mb-4">Dimensions</h3>
+                <div className="flex bg-glass-panel rounded-lg p-1 mb-4">
+                    {(['original', 'preset', 'custom'] as const).map(mode => (
+                        <button
+                            key={mode}
+                            onClick={() => setResizeMode(mode)}
+                            className={cn(
+                                "flex-1 py-1.5 text-sm font-medium rounded-md transition-all capitalize",
+                                resizeMode === mode ? "bg-indigo-500/20 text-indigo-400" : "text-foreground-secondary hover:text-foreground"
+                            )}
+                        >
+                            {mode}
+                        </button>
+                    ))}
+                </div>
+
+                {resizeMode === 'preset' && (
+                    <div className="grid grid-cols-2 gap-3">
+                        {(Object.entries(SOCIAL_PRESETS) as [SocialPreset, { label: string }][]).map(([key, { label }]) => (
+                            <button
+                                key={key}
+                                onClick={() => setSelectedPreset(key)}
+                                className={cn(
+                                    "px-4 py-3 rounded-lg border text-sm font-medium transition-all text-left",
+                                    selectedPreset === key
+                                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                        : "border-border-glass bg-glass-panel text-foreground-secondary hover:border-indigo-500/50"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {resizeMode === 'custom' && (
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs text-foreground-muted mb-1 block">Width</label>
+                            <input
+                                type="number"
+                                value={customWidth}
+                                onChange={(e) => setCustomWidth(e.target.value ? Number(e.target.value) : '')}
+                                placeholder="Width px"
+                                className="w-full px-3 py-2 bg-glass-panel border border-border-glass rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-foreground-muted mb-1 block">Height</label>
+                            <input
+                                type="number"
+                                value={customHeight}
+                                onChange={(e) => setCustomHeight(e.target.value ? Number(e.target.value) : '')}
+                                placeholder="Height px"
+                                className="w-full px-3 py-2 bg-glass-panel border border-border-glass rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                            />
+                        </div>
+                    </div>
+                )}
+                {resizeMode === 'original' && (
+                    <p className="text-xs text-foreground-muted">Export at original screenshot dimensions.</p>
+                )}
+            </div>
 
             <div>
                 <label className="text-sm font-medium mb-2 block">Filename (optional)</label>

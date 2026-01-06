@@ -11,6 +11,31 @@ interface SettingsStore {
     launchAtLogin: boolean;
     sidebarCollapsed: boolean;
 
+    // Notifications
+    notificationsEnabled: boolean;
+    notificationSound: boolean;
+    toastDuration: number;
+    notifyOnScanComplete: boolean;
+    notifyOnCleanupComplete: boolean;
+    notifyOnErrors: boolean;
+
+    // Window & Behavior
+    windowOpacity: number;
+    alwaysOnTop: boolean;
+    rememberWindowPosition: boolean;
+    animationSpeed: 'fast' | 'normal' | 'slow';
+    reduceMotion: boolean;
+
+    // Performance
+    enableAnimations: boolean;
+    lazyLoading: boolean;
+    memoryLimit: number; // MB
+    backgroundProcessing: boolean;
+
+    // Data Management
+    autoBackup: boolean;
+    backupRetentionDays: number;
+
     toolShortcuts: Record<string, string>;
     setToolShortcut: (toolId: string, shortcut: string | null) => void;
 
@@ -22,20 +47,79 @@ interface SettingsStore {
     setLaunchAtLogin: (value: boolean) => void;
     setSidebarCollapsed: (collapsed: boolean) => void;
     toggleSidebar: () => void;
+
+    // Notifications setters
+    setNotificationsEnabled: (value: boolean) => void;
+    setNotificationSound: (value: boolean) => void;
+    setToastDuration: (duration: number) => void;
+    setNotifyOnScanComplete: (value: boolean) => void;
+    setNotifyOnCleanupComplete: (value: boolean) => void;
+    setNotifyOnErrors: (value: boolean) => void;
+
+    // Window & Behavior setters
+    setWindowOpacity: (opacity: number) => void;
+    setAlwaysOnTop: (value: boolean) => void;
+    setRememberWindowPosition: (value: boolean) => void;
+    setAnimationSpeed: (speed: 'fast' | 'normal' | 'slow') => void;
+    setReduceMotion: (value: boolean) => void;
+
+    // Performance setters
+    setEnableAnimations: (value: boolean) => void;
+    setLazyLoading: (value: boolean) => void;
+    setMemoryLimit: (limit: number) => void;
+    setBackgroundProcessing: (value: boolean) => void;
+
+    // Data Management setters
+    setAutoBackup: (value: boolean) => void;
+    setBackupRetentionDays: (days: number) => void;
+
+    // Export/Import
+    exportSettings: () => string;
+    importSettings: (json: string) => boolean;
+    resetToDefaults: () => void;
 }
+
+const defaultSettings = {
+    fontSize: 14,
+    wordWrap: true,
+    theme: 'dark' as const,
+    historyLimit: 50,
+    minimizeToTray: true,
+    startMinimized: false,
+    launchAtLogin: false,
+    sidebarCollapsed: false,
+    toolShortcuts: {},
+
+    // Notifications
+    notificationsEnabled: true,
+    notificationSound: false,
+    toastDuration: 3000,
+    notifyOnScanComplete: true,
+    notifyOnCleanupComplete: true,
+    notifyOnErrors: true,
+
+    // Window & Behavior
+    windowOpacity: 1.0,
+    alwaysOnTop: false,
+    rememberWindowPosition: true,
+    animationSpeed: 'normal' as const,
+    reduceMotion: false,
+
+    // Performance
+    enableAnimations: true,
+    lazyLoading: true,
+    memoryLimit: 512,
+    backgroundProcessing: true,
+
+    // Data Management
+    autoBackup: true,
+    backupRetentionDays: 30,
+};
 
 export const useSettingsStore = create<SettingsStore>()(
     persist(
-        (set) => ({
-            fontSize: 14,
-            wordWrap: true,
-            theme: 'dark',
-            historyLimit: 50,
-            minimizeToTray: true,
-            startMinimized: false,
-            launchAtLogin: false,
-            sidebarCollapsed: false,
-            toolShortcuts: {},
+        (set, get) => ({
+            ...defaultSettings,
 
             setToolShortcut: (toolId, shortcut) => set((state) => {
                 const newShortcuts = { ...state.toolShortcuts };
@@ -52,10 +136,6 @@ export const useSettingsStore = create<SettingsStore>()(
             setTheme: (theme) => set({ theme }),
             setMinimizeToTray: (minimizeToTray) => {
                 set({ minimizeToTray });
-                // Sync with electron store if possible, or main process reads from local storage via IPC?
-                // Main process uses 'electron-store', this is 'zustand-persist'.
-                // We need to sync them or just have main process read this value.
-                // Actually, simpler: Use IPC to invoke 'store-set'
                 (window as any).ipcRenderer?.invoke('store-set', 'minimizeToTray', minimizeToTray);
             },
             setStartMinimized: (startMinimized) => {
@@ -68,6 +148,104 @@ export const useSettingsStore = create<SettingsStore>()(
             },
             setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
             toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+            // Notifications setters
+            setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
+            setNotificationSound: (notificationSound) => set({ notificationSound }),
+            setToastDuration: (toastDuration) => set({ toastDuration }),
+            setNotifyOnScanComplete: (notifyOnScanComplete) => set({ notifyOnScanComplete }),
+            setNotifyOnCleanupComplete: (notifyOnCleanupComplete) => set({ notifyOnCleanupComplete }),
+            setNotifyOnErrors: (notifyOnErrors) => set({ notifyOnErrors }),
+
+            // Window & Behavior setters
+            setWindowOpacity: (windowOpacity) => {
+                set({ windowOpacity });
+                // Sync with main process if needed
+                (window as any).ipcRenderer?.send('window-set-opacity', windowOpacity);
+            },
+            setAlwaysOnTop: (alwaysOnTop) => {
+                set({ alwaysOnTop });
+                (window as any).ipcRenderer?.send('window-set-always-on-top', alwaysOnTop);
+            },
+            setRememberWindowPosition: (rememberWindowPosition) => set({ rememberWindowPosition }),
+            setAnimationSpeed: (animationSpeed) => set({ animationSpeed }),
+            setReduceMotion: (reduceMotion) => set({ reduceMotion }),
+
+            // Performance setters
+            setEnableAnimations: (enableAnimations) => set({ enableAnimations }),
+            setLazyLoading: (lazyLoading) => set({ lazyLoading }),
+            setMemoryLimit: (memoryLimit) => set({ memoryLimit }),
+            setBackgroundProcessing: (backgroundProcessing) => set({ backgroundProcessing }),
+
+            // Data Management setters
+            setAutoBackup: (autoBackup) => set({ autoBackup }),
+            setBackupRetentionDays: (backupRetentionDays) => set({ backupRetentionDays }),
+
+            // Export/Import
+            exportSettings: () => {
+                const state = get();
+                const exportData = {
+                    ...state,
+                    toolShortcuts: state.toolShortcuts,
+                    exportedAt: new Date().toISOString(),
+                    version: '1.0',
+                };
+                return JSON.stringify(exportData, null, 2);
+            },
+            importSettings: (json: string) => {
+                try {
+                    const data = JSON.parse(json);
+                    // Validate and import
+                    const {
+                        fontSize, wordWrap, theme, historyLimit,
+                        minimizeToTray, startMinimized, launchAtLogin, sidebarCollapsed,
+                        notificationsEnabled, notificationSound, toastDuration,
+                        notifyOnScanComplete, notifyOnCleanupComplete, notifyOnErrors,
+                        windowOpacity, alwaysOnTop, rememberWindowPosition,
+                        animationSpeed, reduceMotion,
+                        enableAnimations, lazyLoading, memoryLimit, backgroundProcessing,
+                        autoBackup, backupRetentionDays,
+                        toolShortcuts,
+                    } = data;
+
+                    set({
+                        fontSize: fontSize ?? defaultSettings.fontSize,
+                        wordWrap: wordWrap ?? defaultSettings.wordWrap,
+                        theme: theme ?? defaultSettings.theme,
+                        historyLimit: historyLimit ?? defaultSettings.historyLimit,
+                        minimizeToTray: minimizeToTray ?? defaultSettings.minimizeToTray,
+                        startMinimized: startMinimized ?? defaultSettings.startMinimized,
+                        launchAtLogin: launchAtLogin ?? defaultSettings.launchAtLogin,
+                        sidebarCollapsed: sidebarCollapsed ?? defaultSettings.sidebarCollapsed,
+                        notificationsEnabled: notificationsEnabled ?? defaultSettings.notificationsEnabled,
+                        notificationSound: notificationSound ?? defaultSettings.notificationSound,
+                        toastDuration: toastDuration ?? defaultSettings.toastDuration,
+                        notifyOnScanComplete: notifyOnScanComplete ?? defaultSettings.notifyOnScanComplete,
+                        notifyOnCleanupComplete: notifyOnCleanupComplete ?? defaultSettings.notifyOnCleanupComplete,
+                        notifyOnErrors: notifyOnErrors ?? defaultSettings.notifyOnErrors,
+                        windowOpacity: windowOpacity ?? defaultSettings.windowOpacity,
+                        alwaysOnTop: alwaysOnTop ?? defaultSettings.alwaysOnTop,
+                        rememberWindowPosition: rememberWindowPosition ?? defaultSettings.rememberWindowPosition,
+                        animationSpeed: animationSpeed ?? defaultSettings.animationSpeed,
+                        reduceMotion: reduceMotion ?? defaultSettings.reduceMotion,
+                        enableAnimations: enableAnimations ?? defaultSettings.enableAnimations,
+                        lazyLoading: lazyLoading ?? defaultSettings.lazyLoading,
+                        memoryLimit: memoryLimit ?? defaultSettings.memoryLimit,
+                        backgroundProcessing: backgroundProcessing ?? defaultSettings.backgroundProcessing,
+                        autoBackup: autoBackup ?? defaultSettings.autoBackup,
+                        backupRetentionDays: backupRetentionDays ?? defaultSettings.backupRetentionDays,
+                        toolShortcuts: toolShortcuts ?? defaultSettings.toolShortcuts,
+                    });
+
+                    return true;
+                } catch (error) {
+                    console.error('Failed to import settings:', error);
+                    return false;
+                }
+            },
+            resetToDefaults: () => {
+                set(defaultSettings);
+            },
         }),
         {
             name: 'antigravity-settings',
