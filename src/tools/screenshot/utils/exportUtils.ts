@@ -15,6 +15,13 @@ export async function generateFinalImage(
         backgroundPadding?: number;
         annotations?: string; // JSON string of Fabric.js objects
         outputConfig?: OutputConfig;
+        // Xnapper-style controls
+        borderRadius?: number;
+        shadowBlur?: number;
+        shadowOpacity?: number;
+        shadowOffsetX?: number;
+        shadowOffsetY?: number;
+        inset?: number;
     }
 ): Promise<string> {
     // 1. Generate the base image (Auto-balance + Redactions + Background/Padding) using Native Canvas API
@@ -164,12 +171,25 @@ export async function generateFinalImage(
 
     const finalDataUrl = await annotationPromise;
 
-    // 4. Apply output dimensions / presets if specified
-    if (options.outputConfig) {
-        return applyOutputConfig(finalDataUrl, options.outputConfig, options.background);
+    // 4. Apply border radius and shadow (Xnapper-style)
+    let styledDataUrl = finalDataUrl;
+    if (options.borderRadius || options.shadowBlur || options.inset) {
+        styledDataUrl = await applyBorderRadiusAndShadow(finalDataUrl, {
+            borderRadius: options.borderRadius,
+            shadowBlur: options.shadowBlur,
+            shadowOpacity: options.shadowOpacity,
+            shadowOffsetX: options.shadowOffsetX,
+            shadowOffsetY: options.shadowOffsetY,
+            inset: options.inset,
+        });
     }
 
-    return finalDataUrl;
+    // 5. Apply output dimensions / presets if specified
+    if (options.outputConfig) {
+        return applyOutputConfig(styledDataUrl, options.outputConfig, options.background);
+    }
+
+    return styledDataUrl;
 }
 
 export type SocialPreset = 'twitter' | 'instagram-square' | 'instagram-portrait' | 'instagram-story';
@@ -309,6 +329,119 @@ async function applyOutputConfig(
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
                 resolve(canvas.toDataURL('image/png'));
             }
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
+}
+
+/**
+ * Apply border radius and shadow to screenshot (Xnapper-style)
+ */
+export async function applyBorderRadiusAndShadow(
+    dataUrl: string,
+    options: {
+        borderRadius?: number;
+        shadowBlur?: number;
+        shadowOpacity?: number;
+        shadowOffsetX?: number;
+        shadowOffsetY?: number;
+        inset?: number;
+    }
+): Promise<string> {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const {
+                borderRadius = 0,
+                shadowBlur = 0,
+                shadowOpacity = 0,
+                shadowOffsetX = 0,
+                shadowOffsetY = 0,
+                inset = 0,
+            } = options;
+
+            // Calculate canvas size (add space for shadow)
+            const shadowSpread = Math.max(
+                Math.abs(shadowOffsetX) + shadowBlur,
+                Math.abs(shadowOffsetY) + shadowBlur
+            );
+            const canvasWidth = img.width + shadowSpread * 2;
+            const canvasHeight = img.height + shadowSpread * 2;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            const ctx = canvas.getContext('2d')!;
+
+            // Calculate position (centered with shadow offset)
+            const x = shadowSpread + shadowOffsetX;
+            const y = shadowSpread + shadowOffsetY;
+
+            // Apply shadow
+            if (shadowBlur > 0 && shadowOpacity > 0) {
+                ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`;
+                ctx.shadowBlur = shadowBlur;
+                ctx.shadowOffsetX = 0; // We already positioned the image
+                ctx.shadowOffsetY = 0;
+            }
+
+            // Draw with rounded corners
+            if (borderRadius > 0) {
+                ctx.save();
+                ctx.beginPath();
+
+                // Create rounded rectangle path (with inset)
+                const rectX = x + inset;
+                const rectY = y + inset;
+                const rectWidth = img.width - inset * 2;
+                const rectHeight = img.height - inset * 2;
+
+                ctx.moveTo(rectX + borderRadius, rectY);
+                ctx.lineTo(rectX + rectWidth - borderRadius, rectY);
+                ctx.quadraticCurveTo(rectX + rectWidth, rectY, rectX + rectWidth, rectY + borderRadius);
+                ctx.lineTo(rectX + rectWidth, rectY + rectHeight - borderRadius);
+                ctx.quadraticCurveTo(rectX + rectWidth, rectY + rectHeight, rectX + rectWidth - borderRadius, rectY + rectHeight);
+                ctx.lineTo(rectX + borderRadius, rectY + rectHeight);
+                ctx.quadraticCurveTo(rectX, rectY + rectHeight, rectX, rectY + rectHeight - borderRadius);
+                ctx.lineTo(rectX, rectY + borderRadius);
+                ctx.quadraticCurveTo(rectX, rectY, rectX + borderRadius, rectY);
+                ctx.closePath();
+
+                ctx.clip();
+
+                // Draw image within clipped area
+                if (inset > 0) {
+                    // Draw inset portion of image
+                    ctx.drawImage(
+                        img,
+                        inset, inset, img.width - inset * 2, img.height - inset * 2,
+                        rectX, rectY, rectWidth, rectHeight
+                    );
+                } else {
+                    ctx.drawImage(img, x, y);
+                }
+
+                ctx.restore();
+            } else {
+                // No border radius, just draw normally
+                if (inset > 0) {
+                    const rectX = x + inset;
+                    const rectY = y + inset;
+                    const rectWidth = img.width - inset * 2;
+                    const rectHeight = img.height - inset * 2;
+
+                    ctx.drawImage(
+                        img,
+                        inset, inset, img.width - inset * 2, img.height - inset * 2,
+                        rectX, rectY, rectWidth, rectHeight
+                    );
+                } else {
+                    ctx.drawImage(img, x, y);
+                }
+            }
+
+            resolve(canvas.toDataURL('image/png'));
         };
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;

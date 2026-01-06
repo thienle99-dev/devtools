@@ -50,6 +50,20 @@ interface XnapperState {
     backgroundPadding: number;
     setBackgroundPadding: (padding: number) => void;
 
+    // Style controls (Xnapper-like)
+    borderRadius: number; // 0-40px
+    setBorderRadius: (radius: number) => void;
+    shadowBlur: number; // 0-100px
+    setShadowBlur: (blur: number) => void;
+    shadowOpacity: number; // 0-1
+    setShadowOpacity: (opacity: number) => void;
+    shadowOffsetX: number; // -50 to 50
+    setShadowOffsetX: (offset: number) => void;
+    shadowOffsetY: number; // -50 to 50
+    setShadowOffsetY: (offset: number) => void;
+    inset: number; // Inner padding, 0-100px
+    setInset: (inset: number) => void;
+
     // Annotations
     activeAnnotationTool: AnnotationType | null;
     setActiveAnnotationTool: (tool: AnnotationType | null) => void;
@@ -121,6 +135,20 @@ export const useXnapperStore = create<XnapperState>()(
             backgroundPadding: 40,
             setBackgroundPadding: (padding) => set({ backgroundPadding: padding }),
 
+            // Style controls (Xnapper-like)
+            borderRadius: 12,
+            setBorderRadius: (radius) => set({ borderRadius: radius }),
+            shadowBlur: 40,
+            setShadowBlur: (blur) => set({ shadowBlur: blur }),
+            shadowOpacity: 0.3,
+            setShadowOpacity: (opacity) => set({ shadowOpacity: opacity }),
+            shadowOffsetX: 0,
+            setShadowOffsetX: (offset) => set({ shadowOffsetX: offset }),
+            shadowOffsetY: 10,
+            setShadowOffsetY: (offset) => set({ shadowOffsetY: offset }),
+            inset: 0,
+            setInset: (inset) => set({ inset: inset }),
+
             // Annotations
             activeAnnotationTool: null,
             setActiveAnnotationTool: (tool) => set({ activeAnnotationTool: tool }),
@@ -163,6 +191,12 @@ export const useXnapperStore = create<XnapperState>()(
                 exportQuality: state.exportQuality,
                 autoBalance: state.autoBalance,
                 backgroundPadding: state.backgroundPadding,
+                borderRadius: state.borderRadius,
+                shadowBlur: state.shadowBlur,
+                shadowOpacity: state.shadowOpacity,
+                shadowOffsetX: state.shadowOffsetX,
+                shadowOffsetY: state.shadowOffsetY,
+                inset: state.inset,
                 annotationConfig: state.annotationConfig,
                 history: state.history,
             }),

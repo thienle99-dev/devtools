@@ -125,3 +125,12 @@ contextBridge.exposeInMainWorld('permissionsAPI', {
   testFileAccess: () => ipcRenderer.invoke('permissions:test-file-access'),
   openSystemPreferences: (permissionType?: string) => ipcRenderer.invoke('permissions:open-system-preferences', permissionType),
 })
+
+// API for screenshot area selection overlay
+contextBridge.exposeInMainWorld('electronAPI', {
+  sendSelection: (bounds: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke('screenshot:area-selected', bounds),
+  cancelSelection: () =>
+    ipcRenderer.invoke('screenshot:area-cancelled'),
+})
+

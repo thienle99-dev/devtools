@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Image as ImageIcon, Palette, Droplet, Upload } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
+import { Slider } from '../../../components/ui/Slider';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { PRESET_GRADIENTS, generateGradientCSS } from '../utils/backgroundGenerator';
 import { cn } from '../../../utils/cn';
@@ -13,6 +14,18 @@ export const BackgroundPanel: React.FC = () => {
         setBackground,
         backgroundPadding,
         setBackgroundPadding,
+        borderRadius,
+        setBorderRadius,
+        shadowBlur,
+        setShadowBlur,
+        shadowOpacity,
+        setShadowOpacity,
+        shadowOffsetX,
+        setShadowOffsetX,
+        shadowOffsetY,
+        setShadowOffsetY,
+        inset,
+        setInset,
     } = useXnapperStore();
 
     const [activeTab, setActiveTab] = useState<'gradient' | 'image' | 'solid'>('gradient');
@@ -259,20 +272,78 @@ export const BackgroundPanel: React.FC = () => {
                 </div>
             )}
 
-            {/* Padding Control */}
-            <div>
-                <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium">Padding</label>
-                    <span className="text-sm text-foreground-secondary">{backgroundPadding}px</span>
-                </div>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
+            {/* Style Controls - Xnapper Style */}
+            <div className="space-y-4 pt-4 border-t border-border-glass">
+                <h3 className="text-sm font-semibold">Style Controls</h3>
+
+                <Slider
+                    label="Padding"
                     value={backgroundPadding}
-                    onChange={(e) => setBackgroundPadding(Number(e.target.value))}
-                    className="w-full h-2 bg-glass-panel rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    onChange={setBackgroundPadding}
+                    min={0}
+                    max={200}
+                    unit="px"
                 />
+
+                <Slider
+                    label="Inset"
+                    value={inset}
+                    onChange={setInset}
+                    min={0}
+                    max={100}
+                    unit="px"
+                />
+
+                <Slider
+                    label="Border Radius"
+                    value={borderRadius}
+                    onChange={setBorderRadius}
+                    min={0}
+                    max={40}
+                    unit="px"
+                />
+
+                <div className="space-y-3">
+                    <h4 className="text-xs font-medium text-foreground-secondary">Shadow</h4>
+
+                    <Slider
+                        label="Blur"
+                        value={shadowBlur}
+                        onChange={setShadowBlur}
+                        min={0}
+                        max={100}
+                        unit="px"
+                    />
+
+                    <Slider
+                        label="Opacity"
+                        value={Math.round(shadowOpacity * 100)}
+                        onChange={(val) => setShadowOpacity(val / 100)}
+                        min={0}
+                        max={100}
+                        unit="%"
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <Slider
+                            label="Offset X"
+                            value={shadowOffsetX}
+                            onChange={setShadowOffsetX}
+                            min={-50}
+                            max={50}
+                            unit="px"
+                        />
+
+                        <Slider
+                            label="Offset Y"
+                            value={shadowOffsetY}
+                            onChange={setShadowOffsetY}
+                            min={-50}
+                            max={50}
+                            unit="px"
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Remove Background */}

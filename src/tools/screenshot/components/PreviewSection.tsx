@@ -1,10 +1,12 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Sparkles } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, X } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { AnnotationToolbar } from './AnnotationToolbar';
 import { CanvasPreview } from './CanvasPreview';
 import type { CanvasPreviewHandle } from './CanvasPreview';
+import { cropImage } from '../utils/crop';
+import { toast } from 'sonner';
 
 export const PreviewSection: React.FC = () => {
     const {
@@ -12,6 +14,11 @@ export const PreviewSection: React.FC = () => {
         autoBalance,
         setAutoBalance,
         redactionAreas,
+        isCropping,
+        setIsCropping,
+        cropBounds,
+        setCropBounds,
+        setCurrentScreenshot,
     } = useXnapperStore();
 
     const canvasPreviewRef = useRef<CanvasPreviewHandle>(null);
@@ -51,6 +58,37 @@ export const PreviewSection: React.FC = () => {
     const handleResetZoom = () => {
         canvasPreviewRef.current?.resetZoom();
         setZoom(1);
+    };
+
+    const handleApplyCrop = async () => {
+        if (!cropBounds || !currentScreenshot) return;
+
+        try {
+            // Crop the image
+            const croppedDataUrl = await cropImage(currentScreenshot.dataUrl, cropBounds);
+
+            // Update the screenshot with cropped version
+            setCurrentScreenshot({
+                ...currentScreenshot,
+                dataUrl: croppedDataUrl,
+                width: cropBounds.width,
+                height: cropBounds.height,
+            });
+
+            // Exit crop mode
+            setIsCropping(false);
+            setCropBounds(null);
+
+            toast.success('Image cropped successfully!');
+        } catch (error) {
+            console.error('Failed to crop image:', error);
+            toast.error('Failed to crop image');
+        }
+    };
+
+    const handleCancelCrop = () => {
+        setIsCropping(false);
+        setCropBounds(null);
     };
 
     return (
@@ -135,6 +173,31 @@ export const PreviewSection: React.FC = () => {
                     ref={canvasPreviewRef}
                     onHistoryChange={handleHistoryChange}
                 />
+
+                {/* Crop Controls */}
+                {isCropping && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-glass-panel p-3 rounded-lg border border-border-glass shadow-lg z-10">
+                        <Button
+                            variant="primary"
+                            onClick={handleApplyCrop}
+                            disabled={!cropBounds}
+                            size="sm"
+                            className="gap-2"
+                        >
+                            <Check className="w-4 h-4" />
+                            Apply Crop
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={handleCancelCrop}
+                            size="sm"
+                            className="gap-2"
+                        >
+                            <X className="w-4 h-4" />
+                            Cancel
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );

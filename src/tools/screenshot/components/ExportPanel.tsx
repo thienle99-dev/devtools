@@ -19,6 +19,12 @@ export const ExportPanel: React.FC = () => {
         background,
         backgroundPadding,
         canvasData,
+        borderRadius,
+        shadowBlur,
+        shadowOpacity,
+        shadowOffsetX,
+        shadowOffsetY,
+        inset,
     } = useXnapperStore();
 
     const [filename, setFilename] = useState('');
@@ -62,6 +68,12 @@ export const ExportPanel: React.FC = () => {
                 backgroundPadding,
                 annotations: canvasData || undefined,
                 outputConfig: getOutputConfig(),
+                borderRadius,
+                shadowBlur,
+                shadowOpacity,
+                shadowOffsetX,
+                shadowOffsetY,
+                inset,
             });
 
             const result = await (window as any).screenshotAPI?.saveFile(
@@ -99,6 +111,12 @@ export const ExportPanel: React.FC = () => {
                 backgroundPadding,
                 annotations: canvasData || undefined,
                 outputConfig: getOutputConfig(),
+                borderRadius,
+                shadowBlur,
+                shadowOpacity,
+                shadowOffsetX,
+                shadowOffsetY,
+                inset,
             });
 
             // Convert data URL to blob

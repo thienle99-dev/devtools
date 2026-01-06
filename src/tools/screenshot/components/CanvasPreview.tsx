@@ -41,6 +41,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         setActiveAnnotationTool,
         annotationConfig,
         setCanvasData,
+        isCropping,
+        borderRadius,
+        shadowBlur,
+        shadowOpacity,
+        shadowOffsetX,
+        shadowOffsetY,
+        inset,
     } = useXnapperStore();
 
     const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -57,6 +64,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const isDrawingRef = useRef(false);
     const startPointRef = useRef<{ x: number; y: number } | null>(null);
     const activeObjectRef = useRef<fabric.Object | null>(null);
+    const cropRectRef = useRef<fabric.Rect | null>(null);
 
     const updateHistoryState = useCallback(() => {
         if (onHistoryChange) {
@@ -210,6 +218,15 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Clean up crop rectangle when exiting crop mode
+    useEffect(() => {
+        if (!isCropping && cropRectRef.current && fabricCanvasRef.current) {
+            fabricCanvasRef.current.remove(cropRectRef.current);
+            cropRectRef.current = null;
+            fabricCanvasRef.current.requestRenderAll();
+        }
+    }, [isCropping]);
+
     // Load Base Image
     useEffect(() => {
         if (!fabricCanvasRef.current || !currentScreenshot) return;
@@ -219,7 +236,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                 autoBalance,
                 redactionAreas,
                 background,
-                backgroundPadding
+                backgroundPadding,
+                borderRadius,
+                shadowBlur,
+                shadowOpacity,
+                shadowOffsetX,
+                shadowOffsetY,
+                inset,
             });
 
             // Handle promise or callback based on Fabric version
@@ -301,11 +324,46 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     };
 
     const handleMouseDown = (opt: any) => {
-        // If cropping, handle crop logic (TODO) or return
+        // If cropping, handle crop logic
         const { isCropping } = useXnapperStore.getState();
         if (isCropping) {
-            // Placeholder for crop interaction
-            // We'd start a crop selection box here
+            if (!fabricCanvasRef.current) return;
+
+            const canvas = fabricCanvasRef.current;
+            const pointer = canvas.getScenePoint(opt.e);
+
+            // Remove existing crop rectangle if any
+            if (cropRectRef.current) {
+                canvas.remove(cropRectRef.current);
+                cropRectRef.current = null;
+            }
+
+            // Create new crop rectangle
+            const cropRect = new fabric.Rect({
+                left: pointer.x,
+                top: pointer.y,
+                width: 0,
+                height: 0,
+                fill: 'rgba(59, 130, 246, 0.1)', // Indigo with transparency
+                stroke: '#3b82f6', // Indigo
+                strokeWidth: 2,
+                strokeDashArray: [5, 5],
+                selectable: true,
+                hasControls: true,
+                hasBorders: true,
+                lockRotation: true,
+                cornerColor: '#3b82f6',
+                cornerStrokeColor: '#ffffff',
+                borderColor: '#3b82f6',
+                cornerSize: 10,
+                transparentCorners: false,
+            });
+
+            canvas.add(cropRect);
+            cropRectRef.current = cropRect;
+            isDrawingRef.current = true;
+            startPointRef.current = { x: pointer.x, y: pointer.y };
+
             return;
         }
 
@@ -397,6 +455,23 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     };
 
     const handleMouseMove = (opt: any) => {
+        // Handle crop mode
+        const { isCropping } = useXnapperStore.getState();
+        if (isCropping && isDrawingRef.current && cropRectRef.current && startPointRef.current && fabricCanvasRef.current) {
+            const canvas = fabricCanvasRef.current;
+            const pointer = canvas.getScenePoint(opt.e);
+            const start = startPointRef.current;
+
+            const left = Math.min(start.x, pointer.x);
+            const top = Math.min(start.y, pointer.y);
+            const width = Math.abs(pointer.x - start.x);
+            const height = Math.abs(pointer.y - start.y);
+
+            cropRectRef.current.set({ left, top, width, height });
+            canvas.requestRenderAll();
+            return;
+        }
+
         if (!isDrawingRef.current || !activeObjectRef.current || !startPointRef.current || !fabricCanvasRef.current) return;
 
         const canvas = fabricCanvasRef.current;
@@ -448,6 +523,24 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     };
 
     const handleMouseUp = () => {
+        // Handle crop mode
+        const { isCropping, setCropBounds } = useXnapperStore.getState();
+        if (isCropping && isDrawingRef.current && cropRectRef.current) {
+            const rect = cropRectRef.current;
+
+            // Save crop bounds to store
+            setCropBounds({
+                x: rect.left || 0,
+                y: rect.top || 0,
+                width: rect.width || 0,
+                height: rect.height || 0,
+            });
+
+            isDrawingRef.current = false;
+            startPointRef.current = null;
+            return;
+        }
+
         if (isDrawingRef.current) {
             isDrawingRef.current = false;
             activeObjectRef.current = null;
