@@ -80,13 +80,13 @@ export interface TabsContentProps {
 
 export const TabsContent: React.FC<TabsContentProps> = ({ value, children, className }) => {
     const { value: activeValue } = useTabs();
-
-    if (activeValue !== value) {
-        return null;
-    }
+    const isActive = activeValue === value;
 
     return (
-        <div className={className}>
+        <div 
+            className={className}
+            style={{ display: isActive ? 'block' : 'none' }}
+        >
             {children}
         </div>
     );

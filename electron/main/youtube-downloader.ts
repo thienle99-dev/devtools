@@ -54,6 +54,7 @@ export class YouTubeDownloader {
     private currentProcess: any = null;
     private binaryPath: string;
     private initPromise: Promise<void>;
+    private hasAria2c: boolean = false;
     
     constructor() {
         // Set binary path in app data directory (add .exe for Windows)
@@ -86,9 +87,25 @@ export class YouTubeDownloader {
             
             // Initialize with binary path
             this.ytDlp = new YTDlpWrap(this.binaryPath);
+            
+            // Check if aria2c is available
+            await this.checkAria2c();
         } catch (error) {
             console.error('Failed to initialize yt-dlp:', error);
             throw error;
+        }
+    }
+
+    private async checkAria2c(): Promise<void> {
+        try {
+            const { execSync } = require('child_process');
+            // Try to run aria2c --version
+            execSync('aria2c --version', { stdio: 'ignore' });
+            this.hasAria2c = true;
+            console.log('✅ aria2c detected - will use for ultra-fast downloads!');
+        } catch {
+            this.hasAria2c = false;
+            console.log('ℹ️ aria2c not found - using default downloader');
         }
     }
 
@@ -103,8 +120,12 @@ export class YouTubeDownloader {
         await this.ensureInitialized();
         
         try {
-            // Use yt-dlp to get video info
-            const info: any = await this.ytDlp.getVideoInfo(url);
+            // Use yt-dlp to get video info with optimizations
+            const info: any = await this.ytDlp.getVideoInfo([
+                url,
+                '--skip-download', // Don't download, just get info
+                '--no-playlist', // Faster for single videos
+            ]);
             
             // Parse available formats
             const formats: VideoFormat[] = (info.formats || []).map((format: any) => ({
@@ -186,14 +207,31 @@ export class YouTubeDownloader {
                 fs.mkdirSync(downloadsPath, { recursive: true });
             }
 
-            // Build yt-dlp arguments
+            // Build yt-dlp arguments with performance optimizations
             const args: string[] = [
                 url,
                 '-o', outputTemplate,
                 '--no-playlist',
                 '--no-warnings',
                 '--newline', // For progress parsing
+                // Performance optimizations
+                '--concurrent-fragments', '4', // Download 4 fragments simultaneously
+                '--buffer-size', '16K', // Increase buffer size
+                '--retries', '10', // Retry on errors
+                '--fragment-retries', '10',
+                '--throttled-rate', '100K', // Minimum rate before retry
+                '--no-continue', // Don't resume partial downloads (fixes HTTP 416)
+                '--no-overwrites', // Don't overwrite existing files
             ];
+
+            // Use aria2c if available for ultra-fast downloads (10-16x faster!)
+            if (this.hasAria2c) {
+                console.log('🚀 Using aria2c for ultra-fast download!');
+                args.push(
+                    '--external-downloader', 'aria2c',
+                    '--external-downloader-args', '-x 16 -s 16 -k 1M --allow-overwrite=true'
+                );
+            }
 
             // Format selection
             if (format === 'audio') {
@@ -224,9 +262,12 @@ export class YouTubeDownloader {
 
                 this.currentProcess.stdout?.on('data', (data: Buffer) => {
                     const output = data.toString();
+                    console.log('[yt-dlp]', output.trim());
                     
                     // Parse progress from yt-dlp output
-                    // Format: [download]  45.5% of 123.45MiB at 1.23MiB/s ETA 00:12
+                    // Format examples:
+                    // [download]  45.5% of 123.45MiB at 1.23MiB/s ETA 00:12
+                    // [download]  45.5% of ~123.45MiB at 1.23MiB/s ETA 00:12
                     const progressMatch = output.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)(\w+)/);
                     if (progressMatch && progressCallback) {
                         const percent = parseFloat(progressMatch[1]);
@@ -235,16 +276,16 @@ export class YouTubeDownloader {
                         
                         // Convert to bytes
                         let multiplier = 1;
-                        if (unit.includes('KiB')) multiplier = 1024;
-                        else if (unit.includes('MiB')) multiplier = 1024 * 1024;
-                        else if (unit.includes('GiB')) multiplier = 1024 * 1024 * 1024;
+                        if (unit.includes('KiB') || unit.includes('KB')) multiplier = 1024;
+                        else if (unit.includes('MiB') || unit.includes('MB')) multiplier = 1024 * 1024;
+                        else if (unit.includes('GiB') || unit.includes('GB')) multiplier = 1024 * 1024 * 1024;
                         
                         totalBytes = size * multiplier;
                         downloadedBytes = (percent / 100) * totalBytes;
                         
                         const elapsedTime = (Date.now() - startTime) / 1000;
                         const speed = downloadedBytes / elapsedTime;
-                        const eta = (totalBytes - downloadedBytes) / speed;
+                        const eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
                         
                         progressCallback({
                             percent: Math.round(percent),
@@ -255,6 +296,25 @@ export class YouTubeDownloader {
                             state: 'downloading'
                         });
                     }
+                    
+                    // Check for completion message
+                    if (output.includes('[download] 100%') || output.includes('has already been downloaded')) {
+                        if (progressCallback) {
+                            progressCallback({
+                                percent: 100,
+                                downloaded: totalBytes,
+                                total: totalBytes,
+                                speed: 0,
+                                eta: 0,
+                                state: 'complete'
+                            });
+                        }
+                    }
+                });
+
+                this.currentProcess.stderr?.on('data', (data: Buffer) => {
+                    const error = data.toString();
+                    console.error('[yt-dlp error]', error);
                 });
 
                 this.currentProcess.on('close', (code: number) => {
@@ -275,11 +335,15 @@ export class YouTubeDownloader {
                         
                         resolve(expectedFile);
                     } else {
+                        // Clean up partial files on error
+                        this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
                         reject(new Error(`yt-dlp exited with code ${code}`));
                     }
                 });
 
                 this.currentProcess.on('error', (error: Error) => {
+                    // Clean up partial files on error
+                    this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
                     reject(error);
                 });
             });
@@ -295,6 +359,29 @@ export class YouTubeDownloader {
         if (this.currentProcess) {
             this.currentProcess.kill();
             this.currentProcess = null;
+        }
+    }
+    
+    /**
+     * Clean up partial files to prevent HTTP 416 errors
+     */
+    private cleanupPartialFiles(directory: string, filename: string, extension: string): void {
+        try {
+            const patterns = [
+                path.join(directory, `${filename}.${extension}`),
+                path.join(directory, `${filename}.${extension}.part`),
+                path.join(directory, `${filename}.${extension}.ytdl`),
+                path.join(directory, `${filename}.part`),
+            ];
+
+            patterns.forEach(pattern => {
+                if (fs.existsSync(pattern)) {
+                    console.log('Cleaning up partial file:', pattern);
+                    fs.unlinkSync(pattern);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to cleanup partial files:', error);
         }
     }
     

@@ -39,6 +39,7 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
         lazyLoading, setLazyLoading,
         memoryLimit, setMemoryLimit,
         backgroundProcessing, setBackgroundProcessing,
+        maxBackgroundTabs, setMaxBackgroundTabs,
         autoBackup, setAutoBackup,
         backupRetentionDays, setBackupRetentionDays,
         exportSettings, importSettings, resetToDefaults,
@@ -105,7 +106,7 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
                         {activeTab === 'permissions' && <PermissionsTab {...{ permissions, isLoading, checkAllPermissions, checkPermission, testPermission, openSystemPreferences, platform }} />}
                         {activeTab === 'notifications' && <NotificationsTab {...{ notificationsEnabled, setNotificationsEnabled, notificationSound, setNotificationSound, toastDuration, setToastDuration, notifyOnScanComplete, setNotifyOnScanComplete, notifyOnCleanupComplete, setNotifyOnCleanupComplete, notifyOnErrors, setNotifyOnErrors }} />}
                         {activeTab === 'window' && <WindowTab {...{ windowOpacity, setWindowOpacity, alwaysOnTop, setAlwaysOnTop, rememberWindowPosition, setRememberWindowPosition, animationSpeed, setAnimationSpeed, reduceMotion, setReduceMotion }} />}
-                        {activeTab === 'performance' && <PerformanceTab {...{ enableAnimations, setEnableAnimations, lazyLoading, setLazyLoading, memoryLimit, setMemoryLimit, backgroundProcessing, setBackgroundProcessing }} />}
+                        {activeTab === 'performance' && <PerformanceTab {...{ enableAnimations, setEnableAnimations, lazyLoading, setLazyLoading, memoryLimit, setMemoryLimit, backgroundProcessing, setBackgroundProcessing, maxBackgroundTabs, setMaxBackgroundTabs }} />}
                         {activeTab === 'data' && <DataTab {...{ autoBackup, setAutoBackup, backupRetentionDays, setBackupRetentionDays, exportSettings, importSettings, resetToDefaults, clearHistory }} />}
                         {activeTab === 'about' && <AboutTab platform={platform} />}
                     </div>
@@ -518,7 +519,7 @@ const WindowTab: React.FC<any> = ({ windowOpacity, setWindowOpacity, alwaysOnTop
 );
 
 // Performance Tab
-const PerformanceTab: React.FC<any> = ({ enableAnimations, setEnableAnimations, lazyLoading, setLazyLoading, memoryLimit, setMemoryLimit, backgroundProcessing, setBackgroundProcessing }) => (
+const PerformanceTab: React.FC<any> = ({ enableAnimations, setEnableAnimations, lazyLoading, setLazyLoading, memoryLimit, setMemoryLimit, backgroundProcessing, setBackgroundProcessing, maxBackgroundTabs, setMaxBackgroundTabs }) => (
     <div className="space-y-6">
         <h2 className="text-lg font-bold text-foreground">Performance</h2>
 
@@ -561,7 +562,7 @@ const PerformanceTab: React.FC<any> = ({ enableAnimations, setEnableAnimations, 
                     <span className="text-xs font-mono text-foreground-muted">MB</span>
                 </div>
             </div>
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4 border-b border-border-glass">
                 <div>
                     <p className="text-sm font-semibold text-foreground">Background Processing</p>
                     <p className="text-xs text-foreground-muted">Process tasks in background</p>
@@ -570,6 +571,52 @@ const PerformanceTab: React.FC<any> = ({ enableAnimations, setEnableAnimations, 
                     checked={backgroundProcessing}
                     onChange={(e) => setBackgroundProcessing(e.target.checked)}
                 />
+            </div>
+            <div className="flex items-center justify-between p-4">
+                <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">Maximum Background Tabs</p>
+                    <p className="text-xs text-foreground-muted">Limit number of tabs running in background (1-50)</p>
+                    <div className="flex items-center gap-2 mt-2">
+                        <div className="flex-1 h-1 bg-glass-panel rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all"
+                                style={{ width: `${(maxBackgroundTabs / 50) * 100}%` }}
+                            />
+                        </div>
+                        <span className="text-xs font-mono text-foreground-secondary min-w-[3ch] text-right">{maxBackgroundTabs}</span>
+                    </div>
+                </div>
+                <div className="flex items-center space-x-4 ml-4">
+                    <Input
+                        type="number"
+                        min="1"
+                        max="50"
+                        step="1"
+                        value={maxBackgroundTabs}
+                        onChange={(e) => {
+                            const value = parseInt(e.target.value) || 1;
+                            setMaxBackgroundTabs(Math.max(1, Math.min(50, value)));
+                        }}
+                        className="w-16 font-mono text-center"
+                    />
+                    <span className="text-xs text-foreground-muted">tabs</span>
+                </div>
+            </div>
+        </Card>
+        
+        <Card className="p-4 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border-cyan-500/20">
+            <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                    <p className="text-sm font-semibold text-foreground">About Background Tabs</p>
+                    <p className="text-xs text-foreground-muted leading-relaxed">
+                        When you have more tabs open than this limit, the oldest inactive tabs will be automatically closed to maintain performance. 
+                        Active downloads, conversions, and other background processes will continue uninterrupted.
+                    </p>
+                    <p className="text-xs text-cyan-400 font-medium">
+                        💡 Recommended: 5-10 tabs for optimal performance
+                    </p>
+                </div>
             </div>
         </Card>
     </div>
