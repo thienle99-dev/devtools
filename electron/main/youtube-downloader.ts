@@ -14,6 +14,17 @@ export interface DownloadOptions {
     quality?: string;
     container?: string;
     outputPath?: string;
+    maxSpeed?: string;
+    concurrentFragments?: number;
+}
+
+export interface Settings {
+    downloadPath?: string;
+    defaultVideoQuality: string;
+    defaultAudioQuality: string;
+    maxConcurrentDownloads: number;
+    maxSpeedLimit?: string;
+    ffmpegPath?: string;
 }
 
 export interface HistoryItem {
@@ -33,6 +44,7 @@ export interface HistoryItem {
 
 interface StoreSchema {
     history: HistoryItem[];
+    settings: Settings;
 }
 
 export interface VideoFormat {
@@ -82,7 +94,15 @@ export class YouTubeDownloader {
     constructor() {
         this.store = new Store<StoreSchema>({
             name: 'youtube-download-history',
-            defaults: { history: [] }
+            defaults: { 
+                history: [],
+                settings: {
+                    defaultVideoQuality: '1080p',
+                    defaultAudioQuality: '0',
+                    maxConcurrentDownloads: 3,
+                    maxSpeedLimit: ''
+                }
+            }
         });
         // Set binary path in app data directory (add .exe for Windows)
         const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
@@ -267,7 +287,7 @@ export class YouTubeDownloader {
     ): Promise<string> {
         await this.ensureInitialized();
         
-        const { url, format, quality, container, outputPath } = options;
+        const { url, format, quality, container, outputPath, maxSpeed } = options;
         
         try {
             // Get video info for filename
@@ -292,7 +312,7 @@ export class YouTubeDownloader {
                 '--no-warnings',
                 '--newline', // For progress parsing
                 // Performance optimizations
-                '--concurrent-fragments', '4', // Download 4 fragments simultaneously
+                '--concurrent-fragments', `${options.concurrentFragments || 4}`, // Download N fragments simultaneously
                 '--buffer-size', '16K', // Increase buffer size
                 '--retries', '10', // Retry on errors
                 '--fragment-retries', '10',
@@ -300,6 +320,11 @@ export class YouTubeDownloader {
                 '--no-continue', // Don't resume partial downloads (fixes HTTP 416)
                 '--no-overwrites', // Don't overwrite existing files
             ];
+
+            if (maxSpeed) {
+                args.push('--limit-rate', maxSpeed);
+            }
+
 
             // Use aria2c if available for ultra-fast downloads (10-16x faster!)
             if (this.hasAria2c) {
@@ -552,6 +577,17 @@ export class YouTubeDownloader {
     
     clearHistory(): void {
         this.store.set('history', []);
+    }
+
+    getSettings(): Settings {
+        return this.store.get('settings');
+    }
+
+    saveSettings(settings: Partial<Settings>): Settings {
+        const current = this.store.get('settings');
+        const updated = { ...current, ...settings };
+        this.store.set('settings', updated);
+        return updated;
     }
 }
 

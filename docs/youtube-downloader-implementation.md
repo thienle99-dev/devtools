@@ -103,11 +103,11 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
   - [x] Clear history - ✅ Implemented
   - [x] Open downloaded file - ✅ Implemented
 
-- [ ] **Settings**
-  - [x] Choose download location - ✅ Native folder picker
-  - [ ] Default quality preference
-  - [ ] Concurrent downloads limit
-  - [ ] Network speed limit
+- [x] **Settings**
+  - [x] Choose download location - ✅ Native folder picker (Persistent)
+  - [x] Default quality preference - ✅ Supported
+  - [x] Concurrent downloads limit - ✅ Implemented (as fragments)
+  - [x] Network speed limit - ✅ Implemented
 
 ### Phase 5: Testing & Optimization ⏳
 

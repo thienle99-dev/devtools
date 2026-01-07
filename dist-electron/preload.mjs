@@ -126,6 +126,8 @@ electron.contextBridge.exposeInMainWorld("youtubeAPI", {
 	chooseFolder: () => electron.ipcRenderer.invoke("youtube:chooseFolder"),
 	getHistory: () => electron.ipcRenderer.invoke("youtube:getHistory"),
 	clearHistory: () => electron.ipcRenderer.invoke("youtube:clearHistory"),
+	getSettings: () => electron.ipcRenderer.invoke("youtube:getSettings"),
+	saveSettings: (settings) => electron.ipcRenderer.invoke("youtube:saveSettings", settings),
 	onProgress: (callback) => {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("youtube:progress", listener);

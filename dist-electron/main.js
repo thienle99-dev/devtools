@@ -2262,7 +2262,15 @@ var YouTubeDownloader = class {
 		this.hasAria2c = false;
 		this.store = new Store({
 			name: "youtube-download-history",
-			defaults: { history: [] }
+			defaults: {
+				history: [],
+				settings: {
+					defaultVideoQuality: "1080p",
+					defaultAudioQuality: "0",
+					maxConcurrentDownloads: 3,
+					maxSpeedLimit: ""
+				}
+			}
 		});
 		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
 		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
@@ -2381,7 +2389,7 @@ var YouTubeDownloader = class {
 	}
 	async downloadVideo(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, container, outputPath } = options;
+		const { url, format, quality, container, outputPath, maxSpeed } = options;
 		try {
 			const info = await this.getVideoInfo(url);
 			const sanitizedTitle = this.sanitizeFilename(info.title);
@@ -2397,7 +2405,7 @@ var YouTubeDownloader = class {
 				"--no-warnings",
 				"--newline",
 				"--concurrent-fragments",
-				"4",
+				`${options.concurrentFragments || 4}`,
 				"--buffer-size",
 				"16K",
 				"--retries",
@@ -2409,6 +2417,7 @@ var YouTubeDownloader = class {
 				"--no-continue",
 				"--no-overwrites"
 			];
+			if (maxSpeed) args.push("--limit-rate", maxSpeed);
 			if (this.hasAria2c) {
 				console.log("🚀 Using aria2c for ultra-fast download!");
 				args.push("--external-downloader", "aria2c", "--external-downloader-args", "-x 16 -s 16 -k 1M --allow-overwrite=true");
@@ -2567,6 +2576,17 @@ var YouTubeDownloader = class {
 	}
 	clearHistory() {
 		this.store.set("history", []);
+	}
+	getSettings() {
+		return this.store.get("settings");
+	}
+	saveSettings(settings) {
+		const updated = {
+			...this.store.get("settings"),
+			...settings
+		};
+		this.store.set("settings", updated);
+		return updated;
 	}
 };
 const youtubeDownloader = new YouTubeDownloader();
@@ -3853,6 +3873,12 @@ app.whenReady().then(() => {
 	ipcMain.handle("youtube:clearHistory", () => {
 		youtubeDownloader.clearHistory();
 		return true;
+	});
+	ipcMain.handle("youtube:getSettings", () => {
+		return youtubeDownloader.getSettings();
+	});
+	ipcMain.handle("youtube:saveSettings", (_event, settings) => {
+		return youtubeDownloader.saveSettings(settings);
 	});
 	async function getDirSize$1(dirPath) {
 		try {

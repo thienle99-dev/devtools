@@ -16,6 +16,15 @@ interface DownloadStatus {
     detailedLogs?: string[];
 }
 
+interface AppSettings {
+    downloadPath?: string;
+    defaultVideoQuality: string;
+    defaultAudioQuality: string;
+    maxConcurrentDownloads: number;
+    maxSpeedLimit?: string;
+    ffmpegPath?: string;
+}
+
 interface VideoFormat {
     itag: number;
     quality: string;
@@ -97,8 +106,14 @@ export const YoutubeDownloader: React.FC = () => {
     const [playlistInfo, setPlaylistInfo] = useState<any | null>(null);
     const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
     const [isPlaylist, setIsPlaylist] = useState(false);
-    const [view, setView] = useState<'download' | 'history'>('download');
+    const [view, setView] = useState<'download' | 'history' | 'settings'>('download');
     const [history, setHistory] = useState<any[]>([]);
+    const [settings, setSettings] = useState<AppSettings>({
+        defaultVideoQuality: '1080p',
+        defaultAudioQuality: '0',
+        maxConcurrentDownloads: 3,
+        maxSpeedLimit: ''
+    });
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
     const { toasts, removeToast, success, error, info } = useToast();
@@ -164,6 +179,7 @@ export const YoutubeDownloader: React.FC = () => {
                 format,
                 quality,
                 container,
+                maxSpeed: settings.maxSpeedLimit || undefined
             };
             
             // Use custom folder if selected
@@ -289,6 +305,7 @@ export const YoutubeDownloader: React.FC = () => {
                     format,
                     quality,
                     container,
+                    maxSpeed: settings.maxSpeedLimit || undefined
                 };
 
                 if (downloadFolder) {
@@ -340,6 +357,42 @@ export const YoutubeDownloader: React.FC = () => {
             console.error('Failed to load history', err);
         }
     };
+
+    const loadSettings = async () => {
+        try {
+            const data = await (window as any).youtubeAPI.getSettings();
+            if (data) {
+                setSettings(data);
+                // Apply defaults if not set in state?
+                // Also update individual states if they match defaults?
+                // For now just store in settings object.
+                if (data.downloadPath) setDownloadFolder(data.downloadPath);
+                
+                // Only set default qualities if user hasn't touched them? 
+                // Hard to know. Let's just update settings state.
+                if (data.defaultVideoQuality && !url) setQuality(data.defaultVideoQuality);
+            }
+        } catch (err) {
+            console.error('Failed to load settings', err);
+        }
+    };
+
+    const handleSaveSettings = async (newSettings: AppSettings) => {
+        setSettings(newSettings);
+        await (window as any).youtubeAPI.saveSettings(newSettings);
+        success('Settings Saved', 'Preferences updated successfully');
+    };
+
+    useEffect(() => {
+        if (view === 'settings') {
+            loadSettings();
+        }
+    }, [view]);
+
+    // Initial load
+    useEffect(() => {
+        loadSettings();
+    }, []);
 
 
 
@@ -429,6 +482,88 @@ export const YoutubeDownloader: React.FC = () => {
         </div>
     );
 
+    const renderSettings = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid gap-6">
+                <Card className="p-4 bg-glass-panel border-border-glass">
+                    <h3 className="text-sm font-medium text-foreground-primary mb-3 flex items-center gap-2">
+                        <FolderOpen className="w-4 h-4 text-blue-400" />
+                        Default Download Location
+                    </h3>
+                    <div className="flex gap-2">
+                        <Input 
+                            value={settings.downloadPath || downloadFolder || 'Downloads'} 
+                            readOnly 
+                            className="bg-background/50 border-input font-mono text-xs" 
+                        />
+                        <Button 
+                            variant="secondary" 
+                            size="sm"
+                            onClick={async () => {
+                                const path = await (window as any).youtubeAPI.chooseFolder();
+                                if (path) {
+                                    setDownloadFolder(path);
+                                    handleSaveSettings({ ...settings, downloadPath: path });
+                                }
+                            }}
+                        >
+                            Change
+                        </Button>
+                    </div>
+                </Card>
+
+                <Card className="p-4 bg-glass-panel border-border-glass">
+                    <h3 className="text-sm font-medium text-foreground-primary mb-3 flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-purple-400" />
+                        Preferences
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs text-foreground-secondary">Default Video Quality</label>
+                            <select 
+                                className="w-full bg-background/50 border-input rounded-md p-2 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                                value={settings.defaultVideoQuality}
+                                onChange={(e) => handleSaveSettings({ ...settings, defaultVideoQuality: e.target.value })}
+                            >
+                                <option value="2160p">4K (2160p)</option>
+                                <option value="1440p">2K (1440p)</option>
+                                <option value="1080p">1080p</option>
+                                <option value="720p">720p</option>
+                                <option value="480p">480p</option>
+                                <option value="360p">360p</option>
+                            </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <label className="text-xs text-foreground-secondary">Max Concurrent Downloads</label>
+                            <Input 
+                                type="number" 
+                                min={1} 
+                                max={5}
+                                value={settings.maxConcurrentDownloads}
+                                onChange={(e) => handleSaveSettings({ ...settings, maxConcurrentDownloads: parseInt(e.target.value) || 1 })}
+                                className="bg-background/50"
+                            />
+                            <p className="text-[10px] text-foreground-tertiary">Recommended: 1-3</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs text-foreground-secondary">Speed Limit</label>
+                            <Input 
+                                placeholder="e.g. 5M, 500K"
+                                value={settings.maxSpeedLimit || ''}
+                                onChange={(e) => setSettings({ ...settings, maxSpeedLimit: e.target.value })}
+                                onBlur={() => handleSaveSettings(settings)}
+                                className="bg-background/50"
+                            />
+                            <p className="text-[10px] text-foreground-tertiary">Leave empty for unlimited</p>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+
     const handleFetchInfo = async () => {
         if (!url.trim()) {
             return;
@@ -466,9 +601,13 @@ export const YoutubeDownloader: React.FC = () => {
                 const info = await (window as any).youtubeAPI.getInfo(url);
                 setVideoInfo(info);
                 
-                // Auto-select best available quality
+                // Auto-select best available quality or user preference
                 if (info.availableQualities && info.availableQualities.length > 0) {
-                    setQuality(info.availableQualities[0]); // Select highest quality
+                    if (settings.defaultVideoQuality && info.availableQualities.includes(settings.defaultVideoQuality)) {
+                        setQuality(settings.defaultVideoQuality);
+                    } else {
+                        setQuality(info.availableQualities[0]); // Select highest quality
+                    }
                 }
                 
                 success('Video Info Loaded', info.title);
@@ -599,6 +738,15 @@ export const YoutubeDownloader: React.FC = () => {
                         <Clock className="w-3.5 h-3.5" />
                         History
                     </button>
+                    <button
+                        onClick={() => setView('settings')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
+                            view === 'settings' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
+                        }`}
+                    >
+                        <Settings className="w-3.5 h-3.5" />
+                        Settings
+                    </button>
                 </div>
             </div>
 
@@ -608,6 +756,8 @@ export const YoutubeDownloader: React.FC = () => {
                 <div className="max-w-4xl mx-auto space-y-6">
                     {view === 'history' ? (
                         renderHistory()
+                    ) : view === 'settings' ? (
+                        renderSettings()
                     ) : (
                     <>
                     {/* Info Card */}

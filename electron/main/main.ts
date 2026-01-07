@@ -1611,6 +1611,14 @@ app.whenReady().then(() => {
     return true;
   });
 
+  ipcMain.handle('youtube:getSettings', () => {
+    return youtubeDownloader.getSettings();
+  });
+
+  ipcMain.handle('youtube:saveSettings', (_event, settings) => {
+    return youtubeDownloader.saveSettings(settings);
+  });
+
   // Helper functions
   async function getDirSize(dirPath: string): Promise<number> {
     try {
