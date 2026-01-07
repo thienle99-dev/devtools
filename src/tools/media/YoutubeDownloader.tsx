@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw, Clock, HardDrive, Settings } from 'lucide-react';
+import { Download, Youtube, Video, Music, Film, Loader2, Info, FileVideo, FolderOpen, RotateCcw, Clock, HardDrive, Settings } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
@@ -7,6 +7,10 @@ import { VideoInfo } from './components/VideoInfo';
 import { FormatsList } from './components/FormatsList';
 import { PlaylistView } from './components/PlaylistView';
 import { ToastContainer, useToast } from '../../components/ui/Toast';
+import { SearchBar } from './components/SearchBar';
+import { FormatSelector } from './components/FormatSelector';
+import { DownloadProgress } from './components/DownloadProgress';
+import { formatFileSize as formatBytes, formatDuration as formatTime } from './utils/youtube-helpers';
 
 interface DownloadStatus {
     status: 'idle' | 'downloading' | 'success' | 'error';
@@ -52,46 +56,7 @@ interface VideoInfoData {
     hasAudio: boolean;
 }
 
-// Helper functions for formatting
-const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-};
 
-const formatSpeed = (bytesPerSec: number): string => {
-    if (bytesPerSec === 0) return '0 B/s';
-    if (bytesPerSec > 1024 * 1024) {
-        return `${(bytesPerSec / 1024 / 1024).toFixed(2)} MB/s`;
-    }
-    if (bytesPerSec > 1024) {
-        return `${(bytesPerSec / 1024).toFixed(2)} KB/s`;
-    }
-    return `${bytesPerSec.toFixed(0)} B/s`;
-};
-
-const formatETA = (seconds: number): string => {
-    if (seconds === 0 || !isFinite(seconds)) return '--';
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    if (seconds < 3600) {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.round(seconds % 60);
-        return `${mins}m ${secs}s`;
-    }
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${mins}m`;
-};
-
-const formatTime = (seconds: number): string => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-};
 
 export const YoutubeDownloader: React.FC = () => {
     const [url, setUrl] = useState('');
@@ -114,7 +79,7 @@ export const YoutubeDownloader: React.FC = () => {
         maxConcurrentDownloads: 3,
         maxSpeedLimit: ''
     });
-    const [isDragOver, setIsDragOver] = useState(false);
+
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
     const { toasts, removeToast, success, error, info } = useToast();
@@ -754,7 +719,7 @@ export const YoutubeDownloader: React.FC = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
-                <div className="max-w-4xl mx-auto space-y-6">
+                <div className="w-full mx-auto space-y-6">
                     {view === 'history' ? (
                         renderHistory()
                     ) : view === 'settings' ? (
@@ -777,439 +742,122 @@ export const YoutubeDownloader: React.FC = () => {
                     </Card>
 
                     {/* Search Input */}
-                    <Card 
-                        className={`p-6 bg-glass-panel border-border-glass transition-all ${
-                            isDragOver ? 'border-red-500 ring-2 ring-red-500/20 bg-red-500/5' : ''
-                        }`}
-                        onDragOver={(e) => {
-                            e.preventDefault();
-                            setIsDragOver(true);
-                        }}
-                        onDragLeave={() => setIsDragOver(false)}
-                        onDrop={(e) => {
-                            e.preventDefault();
-                            setIsDragOver(false);
-                            const dropped = e.dataTransfer.getData('text');
-                            if (dropped) {
-                                setUrl(dropped);
-                            }
-                        }}
-                    >
-                        <label className="block text-sm font-medium text-foreground-primary mb-2 flex items-center gap-2">
-                            YouTube URL
-                            {fetchingInfo && (
-                                <span className="flex items-center gap-1.5 text-xs text-blue-400">
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                    Fetching info...
-                                </span>
-                            )}
-                        </label>
-                        <div className="flex gap-2">
-                            <Input
-                                type="text"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleFetchInfo();
-                                    if (e.key === 'Escape') handleClear();
-                                }}
-                                placeholder="https://www.youtube.com/watch?v=... (or drop link here)"
-                                className="flex-1"
-                                disabled={downloadStatus.status === 'downloading'}
-                            />
-                            <Button
-                                onClick={handleClear}
-                                variant="outline"
-                                disabled={!url || downloadStatus.status === 'downloading'}
-                            >
-                                Clear
-                            </Button>
-                        </div>
-                    </Card>
+
+                    <SearchBar
+                        url={url}
+                        onUrlChange={setUrl}
+                        onClear={handleClear}
+                        onFetch={handleFetchInfo}
+                        isLoading={fetchingInfo}
+                        disabled={downloadStatus.status === 'downloading'}
+                    />
 
                     {/* Video Info Preview */}
-                    {/* Content Switcher: Playlist vs Single Video */}
-                    {isPlaylist && playlistInfo ? (
-                        <PlaylistView
-                            playlistInfo={playlistInfo}
-                            selectedVideos={selectedVideos}
-                            onToggleVideo={handleToggleVideo}
-                            onSelectAll={handleSelectAll}
-                            onDeselectAll={handleDeselectAll}
-                            onDownloadSelected={handleDownloadPlaylist}
-                        />
-                    ) : videoInfo ? (
-                        <>
-                            <VideoInfo {...videoInfo} />
-                            
-                            {/* Download Estimates Removed as they are now per item */}
-
-                            {/* Available Formats */}
-                            <FormatsList formats={videoInfo.formats} />
-                        </>
-                    ) : null}
-
-                    {/* Download Options */}
-                    <Card className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-foreground-primary">Download Options</h3>
-                            <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
-                                <button
-                                    onClick={() => {
-                                        setFormat('video');
-                                        setQuality(videoInfo?.availableQualities?.[0] || '1080p');
-                                        setContainer('mp4');
-                                    }}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                                        format === 'video' ? 'bg-red-500/20 text-red-400' : 'text-foreground-secondary hover:text-foreground'
-                                    }`}
-                                >
-                                    Video + Audio
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setFormat('audio');
-                                        setQuality('0');
-                                        setContainer('mp3');
-                                    }}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                                        format === 'audio' ? 'bg-pink-500/20 text-pink-400' : 'text-foreground-secondary hover:text-foreground'
-                                    }`}
-                                >
-                                    Audio Only
-                                </button>
+                    {/* Media Showcase Section */}
+                    {((isPlaylist && playlistInfo) || videoInfo) && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 animate-in fade-in slide-in-from-bottom-4">
+                            {/* Left Column: Preview */}
+                            <div className="lg:col-span-1">
+                                {isPlaylist && playlistInfo ? (
+                                    <PlaylistView
+                                        playlistInfo={playlistInfo}
+                                        selectedVideos={selectedVideos}
+                                        onToggleVideo={handleToggleVideo}
+                                        onSelectAll={handleSelectAll}
+                                        onDeselectAll={handleDeselectAll}
+                                        onDownloadSelected={handleDownloadPlaylist}
+                                    />
+                                ) : videoInfo ? (
+                                    <div className="space-y-4">
+                                        <VideoInfo {...videoInfo} />
+                                        <FormatsList formats={videoInfo.formats} />
+                                    </div>
+                                ) : null}
                             </div>
-                        </div>
 
-                        {/* Download Location */}
-                        <div className="mb-4 p-4 bg-background-secondary/50 rounded-lg border border-border-glass">
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
-                                    <FolderOpen className="w-4 h-4 text-blue-400" />
-                                    Download Location
-                                </label>
-                                <Button
-                                    onClick={handleChooseFolder}
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs"
-                                >
-                                    Choose Folder
-                                </Button>
-                            </div>
-                            <p className="text-xs text-foreground-secondary font-mono truncate">
-                                {downloadFolder || 'Default: System Downloads folder'}
-                            </p>
-                        </div>
+                            {/* Right Column: Options & Actions */}
+                            <div className="lg:col-span-2 space-y-4">
+                                {/* Download Location */}
+                                <Card className="p-4 bg-background-secondary/50 rounded-lg border border-border-glass">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
+                                            <FolderOpen className="w-4 h-4 text-blue-400" />
+                                            Download Location
+                                        </label>
+                                        <Button
+                                            onClick={handleChooseFolder}
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs"
+                                        >
+                                            Choose Folder
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-foreground-secondary font-mono truncate">
+                                        {downloadFolder || 'Default: System Downloads folder'}
+                                    </p>
+                                </Card>
 
-                        {/* Format Selection */}
-                        <div className="mb-4">
-                            <label className="text-sm font-medium text-foreground-primary block mb-2 flex items-center gap-2">
-                                <FileVideo className="w-4 h-4 text-blue-400" />
-                                Output Format
-                            </label>
-                            <div className="flex gap-2 flex-wrap">
-                                {(format === 'video' ? ['mp4', 'mkv', 'webm'] : ['mp3', 'm4a', 'wav', 'flac', 'opus']).map(fmt => (
-                                    <button
-                                        key={fmt}
-                                        onClick={() => setContainer(fmt)}
-                                        className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
-                                            container === fmt 
-                                                ? format === 'video' 
-                                                    ? 'bg-red-500/20 text-red-400 border-red-500/50' 
-                                                    : 'bg-pink-500/20 text-pink-400 border-pink-500/50'
-                                                : 'bg-glass-panel text-foreground-secondary border-border-glass hover:bg-white/5 hover:text-foreground-primary'
-                                        }`}
-                                    >
-                                        {fmt.toUpperCase()}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                                {/* Format Selector */}
+                                <FormatSelector
+                                    format={format}
+                                    setFormat={setFormat}
+                                    quality={quality}
+                                    setQuality={setQuality}
+                                    container={container}
+                                    setContainer={setContainer}
+                                    videoInfo={videoInfo}
+                                    disabled={downloadStatus.status === 'downloading'}
+                                />
 
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
-                                    <Settings className="w-4 h-4 text-purple-400" />
-                                    {format === 'video' ? 'Select Video Quality' : 'Select Audio Quality'}
-                                </label>
-                                {format === 'video' && (
-                                    <span className="text-[10px] text-foreground-tertiary bg-background-tertiary px-2 py-1 rounded-full font-mono">
-                                        {container ? container.toUpperCase() : 'MP4'} (H.264)
-                                    </span>
+                                {/* Download Button - Single Video Only */}
+                                {!isPlaylist && (
+                                    <div className="flex justify-center gap-3 pt-2">
+                                        <Button
+                                            onClick={() => handleDownload(false)}
+                                            disabled={!url || downloadStatus.status === 'downloading'}
+                                            className="min-w-[200px] shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all"
+                                            size="lg"
+                                        >
+                                            {downloadStatus.status === 'downloading' ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    Downloading...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    Download Video
+                                                </>
+                                            )}
+                                        </Button>
+
+                                        {downloadStatus.status === 'error' && (
+                                            <Button
+                                                onClick={handleRetry}
+                                                variant="outline"
+                                                size="lg"
+                                            >
+                                                <RotateCcw className="w-4 h-4 mr-2" />
+                                                Retry
+                                            </Button>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-
-                            {format === 'video' ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {(videoInfo?.availableQualities && videoInfo.availableQualities.length > 0
-                                        ? videoInfo.availableQualities 
-                                        : ['1080p', '720p', '480p', '360p']
-                                    ).map((q) => {
-                                        const labels: Record<string, string> = {
-                                            '4320p': '8K Ultra HD',
-                                            '2160p': '4K Ultra HD',
-                                            '1440p': '2K QHD',
-                                            '1080p': 'Full HD',
-                                            '720p': 'HD',
-                                            '480p': 'SD',
-                                            '360p': 'Low',
-                                            '240p': 'Very Low',
-                                            '144p': 'Potato'
-                                        };
-                                        
-                                        // Estimate size
-                                        const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
-                                        const bitrateMap: Record<string, number> = {
-                                            '4320p': 150, '2160p': 60, '1440p': 30,
-                                            '1080p': 15, '720p': 7.5, '480p': 4,
-                                            '360p': 2.5, '240p': 1.5, '144p': 1
-                                        };
-                                        const sizeEst = lengthMB * (bitrateMap[q] || 5);
-                                        const sizeStr = sizeEst < 1024 ? `${sizeEst.toFixed(0)} MB` : `${(sizeEst / 1024).toFixed(1)} GB`;
-
-                                        return (
-                                            <button
-                                                key={q}
-                                                onClick={() => setQuality(q)}
-                                                className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                                                    quality === q 
-                                                        ? 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_4px_20px_-12px_var(--red-500)]' 
-                                                        : 'bg-glass-panel border-transparent hover:bg-background-secondary hover:border-border-glass text-foreground-secondary hover:text-foreground-primary'
-                                                }`}
-                                            >
-                                                {quality === q && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-red-500 shadow-[0_-2px_8px_var(--red-500)]" />}
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <span className="font-bold text-sm">{q}</span>
-                                                    {quality === q && <CheckCircle2 className="w-4 h-4 text-red-500" />}
-                                                </div>
-                                                <div className="flex justify-between items-end">
-                                                    <span className="text-[10px] opacity-70">{labels[q] || 'Video'}</span>
-                                                    <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[
-                                        { id: '0', label: 'Best Quality', detail: '320kbps', size: 2.5 },
-                                        { id: '5', label: 'High Quality', detail: '192kbps', size: 1.5 },
-                                        { id: '9', label: 'Standard', detail: '128kbps', size: 1.0 }
-                                    ].map((opt) => {
-                                        const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
-                                        const sizeEst = lengthMB * opt.size;
-                                        const sizeStr = `${sizeEst.toFixed(1)} MB`;
-
-                                        return (
-                                            <button
-                                                key={opt.id}
-                                                onClick={() => setQuality(opt.id)}
-                                                className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                                                    quality === opt.id 
-                                                        ? 'bg-pink-500/10 border-pink-500 text-pink-400 shadow-[0_4px_20px_-12px_var(--pink-500)]' 
-                                                        : 'bg-glass-panel border-transparent hover:bg-background-secondary hover:border-border-glass text-foreground-secondary hover:text-foreground-primary'
-                                                }`}
-                                            >
-                                                {quality === opt.id && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-pink-500 shadow-[0_-2px_8px_var(--pink-500)]" />}
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <span className="font-bold text-sm px-2 py-0.5 rounded-full bg-background/30 border border-white/5">{opt.label}</span>
-                                                    {quality === opt.id && <CheckCircle2 className="w-4 h-4 text-pink-500" />}
-                                                </div>
-                                                <div className="flex justify-between items-end mt-2 px-1">
-                                                    <span className="text-[10px] font-mono opacity-60">{(container || 'MP3').toUpperCase()} • {opt.detail}</span>
-                                                    <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </Card>
-
-                    {/* Download Button */}
-                    {/* Download Button - Single Video Only */}
-                    {!isPlaylist && (
-                        <div className="flex justify-center gap-3">
-                            <Button
-                                onClick={() => handleDownload(false)}
-                                disabled={!url || downloadStatus.status === 'downloading'}
-                                className="min-w-[200px]"
-                                size="lg"
-                            >
-                                {downloadStatus.status === 'downloading' ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Downloading...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Download Video
-                                    </>
-                                )}
-                            </Button>
-
-                            {downloadStatus.status === 'error' && (
-                                <Button
-                                    onClick={handleRetry}
-                                    variant="outline"
-                                    size="lg"
-                                >
-                                    <RotateCcw className="w-4 h-4 mr-2" />
-                                    Retry
-                                </Button>
-                            )}
                         </div>
                     )}
 
                     {/* Status Display */}
+                    {/* Status Display */}
                     {downloadStatus.status !== 'idle' && (
-                        <Card className={`p-6 ${
-                            downloadStatus.status === 'success' ? 'bg-green-500/5 border-green-500/20' :
-                            downloadStatus.status === 'error' ? 'bg-red-500/5 border-red-500/20' :
-                            'bg-blue-500/5 border-blue-500/20'
-                        }`}>
-                            <div className="flex items-start gap-3">
-                                {downloadStatus.status === 'downloading' && (
-                                    <Loader2 className="w-5 h-5 text-blue-400 animate-spin flex-shrink-0 mt-0.5" />
-                                )}
-                                {downloadStatus.status === 'success' && (
-                                    <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                                )}
-                                {downloadStatus.status === 'error' && (
-                                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                )}
-                                <div className="flex-1">
-                                    <p className={`font-medium ${
-                                        downloadStatus.status === 'success' ? 'text-green-400' :
-                                        downloadStatus.status === 'error' ? 'text-red-400' :
-                                        'text-blue-400'
-                                    }`}>
-                                        {downloadStatus.message}
-                                    </p>
-                                    
-                                    {downloadStatus.status === 'downloading' && isPlaylist && (
-                                        <Button 
-                                            onClick={handleCancel}
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="mt-1 h-6 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                        >
-                                            Cancel
-                                        </Button>
-                                    )}
-
-                                    {downloadStatus.status === 'error' && downloadStatus.detailedLogs && (
-                                        <div className="mt-3 p-3 bg-black/40 rounded-lg border border-red-500/20 font-mono text-[10px] text-red-300">
-                                            <p className="font-bold mb-1 uppercase text-[9px] opacity-70">Error Diagnostic Logs:</p>
-                                            {downloadStatus.detailedLogs.map((log, i) => (
-                                                <div key={i} className="flex gap-2">
-                                                    <span className="opacity-40">[{i+1}]</span>
-                                                    <span>{log}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {downloadStatus.status === 'downloading' && downloadStatus.progress !== undefined && (
-                                        <div className="mt-4 space-y-3">
-                                            {/* Progress Bar */}
-                                            <div>
-                                                <div className="flex justify-between text-sm text-foreground-secondary mb-2">
-                                                    <span className="font-medium">Downloading...</span>
-                                                    <span className="font-mono font-semibold text-blue-400">{downloadStatus.progress}%</span>
-                                                </div>
-                                                <div className="w-full h-3 bg-background-tertiary rounded-full overflow-hidden relative">
-                                                    <div 
-                                                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 relative"
-                                                        style={{ width: `${downloadStatus.progress}%` }}
-                                                    >
-                                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Download Stats Grid */}
-                                            <div className="grid grid-cols-2 gap-3 pt-2">
-                                                {/* Speed */}
-                                                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">Speed</span>
-                                                    </div>
-                                                    <p className="text-lg font-bold text-blue-400 font-mono">
-                                                        {formatSpeed((downloadStatus as any).speed || 0)}
-                                                    </p>
-                                                </div>
-
-                                                {/* ETA */}
-                                                <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Clock className="w-3 h-3 text-purple-400" />
-                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">ETA</span>
-                                                    </div>
-                                                    <p className="text-lg font-bold text-purple-400 font-mono">
-                                                        {formatETA((downloadStatus as any).eta || 0)}
-                                                    </p>
-                                                </div>
-
-                                                {/* Downloaded */}
-                                                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Download className="w-3 h-3 text-green-400" />
-                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">Downloaded</span>
-                                                    </div>
-                                                    <p className="text-lg font-bold text-green-400 font-mono">
-                                                        {formatBytes((downloadStatus as any).downloaded || 0)}
-                                                    </p>
-                                                </div>
-
-                                                {/* Total Size */}
-                                                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <HardDrive className="w-3 h-3 text-orange-400" />
-                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">Total</span>
-                                                    </div>
-                                                    <p className="text-lg font-bold text-orange-400 font-mono">
-                                                        {formatBytes((downloadStatus as any).total || 0)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {downloadStatus.status === 'success' && downloadStatus.filename && (
-                                        <>
-                                            <p className="text-sm text-foreground-secondary mt-2">
-                                                File: {downloadStatus.filename.split(/[/\\]/).pop()}
-                                            </p>
-                                            <div className="flex gap-2 mt-4">
-                                                <Button
-                                                    onClick={handleOpenFile}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="flex-1"
-                                                >
-                                                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                                                    Open File
-                                                </Button>
-                                                <Button
-                                                    onClick={handleShowInFolder}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="flex-1"
-                                                >
-                                                    <FolderOpen className="w-3.5 h-3.5 mr-1.5" />
-                                                    Show in Folder
-                                                </Button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </Card>
+                        <DownloadProgress
+                            status={downloadStatus}
+                            onCancel={handleCancel}
+                            isPlaylist={isPlaylist}
+                            onOpenFile={handleOpenFile}
+                            onShowFolder={handleShowInFolder}
+                        />
                     )}
 
                     {/* Features Info */}

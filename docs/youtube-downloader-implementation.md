@@ -4,7 +4,7 @@
 
 Tính năng download video từ YouTube link với nhiều định dạng và chất lượng khác nhau.
 
-## Status: ✅ Phase 1-3 Complete | ⏳ Phase 4-5 Advanced Features Pending
+## Status: ✅ Phase 1-4 Complete | 🚀 Ready for Polish & Testing
 
 ---
 
@@ -161,14 +161,16 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
 
 ```
 src/tools/media/
-├── YoutubeDownloader.tsx          ✅ Fully Functional
+├── YoutubeDownloader.tsx          ✅ Refactored & Modular
 ├── components/
-│   ├── VideoInfo.tsx             ✅ Integrated in main component
-│   ├── FormatsList.tsx           ✅ Shows all formats
-│   ├── DownloadQueue.tsx         ⏳ TODO (Phase 4)
-│   └── FormatSelector.tsx        ✅ Quality checklist
+│   ├── VideoInfo.tsx             ✅ Integrated
+│   ├── FormatsList.tsx           ✅ Integrated
+│   ├── SearchBar.tsx             ✅ New (Handles Input/Fetch)
+│   ├── FormatSelector.tsx        ✅ New (Handles Qualities)
+│   ├── DownloadProgress.tsx      ✅ New (Handles Progress)
+│   └── PlaylistView.tsx          ✅ Integrated
 └── utils/
-    └── youtube-helpers.ts        ⏳ TODO (Phase 4)
+    └── youtube-helpers.ts        ✅ Centralized Utilities
 
 electron/main/
 ├── youtube-downloader.ts         ✅ Fully Implemented
