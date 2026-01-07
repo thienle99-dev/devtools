@@ -31,6 +31,7 @@ interface SettingsStore {
     lazyLoading: boolean;
     memoryLimit: number; // MB
     backgroundProcessing: boolean;
+    maxBackgroundTabs: number; // Maximum tabs that can run in background
 
     // Data Management
     autoBackup: boolean;
@@ -68,6 +69,7 @@ interface SettingsStore {
     setLazyLoading: (value: boolean) => void;
     setMemoryLimit: (limit: number) => void;
     setBackgroundProcessing: (value: boolean) => void;
+    setMaxBackgroundTabs: (max: number) => void;
 
     // Data Management setters
     setAutoBackup: (value: boolean) => void;
@@ -110,6 +112,7 @@ const defaultSettings = {
     lazyLoading: true,
     memoryLimit: 512,
     backgroundProcessing: true,
+    maxBackgroundTabs: 5, // Default: allow up to 5 tabs
 
     // Data Management
     autoBackup: true,
@@ -176,6 +179,7 @@ export const useSettingsStore = create<SettingsStore>()(
             setLazyLoading: (lazyLoading) => set({ lazyLoading }),
             setMemoryLimit: (memoryLimit) => set({ memoryLimit }),
             setBackgroundProcessing: (backgroundProcessing) => set({ backgroundProcessing }),
+            setMaxBackgroundTabs: (maxBackgroundTabs) => set({ maxBackgroundTabs }),
 
             // Data Management setters
             setAutoBackup: (autoBackup) => set({ autoBackup }),
@@ -203,7 +207,7 @@ export const useSettingsStore = create<SettingsStore>()(
                         notifyOnScanComplete, notifyOnCleanupComplete, notifyOnErrors,
                         windowOpacity, alwaysOnTop, rememberWindowPosition,
                         animationSpeed, reduceMotion,
-                        enableAnimations, lazyLoading, memoryLimit, backgroundProcessing,
+                        enableAnimations, lazyLoading, memoryLimit, backgroundProcessing, maxBackgroundTabs,
                         autoBackup, backupRetentionDays,
                         toolShortcuts,
                     } = data;
@@ -232,6 +236,7 @@ export const useSettingsStore = create<SettingsStore>()(
                         lazyLoading: lazyLoading ?? defaultSettings.lazyLoading,
                         memoryLimit: memoryLimit ?? defaultSettings.memoryLimit,
                         backgroundProcessing: backgroundProcessing ?? defaultSettings.backgroundProcessing,
+                        maxBackgroundTabs: maxBackgroundTabs ?? defaultSettings.maxBackgroundTabs,
                         autoBackup: autoBackup ?? defaultSettings.autoBackup,
                         backupRetentionDays: backupRetentionDays ?? defaultSettings.backupRetentionDays,
                         toolShortcuts: toolShortcuts ?? defaultSettings.toolShortcuts,

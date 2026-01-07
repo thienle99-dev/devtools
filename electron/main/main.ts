@@ -9,6 +9,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
 import { setupScreenshotHandlers } from './screenshot'
+import { youtubeDownloader } from './youtube-downloader'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -540,8 +541,8 @@ function createWindow() {
       contextIsolation: true,
     },
     ...windowBounds,
-    minWidth: 1200, // Increased from 900
-    minHeight: 700, // Increased from 600
+    minWidth: 900, // Increased from 900
+    minHeight: 600, // Increased from 600
     show: !startMinimized, // Respect startMinimized
     // Frameless and transparent for custom UI
     frame: false,
@@ -1536,6 +1537,94 @@ app.whenReady().then(() => {
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
+  });
+
+  // YouTube Downloader IPC Handlers
+  ipcMain.handle('youtube:getInfo', async (_event, url: string) => {
+    try {
+      return await youtubeDownloader.getVideoInfo(url);
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  ipcMain.handle('youtube:getPlaylistInfo', async (_event, url: string) => {
+    try {
+      return await youtubeDownloader.getPlaylistInfo(url);
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  ipcMain.handle('youtube:download', async (event, options) => {
+    try {
+      const filepath = await youtubeDownloader.downloadVideo(
+        options,
+        (progress) => {
+          // Send progress to renderer
+          event.sender.send('youtube:progress', progress);
+        }
+      );
+      return { success: true, filepath };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Download failed' };
+    }
+  });
+
+  ipcMain.handle('youtube:cancel', async () => {
+    youtubeDownloader.cancelDownload();
+    return { success: true };
+  });
+
+  ipcMain.handle('youtube:openFile', async (_event, filePath: string) => {
+    const { shell } = await import('electron');
+    return shell.openPath(filePath);
+  });
+
+  ipcMain.handle('youtube:showInFolder', async (_event, filePath: string) => {
+    const { shell } = await import('electron');
+    shell.showItemInFolder(filePath);
+    return true;
+  });
+
+  ipcMain.handle('youtube:chooseFolder', async () => {
+    const { dialog } = await import('electron');
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Choose Download Location',
+      buttonLabel: 'Select Folder'
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true, path: null };
+    }
+    
+    return { canceled: false, path: result.filePaths[0] };
+  });
+
+  ipcMain.handle('youtube:getHistory', () => {
+    return youtubeDownloader.getHistory();
+  });
+
+  ipcMain.handle('youtube:clearHistory', () => {
+    youtubeDownloader.clearHistory();
+    return true;
+  });
+
+  ipcMain.handle('youtube:getSettings', () => {
+    return youtubeDownloader.getSettings();
+  });
+
+  ipcMain.handle('youtube:saveSettings', (_event, settings) => {
+    return youtubeDownloader.saveSettings(settings);
+  });
+
+  ipcMain.handle('youtube:getCapabilities', () => {
+    return youtubeDownloader.getCapabilities();
+  });
+
+  ipcMain.handle('youtube:installAria2', async () => {
+    return await youtubeDownloader.installAria2();
   });
 
   // Helper functions

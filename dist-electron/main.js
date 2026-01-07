@@ -7,511 +7,408 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import os from "node:os";
 import si from "systeminformation";
+import { createRequire } from "module";
+import fs$1 from "fs";
+import path$1 from "path";
 import Store from "electron-store";
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
-	if (typeof require !== "undefined") return require.apply(this, arguments);
-	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
-});
-var execAsync$1 = promisify(exec);
-var dirSizeCache = /* @__PURE__ */ new Map();
-var CACHE_TTL = 300 * 1e3;
+import { randomUUID as randomUUID$1 } from "crypto";
+import { exec as exec$1, execSync } from "child_process";
+import { promisify as promisify$1 } from "util";
+import https from "https";
+var __require = /* @__PURE__ */ ((i) => typeof require < "u" ? require : typeof Proxy < "u" ? new Proxy(i, { get: (i, N) => (typeof require < "u" ? require : i)[N] }) : i)(function(i) {
+	if (typeof require < "u") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + i + "\" in an environment that doesn't expose the `require` function.");
+}), execAsync$1 = promisify(exec), dirSizeCache = /* @__PURE__ */ new Map(), CACHE_TTL = 300 * 1e3;
 setInterval(() => {
-	const now = Date.now();
-	for (const [key, value] of dirSizeCache.entries()) if (now - value.timestamp > CACHE_TTL) dirSizeCache.delete(key);
+	let i = Date.now();
+	for (let [N, P] of dirSizeCache.entries()) i - P.timestamp > CACHE_TTL && dirSizeCache.delete(N);
 }, 6e4);
 function setupCleanerHandlers() {
-	ipcMain.handle("cleaner:get-platform", async () => {
-		return {
-			platform: process.platform,
-			version: os.release(),
-			architecture: os.arch(),
-			isAdmin: true
-		};
-	});
-	ipcMain.handle("cleaner:scan-junk", async () => {
-		const platform = process.platform;
-		const junkPaths = [];
-		const home = os.homedir();
-		if (platform === "win32") {
-			const windir = process.env.WINDIR || "C:\\Windows";
-			const localApp = process.env.LOCALAPPDATA || "";
-			const tempDir = os.tmpdir();
-			const winTemp = path.join(windir, "Temp");
-			const prefetch = path.join(windir, "Prefetch");
-			const softDist = path.join(windir, "SoftwareDistribution", "Download");
-			junkPaths.push({
-				path: tempDir,
+	ipcMain.handle("cleaner:get-platform", async () => ({
+		platform: process.platform,
+		version: os.release(),
+		architecture: os.arch(),
+		isAdmin: !0
+	})), ipcMain.handle("cleaner:scan-junk", async () => {
+		let i = process.platform, N = [], P = os.homedir();
+		if (i === "win32") {
+			let i = process.env.WINDIR || "C:\\Windows", P = process.env.LOCALAPPDATA || "", F = os.tmpdir(), I = path.join(i, "Temp"), L = path.join(i, "Prefetch"), R = path.join(i, "SoftwareDistribution", "Download");
+			N.push({
+				path: F,
 				name: "User Temporary Files",
 				category: "temp"
-			});
-			junkPaths.push({
-				path: winTemp,
+			}), N.push({
+				path: I,
 				name: "System Temporary Files",
 				category: "temp"
-			});
-			junkPaths.push({
-				path: prefetch,
+			}), N.push({
+				path: L,
 				name: "Prefetch Files",
 				category: "system"
-			});
-			junkPaths.push({
-				path: softDist,
+			}), N.push({
+				path: R,
 				name: "Windows Update Cache",
 				category: "system"
 			});
-			const chromeCache = path.join(localApp, "Google/Chrome/User Data/Default/Cache");
-			const edgeCache = path.join(localApp, "Microsoft/Edge/User Data/Default/Cache");
-			junkPaths.push({
-				path: chromeCache,
+			let z = path.join(P, "Google/Chrome/User Data/Default/Cache"), B = path.join(P, "Microsoft/Edge/User Data/Default/Cache");
+			N.push({
+				path: z,
 				name: "Chrome Cache",
 				category: "cache"
-			});
-			junkPaths.push({
-				path: edgeCache,
+			}), N.push({
+				path: B,
 				name: "Edge Cache",
 				category: "cache"
-			});
-			junkPaths.push({
+			}), N.push({
 				path: "C:\\$Recycle.Bin",
 				name: "Recycle Bin",
 				category: "trash"
 			});
-		} else if (platform === "darwin") {
-			junkPaths.push({
-				path: path.join(home, "Library/Caches"),
+		} else if (i === "darwin") {
+			N.push({
+				path: path.join(P, "Library/Caches"),
 				name: "User Caches",
 				category: "cache"
-			});
-			junkPaths.push({
-				path: path.join(home, "Library/Logs"),
+			}), N.push({
+				path: path.join(P, "Library/Logs"),
 				name: "User Logs",
 				category: "log"
-			});
-			junkPaths.push({
+			}), N.push({
 				path: "/Library/Caches",
 				name: "System Caches",
 				category: "cache"
-			});
-			junkPaths.push({
+			}), N.push({
 				path: "/var/log",
 				name: "System Logs",
 				category: "log"
-			});
-			junkPaths.push({
-				path: path.join(home, "Library/Caches/com.apple.bird"),
+			}), N.push({
+				path: path.join(P, "Library/Caches/com.apple.bird"),
 				name: "iCloud Cache",
 				category: "cache"
-			});
-			junkPaths.push({
-				path: path.join(home, ".Trash"),
+			}), N.push({
+				path: path.join(P, ".Trash"),
 				name: "Trash Bin",
 				category: "trash"
 			});
 			try {
-				const { stdout } = await execAsync$1("tmutil listlocalsnapshots /");
-				const count = stdout.split("\n").filter((l) => l.trim()).length;
-				if (count > 0) junkPaths.push({
+				let { stdout: i } = await execAsync$1("tmutil listlocalsnapshots /"), P = i.split("\n").filter((i) => i.trim()).length;
+				P > 0 && N.push({
 					path: "tmutil:snapshots",
-					name: `Time Machine Snapshots (${count})`,
+					name: `Time Machine Snapshots (${P})`,
 					category: "system",
-					virtual: true,
-					size: count * 500 * 1024 * 1024
+					virtual: !0,
+					size: P * 500 * 1024 * 1024
 				});
-			} catch (e) {}
+			} catch {}
 		}
-		const results = [];
-		let totalSize = 0;
-		for (const item of junkPaths) try {
-			if (item.virtual) {
-				results.push({
-					...item,
-					sizeFormatted: formatBytes$1(item.size || 0)
-				});
-				totalSize += item.size || 0;
+		let F = [], I = 0;
+		for (let i of N) try {
+			if (i.virtual) {
+				F.push({
+					...i,
+					sizeFormatted: formatBytes$1(i.size || 0)
+				}), I += i.size || 0;
 				continue;
 			}
-			const stats = await fs.stat(item.path).catch(() => null);
-			if (stats) {
-				const size = stats.isDirectory() ? await getDirSize(item.path) : stats.size;
-				if (size > 0) {
-					results.push({
-						...item,
-						size,
-						sizeFormatted: formatBytes$1(size)
-					});
-					totalSize += size;
-				}
+			let N = await fs.stat(i.path).catch(() => null);
+			if (N) {
+				let P = N.isDirectory() ? await getDirSize(i.path) : N.size;
+				P > 0 && (F.push({
+					...i,
+					size: P,
+					sizeFormatted: formatBytes$1(P)
+				}), I += P);
 			}
-		} catch (e) {}
+		} catch {}
 		return {
-			items: results,
-			totalSize,
-			totalSizeFormatted: formatBytes$1(totalSize)
+			items: F,
+			totalSize: I,
+			totalSizeFormatted: formatBytes$1(I)
 		};
-	});
-	ipcMain.handle("cleaner:get-space-lens", async (event, scanPath) => {
-		const rootPath = scanPath || os.homedir();
-		const sender = event.sender;
-		return await scanDirectoryForLens(rootPath, 0, 1, (progress) => {
-			if (sender && !sender.isDestroyed()) sender.send("cleaner:space-lens-progress", progress);
+	}), ipcMain.handle("cleaner:get-space-lens", async (i, N) => {
+		let P = N || os.homedir(), F = i.sender;
+		return await scanDirectoryForLens(P, 0, 1, (i) => {
+			F && !F.isDestroyed() && F.send("cleaner:space-lens-progress", i);
 		});
-	});
-	ipcMain.handle("cleaner:get-folder-size", async (_, folderPath) => {
-		const cached = dirSizeCache.get(folderPath);
-		if (cached && Date.now() - cached.timestamp < CACHE_TTL) return {
-			size: cached.size,
-			sizeFormatted: formatBytes$1(cached.size),
-			cached: true
+	}), ipcMain.handle("cleaner:get-folder-size", async (i, N) => {
+		let P = dirSizeCache.get(N);
+		if (P && Date.now() - P.timestamp < CACHE_TTL) return {
+			size: P.size,
+			sizeFormatted: formatBytes$1(P.size),
+			cached: !0
 		};
 		try {
-			const size = await getDirSizeLimited(folderPath, 4);
-			const sizeFormatted = formatBytes$1(size);
-			dirSizeCache.set(folderPath, {
-				size,
+			let i = await getDirSizeLimited(N, 4), P = formatBytes$1(i);
+			return dirSizeCache.set(N, {
+				size: i,
 				timestamp: Date.now()
-			});
-			return {
-				size,
-				sizeFormatted,
-				cached: false
+			}), {
+				size: i,
+				sizeFormatted: P,
+				cached: !1
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
 				size: 0,
 				sizeFormatted: formatBytes$1(0),
-				cached: false,
-				error: e.message
+				cached: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:clear-size-cache", async (_, folderPath) => {
-		if (folderPath) {
-			for (const key of dirSizeCache.keys()) if (key.startsWith(folderPath)) dirSizeCache.delete(key);
-		} else dirSizeCache.clear();
-		return { success: true };
-	});
-	ipcMain.handle("cleaner:get-performance-data", async () => {
-		const processes = await si.processes();
-		const mem = await si.mem();
-		const load = await si.currentLoad();
+	}), ipcMain.handle("cleaner:clear-size-cache", async (i, N) => {
+		if (N) for (let i of dirSizeCache.keys()) i.startsWith(N) && dirSizeCache.delete(i);
+		else dirSizeCache.clear();
+		return { success: !0 };
+	}), ipcMain.handle("cleaner:get-performance-data", async () => {
+		let i = await si.processes(), N = await si.mem(), P = await si.currentLoad();
 		return {
-			heavyApps: processes.list.sort((a, b) => b.cpu + b.mem - (a.cpu + a.mem)).slice(0, 10).map((p) => ({
-				pid: p.pid,
-				name: p.name,
-				cpu: p.cpu,
-				mem: p.mem,
-				user: p.user,
-				path: p.path
+			heavyApps: i.list.sort((i, N) => N.cpu + N.mem - (i.cpu + i.mem)).slice(0, 10).map((i) => ({
+				pid: i.pid,
+				name: i.name,
+				cpu: i.cpu,
+				mem: i.mem,
+				user: i.user,
+				path: i.path
 			})),
 			memory: {
-				total: mem.total,
-				used: mem.used,
-				percent: mem.used / mem.total * 100
+				total: N.total,
+				used: N.used,
+				percent: N.used / N.total * 100
 			},
-			cpuLoad: load.currentLoad
+			cpuLoad: P.currentLoad
 		};
-	});
-	ipcMain.handle("cleaner:get-startup-items", async () => {
-		const platform = process.platform;
-		const items = [];
-		if (platform === "darwin") try {
-			const agentsPath = path.join(os.homedir(), "Library/LaunchAgents");
-			const agencyFiles = await fs.readdir(agentsPath).catch(() => []);
-			for (const file of agencyFiles) if (file.endsWith(".plist")) {
-				const plistPath = path.join(agentsPath, file);
-				const { stdout } = await execAsync$1(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
-				const enabled = stdout.trim().length > 0;
-				items.push({
-					name: file.replace(".plist", ""),
-					path: plistPath,
+	}), ipcMain.handle("cleaner:get-startup-items", async () => {
+		let i = process.platform, N = [];
+		if (i === "darwin") try {
+			let i = path.join(os.homedir(), "Library/LaunchAgents"), P = await fs.readdir(i).catch(() => []);
+			for (let F of P) if (F.endsWith(".plist")) {
+				let P = path.join(i, F), { stdout: I } = await execAsync$1(`launchctl list | grep -i "${F.replace(".plist", "")}"`).catch(() => ({ stdout: "" })), L = I.trim().length > 0;
+				N.push({
+					name: F.replace(".plist", ""),
+					path: P,
 					type: "LaunchAgent",
-					enabled
+					enabled: L
 				});
 			}
-			const globalAgents = "/Library/LaunchAgents";
-			const globalFiles = await fs.readdir(globalAgents).catch(() => []);
-			for (const file of globalFiles) {
-				const plistPath = path.join(globalAgents, file);
-				const { stdout } = await execAsync$1(`launchctl list | grep -i "${file.replace(".plist", "")}"`).catch(() => ({ stdout: "" }));
-				const enabled = stdout.trim().length > 0;
-				items.push({
-					name: file.replace(".plist", ""),
-					path: plistPath,
+			let F = "/Library/LaunchAgents", I = await fs.readdir(F).catch(() => []);
+			for (let i of I) {
+				let P = path.join(F, i), { stdout: I } = await execAsync$1(`launchctl list | grep -i "${i.replace(".plist", "")}"`).catch(() => ({ stdout: "" })), L = I.trim().length > 0;
+				N.push({
+					name: i.replace(".plist", ""),
+					path: P,
 					type: "SystemAgent",
-					enabled
+					enabled: L
 				});
 			}
-		} catch (e) {}
-		else if (platform === "win32") try {
-			const { stdout } = await execAsync$1("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\"");
-			const data = JSON.parse(stdout);
-			const list = Array.isArray(data) ? data : [data];
-			for (const item of list) items.push({
-				name: item.Name,
-				path: item.Command,
+		} catch {}
+		else if (i === "win32") try {
+			let { stdout: i } = await execAsync$1("powershell \"Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | ConvertTo-Json\""), P = JSON.parse(i), F = Array.isArray(P) ? P : [P];
+			for (let i of F) N.push({
+				name: i.Name,
+				path: i.Command,
 				type: "StartupCommand",
-				location: item.Location,
-				enabled: true
+				location: i.Location,
+				enabled: !0
 			});
-		} catch (e) {}
-		return items;
-	});
-	ipcMain.handle("cleaner:toggle-startup-item", async (_event, item) => {
-		const platform = process.platform;
+		} catch {}
+		return N;
+	}), ipcMain.handle("cleaner:toggle-startup-item", async (i, N) => {
+		let P = process.platform;
 		try {
-			if (platform === "darwin") {
-				const isEnabled = item.enabled ?? true;
-				if (item.type === "LaunchAgent" || item.type === "SystemAgent") {
-					if (isEnabled) await execAsync$1(`launchctl unload "${item.path}"`);
-					else await execAsync$1(`launchctl load "${item.path}"`);
-					return {
-						success: true,
-						enabled: !isEnabled
-					};
-				}
-			} else if (platform === "win32") {
-				const isEnabled = item.enabled ?? true;
-				if (item.location === "Startup") {
-					const startupPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup");
-					const shortcutName = path.basename(item.path);
-					const shortcutPath = path.join(startupPath, shortcutName);
-					if (isEnabled) await fs.unlink(shortcutPath).catch(() => {});
-					return {
-						success: true,
-						enabled: !isEnabled
+			if (P === "darwin") {
+				let i = N.enabled ?? !0;
+				if (N.type === "LaunchAgent" || N.type === "SystemAgent") return i ? await execAsync$1(`launchctl unload "${N.path}"`) : await execAsync$1(`launchctl load "${N.path}"`), {
+					success: !0,
+					enabled: !i
+				};
+			} else if (P === "win32") {
+				let i = N.enabled ?? !0;
+				if (N.location === "Startup") {
+					let P = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup"), F = path.basename(N.path), I = path.join(P, F);
+					return i && await fs.unlink(I).catch(() => {}), {
+						success: !0,
+						enabled: !i
 					};
 				} else return {
-					success: true,
-					enabled: !isEnabled
+					success: !0,
+					enabled: !i
 				};
 			}
 			return {
-				success: false,
+				success: !1,
 				error: "Unsupported platform or item type"
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:kill-process", async (_event, pid) => {
+	}), ipcMain.handle("cleaner:kill-process", async (i, N) => {
 		try {
-			process.kill(pid, "SIGKILL");
-			return { success: true };
-		} catch (e) {
+			return process.kill(N, "SIGKILL"), { success: !0 };
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:get-installed-apps", async () => {
-		const platform = process.platform;
-		const apps = [];
-		if (platform === "darwin") {
-			const appsDir = "/Applications";
-			const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
-			for (const file of files) if (file.name.endsWith(".app")) {
-				const appPath = path.join(appsDir, file.name);
+	}), ipcMain.handle("cleaner:get-installed-apps", async () => {
+		let i = process.platform, N = [];
+		if (i === "darwin") {
+			let i = "/Applications", P = await fs.readdir(i, { withFileTypes: !0 }).catch(() => []);
+			for (let F of P) if (F.name.endsWith(".app")) {
+				let P = path.join(i, F.name);
 				try {
-					const stats = await fs.stat(appPath);
-					apps.push({
-						name: file.name.replace(".app", ""),
-						path: appPath,
-						size: await getDirSize(appPath),
-						installDate: stats.birthtime,
+					let i = await fs.stat(P);
+					N.push({
+						name: F.name.replace(".app", ""),
+						path: P,
+						size: await getDirSize(P),
+						installDate: i.birthtime,
 						type: "Application"
 					});
-				} catch (e) {}
+				} catch {}
 			}
-		} else if (platform === "win32") try {
-			const { stdout } = await execAsync$1(`powershell "
-                    Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion, InstallLocation, InstallDate | ConvertTo-Json
-                "`);
-			const data = JSON.parse(stdout);
-			const list = Array.isArray(data) ? data : [data];
-			for (const item of list) if (item.DisplayName) apps.push({
-				name: item.DisplayName,
-				version: item.DisplayVersion,
-				path: item.InstallLocation,
-				installDate: item.InstallDate,
+		} else if (i === "win32") try {
+			let { stdout: i } = await execAsync$1("powershell \"\n                    Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion, InstallLocation, InstallDate | ConvertTo-Json\n                \""), P = JSON.parse(i), F = Array.isArray(P) ? P : [P];
+			for (let i of F) i.DisplayName && N.push({
+				name: i.DisplayName,
+				version: i.DisplayVersion,
+				path: i.InstallLocation,
+				installDate: i.InstallDate,
 				type: "SystemApp"
 			});
-		} catch (e) {}
-		return apps;
-	});
-	ipcMain.handle("cleaner:get-large-files", async (_event, options) => {
-		const minSize = options.minSize || 100 * 1024 * 1024;
-		const scanPaths = options.scanPaths || [os.homedir()];
-		const largeFiles = [];
-		for (const scanPath of scanPaths) await findLargeFiles(scanPath, minSize, largeFiles);
-		largeFiles.sort((a, b) => b.size - a.size);
-		return largeFiles.slice(0, 50);
-	});
-	ipcMain.handle("cleaner:get-duplicates", async (_event, scanPath) => {
-		const rootPath = scanPath || os.homedir();
-		const fileHashes = /* @__PURE__ */ new Map();
-		const duplicates = [];
-		await findDuplicates(rootPath, fileHashes);
-		for (const [hash, paths] of fileHashes.entries()) if (paths.length > 1) try {
-			const stats = await fs.stat(paths[0]);
-			duplicates.push({
-				hash,
-				size: stats.size,
-				sizeFormatted: formatBytes$1(stats.size),
-				totalWasted: stats.size * (paths.length - 1),
-				totalWastedFormatted: formatBytes$1(stats.size * (paths.length - 1)),
-				files: paths
+		} catch {}
+		return N;
+	}), ipcMain.handle("cleaner:get-large-files", async (i, N) => {
+		let P = N.minSize || 100 * 1024 * 1024, F = N.scanPaths || [os.homedir()], I = [];
+		for (let i of F) await findLargeFiles(i, P, I);
+		return I.sort((i, N) => N.size - i.size), I.slice(0, 50);
+	}), ipcMain.handle("cleaner:get-duplicates", async (i, N) => {
+		let P = N || os.homedir(), F = /* @__PURE__ */ new Map(), I = [];
+		await findDuplicates(P, F);
+		for (let [i, N] of F.entries()) if (N.length > 1) try {
+			let P = await fs.stat(N[0]);
+			I.push({
+				hash: i,
+				size: P.size,
+				sizeFormatted: formatBytes$1(P.size),
+				totalWasted: P.size * (N.length - 1),
+				totalWastedFormatted: formatBytes$1(P.size * (N.length - 1)),
+				files: N
 			});
-		} catch (e) {}
-		return duplicates.sort((a, b) => b.totalWasted - a.totalWasted);
-	});
-	ipcMain.handle("cleaner:run-cleanup", async (_event, files) => {
-		let freedSize = 0;
-		const failed = [];
-		const platform = process.platform;
-		const safetyResult = checkFilesSafety(files, platform);
-		if (!safetyResult.safe && safetyResult.blocked.length > 0) return {
-			success: false,
-			error: `Cannot delete ${safetyResult.blocked.length} protected file(s)`,
+		} catch {}
+		return I.sort((i, N) => N.totalWasted - i.totalWasted);
+	}), ipcMain.handle("cleaner:run-cleanup", async (i, N) => {
+		let P = 0, F = [], I = process.platform, L = checkFilesSafety(N, I);
+		if (!L.safe && L.blocked.length > 0) return {
+			success: !1,
+			error: `Cannot delete ${L.blocked.length} protected file(s)`,
 			freedSize: 0,
 			freedSizeFormatted: formatBytes$1(0),
-			failed: safetyResult.blocked
+			failed: L.blocked
 		};
-		const chunkSize = 50;
-		for (let i = 0; i < files.length; i += chunkSize) {
-			const chunk = files.slice(i, i + chunkSize);
-			for (const filePath of chunk) try {
-				if (filePath === "tmutil:snapshots") {
-					if (process.platform === "darwin") {
-						await execAsync$1("tmutil deletelocalsnapshots /");
-						freedSize += 2 * 1024 * 1024 * 1024;
-					}
+		for (let i = 0; i < N.length; i += 50) {
+			let I = N.slice(i, i + 50);
+			for (let i of I) try {
+				if (i === "tmutil:snapshots") {
+					process.platform === "darwin" && (await execAsync$1("tmutil deletelocalsnapshots /"), P += 2 * 1024 * 1024 * 1024);
 					continue;
 				}
-				const stats = await fs.stat(filePath).catch(() => null);
-				if (!stats) continue;
-				const size = stats.isDirectory() ? await getDirSize(filePath) : stats.size;
-				if (stats.isDirectory()) await fs.rm(filePath, {
-					recursive: true,
-					force: true
-				});
-				else await fs.unlink(filePath);
-				freedSize += size;
-			} catch (e) {
-				failed.push(filePath);
+				let N = await fs.stat(i).catch(() => null);
+				if (!N) continue;
+				let F = N.isDirectory() ? await getDirSize(i) : N.size;
+				N.isDirectory() ? await fs.rm(i, {
+					recursive: !0,
+					force: !0
+				}) : await fs.unlink(i), P += F;
+			} catch {
+				F.push(i);
 			}
 		}
 		return {
-			success: failed.length === 0,
-			freedSize,
-			freedSizeFormatted: formatBytes$1(freedSize),
-			failed
+			success: F.length === 0,
+			freedSize: P,
+			freedSizeFormatted: formatBytes$1(P),
+			failed: F
 		};
-	});
-	ipcMain.handle("cleaner:free-ram", async () => {
+	}), ipcMain.handle("cleaner:free-ram", async () => {
 		if (process.platform === "darwin") try {
 			await execAsync$1("purge");
-		} catch (e) {}
+		} catch {}
 		return {
-			success: true,
+			success: !0,
 			ramFreed: Math.random() * 500 * 1024 * 1024
 		};
-	});
-	ipcMain.handle("cleaner:uninstall-app", async (_event, app$1) => {
-		const platform = process.platform;
+	}), ipcMain.handle("cleaner:uninstall-app", async (i, N) => {
+		let P = process.platform;
 		try {
-			if (platform === "darwin") {
-				const appPath = app$1.path;
-				const appName = app$1.name;
-				await execAsync$1(`osascript -e 'tell application "Finder" to move POSIX file "${appPath}" to trash'`);
-				const home = os.homedir();
-				const associatedPaths = [
-					path.join(home, "Library/Preferences", `*${appName}*`),
-					path.join(home, "Library/Application Support", appName),
-					path.join(home, "Library/Caches", appName),
-					path.join(home, "Library/Logs", appName),
-					path.join(home, "Library/Saved Application State", `*${appName}*`),
-					path.join(home, "Library/LaunchAgents", `*${appName}*`)
-				];
-				let freedSize = 0;
-				for (const pattern of associatedPaths) try {
-					const files = await fs.readdir(path.dirname(pattern)).catch(() => []);
-					for (const file of files) if (file.includes(appName)) {
-						const filePath = path.join(path.dirname(pattern), file);
-						const stats = await fs.stat(filePath).catch(() => null);
-						if (stats) if (stats.isDirectory()) {
-							freedSize += await getDirSize(filePath);
-							await fs.rm(filePath, {
-								recursive: true,
-								force: true
-							});
-						} else {
-							freedSize += stats.size;
-							await fs.unlink(filePath);
-						}
+			if (P === "darwin") {
+				let i = N.path, P = N.name;
+				await execAsync$1(`osascript -e 'tell application "Finder" to move POSIX file "${i}" to trash'`);
+				let F = os.homedir(), I = [
+					path.join(F, "Library/Preferences", `*${P}*`),
+					path.join(F, "Library/Application Support", P),
+					path.join(F, "Library/Caches", P),
+					path.join(F, "Library/Logs", P),
+					path.join(F, "Library/Saved Application State", `*${P}*`),
+					path.join(F, "Library/LaunchAgents", `*${P}*`)
+				], L = 0;
+				for (let i of I) try {
+					let N = await fs.readdir(path.dirname(i)).catch(() => []);
+					for (let F of N) if (F.includes(P)) {
+						let N = path.join(path.dirname(i), F), P = await fs.stat(N).catch(() => null);
+						P && (P.isDirectory() ? (L += await getDirSize(N), await fs.rm(N, {
+							recursive: !0,
+							force: !0
+						})) : (L += P.size, await fs.unlink(N)));
 					}
-				} catch (e) {}
+				} catch {}
 				return {
-					success: true,
-					freedSize,
-					freedSizeFormatted: formatBytes$1(freedSize)
+					success: !0,
+					freedSize: L,
+					freedSizeFormatted: formatBytes$1(L)
 				};
-			} else if (platform === "win32") {
-				const appName = app$1.name;
-				let freedSize = 0;
+			} else if (P === "win32") {
+				let i = N.name, P = 0;
 				try {
-					const { stdout } = await execAsync$1(`wmic product where name="${appName.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`);
-					const match = stdout.match(/IdentifyingNumber=(\{[^}]+\})/);
-					if (match) {
-						const guid = match[1];
-						await execAsync$1(`msiexec /x ${guid} /quiet /norestart`);
-						freedSize = await getDirSize(app$1.path).catch(() => 0);
-					} else {
-						await execAsync$1(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => {});
-						freedSize = await getDirSize(app$1.path).catch(() => 0);
-					}
-				} catch (e) {
-					freedSize = await getDirSize(app$1.path).catch(() => 0);
-					await fs.rm(app$1.path, {
-						recursive: true,
-						force: true
+					let { stdout: F } = await execAsync$1(`wmic product where name="${i.replace(/"/g, "\\\"")}" get IdentifyingNumber /value`), I = F.match(/IdentifyingNumber=(\{[^}]+\})/);
+					if (I) {
+						let i = I[1];
+						await execAsync$1(`msiexec /x ${i} /quiet /norestart`), P = await getDirSize(N.path).catch(() => 0);
+					} else await execAsync$1(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${i}*'} | Remove-AppxPackage"`).catch(() => {}), P = await getDirSize(N.path).catch(() => 0);
+				} catch {
+					P = await getDirSize(N.path).catch(() => 0), await fs.rm(N.path, {
+						recursive: !0,
+						force: !0
 					}).catch(() => {});
 				}
-				const localApp = process.env.LOCALAPPDATA || "";
-				const appData = process.env.APPDATA || "";
-				const associatedPaths = [path.join(localApp, appName), path.join(appData, appName)];
-				for (const assocPath of associatedPaths) try {
-					if (await fs.stat(assocPath).catch(() => null)) {
-						freedSize += await getDirSize(assocPath).catch(() => 0);
-						await fs.rm(assocPath, {
-							recursive: true,
-							force: true
-						});
-					}
-				} catch (e) {}
+				let F = process.env.LOCALAPPDATA || "", I = process.env.APPDATA || "", L = [path.join(F, i), path.join(I, i)];
+				for (let i of L) try {
+					await fs.stat(i).catch(() => null) && (P += await getDirSize(i).catch(() => 0), await fs.rm(i, {
+						recursive: !0,
+						force: !0
+					}));
+				} catch {}
 				return {
-					success: true,
-					freedSize,
-					freedSizeFormatted: formatBytes$1(freedSize)
+					success: !0,
+					freedSize: P,
+					freedSizeFormatted: formatBytes$1(P)
 				};
 			}
 			return {
-				success: false,
+				success: !1,
 				error: "Unsupported platform"
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:scan-privacy", async () => {
-		const platform = process.platform;
-		const results = {
+	}), ipcMain.handle("cleaner:scan-privacy", async () => {
+		let i = process.platform, N = {
 			registryEntries: [],
 			activityHistory: [],
 			spotlightHistory: [],
@@ -519,427 +416,320 @@ function setupCleanerHandlers() {
 			totalItems: 0,
 			totalSize: 0
 		};
-		if (platform === "win32") try {
-			const { stdout: docsCount } = await execAsync$1(`powershell "
-                    Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
-                    Select-Object -ExpandProperty * | 
-                    Where-Object { \$_ -ne \$null } | 
-                    Measure-Object | 
-                    Select-Object -ExpandProperty Count
-                "`).catch(() => ({ stdout: "0" }));
-			const docsCountNum = parseInt(docsCount.trim()) || 0;
-			if (docsCountNum > 0) {
-				results.registryEntries.push({
-					name: "Recent Documents",
-					path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs",
-					type: "registry",
-					count: docsCountNum,
-					size: 0,
-					description: "Recently opened documents registry entries"
-				});
-				results.totalItems += docsCountNum;
-			}
-			const { stdout: programsCount } = await execAsync$1(`powershell "
-                    Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
-                    Select-Object -ExpandProperty * | 
-                    Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' } | 
-                    Measure-Object | 
-                    Select-Object -ExpandProperty Count
-                "`).catch(() => ({ stdout: "0" }));
-			const programsCountNum = parseInt(programsCount.trim()) || 0;
-			if (programsCountNum > 0) {
-				results.registryEntries.push({
-					name: "Recent Programs",
-					path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU",
-					type: "registry",
-					count: programsCountNum,
-					size: 0,
-					description: "Recently run programs registry entries"
-				});
-				results.totalItems += programsCountNum;
-			}
-			const activityHistoryPath = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
+		if (i === "win32") try {
+			let { stdout: i } = await execAsync$1("powershell \"\n                    Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\" -ErrorAction SilentlyContinue | \n                    Select-Object -ExpandProperty * | \n                    Where-Object { $_ -ne $null } | \n                    Measure-Object | \n                    Select-Object -ExpandProperty Count\n                \"").catch(() => ({ stdout: "0" })), P = parseInt(i.trim()) || 0;
+			P > 0 && (N.registryEntries.push({
+				name: "Recent Documents",
+				path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs",
+				type: "registry",
+				count: P,
+				size: 0,
+				description: "Recently opened documents registry entries"
+			}), N.totalItems += P);
+			let { stdout: F } = await execAsync$1("powershell \"\n                    Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" -ErrorAction SilentlyContinue | \n                    Select-Object -ExpandProperty * | \n                    Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' } | \n                    Measure-Object | \n                    Select-Object -ExpandProperty Count\n                \"").catch(() => ({ stdout: "0" })), I = parseInt(F.trim()) || 0;
+			I > 0 && (N.registryEntries.push({
+				name: "Recent Programs",
+				path: "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU",
+				type: "registry",
+				count: I,
+				size: 0,
+				description: "Recently run programs registry entries"
+			}), N.totalItems += I);
+			let L = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
 			try {
-				const activityFiles = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
-				const activityFilesList = [];
-				let activitySize = 0;
-				for (const file of activityFiles) {
-					const filePath = path.join(activityHistoryPath, file);
+				let i = await fs.readdir(L, { recursive: !0 }).catch(() => []), P = [], F = 0;
+				for (let N of i) {
+					let i = path.join(L, N);
 					try {
-						const stats = await fs.stat(filePath);
-						if (stats.isFile()) {
-							activityFilesList.push(filePath);
-							activitySize += stats.size;
-						}
-					} catch (e) {}
+						let N = await fs.stat(i);
+						N.isFile() && (P.push(i), F += N.size);
+					} catch {}
 				}
-				if (activityFilesList.length > 0) {
-					results.activityHistory.push({
-						name: "Activity History",
-						path: activityHistoryPath,
-						type: "files",
-						count: activityFilesList.length,
-						size: activitySize,
-						sizeFormatted: formatBytes$1(activitySize),
-						files: activityFilesList,
-						description: "Windows activity history files"
-					});
-					results.totalItems += activityFilesList.length;
-					results.totalSize += activitySize;
-				}
-			} catch (e) {}
-			const searchHistoryPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
+				P.length > 0 && (N.activityHistory.push({
+					name: "Activity History",
+					path: L,
+					type: "files",
+					count: P.length,
+					size: F,
+					sizeFormatted: formatBytes$1(F),
+					files: P,
+					description: "Windows activity history files"
+				}), N.totalItems += P.length, N.totalSize += F);
+			} catch {}
+			let R = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
 			try {
-				const searchFiles = await fs.readdir(searchHistoryPath).catch(() => []);
-				const searchFilesList = [];
-				let searchSize = 0;
-				for (const file of searchFiles) {
-					const filePath = path.join(searchHistoryPath, file);
+				let i = await fs.readdir(R).catch(() => []), P = [], F = 0;
+				for (let N of i) {
+					let i = path.join(R, N);
 					try {
-						const stats = await fs.stat(filePath);
-						searchFilesList.push(filePath);
-						searchSize += stats.size;
-					} catch (e) {}
+						let N = await fs.stat(i);
+						P.push(i), F += N.size;
+					} catch {}
 				}
-				if (searchFilesList.length > 0) {
-					results.activityHistory.push({
-						name: "Windows Search History",
-						path: searchHistoryPath,
-						type: "files",
-						count: searchFilesList.length,
-						size: searchSize,
-						sizeFormatted: formatBytes$1(searchSize),
-						files: searchFilesList,
-						description: "Windows search history files"
-					});
-					results.totalItems += searchFilesList.length;
-					results.totalSize += searchSize;
-				}
-			} catch (e) {}
-		} catch (e) {
+				P.length > 0 && (N.activityHistory.push({
+					name: "Windows Search History",
+					path: R,
+					type: "files",
+					count: P.length,
+					size: F,
+					sizeFormatted: formatBytes$1(F),
+					files: P,
+					description: "Windows search history files"
+				}), N.totalItems += P.length, N.totalSize += F);
+			} catch {}
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message,
-				results
+				success: !1,
+				error: i.message,
+				results: N
 			};
 		}
-		else if (platform === "darwin") try {
-			const spotlightHistoryPath = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
+		else if (i === "darwin") try {
+			let i = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
 			try {
-				const spotlightFiles = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
-				const spotlightFilesList = [];
-				let spotlightSize = 0;
-				for (const file of spotlightFiles) {
-					const filePath = path.join(spotlightHistoryPath, file);
+				let P = await fs.readdir(i, { recursive: !0 }).catch(() => []), F = [], I = 0;
+				for (let N of P) {
+					let P = path.join(i, N);
 					try {
-						const stats = await fs.stat(filePath);
-						if (stats.isFile()) {
-							spotlightFilesList.push(filePath);
-							spotlightSize += stats.size;
-						}
-					} catch (e) {}
+						let i = await fs.stat(P);
+						i.isFile() && (F.push(P), I += i.size);
+					} catch {}
 				}
-				if (spotlightFilesList.length > 0) {
-					results.spotlightHistory.push({
-						name: "Spotlight Search History",
-						path: spotlightHistoryPath,
-						type: "files",
-						count: spotlightFilesList.length,
-						size: spotlightSize,
-						sizeFormatted: formatBytes$1(spotlightSize),
-						files: spotlightFilesList,
-						description: "macOS Spotlight search history"
-					});
-					results.totalItems += spotlightFilesList.length;
-					results.totalSize += spotlightSize;
-				}
-			} catch (e) {}
-			const quickLookCachePath = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
+				F.length > 0 && (N.spotlightHistory.push({
+					name: "Spotlight Search History",
+					path: i,
+					type: "files",
+					count: F.length,
+					size: I,
+					sizeFormatted: formatBytes$1(I),
+					files: F,
+					description: "macOS Spotlight search history"
+				}), N.totalItems += F.length, N.totalSize += I);
+			} catch {}
+			let P = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
 			try {
-				const quickLookFiles = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
-				const quickLookFilesList = [];
-				let quickLookSize = 0;
-				for (const file of quickLookFiles) {
-					const filePath = path.join(quickLookCachePath, file);
+				let i = await fs.readdir(P, { recursive: !0 }).catch(() => []), F = [], I = 0;
+				for (let N of i) {
+					let i = path.join(P, N);
 					try {
-						const stats = await fs.stat(filePath);
-						if (stats.isFile()) {
-							quickLookFilesList.push(filePath);
-							quickLookSize += stats.size;
-						}
-					} catch (e) {}
+						let N = await fs.stat(i);
+						N.isFile() && (F.push(i), I += N.size);
+					} catch {}
 				}
-				if (quickLookFilesList.length > 0) {
-					results.quickLookCache.push({
-						name: "Quick Look Cache",
-						path: quickLookCachePath,
-						type: "files",
-						count: quickLookFilesList.length,
-						size: quickLookSize,
-						sizeFormatted: formatBytes$1(quickLookSize),
-						files: quickLookFilesList,
-						description: "macOS Quick Look thumbnail cache"
-					});
-					results.totalItems += quickLookFilesList.length;
-					results.totalSize += quickLookSize;
-				}
-			} catch (e) {}
-			const recentItemsPath = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
+				F.length > 0 && (N.quickLookCache.push({
+					name: "Quick Look Cache",
+					path: P,
+					type: "files",
+					count: F.length,
+					size: I,
+					sizeFormatted: formatBytes$1(I),
+					files: F,
+					description: "macOS Quick Look thumbnail cache"
+				}), N.totalItems += F.length, N.totalSize += I);
+			} catch {}
+			let F = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
 			try {
-				const recentFiles = await fs.readdir(recentItemsPath).catch(() => []);
-				const recentFilesList = [];
-				let recentSize = 0;
-				for (const file of recentFiles) if (file.includes("RecentItems")) {
-					const filePath = path.join(recentItemsPath, file);
+				let i = await fs.readdir(F).catch(() => []), P = [], I = 0;
+				for (let N of i) if (N.includes("RecentItems")) {
+					let i = path.join(F, N);
 					try {
-						const stats = await fs.stat(filePath);
-						recentFilesList.push(filePath);
-						recentSize += stats.size;
-					} catch (e) {}
+						let N = await fs.stat(i);
+						P.push(i), I += N.size;
+					} catch {}
 				}
-				if (recentFilesList.length > 0) {
-					results.spotlightHistory.push({
-						name: "Recently Opened Files",
-						path: recentItemsPath,
-						type: "files",
-						count: recentFilesList.length,
-						size: recentSize,
-						sizeFormatted: formatBytes$1(recentSize),
-						files: recentFilesList,
-						description: "macOS recently opened files list"
-					});
-					results.totalItems += recentFilesList.length;
-					results.totalSize += recentSize;
-				}
-			} catch (e) {}
-		} catch (e) {
+				P.length > 0 && (N.spotlightHistory.push({
+					name: "Recently Opened Files",
+					path: F,
+					type: "files",
+					count: P.length,
+					size: I,
+					sizeFormatted: formatBytes$1(I),
+					files: P,
+					description: "macOS recently opened files list"
+				}), N.totalItems += P.length, N.totalSize += I);
+			} catch {}
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message,
-				results
+				success: !1,
+				error: i.message,
+				results: N
 			};
 		}
 		return {
-			success: true,
-			results
+			success: !0,
+			results: N
 		};
-	});
-	ipcMain.handle("cleaner:clean-privacy", async (_event, options) => {
-		const platform = process.platform;
-		let cleanedItems = 0;
-		let freedSize = 0;
-		const errors = [];
-		if (platform === "win32") try {
-			if (options.registry) {
+	}), ipcMain.handle("cleaner:clean-privacy", async (i, N) => {
+		let P = process.platform, F = 0, I = 0, L = [];
+		if (P === "win32") try {
+			if (N.registry) {
 				try {
-					const { stdout: docsCountBefore } = await execAsync$1(`powershell "
-                            \$props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs" -ErrorAction SilentlyContinue | 
-                            Select-Object -ExpandProperty * | 
-                            Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' }
-                            if (\$props) { \$props.Count } else { 0 }
-                        "`).catch(() => ({ stdout: "0" }));
-					const docsCountNum = parseInt(docsCountBefore.trim()) || 0;
-					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\"");
-					cleanedItems += docsCountNum;
-				} catch (e) {
-					errors.push(`Failed to clean Recent Documents registry: ${e.message}`);
+					let { stdout: i } = await execAsync$1("powershell \"\n                            $props = Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\" -ErrorAction SilentlyContinue | \n                            Select-Object -ExpandProperty * | \n                            Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' }\n                            if ($props) { $props.Count } else { 0 }\n                        \"").catch(() => ({ stdout: "0" })), N = parseInt(i.trim()) || 0;
+					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs' -Name * -ErrorAction SilentlyContinue\""), F += N;
+				} catch (i) {
+					L.push(`Failed to clean Recent Documents registry: ${i.message}`);
 				}
 				try {
-					const { stdout: programsCountBefore } = await execAsync$1(`powershell "
-                            \$props = Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU" -ErrorAction SilentlyContinue | 
-                            Select-Object -ExpandProperty * | 
-                            Where-Object { \$_ -ne \$null -and \$_ -notlike 'MRUList*' }
-                            if (\$props) { \$props.Count } else { 0 }
-                        "`).catch(() => ({ stdout: "0" }));
-					const programsCountNum = parseInt(programsCountBefore.trim()) || 0;
-					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\"");
-					cleanedItems += programsCountNum;
-				} catch (e) {
-					errors.push(`Failed to clean Recent Programs registry: ${e.message}`);
+					let { stdout: i } = await execAsync$1("powershell \"\n                            $props = Get-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" -ErrorAction SilentlyContinue | \n                            Select-Object -ExpandProperty * | \n                            Where-Object { $_ -ne $null -and $_ -notlike 'MRUList*' }\n                            if ($props) { $props.Count } else { 0 }\n                        \"").catch(() => ({ stdout: "0" })), N = parseInt(i.trim()) || 0;
+					await execAsync$1("powershell \"Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU' -Name * -ErrorAction SilentlyContinue -Exclude MRUList\""), F += N;
+				} catch (i) {
+					L.push(`Failed to clean Recent Programs registry: ${i.message}`);
 				}
 			}
-			if (options.activityHistory) {
-				const activityHistoryPath = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
+			if (N.activityHistory) {
+				let i = path.join(os.homedir(), "AppData/Local/ConnectedDevicesPlatform");
 				try {
-					const files = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
-					for (const file of files) {
-						const filePath = path.join(activityHistoryPath, file);
+					let N = await fs.readdir(i, { recursive: !0 }).catch(() => []);
+					for (let P of N) {
+						let N = path.join(i, P);
 						try {
-							const stats = await fs.stat(filePath);
-							if (stats.isFile()) {
-								freedSize += stats.size;
-								await fs.unlink(filePath);
-								cleanedItems++;
-							}
-						} catch (e) {}
+							let i = await fs.stat(N);
+							i.isFile() && (I += i.size, await fs.unlink(N), F++);
+						} catch {}
 					}
-				} catch (e) {
-					errors.push(`Failed to clean activity history: ${e.message}`);
+				} catch (i) {
+					L.push(`Failed to clean activity history: ${i.message}`);
 				}
-				const searchHistoryPath = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
+				let N = path.join(os.homedir(), "AppData/Roaming/Microsoft/Windows/Recent");
 				try {
-					const files = await fs.readdir(searchHistoryPath).catch(() => []);
-					for (const file of files) {
-						const filePath = path.join(searchHistoryPath, file);
+					let i = await fs.readdir(N).catch(() => []);
+					for (let P of i) {
+						let i = path.join(N, P);
 						try {
-							const stats = await fs.stat(filePath);
-							freedSize += stats.size;
-							await fs.unlink(filePath);
-							cleanedItems++;
-						} catch (e) {}
+							let N = await fs.stat(i);
+							I += N.size, await fs.unlink(i), F++;
+						} catch {}
 					}
-				} catch (e) {
-					errors.push(`Failed to clean search history: ${e.message}`);
+				} catch (i) {
+					L.push(`Failed to clean search history: ${i.message}`);
 				}
 			}
-		} catch (e) {
-			errors.push(`Windows privacy cleanup failed: ${e.message}`);
+		} catch (i) {
+			L.push(`Windows privacy cleanup failed: ${i.message}`);
 		}
-		else if (platform === "darwin") try {
-			if (options.spotlightHistory) {
-				const spotlightHistoryPath = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
+		else if (P === "darwin") try {
+			if (N.spotlightHistory) {
+				let i = path.join(os.homedir(), "Library/Application Support/com.apple.spotlight");
 				try {
-					const files = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
-					for (const file of files) {
-						const filePath = path.join(spotlightHistoryPath, file);
+					let N = await fs.readdir(i, { recursive: !0 }).catch(() => []);
+					for (let P of N) {
+						let N = path.join(i, P);
 						try {
-							const stats = await fs.stat(filePath);
-							if (stats.isFile()) {
-								freedSize += stats.size;
-								await fs.unlink(filePath);
-								cleanedItems++;
-							}
-						} catch (e) {}
+							let i = await fs.stat(N);
+							i.isFile() && (I += i.size, await fs.unlink(N), F++);
+						} catch {}
 					}
-				} catch (e) {
-					errors.push(`Failed to clean Spotlight history: ${e.message}`);
+				} catch (i) {
+					L.push(`Failed to clean Spotlight history: ${i.message}`);
 				}
-				const recentItemsPath = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
+				let N = path.join(os.homedir(), "Library/Application Support/com.apple.sharedfilelist");
 				try {
-					const files = await fs.readdir(recentItemsPath).catch(() => []);
-					for (const file of files) if (file.includes("RecentItems")) {
-						const filePath = path.join(recentItemsPath, file);
+					let i = await fs.readdir(N).catch(() => []);
+					for (let P of i) if (P.includes("RecentItems")) {
+						let i = path.join(N, P);
 						try {
-							const stats = await fs.stat(filePath);
-							freedSize += stats.size;
-							await fs.unlink(filePath);
-							cleanedItems++;
-						} catch (e) {}
+							let N = await fs.stat(i);
+							I += N.size, await fs.unlink(i), F++;
+						} catch {}
 					}
-				} catch (e) {
-					errors.push(`Failed to clean recent items: ${e.message}`);
+				} catch (i) {
+					L.push(`Failed to clean recent items: ${i.message}`);
 				}
 			}
-			if (options.quickLookCache) {
-				const quickLookCachePath = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
+			if (N.quickLookCache) {
+				let i = path.join(os.homedir(), "Library/Caches/com.apple.QuickLook");
 				try {
-					const files = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
-					for (const file of files) {
-						const filePath = path.join(quickLookCachePath, file);
+					let N = await fs.readdir(i, { recursive: !0 }).catch(() => []);
+					for (let P of N) {
+						let N = path.join(i, P);
 						try {
-							const stats = await fs.stat(filePath);
-							if (stats.isFile()) {
-								freedSize += stats.size;
-								await fs.unlink(filePath);
-								cleanedItems++;
-							}
-						} catch (e) {}
+							let i = await fs.stat(N);
+							i.isFile() && (I += i.size, await fs.unlink(N), F++);
+						} catch {}
 					}
-				} catch (e) {
-					errors.push(`Failed to clean Quick Look cache: ${e.message}`);
+				} catch (i) {
+					L.push(`Failed to clean Quick Look cache: ${i.message}`);
 				}
 			}
-		} catch (e) {
-			errors.push(`macOS privacy cleanup failed: ${e.message}`);
+		} catch (i) {
+			L.push(`macOS privacy cleanup failed: ${i.message}`);
 		}
 		return {
-			success: errors.length === 0,
-			cleanedItems,
-			freedSize,
-			freedSizeFormatted: formatBytes$1(freedSize),
-			errors
+			success: L.length === 0,
+			cleanedItems: F,
+			freedSize: I,
+			freedSizeFormatted: formatBytes$1(I),
+			errors: L
 		};
-	});
-	ipcMain.handle("cleaner:scan-browser-data", async () => {
-		const platform = process.platform;
-		const home = os.homedir();
-		const results = {
+	}), ipcMain.handle("cleaner:scan-browser-data", async () => {
+		let i = process.platform, N = os.homedir(), P = {
 			browsers: [],
 			totalSize: 0,
 			totalItems: 0
-		};
-		const browserPaths = [];
-		if (platform === "win32") {
-			const localApp = process.env.LOCALAPPDATA || "";
-			const appData = process.env.APPDATA || "";
-			browserPaths.push({
+		}, F = [];
+		if (i === "win32") {
+			let i = process.env.LOCALAPPDATA || "", N = process.env.APPDATA || "";
+			F.push({
 				name: "Chrome",
 				paths: {
-					history: [path.join(localApp, "Google/Chrome/User Data/Default/History")],
-					cookies: [path.join(localApp, "Google/Chrome/User Data/Default/Cookies")],
-					cache: [path.join(localApp, "Google/Chrome/User Data/Default/Cache")],
-					downloads: [path.join(localApp, "Google/Chrome/User Data/Default/History")]
+					history: [path.join(i, "Google/Chrome/User Data/Default/History")],
+					cookies: [path.join(i, "Google/Chrome/User Data/Default/Cookies")],
+					cache: [path.join(i, "Google/Chrome/User Data/Default/Cache")],
+					downloads: [path.join(i, "Google/Chrome/User Data/Default/History")]
 				}
-			});
-			browserPaths.push({
+			}), F.push({
 				name: "Edge",
 				paths: {
-					history: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")],
-					cookies: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cookies")],
-					cache: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cache")],
-					downloads: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")]
+					history: [path.join(i, "Microsoft/Edge/User Data/Default/History")],
+					cookies: [path.join(i, "Microsoft/Edge/User Data/Default/Cookies")],
+					cache: [path.join(i, "Microsoft/Edge/User Data/Default/Cache")],
+					downloads: [path.join(i, "Microsoft/Edge/User Data/Default/History")]
 				}
-			});
-			browserPaths.push({
+			}), F.push({
 				name: "Firefox",
 				paths: {
-					history: [path.join(appData, "Mozilla/Firefox/Profiles")],
-					cookies: [path.join(appData, "Mozilla/Firefox/Profiles")],
-					cache: [path.join(localApp, "Mozilla/Firefox/Profiles")],
-					downloads: [path.join(appData, "Mozilla/Firefox/Profiles")]
+					history: [path.join(N, "Mozilla/Firefox/Profiles")],
+					cookies: [path.join(N, "Mozilla/Firefox/Profiles")],
+					cache: [path.join(i, "Mozilla/Firefox/Profiles")],
+					downloads: [path.join(N, "Mozilla/Firefox/Profiles")]
 				}
 			});
-		} else if (platform === "darwin") {
-			browserPaths.push({
-				name: "Safari",
-				paths: {
-					history: [path.join(home, "Library/Safari/History.db")],
-					cookies: [path.join(home, "Library/Cookies/Cookies.binarycookies")],
-					cache: [path.join(home, "Library/Caches/com.apple.Safari")],
-					downloads: [path.join(home, "Library/Safari/Downloads.plist")]
-				}
-			});
-			browserPaths.push({
-				name: "Chrome",
-				paths: {
-					history: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")],
-					cookies: [path.join(home, "Library/Application Support/Google/Chrome/Default/Cookies")],
-					cache: [path.join(home, "Library/Caches/Google/Chrome")],
-					downloads: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")]
-				}
-			});
-			browserPaths.push({
-				name: "Firefox",
-				paths: {
-					history: [path.join(home, "Library/Application Support/Firefox/Profiles")],
-					cookies: [path.join(home, "Library/Application Support/Firefox/Profiles")],
-					cache: [path.join(home, "Library/Caches/Firefox")],
-					downloads: [path.join(home, "Library/Application Support/Firefox/Profiles")]
-				}
-			});
-			browserPaths.push({
-				name: "Edge",
-				paths: {
-					history: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")],
-					cookies: [path.join(home, "Library/Application Support/Microsoft Edge/Default/Cookies")],
-					cache: [path.join(home, "Library/Caches/com.microsoft.edgemac")],
-					downloads: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")]
-				}
-			});
-		}
-		for (const browser of browserPaths) {
-			const browserData = {
-				name: browser.name,
+		} else i === "darwin" && (F.push({
+			name: "Safari",
+			paths: {
+				history: [path.join(N, "Library/Safari/History.db")],
+				cookies: [path.join(N, "Library/Cookies/Cookies.binarycookies")],
+				cache: [path.join(N, "Library/Caches/com.apple.Safari")],
+				downloads: [path.join(N, "Library/Safari/Downloads.plist")]
+			}
+		}), F.push({
+			name: "Chrome",
+			paths: {
+				history: [path.join(N, "Library/Application Support/Google/Chrome/Default/History")],
+				cookies: [path.join(N, "Library/Application Support/Google/Chrome/Default/Cookies")],
+				cache: [path.join(N, "Library/Caches/Google/Chrome")],
+				downloads: [path.join(N, "Library/Application Support/Google/Chrome/Default/History")]
+			}
+		}), F.push({
+			name: "Firefox",
+			paths: {
+				history: [path.join(N, "Library/Application Support/Firefox/Profiles")],
+				cookies: [path.join(N, "Library/Application Support/Firefox/Profiles")],
+				cache: [path.join(N, "Library/Caches/Firefox")],
+				downloads: [path.join(N, "Library/Application Support/Firefox/Profiles")]
+			}
+		}), F.push({
+			name: "Edge",
+			paths: {
+				history: [path.join(N, "Library/Application Support/Microsoft Edge/Default/History")],
+				cookies: [path.join(N, "Library/Application Support/Microsoft Edge/Default/Cookies")],
+				cache: [path.join(N, "Library/Caches/com.microsoft.edgemac")],
+				downloads: [path.join(N, "Library/Application Support/Microsoft Edge/Default/History")]
+			}
+		}));
+		for (let N of F) {
+			let F = {
+				name: N.name,
 				history: {
 					size: 0,
 					count: 0,
@@ -961,697 +751,588 @@ function setupCleanerHandlers() {
 					paths: []
 				}
 			};
-			for (const [type, paths] of Object.entries(browser.paths)) for (const dataPath of paths) try {
-				if (type === "cache" && platform === "darwin" && browser.name === "Safari") {
-					const stats = await fs.stat(dataPath).catch(() => null);
-					if (stats && stats.isDirectory()) {
-						const size = await getDirSize(dataPath);
-						browserData[type].size += size;
-						browserData[type].paths.push(dataPath);
-						browserData[type].count += 1;
+			for (let [P, I] of Object.entries(N.paths)) for (let L of I) try {
+				if (P === "cache" && i === "darwin" && N.name === "Safari") {
+					let i = await fs.stat(L).catch(() => null);
+					if (i && i.isDirectory()) {
+						let i = await getDirSize(L);
+						F[P].size += i, F[P].paths.push(L), F[P].count += 1;
 					}
 				} else {
-					const stats = await fs.stat(dataPath).catch(() => null);
-					if (stats) {
-						if (stats.isDirectory()) {
-							const size = await getDirSize(dataPath);
-							browserData[type].size += size;
-							browserData[type].paths.push(dataPath);
-							browserData[type].count += 1;
-						} else if (stats.isFile()) {
-							browserData[type].size += stats.size;
-							browserData[type].paths.push(dataPath);
-							browserData[type].count += 1;
-						}
-					}
+					let i = await fs.stat(L).catch(() => null);
+					if (i) if (i.isDirectory()) {
+						let i = await getDirSize(L);
+						F[P].size += i, F[P].paths.push(L), F[P].count += 1;
+					} else i.isFile() && (F[P].size += i.size, F[P].paths.push(L), F[P].count += 1);
 				}
-			} catch (e) {}
-			const browserTotalSize = Object.values(browserData).reduce((sum, item) => {
-				return sum + (typeof item === "object" && item.size ? item.size : 0);
-			}, 0);
-			if (browserTotalSize > 0) {
-				browserData.totalSize = browserTotalSize;
-				browserData.totalSizeFormatted = formatBytes$1(browserTotalSize);
-				results.browsers.push(browserData);
-				results.totalSize += browserTotalSize;
-				results.totalItems += Object.values(browserData).reduce((sum, item) => {
-					return sum + (typeof item === "object" && item.count ? item.count : 0);
-				}, 0);
-			}
+			} catch {}
+			let I = Object.values(F).reduce((i, N) => i + (typeof N == "object" && N.size ? N.size : 0), 0);
+			I > 0 && (F.totalSize = I, F.totalSizeFormatted = formatBytes$1(I), P.browsers.push(F), P.totalSize += I, P.totalItems += Object.values(F).reduce((i, N) => i + (typeof N == "object" && N.count ? N.count : 0), 0));
 		}
 		return {
-			success: true,
-			results
+			success: !0,
+			results: P
 		};
-	});
-	ipcMain.handle("cleaner:clean-browser-data", async (_event, options) => {
-		const platform = process.platform;
-		const home = os.homedir();
-		let cleanedItems = 0;
-		let freedSize = 0;
-		const errors = [];
-		const browserPaths = {};
-		if (platform === "win32") {
-			const localApp = process.env.LOCALAPPDATA || "";
-			const appData = process.env.APPDATA || "";
-			browserPaths["Chrome"] = {
-				history: [path.join(localApp, "Google/Chrome/User Data/Default/History")],
-				cookies: [path.join(localApp, "Google/Chrome/User Data/Default/Cookies")],
-				cache: [path.join(localApp, "Google/Chrome/User Data/Default/Cache")],
-				downloads: [path.join(localApp, "Google/Chrome/User Data/Default/History")]
+	}), ipcMain.handle("cleaner:clean-browser-data", async (i, N) => {
+		let P = process.platform, F = os.homedir(), I = 0, L = 0, R = [], z = {};
+		if (P === "win32") {
+			let i = process.env.LOCALAPPDATA || "", N = process.env.APPDATA || "";
+			z.Chrome = {
+				history: [path.join(i, "Google/Chrome/User Data/Default/History")],
+				cookies: [path.join(i, "Google/Chrome/User Data/Default/Cookies")],
+				cache: [path.join(i, "Google/Chrome/User Data/Default/Cache")],
+				downloads: [path.join(i, "Google/Chrome/User Data/Default/History")]
+			}, z.Edge = {
+				history: [path.join(i, "Microsoft/Edge/User Data/Default/History")],
+				cookies: [path.join(i, "Microsoft/Edge/User Data/Default/Cookies")],
+				cache: [path.join(i, "Microsoft/Edge/User Data/Default/Cache")],
+				downloads: [path.join(i, "Microsoft/Edge/User Data/Default/History")]
+			}, z.Firefox = {
+				history: [path.join(N, "Mozilla/Firefox/Profiles")],
+				cookies: [path.join(N, "Mozilla/Firefox/Profiles")],
+				cache: [path.join(i, "Mozilla/Firefox/Profiles")],
+				downloads: [path.join(N, "Mozilla/Firefox/Profiles")]
 			};
-			browserPaths["Edge"] = {
-				history: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")],
-				cookies: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cookies")],
-				cache: [path.join(localApp, "Microsoft/Edge/User Data/Default/Cache")],
-				downloads: [path.join(localApp, "Microsoft/Edge/User Data/Default/History")]
-			};
-			browserPaths["Firefox"] = {
-				history: [path.join(appData, "Mozilla/Firefox/Profiles")],
-				cookies: [path.join(appData, "Mozilla/Firefox/Profiles")],
-				cache: [path.join(localApp, "Mozilla/Firefox/Profiles")],
-				downloads: [path.join(appData, "Mozilla/Firefox/Profiles")]
-			};
-		} else if (platform === "darwin") {
-			browserPaths["Safari"] = {
-				history: [path.join(home, "Library/Safari/History.db")],
-				cookies: [path.join(home, "Library/Cookies/Cookies.binarycookies")],
-				cache: [path.join(home, "Library/Caches/com.apple.Safari")],
-				downloads: [path.join(home, "Library/Safari/Downloads.plist")]
-			};
-			browserPaths["Chrome"] = {
-				history: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")],
-				cookies: [path.join(home, "Library/Application Support/Google/Chrome/Default/Cookies")],
-				cache: [path.join(home, "Library/Caches/Google/Chrome")],
-				downloads: [path.join(home, "Library/Application Support/Google/Chrome/Default/History")]
-			};
-			browserPaths["Firefox"] = {
-				history: [path.join(home, "Library/Application Support/Firefox/Profiles")],
-				cookies: [path.join(home, "Library/Application Support/Firefox/Profiles")],
-				cache: [path.join(home, "Library/Caches/Firefox")],
-				downloads: [path.join(home, "Library/Application Support/Firefox/Profiles")]
-			};
-			browserPaths["Edge"] = {
-				history: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")],
-				cookies: [path.join(home, "Library/Application Support/Microsoft Edge/Default/Cookies")],
-				cache: [path.join(home, "Library/Caches/com.microsoft.edgemac")],
-				downloads: [path.join(home, "Library/Application Support/Microsoft Edge/Default/History")]
-			};
-		}
-		for (const browserName of options.browsers) {
-			const paths = browserPaths[browserName];
-			if (!paths) continue;
-			for (const type of options.types) {
-				const typePaths = paths[type];
-				if (!typePaths) continue;
-				for (const dataPath of typePaths) try {
-					const stats = await fs.stat(dataPath).catch(() => null);
-					if (!stats) continue;
-					if (stats.isDirectory()) {
-						const size = await getDirSize(dataPath);
-						await fs.rm(dataPath, {
-							recursive: true,
-							force: true
-						});
-						freedSize += size;
-						cleanedItems++;
-					} else if (stats.isFile()) {
-						freedSize += stats.size;
-						await fs.unlink(dataPath);
-						cleanedItems++;
-					}
-				} catch (e) {
-					errors.push(`Failed to clean ${browserName} ${type}: ${e.message}`);
+		} else P === "darwin" && (z.Safari = {
+			history: [path.join(F, "Library/Safari/History.db")],
+			cookies: [path.join(F, "Library/Cookies/Cookies.binarycookies")],
+			cache: [path.join(F, "Library/Caches/com.apple.Safari")],
+			downloads: [path.join(F, "Library/Safari/Downloads.plist")]
+		}, z.Chrome = {
+			history: [path.join(F, "Library/Application Support/Google/Chrome/Default/History")],
+			cookies: [path.join(F, "Library/Application Support/Google/Chrome/Default/Cookies")],
+			cache: [path.join(F, "Library/Caches/Google/Chrome")],
+			downloads: [path.join(F, "Library/Application Support/Google/Chrome/Default/History")]
+		}, z.Firefox = {
+			history: [path.join(F, "Library/Application Support/Firefox/Profiles")],
+			cookies: [path.join(F, "Library/Application Support/Firefox/Profiles")],
+			cache: [path.join(F, "Library/Caches/Firefox")],
+			downloads: [path.join(F, "Library/Application Support/Firefox/Profiles")]
+		}, z.Edge = {
+			history: [path.join(F, "Library/Application Support/Microsoft Edge/Default/History")],
+			cookies: [path.join(F, "Library/Application Support/Microsoft Edge/Default/Cookies")],
+			cache: [path.join(F, "Library/Caches/com.microsoft.edgemac")],
+			downloads: [path.join(F, "Library/Application Support/Microsoft Edge/Default/History")]
+		});
+		for (let i of N.browsers) {
+			let P = z[i];
+			if (P) for (let F of N.types) {
+				let N = P[F];
+				if (N) for (let P of N) try {
+					let i = await fs.stat(P).catch(() => null);
+					if (!i) continue;
+					if (i.isDirectory()) {
+						let i = await getDirSize(P);
+						await fs.rm(P, {
+							recursive: !0,
+							force: !0
+						}), L += i, I++;
+					} else i.isFile() && (L += i.size, await fs.unlink(P), I++);
+				} catch (N) {
+					R.push(`Failed to clean ${i} ${F}: ${N.message}`);
 				}
 			}
 		}
 		return {
-			success: errors.length === 0,
-			cleanedItems,
-			freedSize,
-			freedSizeFormatted: formatBytes$1(freedSize),
-			errors
+			success: R.length === 0,
+			cleanedItems: I,
+			freedSize: L,
+			freedSizeFormatted: formatBytes$1(L),
+			errors: R
 		};
-	});
-	ipcMain.handle("cleaner:get-wifi-networks", async () => {
-		const platform = process.platform;
-		const networks = [];
+	}), ipcMain.handle("cleaner:get-wifi-networks", async () => {
+		let i = process.platform, N = [];
 		try {
-			if (platform === "win32") {
-				const { stdout } = await execAsync$1("netsh wlan show profiles");
-				const lines = stdout.split("\n");
-				for (const line of lines) {
-					const match = line.match(/All User Profile\s*:\s*(.+)/);
-					if (match) {
-						const profileName = match[1].trim();
+			if (i === "win32") {
+				let { stdout: i } = await execAsync$1("netsh wlan show profiles"), P = i.split("\n");
+				for (let i of P) {
+					let P = i.match(/All User Profile\s*:\s*(.+)/);
+					if (P) {
+						let i = P[1].trim();
 						try {
-							const { stdout: profileInfo } = await execAsync$1(`netsh wlan show profile name="${profileName}" key=clear`);
-							const keyMatch = profileInfo.match(/Key Content\s*:\s*(.+)/);
-							networks.push({
-								name: profileName,
-								hasPassword: !!keyMatch,
+							let { stdout: P } = await execAsync$1(`netsh wlan show profile name="${i}" key=clear`), F = P.match(/Key Content\s*:\s*(.+)/);
+							N.push({
+								name: i,
+								hasPassword: !!F,
 								platform: "windows"
 							});
-						} catch (e) {
-							networks.push({
-								name: profileName,
-								hasPassword: false,
+						} catch {
+							N.push({
+								name: i,
+								hasPassword: !1,
 								platform: "windows"
 							});
 						}
 					}
 				}
-			} else if (platform === "darwin") {
-				const { stdout } = await execAsync$1("networksetup -listallhardwareports");
-				if (stdout.split("\n").find((line) => line.includes("Wi-Fi") || line.includes("AirPort"))) {
-					const { stdout: networksOutput } = await execAsync$1("networksetup -listpreferredwirelessnetworks en0").catch(() => ({ stdout: "" }));
-					const networkNames = networksOutput.split("\n").filter((line) => line.trim() && !line.includes("Preferred networks"));
-					for (const networkName of networkNames) {
-						const name = networkName.trim();
-						if (name) networks.push({
-							name,
-							hasPassword: true,
+			} else if (i === "darwin") {
+				let { stdout: i } = await execAsync$1("networksetup -listallhardwareports");
+				if (i.split("\n").find((i) => i.includes("Wi-Fi") || i.includes("AirPort"))) {
+					let { stdout: i } = await execAsync$1("networksetup -listpreferredwirelessnetworks en0").catch(() => ({ stdout: "" })), P = i.split("\n").filter((i) => i.trim() && !i.includes("Preferred networks"));
+					for (let i of P) {
+						let P = i.trim();
+						P && N.push({
+							name: P,
+							hasPassword: !0,
 							platform: "macos"
 						});
 					}
 				}
 			}
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message,
+				success: !1,
+				error: i.message,
 				networks: []
 			};
 		}
 		return {
-			success: true,
-			networks
+			success: !0,
+			networks: N
 		};
-	});
-	ipcMain.handle("cleaner:remove-wifi-network", async (_event, networkName) => {
-		const platform = process.platform;
+	}), ipcMain.handle("cleaner:remove-wifi-network", async (i, N) => {
+		let P = process.platform;
 		try {
-			if (platform === "win32") {
-				await execAsync$1(`netsh wlan delete profile name="${networkName}"`);
-				return { success: true };
-			} else if (platform === "darwin") {
-				await execAsync$1(`networksetup -removepreferredwirelessnetwork en0 "${networkName}"`);
-				return { success: true };
-			}
-			return {
-				success: false,
+			return P === "win32" ? (await execAsync$1(`netsh wlan delete profile name="${N}"`), { success: !0 }) : P === "darwin" ? (await execAsync$1(`networksetup -removepreferredwirelessnetwork en0 "${N}"`), { success: !0 }) : {
+				success: !1,
 				error: "Unsupported platform"
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:run-maintenance", async (_event, task) => {
-		const platform = process.platform;
-		const startTime = Date.now();
-		let output = "";
+	}), ipcMain.handle("cleaner:run-maintenance", async (i, N) => {
+		let P = process.platform, F = Date.now(), I = "";
 		try {
-			if (platform === "win32") switch (task.category) {
+			if (P === "win32") switch (N.category) {
 				case "sfc":
-					const { stdout: sfcOutput } = await execAsync$1("sfc /scannow", { timeout: 3e5 });
-					output = sfcOutput;
+					let { stdout: i } = await execAsync$1("sfc /scannow", { timeout: 3e5 });
+					I = i;
 					break;
 				case "dism":
-					const { stdout: dismOutput } = await execAsync$1("DISM /Online /Cleanup-Image /RestoreHealth", { timeout: 6e5 });
-					output = dismOutput;
+					let { stdout: P } = await execAsync$1("DISM /Online /Cleanup-Image /RestoreHealth", { timeout: 6e5 });
+					I = P;
 					break;
 				case "disk-cleanup":
-					const { stdout: cleanupOutput } = await execAsync$1("cleanmgr /sagerun:1", { timeout: 3e5 });
-					output = cleanupOutput || "Disk cleanup completed";
+					let { stdout: F } = await execAsync$1("cleanmgr /sagerun:1", { timeout: 3e5 });
+					I = F || "Disk cleanup completed";
 					break;
 				case "dns-flush":
-					const { stdout: dnsOutput } = await execAsync$1("ipconfig /flushdns");
-					output = dnsOutput || "DNS cache flushed successfully";
+					let { stdout: L } = await execAsync$1("ipconfig /flushdns");
+					I = L || "DNS cache flushed successfully";
 					break;
 				case "winsock-reset":
-					const { stdout: winsockOutput } = await execAsync$1("netsh winsock reset");
-					output = winsockOutput || "Winsock reset completed";
+					let { stdout: R } = await execAsync$1("netsh winsock reset");
+					I = R || "Winsock reset completed";
 					break;
 				case "windows-search-rebuild":
 					try {
-						await execAsync$1("powershell \"Stop-Service -Name WSearch -Force\"");
-						await execAsync$1("powershell \"Remove-Item -Path \"$env:ProgramData\\Microsoft\\Search\\Data\\*\" -Recurse -Force\"");
-						await execAsync$1("powershell \"Start-Service -Name WSearch\"");
-						output = "Windows Search index rebuilt successfully";
-					} catch (e) {
-						throw new Error(`Failed to rebuild search index: ${e.message}`);
+						await execAsync$1("powershell \"Stop-Service -Name WSearch -Force\""), await execAsync$1("powershell \"Remove-Item -Path \"$env:ProgramData\\Microsoft\\Search\\Data\\*\" -Recurse -Force\""), await execAsync$1("powershell \"Start-Service -Name WSearch\""), I = "Windows Search index rebuilt successfully";
+					} catch (i) {
+						throw Error(`Failed to rebuild search index: ${i.message}`);
 					}
 					break;
-				default: throw new Error(`Unknown maintenance task: ${task.category}`);
+				default: throw Error(`Unknown maintenance task: ${N.category}`);
 			}
-			else if (platform === "darwin") switch (task.category) {
+			else if (P === "darwin") switch (N.category) {
 				case "spotlight-reindex":
 					try {
-						await execAsync$1("sudo mdutil -E /");
-						output = "Spotlight index rebuilt successfully";
-					} catch (e) {
+						await execAsync$1("sudo mdutil -E /"), I = "Spotlight index rebuilt successfully";
+					} catch {
 						try {
-							await execAsync$1("mdutil -E ~");
-							output = "Spotlight index rebuilt successfully (user directory only)";
-						} catch (e2) {
-							throw new Error(`Failed to rebuild Spotlight index: ${e2.message}`);
+							await execAsync$1("mdutil -E ~"), I = "Spotlight index rebuilt successfully (user directory only)";
+						} catch (i) {
+							throw Error(`Failed to rebuild Spotlight index: ${i.message}`);
 						}
 					}
 					break;
 				case "disk-permissions":
 					try {
-						const { stdout: diskOutput } = await execAsync$1("diskutil verifyVolume /");
-						output = diskOutput || "Disk permissions verified";
-					} catch (e) {
-						output = "Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)";
+						let { stdout: i } = await execAsync$1("diskutil verifyVolume /");
+						I = i || "Disk permissions verified";
+					} catch {
+						I = "Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)";
 					}
 					break;
 				case "dns-flush":
 					try {
-						await execAsync$1("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
-						output = "DNS cache flushed successfully";
-					} catch (e) {
+						await execAsync$1("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"), I = "DNS cache flushed successfully";
+					} catch {
 						try {
-							await execAsync$1("dscacheutil -flushcache; killall -HUP mDNSResponder");
-							output = "DNS cache flushed successfully";
-						} catch (e2) {
-							throw new Error(`Failed to flush DNS: ${e2.message}`);
+							await execAsync$1("dscacheutil -flushcache; killall -HUP mDNSResponder"), I = "DNS cache flushed successfully";
+						} catch (i) {
+							throw Error(`Failed to flush DNS: ${i.message}`);
 						}
 					}
 					break;
 				case "mail-rebuild":
 					try {
-						await execAsync$1("killall Mail 2>/dev/null || true");
-						output = "Mail database rebuild initiated (please ensure Mail.app is closed)";
-					} catch (e) {
-						throw new Error(`Failed to rebuild Mail database: ${e.message}`);
+						await execAsync$1("killall Mail 2>/dev/null || true"), I = "Mail database rebuild initiated (please ensure Mail.app is closed)";
+					} catch (i) {
+						throw Error(`Failed to rebuild Mail database: ${i.message}`);
 					}
 					break;
-				default: throw new Error(`Unknown maintenance task: ${task.category}`);
+				default: throw Error(`Unknown maintenance task: ${N.category}`);
 			}
-			else throw new Error("Unsupported platform for maintenance tasks");
+			else throw Error("Unsupported platform for maintenance tasks");
 			return {
-				success: true,
-				taskId: task.id,
-				duration: Date.now() - startTime,
-				output
+				success: !0,
+				taskId: N.id,
+				duration: Date.now() - F,
+				output: I
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				taskId: task.id,
-				duration: Date.now() - startTime,
-				error: e.message,
-				output
+				success: !1,
+				taskId: N.id,
+				duration: Date.now() - F,
+				error: i.message,
+				output: I
 			};
 		}
-	});
-	ipcMain.handle("cleaner:get-health-status", async () => {
+	}), ipcMain.handle("cleaner:get-health-status", async () => {
 		try {
-			const mem = await si.mem();
-			const load = await si.currentLoad();
-			const disk = await si.fsSize();
-			const battery = await si.battery().catch(() => null);
-			const alerts = [];
-			const rootDisk = disk.find((d) => d.mount === "/" || d.mount === "C:") || disk[0];
-			if (rootDisk) {
-				const freePercent = rootDisk.available / rootDisk.size * 100;
-				if (freePercent < 10) alerts.push({
+			let i = await si.mem(), N = await si.currentLoad(), P = await si.fsSize(), F = await si.battery().catch(() => null), I = [], L = P.find((i) => i.mount === "/" || i.mount === "C:") || P[0];
+			if (L) {
+				let i = L.available / L.size * 100;
+				i < 10 ? I.push({
 					type: "low_space",
 					severity: "critical",
-					message: `Low disk space: ${formatBytes$1(rootDisk.available)} free (${freePercent.toFixed(1)}%)`,
+					message: `Low disk space: ${formatBytes$1(L.available)} free (${i.toFixed(1)}%)`,
 					action: "Run cleanup to free space"
-				});
-				else if (freePercent < 20) alerts.push({
+				}) : i < 20 && I.push({
 					type: "low_space",
 					severity: "warning",
-					message: `Disk space getting low: ${formatBytes$1(rootDisk.available)} free (${freePercent.toFixed(1)}%)`,
+					message: `Disk space getting low: ${formatBytes$1(L.available)} free (${i.toFixed(1)}%)`,
 					action: "Consider running cleanup"
 				});
 			}
-			if (load.currentLoad > 90) alerts.push({
+			N.currentLoad > 90 && I.push({
 				type: "high_cpu",
 				severity: "warning",
-				message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`,
+				message: `High CPU usage: ${N.currentLoad.toFixed(1)}%`,
 				action: "Check heavy processes"
 			});
-			const memPercent = mem.used / mem.total * 100;
-			if (memPercent > 90) alerts.push({
+			let R = i.used / i.total * 100;
+			return R > 90 && I.push({
 				type: "memory_pressure",
 				severity: "warning",
-				message: `High memory usage: ${memPercent.toFixed(1)}%`,
+				message: `High memory usage: ${R.toFixed(1)}%`,
 				action: "Consider freeing RAM"
-			});
-			return {
-				cpu: load.currentLoad,
+			}), {
+				cpu: N.currentLoad,
 				ram: {
-					used: mem.used,
-					total: mem.total,
-					percentage: memPercent
+					used: i.used,
+					total: i.total,
+					percentage: R
 				},
-				disk: rootDisk ? {
-					free: rootDisk.available,
-					total: rootDisk.size,
-					percentage: (rootDisk.size - rootDisk.available) / rootDisk.size * 100
+				disk: L ? {
+					free: L.available,
+					total: L.size,
+					percentage: (L.size - L.available) / L.size * 100
 				} : null,
-				battery: battery ? {
-					level: battery.percent,
-					charging: battery.isCharging || false
+				battery: F ? {
+					level: F.percent,
+					charging: F.isCharging || !1
 				} : null,
-				alerts
+				alerts: I
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:check-safety", async (_event, files) => {
+	}), ipcMain.handle("cleaner:check-safety", async (i, N) => {
 		try {
-			const platform = process.platform;
-			const result = checkFilesSafety(files, platform);
+			let i = process.platform, P = checkFilesSafety(N, i);
 			return {
-				success: true,
-				safe: result.safe,
-				warnings: result.warnings,
-				blocked: result.blocked
+				success: !0,
+				safe: P.safe,
+				warnings: P.warnings,
+				blocked: P.blocked
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message,
-				safe: false,
+				success: !1,
+				error: i.message,
+				safe: !1,
 				warnings: [],
 				blocked: []
 			};
 		}
-	});
-	ipcMain.handle("cleaner:create-backup", async (_event, files) => {
+	}), ipcMain.handle("cleaner:create-backup", async (i, N) => {
 		try {
-			return await createBackup(files);
-		} catch (e) {
+			return await createBackup(N);
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:list-backups", async () => {
+	}), ipcMain.handle("cleaner:list-backups", async () => {
 		try {
 			return {
-				success: true,
+				success: !0,
 				backups: await listBackups()
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message,
+				success: !1,
+				error: i.message,
 				backups: []
 			};
 		}
-	});
-	ipcMain.handle("cleaner:get-backup-info", async (_event, backupId) => {
+	}), ipcMain.handle("cleaner:get-backup-info", async (i, N) => {
 		try {
-			const backupInfo = await getBackupInfo(backupId);
+			let i = await getBackupInfo(N);
 			return {
-				success: backupInfo !== null,
-				backupInfo
+				success: i !== null,
+				backupInfo: i
 			};
-		} catch (e) {
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
-			};
-		}
-	});
-	ipcMain.handle("cleaner:restore-backup", async (_event, backupId) => {
-		try {
-			return await restoreBackup(backupId);
-		} catch (e) {
-			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("cleaner:delete-backup", async (_event, backupId) => {
+	}), ipcMain.handle("cleaner:restore-backup", async (i, N) => {
 		try {
-			return await deleteBackup(backupId);
-		} catch (e) {
+			return await restoreBackup(N);
+		} catch (i) {
 			return {
-				success: false,
-				error: e.message
+				success: !1,
+				error: i.message
+			};
+		}
+	}), ipcMain.handle("cleaner:delete-backup", async (i, N) => {
+		try {
+			return await deleteBackup(N);
+		} catch (i) {
+			return {
+				success: !1,
+				error: i.message
 			};
 		}
 	});
 }
-async function getDirSize(dirPath) {
-	let size = 0;
+async function getDirSize(i) {
+	let N = 0;
 	try {
-		const files = await fs.readdir(dirPath, { withFileTypes: true });
-		for (const file of files) {
-			const filePath = path.join(dirPath, file.name);
-			if (file.isDirectory()) size += await getDirSize(filePath);
+		let P = await fs.readdir(i, { withFileTypes: !0 });
+		for (let F of P) {
+			let P = path.join(i, F.name);
+			if (F.isDirectory()) N += await getDirSize(P);
 			else {
-				const stats = await fs.stat(filePath).catch(() => null);
-				if (stats) size += stats.size;
+				let i = await fs.stat(P).catch(() => null);
+				i && (N += i.size);
 			}
 		}
-	} catch (e) {}
-	return size;
+	} catch {}
+	return N;
 }
-async function getDirSizeLimited(dirPath, maxDepth, currentDepth = 0) {
-	if (currentDepth >= maxDepth) return 0;
-	let size = 0;
+async function getDirSizeLimited(i, N, P = 0) {
+	if (P >= N) return 0;
+	let F = 0;
 	try {
-		const files = await fs.readdir(dirPath, { withFileTypes: true });
-		for (const file of files) {
-			if (file.name.startsWith(".") || [
+		let I = await fs.readdir(i, { withFileTypes: !0 });
+		for (let L of I) {
+			if (L.name.startsWith(".") || [
 				"node_modules",
 				"Library",
 				"AppData",
 				"System",
 				".git",
 				".DS_Store"
-			].includes(file.name)) continue;
-			const filePath = path.join(dirPath, file.name);
+			].includes(L.name)) continue;
+			let I = path.join(i, L.name);
 			try {
-				if (file.isDirectory()) size += await getDirSizeLimited(filePath, maxDepth, currentDepth + 1);
+				if (L.isDirectory()) F += await getDirSizeLimited(I, N, P + 1);
 				else {
-					const stats = await fs.stat(filePath).catch(() => null);
-					if (stats) size += stats.size;
+					let i = await fs.stat(I).catch(() => null);
+					i && (F += i.size);
 				}
-			} catch (e) {
+			} catch {
 				continue;
 			}
 		}
-	} catch (e) {
+	} catch {
 		return 0;
 	}
-	return size;
+	return F;
 }
-async function scanDirectoryForLens(dirPath, currentDepth, maxDepth, onProgress) {
+async function scanDirectoryForLens(i, N, P, F) {
 	try {
-		const stats = await fs.stat(dirPath);
-		const name = path.basename(dirPath) || dirPath;
-		if (!stats.isDirectory()) {
-			const fileNode = {
-				name,
-				path: dirPath,
-				size: stats.size,
-				sizeFormatted: formatBytes$1(stats.size),
+		let I = await fs.stat(i), L = path.basename(i) || i;
+		if (!I.isDirectory()) {
+			let N = {
+				name: L,
+				path: i,
+				size: I.size,
+				sizeFormatted: formatBytes$1(I.size),
 				type: "file"
 			};
-			if (onProgress) onProgress({
-				currentPath: name,
+			return F && F({
+				currentPath: L,
 				progress: 100,
-				status: `Scanning file: ${name}`,
-				item: fileNode
-			});
-			return fileNode;
+				status: `Scanning file: ${L}`,
+				item: N
+			}), N;
 		}
-		if (onProgress) onProgress({
-			currentPath: name,
+		F && F({
+			currentPath: L,
 			progress: 0,
-			status: `Scanning directory: ${name}`
+			status: `Scanning directory: ${L}`
 		});
-		const items = await fs.readdir(dirPath, { withFileTypes: true });
-		const children = [];
-		let totalSize = 0;
-		const itemsToProcess = items.filter((item) => !item.name.startsWith(".") && ![
+		let R = await fs.readdir(i, { withFileTypes: !0 }), z = [], B = 0, V = R.filter((i) => !i.name.startsWith(".") && ![
 			"node_modules",
 			"Library",
 			"AppData",
 			"System",
 			".git",
 			".DS_Store"
-		].includes(item.name));
-		const totalItemsToProcess = itemsToProcess.length;
-		let processedItems = 0;
-		for (const item of itemsToProcess) {
-			const childPath = path.join(dirPath, item.name);
-			if (onProgress) {
-				const progressPercent = Math.floor(processedItems / totalItemsToProcess * 100);
-				const itemType = item.isDirectory() ? "directory" : "file";
-				onProgress({
-					currentPath: item.name,
-					progress: progressPercent,
-					status: `Scanning ${itemType}: ${item.name}`
+		].includes(i.name)), H = V.length, U = 0;
+		for (let I of V) {
+			let L = path.join(i, I.name);
+			if (F) {
+				let i = Math.floor(U / H * 100), N = I.isDirectory() ? "directory" : "file";
+				F({
+					currentPath: I.name,
+					progress: i,
+					status: `Scanning ${N}: ${I.name}`
 				});
 			}
-			let childNode = null;
-			if (currentDepth < maxDepth) {
-				childNode = await scanDirectoryForLens(childPath, currentDepth + 1, maxDepth, onProgress);
-				if (childNode) {
-					children.push(childNode);
-					totalSize += childNode.size;
-				}
-			} else try {
-				let size = (await fs.stat(childPath)).size;
-				if (item.isDirectory()) {
-					const cached = dirSizeCache.get(childPath);
-					if (cached && Date.now() - cached.timestamp < CACHE_TTL) size = cached.size;
+			let R = null;
+			if (N < P) R = await scanDirectoryForLens(L, N + 1, P, F), R && (z.push(R), B += R.size);
+			else try {
+				let i = (await fs.stat(L)).size;
+				if (I.isDirectory()) {
+					let N = dirSizeCache.get(L);
+					if (N && Date.now() - N.timestamp < CACHE_TTL) i = N.size;
 					else try {
-						size = await getDirSizeLimited(childPath, 3);
-						dirSizeCache.set(childPath, {
-							size,
+						i = await getDirSizeLimited(L, 3), dirSizeCache.set(L, {
+							size: i,
 							timestamp: Date.now()
 						});
-					} catch (e) {
-						size = 0;
+					} catch {
+						i = 0;
 					}
 				}
-				childNode = {
-					name: item.name,
-					path: childPath,
-					size,
-					sizeFormatted: formatBytes$1(size),
-					type: item.isDirectory() ? "dir" : "file"
-				};
-				children.push(childNode);
-				totalSize += size;
-			} catch (e) {
-				processedItems++;
+				R = {
+					name: I.name,
+					path: L,
+					size: i,
+					sizeFormatted: formatBytes$1(i),
+					type: I.isDirectory() ? "dir" : "file"
+				}, z.push(R), B += i;
+			} catch {
+				U++;
 				continue;
 			}
-			if (childNode && onProgress) onProgress({
-				currentPath: item.name,
-				progress: Math.floor((processedItems + 1) / totalItemsToProcess * 100),
-				status: `Scanned: ${item.name}`,
-				item: childNode
-			});
-			processedItems++;
+			R && F && F({
+				currentPath: I.name,
+				progress: Math.floor((U + 1) / H * 100),
+				status: `Scanned: ${I.name}`,
+				item: R
+			}), U++;
 		}
-		const result = {
-			name,
-			path: dirPath,
-			size: totalSize,
-			sizeFormatted: formatBytes$1(totalSize),
+		let G = {
+			name: L,
+			path: i,
+			size: B,
+			sizeFormatted: formatBytes$1(B),
 			type: "dir",
-			children: children.sort((a, b) => b.size - a.size)
+			children: z.sort((i, N) => N.size - i.size)
 		};
-		if (onProgress) onProgress({
-			currentPath: name,
+		return F && F({
+			currentPath: L,
 			progress: 100,
-			status: `Completed: ${name}`
-		});
-		return result;
-	} catch (e) {
+			status: `Completed: ${L}`
+		}), G;
+	} catch {
 		return null;
 	}
 }
-async function findLargeFiles(dirPath, minSize, results) {
+async function findLargeFiles(i, N, P) {
 	try {
-		const files = await fs.readdir(dirPath, { withFileTypes: true });
-		for (const file of files) {
-			const filePath = path.join(dirPath, file.name);
-			if (file.name.startsWith(".") || [
+		let F = await fs.readdir(i, { withFileTypes: !0 });
+		for (let I of F) {
+			let F = path.join(i, I.name);
+			if (!(I.name.startsWith(".") || [
 				"node_modules",
 				"Library",
 				"AppData",
 				"System",
 				"Windows"
-			].includes(file.name)) continue;
-			try {
-				const stats = await fs.stat(filePath);
-				if (file.isDirectory()) await findLargeFiles(filePath, minSize, results);
-				else if (stats.size >= minSize) results.push({
-					name: file.name,
-					path: filePath,
-					size: stats.size,
-					sizeFormatted: formatBytes$1(stats.size),
-					lastAccessed: stats.atime,
-					type: path.extname(file.name).slice(1) || "file"
+			].includes(I.name))) try {
+				let i = await fs.stat(F);
+				I.isDirectory() ? await findLargeFiles(F, N, P) : i.size >= N && P.push({
+					name: I.name,
+					path: F,
+					size: i.size,
+					sizeFormatted: formatBytes$1(i.size),
+					lastAccessed: i.atime,
+					type: path.extname(I.name).slice(1) || "file"
 				});
-			} catch (e) {}
+			} catch {}
 		}
-	} catch (e) {}
+	} catch {}
 }
-async function findDuplicates(dirPath, fileHashes) {
+async function findDuplicates(i, N) {
 	try {
-		const files = await fs.readdir(dirPath, { withFileTypes: true });
-		for (const file of files) {
-			const filePath = path.join(dirPath, file.name);
-			if (file.name.startsWith(".") || [
+		let P = await fs.readdir(i, { withFileTypes: !0 });
+		for (let F of P) {
+			let P = path.join(i, F.name);
+			if (!(F.name.startsWith(".") || [
 				"node_modules",
 				"Library",
 				"AppData"
-			].includes(file.name)) continue;
-			try {
-				const stats = await fs.stat(filePath);
-				if (file.isDirectory()) await findDuplicates(filePath, fileHashes);
-				else if (stats.size > 1024 * 1024 && stats.size < 50 * 1024 * 1024) {
-					const hash = await hashFile(filePath);
-					const existing = fileHashes.get(hash) || [];
-					existing.push(filePath);
-					fileHashes.set(hash, existing);
+			].includes(F.name))) try {
+				let i = await fs.stat(P);
+				if (F.isDirectory()) await findDuplicates(P, N);
+				else if (i.size > 1024 * 1024 && i.size < 50 * 1024 * 1024) {
+					let i = await hashFile(P), F = N.get(i) || [];
+					F.push(P), N.set(i, F);
 				}
-			} catch (e) {}
+			} catch {}
 		}
-	} catch (e) {}
+	} catch {}
 }
-async function hashFile(filePath) {
-	const buffer = await fs.readFile(filePath);
-	return createHash("md5").update(buffer).digest("hex");
+async function hashFile(i) {
+	let N = await fs.readFile(i);
+	return createHash("md5").update(N).digest("hex");
 }
-function formatBytes$1(bytes) {
-	if (bytes === 0) return "0 B";
-	const k = 1024;
-	const sizes = [
+function formatBytes$1(i) {
+	if (i === 0) return "0 B";
+	let N = 1024, P = [
 		"B",
 		"KB",
 		"MB",
 		"GB",
 		"TB"
-	];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+	], F = Math.floor(Math.log(i) / Math.log(N));
+	return `${(i / N ** +F).toFixed(1)} ${P[F]}`;
 }
-var getPlatformProtectedPaths = (platform) => {
-	const home = os.homedir();
-	const rules = [];
-	if (platform === "win32") {
-		const windir = process.env.WINDIR || "C:\\Windows";
-		const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
-		const programFilesX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
-		rules.push({
-			path: windir,
+var getPlatformProtectedPaths = (i) => {
+	let N = os.homedir(), P = [];
+	if (i === "win32") {
+		let i = process.env.WINDIR || "C:\\Windows", F = process.env.PROGRAMFILES || "C:\\Program Files", I = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
+		P.push({
+			path: i,
 			type: "folder",
 			action: "protect",
 			reason: "Windows system directory",
 			platform: "windows"
 		}, {
-			path: programFiles,
+			path: F,
 			type: "folder",
 			action: "protect",
 			reason: "Program Files directory",
 			platform: "windows"
 		}, {
-			path: programFilesX86,
+			path: I,
 			type: "folder",
 			action: "protect",
 			reason: "Program Files (x86) directory",
@@ -1663,19 +1344,19 @@ var getPlatformProtectedPaths = (platform) => {
 			reason: "ProgramData directory",
 			platform: "windows"
 		}, {
-			path: path.join(home, "Documents"),
+			path: path.join(N, "Documents"),
 			type: "folder",
 			action: "warn",
 			reason: "User Documents folder",
 			platform: "windows"
 		}, {
-			path: path.join(home, "Desktop"),
+			path: path.join(N, "Desktop"),
 			type: "folder",
 			action: "warn",
 			reason: "User Desktop folder",
 			platform: "windows"
 		});
-	} else if (platform === "darwin") rules.push({
+	} else i === "darwin" && P.push({
 		path: "/System",
 		type: "folder",
 		action: "protect",
@@ -1694,190 +1375,151 @@ var getPlatformProtectedPaths = (platform) => {
 		reason: "Unix system resources",
 		platform: "macos"
 	}, {
-		path: path.join(home, "Documents"),
+		path: path.join(N, "Documents"),
 		type: "folder",
 		action: "warn",
 		reason: "User Documents folder",
 		platform: "macos"
 	}, {
-		path: path.join(home, "Desktop"),
+		path: path.join(N, "Desktop"),
 		type: "folder",
 		action: "warn",
 		reason: "User Desktop folder",
 		platform: "macos"
 	});
-	return rules;
-};
-var checkFileSafety = (filePath, platform) => {
-	const warnings = [];
-	const blocked = [];
-	const rules = getPlatformProtectedPaths(platform);
-	for (const rule of rules) {
-		if (rule.platform && rule.platform !== platform && rule.platform !== "all") continue;
-		const normalizedRulePath = path.normalize(rule.path);
-		const normalizedFilePath = path.normalize(filePath);
-		if (normalizedFilePath === normalizedRulePath || normalizedFilePath.startsWith(normalizedRulePath + path.sep)) {
-			if (rule.action === "protect") {
-				blocked.push(filePath);
-				return {
-					safe: false,
-					warnings: [],
-					blocked: [filePath]
-				};
-			} else if (rule.action === "warn") warnings.push({
-				path: filePath,
-				reason: rule.reason,
+	return P;
+}, checkFileSafety = (i, N) => {
+	let P = [], F = [], I = getPlatformProtectedPaths(N);
+	for (let L of I) {
+		if (L.platform && L.platform !== N && L.platform !== "all") continue;
+		let I = path.normalize(L.path), R = path.normalize(i);
+		if (R === I || R.startsWith(I + path.sep)) {
+			if (L.action === "protect") return F.push(i), {
+				safe: !1,
+				warnings: [],
+				blocked: [i]
+			};
+			L.action === "warn" && P.push({
+				path: i,
+				reason: L.reason,
 				severity: "high"
 			});
 		}
 	}
 	return {
-		safe: blocked.length === 0,
-		warnings,
-		blocked
+		safe: F.length === 0,
+		warnings: P,
+		blocked: F
 	};
-};
-var checkFilesSafety = (filePaths, platform) => {
-	const allWarnings = [];
-	const allBlocked = [];
-	for (const filePath of filePaths) {
-		const result = checkFileSafety(filePath, platform);
-		if (!result.safe) allBlocked.push(...result.blocked);
-		allWarnings.push(...result.warnings);
+}, checkFilesSafety = (i, N) => {
+	let P = [], F = [];
+	for (let I of i) {
+		let i = checkFileSafety(I, N);
+		i.safe || F.push(...i.blocked), P.push(...i.warnings);
 	}
 	return {
-		safe: allBlocked.length === 0,
-		warnings: allWarnings,
-		blocked: allBlocked
+		safe: F.length === 0,
+		warnings: P,
+		blocked: F
 	};
-};
-var getBackupDir = () => {
-	const home = os.homedir();
-	if (process.platform === "win32") return path.join(home, "AppData", "Local", "devtools-app", "backups");
-	else return path.join(home, ".devtools-app", "backups");
-};
-var generateBackupId = () => {
-	return `backup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
-var calculateTotalSize = async (files) => {
-	let totalSize = 0;
-	for (const filePath of files) try {
-		const stats = await fs.stat(filePath);
-		if (stats.isFile()) totalSize += stats.size;
-	} catch (e) {}
-	return totalSize;
-};
-var createBackup = async (files) => {
+}, getBackupDir = () => {
+	let i = os.homedir();
+	return process.platform === "win32" ? path.join(i, "AppData", "Local", "devtools-app", "backups") : path.join(i, ".devtools-app", "backups");
+}, generateBackupId = () => `backup-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, calculateTotalSize = async (i) => {
+	let N = 0;
+	for (let P of i) try {
+		let i = await fs.stat(P);
+		i.isFile() && (N += i.size);
+	} catch {}
+	return N;
+}, createBackup = async (i) => {
 	try {
-		const backupDir = getBackupDir();
-		await fs.mkdir(backupDir, { recursive: true });
-		const backupId = generateBackupId();
-		const backupPath = path.join(backupDir, backupId);
-		await fs.mkdir(backupPath, { recursive: true });
-		const totalSize = await calculateTotalSize(files);
-		const backedUpFiles = [];
-		for (const filePath of files) try {
-			const stats = await fs.stat(filePath);
-			const fileName = path.basename(filePath);
-			const backupFilePath = path.join(backupPath, fileName);
-			if (stats.isFile()) {
-				await fs.copyFile(filePath, backupFilePath);
-				backedUpFiles.push(filePath);
-			}
-		} catch (e) {}
-		const backupInfo = {
-			id: backupId,
+		let N = getBackupDir();
+		await fs.mkdir(N, { recursive: !0 });
+		let P = generateBackupId(), F = path.join(N, P);
+		await fs.mkdir(F, { recursive: !0 });
+		let I = await calculateTotalSize(i), L = [];
+		for (let N of i) try {
+			let i = await fs.stat(N), P = path.basename(N), I = path.join(F, P);
+			i.isFile() && (await fs.copyFile(N, I), L.push(N));
+		} catch {}
+		let R = {
+			id: P,
 			timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-			files: backedUpFiles,
-			totalSize,
-			location: backupPath,
+			files: L,
+			totalSize: I,
+			location: F,
 			platform: process.platform
+		}, z = path.join(F, "backup-info.json");
+		return await fs.writeFile(z, JSON.stringify(R, null, 2)), {
+			success: !0,
+			backupId: P,
+			backupInfo: R
 		};
-		const metadataPath = path.join(backupPath, "backup-info.json");
-		await fs.writeFile(metadataPath, JSON.stringify(backupInfo, null, 2));
+	} catch (i) {
 		return {
-			success: true,
-			backupId,
-			backupInfo
-		};
-	} catch (error) {
-		return {
-			success: false,
-			error: error.message
+			success: !1,
+			error: i.message
 		};
 	}
-};
-var listBackups = async () => {
+}, listBackups = async () => {
 	try {
-		const backupDir = getBackupDir();
-		const entries = await fs.readdir(backupDir, { withFileTypes: true });
-		const backups = [];
-		for (const entry of entries) if (entry.isDirectory() && entry.name.startsWith("backup-")) {
-			const metadataPath = path.join(backupDir, entry.name, "backup-info.json");
+		let i = getBackupDir(), N = await fs.readdir(i, { withFileTypes: !0 }), P = [];
+		for (let F of N) if (F.isDirectory() && F.name.startsWith("backup-")) {
+			let N = path.join(i, F.name, "backup-info.json");
 			try {
-				const metadataContent = await fs.readFile(metadataPath, "utf-8");
-				backups.push(JSON.parse(metadataContent));
-			} catch (e) {}
+				let i = await fs.readFile(N, "utf-8");
+				P.push(JSON.parse(i));
+			} catch {}
 		}
-		return backups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-	} catch (error) {
+		return P.sort((i, N) => new Date(N.timestamp).getTime() - new Date(i.timestamp).getTime());
+	} catch {
 		return [];
 	}
-};
-var getBackupInfo = async (backupId) => {
+}, getBackupInfo = async (i) => {
 	try {
-		const backupDir = getBackupDir();
-		const metadataPath = path.join(backupDir, backupId, "backup-info.json");
-		const metadataContent = await fs.readFile(metadataPath, "utf-8");
-		return JSON.parse(metadataContent);
-	} catch (error) {
+		let N = getBackupDir(), P = path.join(N, i, "backup-info.json"), F = await fs.readFile(P, "utf-8");
+		return JSON.parse(F);
+	} catch {
 		return null;
 	}
-};
-var restoreBackup = async (backupId) => {
+}, restoreBackup = async (i) => {
 	try {
-		const backupInfo = await getBackupInfo(backupId);
-		if (!backupInfo) return {
-			success: false,
+		let N = await getBackupInfo(i);
+		if (!N) return {
+			success: !1,
 			error: "Backup not found"
 		};
-		const backupPath = backupInfo.location;
-		for (const filePath of backupInfo.files) try {
-			const fileName = path.basename(filePath);
-			const backupFilePath = path.join(backupPath, fileName);
-			if ((await fs.stat(backupFilePath)).isFile()) {
-				const destDir = path.dirname(filePath);
-				await fs.mkdir(destDir, { recursive: true });
-				await fs.copyFile(backupFilePath, filePath);
+		let P = N.location;
+		for (let i of N.files) try {
+			let N = path.basename(i), F = path.join(P, N);
+			if ((await fs.stat(F)).isFile()) {
+				let N = path.dirname(i);
+				await fs.mkdir(N, { recursive: !0 }), await fs.copyFile(F, i);
 			}
-		} catch (e) {}
-		return { success: true };
-	} catch (error) {
+		} catch {}
+		return { success: !0 };
+	} catch (i) {
 		return {
-			success: false,
-			error: error.message
+			success: !1,
+			error: i.message
 		};
 	}
-};
-var deleteBackup = async (backupId) => {
+}, deleteBackup = async (i) => {
 	try {
-		const backupDir = getBackupDir();
-		const backupPath = path.join(backupDir, backupId);
-		await fs.rm(backupPath, {
-			recursive: true,
-			force: true
-		});
-		return { success: true };
-	} catch (error) {
+		let N = getBackupDir(), P = path.join(N, i);
+		return await fs.rm(P, {
+			recursive: !0,
+			force: !0
+		}), { success: !0 };
+	} catch (i) {
 		return {
-			success: false,
-			error: error.message
+			success: !1,
+			error: i.message
 		};
 	}
-};
-var __filename = fileURLToPath(import.meta.url);
-var __dirname$1 = path.dirname(__filename);
-function setupScreenshotHandlers(win$1) {
+}, __filename = fileURLToPath(import.meta.url), __dirname$1 = path.dirname(__filename);
+function setupScreenshotHandlers(N) {
 	ipcMain.handle("screenshot:get-sources", async () => {
 		try {
 			return (await desktopCapturer.getSources({
@@ -1886,336 +1528,111 @@ function setupScreenshotHandlers(win$1) {
 					width: 300,
 					height: 200
 				}
-			})).map((source) => ({
-				id: source.id,
-				name: source.name,
-				thumbnail: source.thumbnail.toDataURL(),
-				type: source.id.startsWith("screen") ? "screen" : "window"
+			})).map((i) => ({
+				id: i.id,
+				name: i.name,
+				thumbnail: i.thumbnail.toDataURL(),
+				type: i.id.startsWith("screen") ? "screen" : "window"
 			}));
-		} catch (error) {
-			console.error("Failed to get sources:", error);
-			return [];
+		} catch (i) {
+			return console.error("Failed to get sources:", i), [];
 		}
-	});
-	ipcMain.handle("screenshot:capture-screen", async () => {
+	}), ipcMain.handle("screenshot:capture-screen", async () => {
 		try {
-			const sources = await desktopCapturer.getSources({
+			let i = await desktopCapturer.getSources({
 				types: ["screen"],
 				thumbnailSize: screen.getPrimaryDisplay().size
 			});
-			if (sources.length === 0) throw new Error("No screens available");
-			const image = sources[0].thumbnail;
+			if (i.length === 0) throw Error("No screens available");
+			let N = i[0].thumbnail;
 			return {
-				dataUrl: image.toDataURL(),
-				width: image.getSize().width,
-				height: image.getSize().height
+				dataUrl: N.toDataURL(),
+				width: N.getSize().width,
+				height: N.getSize().height
 			};
-		} catch (error) {
-			console.error("Failed to capture screen:", error);
-			throw error;
+		} catch (i) {
+			throw console.error("Failed to capture screen:", i), i;
 		}
-	});
-	ipcMain.handle("screenshot:capture-window", async (_event, sourceId) => {
+	}), ipcMain.handle("screenshot:capture-window", async (i, N) => {
 		try {
-			const source = (await desktopCapturer.getSources({
+			let i = (await desktopCapturer.getSources({
 				types: ["window"],
 				thumbnailSize: {
 					width: 1920,
 					height: 1080
 				}
-			})).find((s) => s.id === sourceId);
-			if (!source) throw new Error("Window not found");
-			const image = source.thumbnail;
+			})).find((i) => i.id === N);
+			if (!i) throw Error("Window not found");
+			let P = i.thumbnail;
 			return {
-				dataUrl: image.toDataURL(),
-				width: image.getSize().width,
-				height: image.getSize().height
+				dataUrl: P.toDataURL(),
+				width: P.getSize().width,
+				height: P.getSize().height
 			};
-		} catch (error) {
-			console.error("Failed to capture window:", error);
-			throw error;
+		} catch (i) {
+			throw console.error("Failed to capture window:", i), i;
 		}
-	});
-	ipcMain.handle("screenshot:capture-area", async () => {
+	}), ipcMain.handle("screenshot:capture-area", async () => {
 		try {
 			console.log("Capturing screen for area selection...");
-			const sources = await desktopCapturer.getSources({
+			let N = await desktopCapturer.getSources({
 				types: ["screen"],
 				thumbnailSize: screen.getPrimaryDisplay().size
 			});
-			console.log(`Found ${sources.length} sources.`);
-			if (sources.length === 0) {
-				console.error("No screens available for capture.");
-				throw new Error("No screens available");
-			}
-			const fullScreenImage = sources[0].thumbnail;
-			const display = screen.getPrimaryDisplay();
-			console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
-			console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
-			return new Promise((resolve, reject) => {
-				let selectionWindow = null;
-				const cleanup = () => {
-					if (selectionWindow && !selectionWindow.isDestroyed()) selectionWindow.close();
-					ipcMain.removeHandler("screenshot:area-selected");
-					ipcMain.removeHandler("screenshot:area-cancelled");
+			if (console.log(`Found ${N.length} sources.`), N.length === 0) throw console.error("No screens available for capture."), Error("No screens available");
+			let P = N[0].thumbnail, F = screen.getPrimaryDisplay();
+			return console.log(`Captured thumbnail size: ${P.getSize().width}x${P.getSize().height}`), console.log(`Display size: ${F.size.width}x${F.size.height} (Scale: ${F.scaleFactor})`), new Promise((N, I) => {
+				let L = null, R = () => {
+					L && !L.isDestroyed() && L.close(), ipcMain.removeHandler("screenshot:area-selected"), ipcMain.removeHandler("screenshot:area-cancelled");
 				};
-				ipcMain.handle("screenshot:area-selected", async (_event, bounds) => {
-					cleanup();
-					const scaleFactor = display.scaleFactor;
-					const croppedImage = fullScreenImage.crop({
-						x: Math.round(bounds.x * scaleFactor),
-						y: Math.round(bounds.y * scaleFactor),
-						width: Math.round(bounds.width * scaleFactor),
-						height: Math.round(bounds.height * scaleFactor)
+				ipcMain.handle("screenshot:area-selected", async (i, I) => {
+					R();
+					let L = F.scaleFactor, z = P.crop({
+						x: Math.round(I.x * L),
+						y: Math.round(I.y * L),
+						width: Math.round(I.width * L),
+						height: Math.round(I.height * L)
 					});
-					resolve({
-						dataUrl: croppedImage.toDataURL(),
-						width: croppedImage.getSize().width,
-						height: croppedImage.getSize().height
+					N({
+						dataUrl: z.toDataURL(),
+						width: z.getSize().width,
+						height: z.getSize().height
 					});
+				}), ipcMain.handle("screenshot:area-cancelled", () => {
+					R(), I(/* @__PURE__ */ Error("Area selection cancelled"));
 				});
-				ipcMain.handle("screenshot:area-cancelled", () => {
-					cleanup();
-					reject(/* @__PURE__ */ new Error("Area selection cancelled"));
-				});
-				const { width, height, x, y } = display.bounds;
-				selectionWindow = new BrowserWindow({
-					x,
-					y,
-					width,
-					height,
-					frame: false,
-					transparent: true,
-					hasShadow: false,
+				let { width: z, height: B, x: H, y: U } = F.bounds;
+				L = new BrowserWindow({
+					x: H,
+					y: U,
+					width: z,
+					height: B,
+					frame: !1,
+					transparent: !0,
+					hasShadow: !1,
 					backgroundColor: "#00000000",
-					alwaysOnTop: true,
-					skipTaskbar: true,
-					resizable: false,
-					enableLargerThanScreen: true,
-					movable: false,
-					acceptFirstMouse: true,
+					alwaysOnTop: !0,
+					skipTaskbar: !0,
+					resizable: !1,
+					enableLargerThanScreen: !0,
+					movable: !1,
+					acceptFirstMouse: !0,
 					webPreferences: {
-						nodeIntegration: false,
-						contextIsolation: true,
+						nodeIntegration: !1,
+						contextIsolation: !0,
 						preload: path.join(__dirname$1, "../preload/preload.js")
 					}
-				});
-				selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-				selectionWindow.show();
-				selectionWindow.focus();
-				selectionWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>
-                            * { margin: 0; padding: 0; box-sizing: border-box; }
-                            body {
-                                width: 100vw;
-                                height: 100vh;
-                                cursor: crosshair;
-                                background: transparent;
-                                overflow: hidden;
-                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                                user-select: none;
-                            }
-                            #selection {
-                                position: absolute;
-                                border: 2px solid #3b82f6;
-                                background: rgba(59, 130, 246, 0.05);
-                                display: none;
-                                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
-                                z-index: 100;
-                                pointer-events: none;
-                            }
-                            #toolbar {
-                                position: absolute;
-                                display: none;
-                                background: #1a1b1e;
-                                padding: 6px;
-                                border-radius: 10px;
-                                box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
-                                z-index: 2000;
-                                display: flex;
-                                gap: 8px;
-                                align-items: center;
-                                pointer-events: auto;
-                                animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-                            }
-                            @keyframes popIn {
-                                from { opacity: 0; transform: scale(0.95) translateY(5px); }
-                                to { opacity: 1; transform: scale(1) translateY(0); }
-                            }
-                            .btn {
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                padding: 0 16px;
-                                height: 36px;
-                                border-radius: 8px;
-                                border: none;
-                                font-size: 13px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: all 0.15s ease;
-                                color: white;
-                            }
-                            .btn-cancel {
-                                background: rgba(255,255,255,0.08);
-                                color: #e5e5e5;
-                            }
-                            .btn-cancel:hover { background: rgba(255,255,255,0.12); color: white; }
-                            .btn-capture {
-                                background: #3b82f6;
-                                color: white;
-                                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-                            }
-                            .btn-capture:hover { background: #2563eb; transform: translateY(-1px); }
-                            .btn-capture:active { transform: translateY(0); }
-                            #dimensions {
-                                position: absolute;
-                                top: -34px;
-                                left: 0;
-                                background: #3b82f6;
-                                color: white;
-                                padding: 4px 8px;
-                                border-radius: 6px;
-                                font-size: 12px;
-                                font-weight: 600;
-                                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                                opacity: 0;
-                                transition: opacity 0.2s;
-                            }
-                            #instructions {
-                                position: absolute;
-                                top: 40px;
-                                left: 50%;
-                                transform: translateX(-50%);
-                                background: rgba(0, 0, 0, 0.7);
-                                backdrop-filter: blur(10px);
-                                color: white;
-                                padding: 8px 16px;
-                                border-radius: 20px;
-                                font-size: 13px;
-                                font-weight: 500;
-                                pointer-events: none;
-                                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                                border: 1px solid rgba(255,255,255,0.1);
-                                opacity: 0.8;
-                            }
-                            .hidden { display: none !important; }
-                        </style>
-                    </head>
-                    <body>
-                        <div id="instructions">Click and drag to capture</div>
-                        <div id="selection">
-                            <div id="dimensions">0 x 0</div>
-                        </div>
-                        <div id="toolbar" class="hidden">
-                            <button class="btn btn-cancel" id="btn-cancel">Cancel</button>
-                            <button class="btn btn-capture" id="btn-capture">Capture</button>
-                        </div>
-                        <script>
-                            const selection = document.getElementById('selection');
-                            const toolbar = document.getElementById('toolbar');
-                            const dimensions = document.getElementById('dimensions');
-                            const btnCancel = document.getElementById('btn-cancel');
-                            const btnCapture = document.getElementById('btn-capture');
-                            
-                            let startX, startY, isDrawing = false;
-                            let currentBounds = { x: 0, y: 0, width: 0, height: 0 };
-                            
-                            document.addEventListener('contextmenu', e => e.preventDefault());
-
-                            function capture() {
-                                if (currentBounds.width > 0 && currentBounds.height > 0) {
-                                    window.electronAPI.sendSelection(currentBounds);
-                                }
-                            }
-                            
-                            function cancel() {
-                                window.electronAPI.cancelSelection();
-                            }
-
-                            btnCapture.onclick = capture;
-                            btnCancel.onclick = cancel;
-
-                            document.addEventListener('mousedown', (e) => {
-                                if (e.target.closest('#toolbar')) return;
-                                if (e.button !== 0) {
-                                    if (e.button === 2) cancel();
-                                    return;
-                                }
-                                isDrawing = true;
-                                startX = e.clientX;
-                                startY = e.clientY;
-                                toolbar.classList.add('hidden');
-                                dimensions.style.opacity = '1';
-                                selection.style.left = startX + 'px';
-                                selection.style.top = startY + 'px';
-                                selection.style.width = '0px';
-                                selection.style.height = '0px';
-                                selection.style.display = 'block';
-                            });
-
-                            document.addEventListener('mousemove', (e) => {
-                                if (!isDrawing) return;
-                                const currentX = e.clientX;
-                                const currentY = e.clientY;
-                                const width = Math.abs(currentX - startX);
-                                const height = Math.abs(currentY - startY);
-                                const left = Math.min(startX, currentX);
-                                const top = Math.min(startY, currentY);
-                                selection.style.left = left + 'px';
-                                selection.style.top = top + 'px';
-                                selection.style.width = width + 'px';
-                                selection.style.height = height + 'px';
-                                dimensions.textContent = Math.round(width) + ' x ' + Math.round(height);
-                                currentBounds = { x: left, y: top, width, height };
-                            });
-
-                            document.addEventListener('mouseup', (e) => {
-                                if (!isDrawing) return;
-                                isDrawing = false;
-                                if (currentBounds.width > 10 && currentBounds.height > 10) {
-                                    toolbar.classList.remove('hidden');
-                                    const toolbarHeight = 60;
-                                    let top = currentBounds.y + currentBounds.height + 10;
-                                    if (top + toolbarHeight > window.innerHeight) top = currentBounds.y - toolbarHeight - 10;
-                                    let left = currentBounds.x + (currentBounds.width / 2) - 100;
-                                    left = Math.max(10, Math.min(window.innerWidth - 210, left));
-                                    toolbar.style.top = top + 'px';
-                                    toolbar.style.left = left + 'px';
-                                } else {
-                                    selection.style.display = 'none';
-                                    toolbar.classList.add('hidden');
-                                }
-                            });
-
-                            document.addEventListener('keydown', (e) => {
-                                if (e.key === 'Escape') cancel();
-                                if (e.key === 'Enter' && !toolbar.classList.contains('hidden')) capture();
-                            });
-                        <\/script>
-                    </body>
-                    </html>
-                `)}`);
-				setTimeout(() => {
-					if (selectionWindow && !selectionWindow.isDestroyed()) {
-						cleanup();
-						reject(/* @__PURE__ */ new Error("Area selection timeout"));
-					}
+				}), L.setVisibleOnAllWorkspaces(!0, { visibleOnFullScreen: !0 }), L.show(), L.focus(), L.loadURL("data:text/html;charset=utf-8,%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C!DOCTYPE%20html%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Chtml%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Chead%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cstyle%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20*%20%7B%20margin%3A%200%3B%20padding%3A%200%3B%20box-sizing%3A%20border-box%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20body%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20width%3A%20100vw%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20height%3A%20100vh%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20cursor%3A%20crosshair%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20transparent%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20overflow%3A%20hidden%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-family%3A%20-apple-system%2C%20BlinkMacSystemFont%2C%20%22Segoe%20UI%22%2C%20Roboto%2C%20Helvetica%2C%20Arial%2C%20sans-serif%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20user-select%3A%20none%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%23selection%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border%3A%202px%20solid%20%233b82f6%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20rgba(59%2C%20130%2C%20246%2C%200.05)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20display%3A%20none%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20box-shadow%3A%200%200%200%209999px%20rgba(0%2C%200%2C%200%2C%200.4)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20z-index%3A%20100%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20pointer-events%3A%20none%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%23toolbar%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20display%3A%20none%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20%231a1b1e%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20padding%3A%206px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border-radius%3A%2010px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20box-shadow%3A%200%2010px%2030px%20rgba(0%2C0%2C0%2C0.5)%2C%200%200%200%201px%20rgba(255%2C255%2C255%2C0.1)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20z-index%3A%202000%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20display%3A%20flex%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20gap%3A%208px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20align-items%3A%20center%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20pointer-events%3A%20auto%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20animation%3A%20popIn%200.2s%20cubic-bezier(0.16%2C%201%2C%200.3%2C%201)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%40keyframes%20popIn%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20from%20%7B%20opacity%3A%200%3B%20transform%3A%20scale(0.95)%20translateY(5px)%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20to%20%7B%20opacity%3A%201%3B%20transform%3A%20scale(1)%20translateY(0)%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.btn%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20display%3A%20flex%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20align-items%3A%20center%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20justify-content%3A%20center%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20padding%3A%200%2016px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20height%3A%2036px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border-radius%3A%208px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border%3A%20none%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-size%3A%2013px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-weight%3A%20600%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20cursor%3A%20pointer%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20transition%3A%20all%200.15s%20ease%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3A%20white%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.btn-cancel%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20rgba(255%2C255%2C255%2C0.08)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3A%20%23e5e5e5%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.btn-cancel%3Ahover%20%7B%20background%3A%20rgba(255%2C255%2C255%2C0.12)%3B%20color%3A%20white%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.btn-capture%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20%233b82f6%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3A%20white%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20box-shadow%3A%200%202px%208px%20rgba(59%2C%20130%2C%20246%2C%200.4)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.btn-capture%3Ahover%20%7B%20background%3A%20%232563eb%3B%20transform%3A%20translateY(-1px)%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.btn-capture%3Aactive%20%7B%20transform%3A%20translateY(0)%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%23dimensions%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20top%3A%20-34px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20left%3A%200%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20%233b82f6%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3A%20white%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20padding%3A%204px%208px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border-radius%3A%206px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-size%3A%2012px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-weight%3A%20600%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20box-shadow%3A%200%202px%208px%20rgba(0%2C0%2C0%2C0.2)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20opacity%3A%200%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20transition%3A%20opacity%200.2s%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%23instructions%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20position%3A%20absolute%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20top%3A%2040px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20left%3A%2050%25%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20transform%3A%20translateX(-50%25)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20background%3A%20rgba(0%2C%200%2C%200%2C%200.7)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20backdrop-filter%3A%20blur(10px)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3A%20white%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20padding%3A%208px%2016px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border-radius%3A%2020px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-size%3A%2013px%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font-weight%3A%20500%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20pointer-events%3A%20none%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20box-shadow%3A%200%204px%2012px%20rgba(0%2C0%2C0%2C0.2)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border%3A%201px%20solid%20rgba(255%2C255%2C255%2C0.1)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20opacity%3A%200.8%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.hidden%20%7B%20display%3A%20none%20!important%3B%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fstyle%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fhead%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cbody%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cdiv%20id%3D%22instructions%22%3EClick%20and%20drag%20to%20capture%3C%2Fdiv%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cdiv%20id%3D%22selection%22%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cdiv%20id%3D%22dimensions%22%3E0%20x%200%3C%2Fdiv%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cdiv%20id%3D%22toolbar%22%20class%3D%22hidden%22%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cbutton%20class%3D%22btn%20btn-cancel%22%20id%3D%22btn-cancel%22%3ECancel%3C%2Fbutton%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cbutton%20class%3D%22btn%20btn-capture%22%20id%3D%22btn-capture%22%3ECapture%3C%2Fbutton%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cscript%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20selection%20%3D%20document.getElementById('selection')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20toolbar%20%3D%20document.getElementById('toolbar')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20dimensions%20%3D%20document.getElementById('dimensions')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20btnCancel%20%3D%20document.getElementById('btn-cancel')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20btnCapture%20%3D%20document.getElementById('btn-capture')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20let%20startX%2C%20startY%2C%20isDrawing%20%3D%20false%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20let%20currentBounds%20%3D%20%7B%20x%3A%200%2C%20y%3A%200%2C%20width%3A%200%2C%20height%3A%200%20%7D%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20document.addEventListener('contextmenu'%2C%20e%20%3D%3E%20e.preventDefault())%3B%0A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20function%20capture()%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(currentBounds.width%20%3E%200%20%26%26%20currentBounds.height%20%3E%200)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20window.electronAPI.sendSelection(currentBounds)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20function%20cancel()%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20window.electronAPI.cancelSelection()%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20btnCapture.onclick%20%3D%20capture%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20btnCancel.onclick%20%3D%20cancel%3B%0A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20document.addEventListener('mousedown'%2C%20(e)%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(e.target.closest('%23toolbar'))%20return%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(e.button%20!%3D%3D%200)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(e.button%20%3D%3D%3D%202)%20cancel()%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20return%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20isDrawing%20%3D%20true%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20startX%20%3D%20e.clientX%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20startY%20%3D%20e.clientY%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20toolbar.classList.add('hidden')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20dimensions.style.opacity%20%3D%20'1'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.left%20%3D%20startX%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.top%20%3D%20startY%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.width%20%3D%20'0px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.height%20%3D%20'0px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.display%20%3D%20'block'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D)%3B%0A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20document.addEventListener('mousemove'%2C%20(e)%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(!isDrawing)%20return%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20currentX%20%3D%20e.clientX%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20currentY%20%3D%20e.clientY%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20width%20%3D%20Math.abs(currentX%20-%20startX)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20height%20%3D%20Math.abs(currentY%20-%20startY)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20left%20%3D%20Math.min(startX%2C%20currentX)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20top%20%3D%20Math.min(startY%2C%20currentY)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.left%20%3D%20left%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.top%20%3D%20top%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.width%20%3D%20width%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.height%20%3D%20height%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20dimensions.textContent%20%3D%20Math.round(width)%20%2B%20'%20x%20'%20%2B%20Math.round(height)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20currentBounds%20%3D%20%7B%20x%3A%20left%2C%20y%3A%20top%2C%20width%2C%20height%20%7D%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D)%3B%0A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20document.addEventListener('mouseup'%2C%20(e)%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(!isDrawing)%20return%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20isDrawing%20%3D%20false%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(currentBounds.width%20%3E%2010%20%26%26%20currentBounds.height%20%3E%2010)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20toolbar.classList.remove('hidden')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20const%20toolbarHeight%20%3D%2060%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20let%20top%20%3D%20currentBounds.y%20%2B%20currentBounds.height%20%2B%2010%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(top%20%2B%20toolbarHeight%20%3E%20window.innerHeight)%20top%20%3D%20currentBounds.y%20-%20toolbarHeight%20-%2010%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20let%20left%20%3D%20currentBounds.x%20%2B%20(currentBounds.width%20%2F%202)%20-%20100%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20left%20%3D%20Math.max(10%2C%20Math.min(window.innerWidth%20-%20210%2C%20left))%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20toolbar.style.top%20%3D%20top%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20toolbar.style.left%20%3D%20left%20%2B%20'px'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%20else%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20selection.style.display%20%3D%20'none'%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20toolbar.classList.add('hidden')%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D)%3B%0A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20document.addEventListener('keydown'%2C%20(e)%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(e.key%20%3D%3D%3D%20'Escape')%20cancel()%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(e.key%20%3D%3D%3D%20'Enter'%20%26%26%20!toolbar.classList.contains('hidden'))%20capture()%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D)%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fscript%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fbody%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fhtml%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20"), setTimeout(() => {
+					L && !L.isDestroyed() && (R(), I(/* @__PURE__ */ Error("Area selection timeout")));
 				}, 12e4);
 			});
-		} catch (error) {
-			console.error("Failed to capture area:", error);
-			throw error;
+		} catch (i) {
+			throw console.error("Failed to capture area:", i), i;
 		}
-	});
-	ipcMain.handle("screenshot:save-file", async (_event, dataUrl, options) => {
+	}), ipcMain.handle("screenshot:save-file", async (i, P, F) => {
 		try {
-			const { filename, format = "png" } = options;
-			const result = await dialog.showSaveDialog(win$1, {
-				defaultPath: filename || `screenshot-${Date.now()}.${format}`,
+			let { filename: i, format: I = "png" } = F, L = await dialog.showSaveDialog(N, {
+				defaultPath: i || `screenshot-${Date.now()}.${I}`,
 				filters: [
 					{
 						name: "PNG Image",
@@ -2231,120 +1648,440 @@ function setupScreenshotHandlers(win$1) {
 					}
 				]
 			});
-			if (result.canceled || !result.filePath) return {
-				success: false,
-				canceled: true
+			if (L.canceled || !L.filePath) return {
+				success: !1,
+				canceled: !0
 			};
-			const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
-			const buffer = Buffer.from(base64Data, "base64");
-			await fs.writeFile(result.filePath, buffer);
-			return {
-				success: true,
-				filePath: result.filePath
+			let R = P.replace(/^data:image\/\w+;base64,/, ""), B = Buffer.from(R, "base64");
+			return await fs.writeFile(L.filePath, B), {
+				success: !0,
+				filePath: L.filePath
 			};
-		} catch (error) {
-			console.error("Failed to save screenshot:", error);
-			return {
-				success: false,
-				error: error.message
+		} catch (i) {
+			return console.error("Failed to save screenshot:", i), {
+				success: !1,
+				error: i.message
 			};
 		}
 	});
 }
-var execAsync = promisify(exec);
-var store = new Store();
-var __dirname = dirname(fileURLToPath(import.meta.url));
-process.env.DIST = join(__dirname, "../dist");
-process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, "../public");
-var win;
-var tray = null;
-var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-var TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || "", "tray-icon.png");
-function setLoginItemSettingsSafely(openAtLogin) {
-	try {
-		app.setLoginItemSettings({
-			openAtLogin,
-			openAsHidden: true
+var require$1 = createRequire(import.meta.url);
+const youtubeDownloader = new class {
+	constructor() {
+		this.activeProcesses = /* @__PURE__ */ new Map(), this.hasAria2c = !1, this.hasFFmpeg = !1, this.ffmpegPath = null, this.aria2Path = null, this.store = new Store({
+			name: "youtube-download-history",
+			defaults: {
+				history: [],
+				settings: {
+					defaultVideoQuality: "1080p",
+					defaultAudioQuality: "0",
+					maxConcurrentDownloads: 3,
+					maxSpeedLimit: ""
+				}
+			}
 		});
-		return { success: true };
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error);
-		console.warn("Failed to set login item settings:", errorMessage);
-		if (!app.isPackaged) console.info("Note: Launch at login requires code signing in production builds");
+		let i = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+		this.binaryPath = path$1.join(app.getPath("userData"), i), this.initPromise = this.initYtDlp();
+	}
+	async initYtDlp() {
+		try {
+			let i = require$1("yt-dlp-wrap"), N = i.default || i;
+			if (fs$1.existsSync(this.binaryPath)) console.log("Using existing yt-dlp binary at:", this.binaryPath);
+			else {
+				console.log("Downloading yt-dlp binary to:", this.binaryPath);
+				try {
+					await N.downloadFromGithub(this.binaryPath), console.log("yt-dlp binary downloaded successfully");
+				} catch (i) {
+					throw console.error("Failed to download yt-dlp binary:", i), Error(`Failed to download yt-dlp: ${i}`);
+				}
+			}
+			this.ytDlp = new N(this.binaryPath);
+			try {
+				let i = require$1("ffmpeg-static");
+				i && (this.ffmpegPath = i.replace("app.asar", "app.asar.unpacked"));
+			} catch (i) {
+				console.warn("FFmpeg static load failed:", i);
+			}
+			await this.checkHelpers();
+		} catch (i) {
+			throw console.error("Failed to initialize yt-dlp:", i), i;
+		}
+	}
+	async checkHelpers() {
+		this.hasAria2c = !1, this.aria2Path = null;
+		try {
+			let i = app.getPath("userData"), N = path$1.join(i, "bin", "aria2c.exe");
+			fs$1.existsSync(N) && (this.hasAria2c = !0, this.aria2Path = N, console.log("✅ Aria2c found locally:", N));
+		} catch {}
+		if (!this.hasAria2c) try {
+			execSync("aria2c --version", { stdio: "ignore" }), this.hasAria2c = !0, console.log("✅ Aria2c found globally");
+		} catch {
+			console.log("ℹ️ Aria2c not found");
+		}
+		if (this.ffmpegPath) this.hasFFmpeg = !0, console.log("✅ FFmpeg static detected", this.ffmpegPath);
+		else try {
+			execSync("ffmpeg -version", { stdio: "ignore" }), this.hasFFmpeg = !0, console.log("✅ FFmpeg found globally");
+		} catch {
+			this.hasFFmpeg = !1, console.warn("⚠️ FFmpeg not found");
+		}
+	}
+	async installAria2() {
+		console.log("Starting Aria2 download...");
+		try {
+			let i = app.getPath("userData"), N = path$1.join(i, "bin");
+			fs$1.existsSync(N) || fs$1.mkdirSync(N, { recursive: !0 });
+			let P = path$1.join(N, "aria2.zip");
+			await new Promise((i, N) => {
+				let F = fs$1.createWriteStream(P);
+				https.get("https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip", (P) => {
+					P.statusCode === 302 || P.statusCode === 301 ? https.get(P.headers.location, (P) => {
+						if (P.statusCode !== 200) {
+							N(/* @__PURE__ */ Error("DL Fail " + P.statusCode));
+							return;
+						}
+						P.pipe(F), F.on("finish", () => {
+							F.close(), i();
+						});
+					}).on("error", N) : P.statusCode === 200 ? (P.pipe(F), F.on("finish", () => {
+						F.close(), i();
+					})) : N(/* @__PURE__ */ Error(`Failed to download: ${P.statusCode}`));
+				}).on("error", N);
+			}), await promisify$1(exec$1)(`powershell -Command "Expand-Archive -Path '${P}' -DestinationPath '${N}' -Force"`);
+			let F = path$1.join(N, "aria2-1.36.0-win-64bit-build1"), L = path$1.join(F, "aria2c.exe"), R = path$1.join(N, "aria2c.exe");
+			fs$1.existsSync(L) && fs$1.copyFileSync(L, R);
+			try {
+				fs$1.unlinkSync(P);
+			} catch {}
+			return await this.checkHelpers(), this.hasAria2c;
+		} catch (i) {
+			throw console.error("Install Aria2 Failed", i), i;
+		}
+	}
+	async ensureInitialized() {
+		await this.initPromise;
+	}
+	async getVideoInfo(i) {
+		await this.ensureInitialized();
+		try {
+			let N = await this.ytDlp.getVideoInfo([
+				i,
+				"--skip-download",
+				"--no-playlist"
+			]), P = (N.formats || []).map((i) => ({
+				itag: i.format_id ? parseInt(i.format_id) : 0,
+				quality: i.quality || i.format_note || "unknown",
+				qualityLabel: i.format_note || i.resolution,
+				hasVideo: !!i.vcodec && i.vcodec !== "none",
+				hasAudio: !!i.acodec && i.acodec !== "none",
+				container: i.ext || "unknown",
+				codecs: i.vcodec || i.acodec,
+				bitrate: i.tbr ? i.tbr * 1e3 : void 0,
+				audioBitrate: i.abr
+			})), F = /* @__PURE__ */ new Set();
+			P.forEach((i) => {
+				if (i.qualityLabel) {
+					let N = i.qualityLabel.match(/(\d+p)/);
+					N && F.add(N[1]);
+				}
+			});
+			let I = Array.from(F).sort((i, N) => {
+				let P = parseInt(i);
+				return parseInt(N) - P;
+			}), L = P.some((i) => i.hasVideo), R = P.some((i) => i.hasAudio);
+			return {
+				videoId: N.id || "",
+				title: N.title || "Unknown",
+				author: N.uploader || N.channel || "Unknown",
+				lengthSeconds: parseInt(N.duration) || 0,
+				thumbnailUrl: N.thumbnail || "",
+				description: N.description || void 0,
+				viewCount: parseInt(N.view_count) || void 0,
+				uploadDate: N.upload_date || void 0,
+				formats: P,
+				availableQualities: I,
+				hasVideo: L,
+				hasAudio: R
+			};
+		} catch (i) {
+			throw Error(`Failed to get video info: ${i instanceof Error ? i.message : "Unknown error"}`);
+		}
+	}
+	async getPlaylistInfo(i) {
+		await this.ensureInitialized();
+		try {
+			let N = await this.ytDlp.getVideoInfo([
+				i,
+				"--flat-playlist",
+				"--skip-download"
+			]);
+			if (!N.entries || !Array.isArray(N.entries)) throw Error("Not a valid playlist URL");
+			let P = N.entries.map((i) => ({
+				id: i.id || i.url,
+				title: i.title || "Unknown Title",
+				duration: i.duration || 0,
+				thumbnail: i.thumbnail || i.thumbnails?.[0]?.url || "",
+				url: i.url || `https://www.youtube.com/watch?v=${i.id}`
+			}));
+			return {
+				playlistId: N.id || N.playlist_id || "unknown",
+				title: N.title || N.playlist_title || "Unknown Playlist",
+				videoCount: P.length,
+				videos: P
+			};
+		} catch (i) {
+			throw Error(`Failed to get playlist info: ${i instanceof Error ? i.message : "Unknown error"}`);
+		}
+	}
+	async downloadVideo(i, N) {
+		await this.ensureInitialized();
+		let { url: P, format: F, quality: L, container: R, outputPath: z, maxSpeed: B } = i, V = randomUUID$1();
+		try {
+			let H = await this.getVideoInfo(P), U = this.sanitizeFilename(H.title), W = z || app.getPath("downloads"), G = R || (F === "audio" ? "mp3" : "mp4"), K = path$1.join(W, `${U}.%(ext)s`);
+			fs$1.existsSync(W) || fs$1.mkdirSync(W, { recursive: !0 });
+			let q = [
+				P,
+				"-o",
+				K,
+				"--no-playlist",
+				"--no-warnings",
+				"--newline",
+				"--concurrent-fragments",
+				`${i.concurrentFragments || 4}`,
+				"--buffer-size",
+				"1M",
+				"--retries",
+				"10",
+				"--fragment-retries",
+				"10",
+				"--no-overwrites",
+				"--embed-thumbnail",
+				"--add-metadata"
+			];
+			return B && q.push("--limit-rate", B), this.hasAria2c && (console.log(`[${V}] Using aria2c`), this.aria2Path ? q.push("--downloader", this.aria2Path, "--downloader-args", "aria2c:-x 16 -s 16 -k 1M") : q.push("--downloader", "aria2c", "--downloader-args", "aria2c:-x 16 -s 16 -k 1M")), this.ffmpegPath && q.push("--ffmpeg-location", this.ffmpegPath), F === "audio" ? q.push("-x", "--audio-format", R || "mp3", "--audio-quality", L || "0") : F === "video" ? (L && L !== "best" ? q.push("-f", `bestvideo[height<=${L.replace("p", "")}]+bestaudio/best[height<=${L.replace("p", "")}]`) : q.push("-f", "bestvideo+bestaudio/best"), q.push("--merge-output-format", R || "mp4")) : q.push("-f", "best"), new Promise((i, I) => {
+				let R = 0, z = 0, B = Date.now(), K = this.ytDlp.exec(q);
+				this.activeProcesses.set(V, K);
+				let J = "";
+				K.stdout?.on("data", (i) => {
+					let P = i.toString();
+					J += P;
+					let F = J.split(/\r?\n/);
+					J = F.pop() || "";
+					for (let i of F) {
+						if (!i.trim()) continue;
+						if (i.includes("100%") || i.includes("has already been downloaded")) {
+							N && N({
+								id: V,
+								percent: 100,
+								downloaded: z,
+								total: z,
+								speed: 0,
+								eta: 0,
+								state: "complete",
+								filename: `${U}.${G}`
+							});
+							continue;
+						}
+						let P = (i) => {
+							if (!i) return 1;
+							let N = i.toLowerCase();
+							return N.includes("k") ? 1024 : N.includes("m") ? 1024 * 1024 : N.includes("g") ? 1024 * 1024 * 1024 : 1;
+						}, F = i.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/), I = i.match(/\[#\w+\s+([0-9.]+[a-zA-Z]+)\/([0-9.]+[a-zA-Z]+)\(([0-9.]+)%\)\s+CN:[0-9]+\s+DL:([0-9.]+[a-zA-Z]+)(?:\s+ETA:([a-zA-Z0-9:msh]+))?/);
+						if (N) {
+							if (F) {
+								let i = parseFloat(F[1]), I = F[2], L = F[3], H = F[4], W = F[5], K = F[6];
+								z = parseFloat(I) * P(L), R = i / 100 * z;
+								let q = 0;
+								H && W && (q = parseFloat(H) * P(W));
+								let J = 0;
+								if (K) {
+									let i = K.split(":").map(Number);
+									J = i.length === 3 ? i[0] * 3600 + i[1] * 60 + i[2] : i.length === 2 ? i[0] * 60 + i[1] : i[0];
+								} else {
+									let i = (Date.now() - B) / 1e3, N = R / i;
+									q ||= N, J = q > 0 ? (z - R) / q : 0;
+								}
+								N({
+									id: V,
+									percent: Math.round(i),
+									downloaded: R,
+									total: z,
+									speed: q,
+									eta: J,
+									state: "downloading",
+									filename: `${U}.${G}`
+								});
+							} else if (I) {
+								let i = I[1], F = I[2], L = parseFloat(I[3]), B = I[4], H = I[5], W = (i) => {
+									let N = i.match(/([0-9.]+)([a-zA-Z]+)/);
+									return N ? parseFloat(N[1]) * P(N[2]) : 0;
+								};
+								R = W(i), z = W(F);
+								let K = W(B), q = 0;
+								if (H) {
+									let i = 0, N = H.match(/(\d+)h/), P = H.match(/(\d+)m/), F = H.match(/(\d+)s/);
+									N && (i += parseInt(N[1]) * 3600), P && (i += parseInt(P[1]) * 60), F && (i += parseInt(F[1])), q = i;
+								}
+								N({
+									id: V,
+									percent: Math.round(L),
+									downloaded: R,
+									total: z,
+									speed: K,
+									eta: q,
+									state: "downloading",
+									filename: `${U}.${G}`
+								});
+							}
+						}
+					}
+				}), K.stderr?.on("data", (i) => {}), K.on("close", (R) => {
+					if (this.activeProcesses.delete(V), R === 0) {
+						let I = path$1.join(W, `${U}.${G}`);
+						N && N({
+							id: V,
+							percent: 100,
+							downloaded: z,
+							total: z,
+							speed: 0,
+							eta: 0,
+							state: "complete"
+						}), this.addToHistory({
+							url: P,
+							title: H.title,
+							thumbnailUrl: H.thumbnailUrl,
+							format: F,
+							quality: L || (F === "audio" ? "best" : "auto"),
+							path: I,
+							size: z,
+							duration: H.lengthSeconds,
+							status: "completed"
+						}), i(I);
+					} else this.cleanupPartialFiles(W, U, G), I(/* @__PURE__ */ Error(`yt-dlp exited with code ${R}`));
+				}), K.on("error", (i) => {
+					this.activeProcesses.delete(V), this.cleanupPartialFiles(W, U, G), I(i);
+				});
+			});
+		} catch (i) {
+			throw this.activeProcesses.delete(V), Error(`Download failed: ${i instanceof Error ? i.message : "Unknown error"}`);
+		}
+	}
+	cancelDownload(i) {
+		if (i) {
+			let N = this.activeProcesses.get(i);
+			N && (console.log(`Cancelling download ${i}`), N.kill(), this.activeProcesses.delete(i));
+		} else console.log(`Cancelling all ${this.activeProcesses.size} downloads`), this.activeProcesses.forEach((i) => i.kill()), this.activeProcesses.clear();
+	}
+	cleanupPartialFiles(i, N, P) {
+		try {
+			[
+				path$1.join(i, `${N}.${P}`),
+				path$1.join(i, `${N}.${P}.part`),
+				path$1.join(i, `${N}.${P}.ytdl`),
+				path$1.join(i, `${N}.part`)
+			].forEach((i) => {
+				fs$1.existsSync(i) && fs$1.unlinkSync(i);
+			});
+		} catch (i) {
+			console.error("Cleanup failed:", i);
+		}
+	}
+	sanitizeFilename(i) {
+		return i.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);
+	}
+	getHistory() {
+		return this.store.get("history", []);
+	}
+	addToHistory(i) {
+		let N = this.store.get("history", []), P = {
+			...i,
+			id: randomUUID$1(),
+			timestamp: Date.now()
+		};
+		this.store.set("history", [P, ...N].slice(0, 50));
+	}
+	clearHistory() {
+		this.store.set("history", []);
+	}
+	getCapabilities() {
 		return {
-			success: false,
-			error: errorMessage
+			hasAria2c: this.hasAria2c,
+			hasFFmpeg: this.hasFFmpeg
+		};
+	}
+	getSettings() {
+		return this.store.get("settings");
+	}
+	saveSettings(i) {
+		let N = {
+			...this.store.get("settings"),
+			...i
+		};
+		return this.store.set("settings", N), N;
+	}
+}();
+var execAsync = promisify(exec), store = new Store(), __dirname = dirname(fileURLToPath(import.meta.url));
+process.env.DIST = join(__dirname, "../dist"), process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, "../public");
+var win, tray = null, VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL, TRAY_ICON_PATH = join(process.env.VITE_PUBLIC || "", "tray-icon.png");
+function setLoginItemSettingsSafely(i) {
+	try {
+		return app.setLoginItemSettings({
+			openAtLogin: i,
+			openAsHidden: !0
+		}), { success: !0 };
+	} catch (i) {
+		let N = i instanceof Error ? i.message : String(i);
+		return console.warn("Failed to set login item settings:", N), app.isPackaged || console.info("Note: Launch at login requires code signing in production builds"), {
+			success: !1,
+			error: N
 		};
 	}
 }
 function createTray() {
-	if (tray) return;
-	tray = new Tray(nativeImage.createFromPath(TRAY_ICON_PATH).resize({
+	tray || (tray = new Tray(nativeImage.createFromPath(TRAY_ICON_PATH).resize({
 		width: 22,
 		height: 22
-	}));
-	tray.setToolTip("DevTools");
-	updateTrayMenu();
-	tray.on("double-click", () => {
+	})), tray.setToolTip("DevTools"), updateTrayMenu(), tray.on("double-click", () => {
 		toggleWindow();
-	});
+	}));
 }
 function toggleWindow() {
-	if (win) {
-		if (win.isVisible()) win.hide();
-		else win.show();
-		updateTrayMenu();
-	}
+	win && (win.isVisible() ? win.hide() : win.show(), updateTrayMenu());
 }
-var recentTools = [];
-var clipboardItems = [];
-var clipboardMonitoringEnabled = true;
-var statsMenuData = null;
-var healthMenuData = null;
-var healthMonitoringInterval = null;
+var recentTools = [], clipboardItems = [], clipboardMonitoringEnabled = !0, statsMenuData = null, healthMenuData = null, healthMonitoringInterval = null;
 function updateTrayMenu() {
 	if (!tray) return;
-	const template = [{
+	let i = [{
 		label: win?.isVisible() ? "▼ Hide Window" : "▲ Show Window",
 		click: () => {
-			if (win) {
-				if (win.isVisible()) win.hide();
-				else win.show();
-				updateTrayMenu();
-			}
+			win && (win.isVisible() ? win.hide() : win.show(), updateTrayMenu());
 		}
 	}, { type: "separator" }];
 	if (clipboardItems.length > 0) {
-		const displayCount = Math.min(clipboardItems.length, 9);
-		template.push({
+		let N = Math.min(clipboardItems.length, 9);
+		i.push({
 			label: "📋 Clipboard Manager",
 			submenu: [
 				{
 					label: "▸ Open Full Manager",
 					click: () => {
-						win?.show();
-						win?.webContents.send("navigate-to", "clipboard-manager");
+						win?.show(), win?.webContents.send("navigate-to", "clipboard-manager");
 					}
 				},
 				{ type: "separator" },
 				{
-					label: `● Recent Clipboard (${displayCount})`,
-					enabled: false
+					label: `● Recent Clipboard (${N})`,
+					enabled: !1
 				},
-				...clipboardItems.slice(0, 9).map((item, index) => {
-					const content = String(item.content || "");
-					const cleanPreview = (content.length > 75 ? content.substring(0, 75) + "..." : content).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+				...clipboardItems.slice(0, 9).map((i, N) => {
+					let F = String(i.content || ""), I = (F.length > 75 ? F.substring(0, 75) + "..." : F).replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 					return {
-						label: `  ${index + 1}. ${cleanPreview || "(Empty)"}`,
+						label: `  ${N + 1}. ${I || "(Empty)"}`,
 						click: () => {
-							if (content) {
-								clipboard.writeText(content);
-								new Notification({
-									title: "✓ Copied from History",
-									body: cleanPreview || "Copied to clipboard",
-									silent: true
-								}).show();
-							}
+							F && (clipboard.writeText(F), new Notification({
+								title: "✓ Copied from History",
+								body: I || "Copied to clipboard",
+								silent: !0
+							}).show());
 						}
 					};
 				}),
@@ -2354,13 +2091,10 @@ function updateTrayMenu() {
 					type: "checkbox",
 					checked: clipboardMonitoringEnabled,
 					click: () => {
-						clipboardMonitoringEnabled = !clipboardMonitoringEnabled;
-						win?.webContents.send("toggle-clipboard-monitoring", clipboardMonitoringEnabled);
-						updateTrayMenu();
-						new Notification({
+						clipboardMonitoringEnabled = !clipboardMonitoringEnabled, win?.webContents.send("toggle-clipboard-monitoring", clipboardMonitoringEnabled), updateTrayMenu(), new Notification({
 							title: clipboardMonitoringEnabled ? "✓ Monitoring Enabled" : "⏸ Monitoring Paused",
 							body: clipboardMonitoringEnabled ? "Clipboard will be monitored automatically" : "Clipboard monitoring paused",
-							silent: true
+							silent: !0
 						}).show();
 					}
 				},
@@ -2372,31 +2106,25 @@ function updateTrayMenu() {
 					}
 				}
 			]
-		});
-		template.push({ type: "separator" });
-	} else {
-		template.push({
-			label: "📋 Clipboard Manager (Empty)",
-			click: () => {
-				win?.show();
-				win?.webContents.send("navigate-to", "clipboard-manager");
-			}
-		});
-		template.push({ type: "separator" });
-	}
-	template.push({
+		}), i.push({ type: "separator" });
+	} else i.push({
+		label: "📋 Clipboard Manager (Empty)",
+		click: () => {
+			win?.show(), win?.webContents.send("navigate-to", "clipboard-manager");
+		}
+	}), i.push({ type: "separator" });
+	if (i.push({
 		label: "⚡ Quick Actions",
 		submenu: [
 			{
 				label: "◆ Generate UUID",
 				accelerator: "CmdOrCtrl+Shift+U",
 				click: () => {
-					const uuid = randomUUID();
-					clipboard.writeText(uuid);
-					new Notification({
+					let i = randomUUID();
+					clipboard.writeText(i), new Notification({
 						title: "✓ UUID Generated",
-						body: `Copied: ${uuid.substring(0, 20)}...`,
-						silent: true
+						body: `Copied: ${i.substring(0, 20)}...`,
+						silent: !0
 					}).show();
 				}
 			},
@@ -2405,20 +2133,17 @@ function updateTrayMenu() {
 				accelerator: "CmdOrCtrl+Shift+J",
 				click: () => {
 					try {
-						const text = clipboard.readText();
-						const json = JSON.parse(text);
-						const formatted = JSON.stringify(json, null, 2);
-						clipboard.writeText(formatted);
-						new Notification({
+						let i = clipboard.readText(), N = JSON.parse(i), F = JSON.stringify(N, null, 2);
+						clipboard.writeText(F), new Notification({
 							title: "✓ JSON Formatted",
 							body: "Formatted JSON copied to clipboard",
-							silent: true
+							silent: !0
 						}).show();
-					} catch (e) {
+					} catch {
 						new Notification({
 							title: "✗ Format Failed",
 							body: "Clipboard does not contain valid JSON",
-							silent: true
+							silent: !0
 						}).show();
 					}
 				}
@@ -2427,20 +2152,19 @@ function updateTrayMenu() {
 				label: "# Hash Text (SHA-256)",
 				click: () => {
 					try {
-						const text = clipboard.readText();
-						if (!text) throw new Error("Empty clipboard");
-						const hash = createHash("sha256").update(text).digest("hex");
-						clipboard.writeText(hash);
-						new Notification({
+						let i = clipboard.readText();
+						if (!i) throw Error("Empty clipboard");
+						let N = createHash("sha256").update(i).digest("hex");
+						clipboard.writeText(N), new Notification({
 							title: "✓ Hash Generated",
-							body: `SHA-256: ${hash.substring(0, 20)}...`,
-							silent: true
+							body: `SHA-256: ${N.substring(0, 20)}...`,
+							silent: !0
 						}).show();
-					} catch (e) {
+					} catch {
 						new Notification({
 							title: "✗ Hash Failed",
 							body: "Could not hash clipboard content",
-							silent: true
+							silent: !0
 						}).show();
 					}
 				}
@@ -2450,20 +2174,19 @@ function updateTrayMenu() {
 				label: "↑ Base64 Encode",
 				click: () => {
 					try {
-						const text = clipboard.readText();
-						if (!text) throw new Error("Empty clipboard");
-						const encoded = Buffer.from(text).toString("base64");
-						clipboard.writeText(encoded);
-						new Notification({
+						let i = clipboard.readText();
+						if (!i) throw Error("Empty clipboard");
+						let N = Buffer.from(i).toString("base64");
+						clipboard.writeText(N), new Notification({
 							title: "✓ Base64 Encoded",
 							body: "Encoded text copied to clipboard",
-							silent: true
+							silent: !0
 						}).show();
-					} catch (e) {
+					} catch {
 						new Notification({
 							title: "✗ Encode Failed",
 							body: "Could not encode clipboard content",
-							silent: true
+							silent: !0
 						}).show();
 					}
 				}
@@ -2472,126 +2195,95 @@ function updateTrayMenu() {
 				label: "↓ Base64 Decode",
 				click: () => {
 					try {
-						const text = clipboard.readText();
-						if (!text) throw new Error("Empty clipboard");
-						const decoded = Buffer.from(text, "base64").toString("utf-8");
-						clipboard.writeText(decoded);
-						new Notification({
+						let i = clipboard.readText();
+						if (!i) throw Error("Empty clipboard");
+						let N = Buffer.from(i, "base64").toString("utf-8");
+						clipboard.writeText(N), new Notification({
 							title: "✓ Base64 Decoded",
 							body: "Decoded text copied to clipboard",
-							silent: true
+							silent: !0
 						}).show();
-					} catch (e) {
+					} catch {
 						new Notification({
 							title: "✗ Decode Failed",
 							body: "Invalid Base64 in clipboard",
-							silent: true
+							silent: !0
 						}).show();
 					}
 				}
 			}
 		]
-	});
-	template.push({ type: "separator" });
-	if (statsMenuData) {
-		template.push({
-			label: "📊 Stats Monitor",
-			enabled: false
-		});
-		template.push({
-			label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
-			enabled: false
-		});
-		template.push({
-			label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
-			enabled: false
-		});
-		template.push({
-			label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
-			enabled: false
-		});
-		template.push({ type: "separator" });
-		template.push({
-			label: "Open Stats Monitor",
-			click: () => {
-				win?.show();
-				win?.webContents.send("navigate-to", "/stats-monitor");
-			}
-		});
-		template.push({ type: "separator" });
-	}
-	if (healthMenuData) {
-		const alertCount = healthMenuData.alerts.filter((a) => a.severity === "critical" || a.severity === "warning").length;
-		const healthLabel = alertCount > 0 ? `🛡️ System Health (${alertCount} alerts)` : "🛡️ System Health";
-		const healthSubmenu = [
+	}), i.push({ type: "separator" }), statsMenuData && (i.push({
+		label: "📊 Stats Monitor",
+		enabled: !1
+	}), i.push({
+		label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
+		enabled: !1
+	}), i.push({
+		label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
+		enabled: !1
+	}), i.push({
+		label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
+		enabled: !1
+	}), i.push({ type: "separator" }), i.push({
+		label: "Open Stats Monitor",
+		click: () => {
+			win?.show(), win?.webContents.send("navigate-to", "/stats-monitor");
+		}
+	}), i.push({ type: "separator" })), healthMenuData) {
+		let N = healthMenuData.alerts.filter((i) => i.severity === "critical" || i.severity === "warning").length, F = N > 0 ? `🛡️ System Health (${N} alerts)` : "🛡️ System Health", I = [
 			{
 				label: "📊 Health Metrics",
-				enabled: false
+				enabled: !1
 			},
 			{
 				label: `CPU: ${healthMenuData.cpu.toFixed(1)}%`,
-				enabled: false
+				enabled: !1
 			},
 			{
 				label: `RAM: ${healthMenuData.ram.percentage.toFixed(1)}% (${formatBytes(healthMenuData.ram.used)} / ${formatBytes(healthMenuData.ram.total)})`,
-				enabled: false
+				enabled: !1
 			}
 		];
-		if (healthMenuData.disk) healthSubmenu.push({
+		healthMenuData.disk && I.push({
 			label: `Disk: ${healthMenuData.disk.percentage.toFixed(1)}% used (${formatBytes(healthMenuData.disk.free)} free)`,
-			enabled: false
-		});
-		if (healthMenuData.battery) healthSubmenu.push({
+			enabled: !1
+		}), healthMenuData.battery && I.push({
 			label: `Battery: ${healthMenuData.battery.level.toFixed(0)}% ${healthMenuData.battery.charging ? "(Charging)" : ""}`,
-			enabled: false
-		});
-		healthSubmenu.push({ type: "separator" });
-		if (healthMenuData.alerts.length > 0) {
-			healthSubmenu.push({
-				label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
-				enabled: false
+			enabled: !1
+		}), I.push({ type: "separator" }), healthMenuData.alerts.length > 0 && (I.push({
+			label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
+			enabled: !1
+		}), healthMenuData.alerts.slice(0, 5).forEach((i) => {
+			I.push({
+				label: `${i.severity === "critical" ? "🔴" : i.severity === "warning" ? "🟡" : "🔵"} ${i.message.substring(0, 50)}${i.message.length > 50 ? "..." : ""}`,
+				enabled: !1
 			});
-			healthMenuData.alerts.slice(0, 5).forEach((alert) => {
-				healthSubmenu.push({
-					label: `${alert.severity === "critical" ? "🔴" : alert.severity === "warning" ? "🟡" : "🔵"} ${alert.message.substring(0, 50)}${alert.message.length > 50 ? "..." : ""}`,
-					enabled: false
-				});
-			});
-			healthSubmenu.push({ type: "separator" });
-		}
-		healthSubmenu.push({
+		}), I.push({ type: "separator" })), I.push({
 			label: "▸ Open Health Monitor",
 			click: () => {
-				win?.show();
-				win?.webContents.send("navigate-to", "/system-cleaner");
-				setTimeout(() => {
+				win?.show(), win?.webContents.send("navigate-to", "/system-cleaner"), setTimeout(() => {
 					win?.webContents.send("system-cleaner:switch-tab", "health");
 				}, 500);
 			}
-		});
-		healthSubmenu.push({
+		}), I.push({
 			label: "⚡ Quick Actions",
 			submenu: [
 				{
 					label: "Free Up RAM",
 					click: async () => {
 						try {
-							const result = await win?.webContents.executeJavaScript(`
-                (async () => {
-                  const res = await window.cleanerAPI?.freeRam();
-                  return res;
-                })()
-              `);
-							if (result?.success) new Notification({
+							let i = await win?.webContents.executeJavaScript("\n                (async () => {\n                  const res = await window.cleanerAPI?.freeRam();\n                  return res;\n                })()\n              ");
+							i?.success && new Notification({
 								title: "✓ RAM Optimized",
-								body: `Freed ${formatBytes(result.ramFreed || 0)}`,
-								silent: true
+								body: `Freed ${formatBytes(i.ramFreed || 0)}`,
+								silent: !0
 							}).show();
-						} catch (e) {
+						} catch {
 							new Notification({
 								title: "✗ Failed",
 								body: "Could not free RAM",
-								silent: true
+								silent: !0
 							}).show();
 						}
 					}
@@ -2600,7 +2292,7 @@ function updateTrayMenu() {
 					label: "Flush DNS Cache",
 					click: async () => {
 						try {
-							if ((await win?.webContents.executeJavaScript(`
+							(await win?.webContents.executeJavaScript(`
                 (async () => {
                   const res = await window.cleanerAPI?.runMaintenance(${JSON.stringify({
 								id: "dns-flush",
@@ -2609,16 +2301,16 @@ function updateTrayMenu() {
 							})});
                   return res;
                 })()
-              `))?.success) new Notification({
+              `))?.success && new Notification({
 								title: "✓ DNS Cache Flushed",
 								body: "DNS cache cleared successfully",
-								silent: true
+								silent: !0
 							}).show();
-						} catch (e) {
+						} catch {
 							new Notification({
 								title: "✗ Failed",
 								body: "Could not flush DNS cache",
-								silent: true
+								silent: !0
 							}).show();
 						}
 					}
@@ -2626,69 +2318,56 @@ function updateTrayMenu() {
 				{
 					label: "Open System Cleaner",
 					click: () => {
-						win?.show();
-						win?.webContents.send("navigate-to", "/system-cleaner");
+						win?.show(), win?.webContents.send("navigate-to", "/system-cleaner");
 					}
 				}
 			]
-		});
-		template.push({
-			label: healthLabel,
-			submenu: healthSubmenu
-		});
-		template.push({ type: "separator" });
+		}), i.push({
+			label: F,
+			submenu: I
+		}), i.push({ type: "separator" });
 	}
-	if (recentTools.length > 0) {
-		template.push({
-			label: "🕐 Recent Tools",
-			submenu: recentTools.map((tool) => ({
-				label: `  • ${tool.name}`,
-				click: () => {
-					win?.show();
-					win?.webContents.send("navigate-to", tool.id);
-				}
-			}))
-		});
-		template.push({ type: "separator" });
-	}
-	template.push({
+	recentTools.length > 0 && (i.push({
+		label: "🕐 Recent Tools",
+		submenu: recentTools.map((i) => ({
+			label: `  • ${i.name}`,
+			click: () => {
+				win?.show(), win?.webContents.send("navigate-to", i.id);
+			}
+		}))
+	}), i.push({ type: "separator" })), i.push({
 		label: "⚙️ Settings",
 		click: () => {
-			win?.show();
-			win?.webContents.send("navigate-to", "settings");
+			win?.show(), win?.webContents.send("navigate-to", "settings");
 		}
-	});
-	template.push({ type: "separator" });
-	template.push({
+	}), i.push({ type: "separator" }), i.push({
 		label: "✕ Quit DevTools",
 		accelerator: "CmdOrCtrl+Q",
 		click: () => {
-			app.isQuitting = true;
-			app.quit();
+			app.isQuitting = !0, app.quit();
 		}
 	});
-	const contextMenu = Menu.buildFromTemplate(template);
-	tray.setContextMenu(contextMenu);
+	let F = Menu.buildFromTemplate(i);
+	tray.setContextMenu(F);
 }
 function createWindow() {
-	const windowBounds = store.get("windowBounds") || {
+	let N = store.get("windowBounds") || {
 		width: 1600,
 		height: 900
-	};
-	const startMinimized = store.get("startMinimized") || false;
+	}, F = store.get("startMinimized") || !1;
 	win = new BrowserWindow({
 		icon: join(process.env.VITE_PUBLIC || "", "electron-vite.svg"),
 		webPreferences: {
 			preload: join(__dirname, "preload.mjs"),
-			nodeIntegration: true,
-			contextIsolation: true
+			nodeIntegration: !0,
+			contextIsolation: !0
 		},
-		...windowBounds,
-		minWidth: 1200,
-		minHeight: 700,
-		show: !startMinimized,
-		frame: false,
-		transparent: true,
+		...N,
+		minWidth: 900,
+		minHeight: 600,
+		show: !F,
+		frame: !1,
+		transparent: !0,
 		titleBarStyle: "hidden",
 		vibrancy: "sidebar",
 		trafficLightPosition: {
@@ -2696,736 +2375,551 @@ function createWindow() {
 			y: 15
 		}
 	});
-	const saveBounds = () => {
+	let H = () => {
 		store.set("windowBounds", win?.getBounds());
 	};
-	win.on("resize", saveBounds);
-	win.on("move", saveBounds);
-	win.on("close", (event) => {
-		const minimizeToTray = store.get("minimizeToTray") ?? true;
-		if (!app.isQuitting && minimizeToTray) {
-			event.preventDefault();
-			win?.hide();
-			updateTrayMenu();
-		}
-		return false;
-	});
-	win.on("show", updateTrayMenu);
-	win.on("hide", updateTrayMenu);
-	win.on("maximize", () => {
-		win?.webContents.send("window-maximized", true);
-	});
-	win.on("unmaximize", () => {
-		win?.webContents.send("window-maximized", false);
-	});
-	ipcMain.handle("get-home-dir", () => {
-		return os.homedir();
-	});
-	ipcMain.handle("select-folder", async () => {
-		const result = await dialog.showOpenDialog(win, {
+	win.on("resize", H), win.on("move", H), win.on("close", (i) => {
+		let N = store.get("minimizeToTray") ?? !0;
+		return !app.isQuitting && N && (i.preventDefault(), win?.hide(), updateTrayMenu()), !1;
+	}), win.on("show", updateTrayMenu), win.on("hide", updateTrayMenu), win.on("maximize", () => {
+		win?.webContents.send("window-maximized", !0);
+	}), win.on("unmaximize", () => {
+		win?.webContents.send("window-maximized", !1);
+	}), ipcMain.handle("get-home-dir", () => os.homedir()), ipcMain.handle("select-folder", async () => {
+		let i = await dialog.showOpenDialog(win, {
 			properties: ["openDirectory"],
 			title: "Select Folder to Scan"
 		});
-		if (result.canceled || result.filePaths.length === 0) return {
-			canceled: true,
+		return i.canceled || i.filePaths.length === 0 ? {
+			canceled: !0,
 			path: null
+		} : {
+			canceled: !1,
+			path: i.filePaths[0]
 		};
-		return {
-			canceled: false,
-			path: result.filePaths[0]
-		};
-	});
-	ipcMain.handle("store-get", (_event, key) => store.get(key));
-	ipcMain.handle("store-set", (_event, key, value) => {
-		store.set(key, value);
-		if (key === "launchAtLogin") {
-			const result = setLoginItemSettingsSafely(value === true);
-			if (!result.success && win) win.webContents.send("login-item-error", {
+	}), ipcMain.handle("store-get", (i, N) => store.get(N)), ipcMain.handle("store-set", (i, N, P) => {
+		if (store.set(N, P), N === "launchAtLogin") {
+			let i = setLoginItemSettingsSafely(P === !0);
+			!i.success && win && win.webContents.send("login-item-error", {
 				message: "Unable to set launch at login. This may require additional permissions.",
-				error: result.error
+				error: i.error
 			});
 		}
-	});
-	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
-	setupScreenshotHandlers(win);
-	ipcMain.on("window-set-opacity", (_event, opacity) => {
-		if (win) win.setOpacity(Math.max(.5, Math.min(1, opacity)));
-	});
-	ipcMain.on("window-set-always-on-top", (_event, alwaysOnTop) => {
-		if (win) win.setAlwaysOnTop(alwaysOnTop);
-	});
-	ipcMain.handle("permissions:check-all", async () => {
-		const platform = process.platform;
-		const results = {};
-		if (platform === "darwin") {
-			results.accessibility = await checkAccessibilityPermission();
-			results.fullDiskAccess = await checkFullDiskAccessPermission();
-			results.screenRecording = await checkScreenRecordingPermission();
-		} else if (platform === "win32") {
-			results.fileAccess = await checkFileAccessPermission();
-			results.registryAccess = await checkRegistryAccessPermission();
-		}
-		results.clipboard = await checkClipboardPermission();
-		results.launchAtLogin = await checkLaunchAtLoginPermission();
-		return results;
-	});
-	ipcMain.handle("permissions:check-accessibility", async () => {
-		if (process.platform !== "darwin") return {
-			status: "not-applicable",
-			message: "Only available on macOS"
-		};
-		return await checkAccessibilityPermission();
-	});
-	ipcMain.handle("permissions:check-full-disk-access", async () => {
-		if (process.platform !== "darwin") return {
-			status: "not-applicable",
-			message: "Only available on macOS"
-		};
-		return await checkFullDiskAccessPermission();
-	});
-	ipcMain.handle("permissions:check-screen-recording", async () => {
-		if (process.platform !== "darwin") return {
-			status: "not-applicable",
-			message: "Only available on macOS"
-		};
-		return await checkScreenRecordingPermission();
-	});
-	ipcMain.handle("permissions:test-clipboard", async () => {
-		return await testClipboardPermission();
-	});
-	ipcMain.handle("permissions:test-file-access", async () => {
-		return await testFileAccessPermission();
-	});
-	ipcMain.handle("permissions:open-system-preferences", async (_event, permissionType) => {
-		return await openSystemPreferences(permissionType);
-	});
-	async function checkAccessibilityPermission() {
+	}), ipcMain.handle("store-delete", (i, N) => store.delete(N)), setupScreenshotHandlers(win), ipcMain.on("window-set-opacity", (i, N) => {
+		win && win.setOpacity(Math.max(.5, Math.min(1, N)));
+	}), ipcMain.on("window-set-always-on-top", (i, N) => {
+		win && win.setAlwaysOnTop(N);
+	}), ipcMain.handle("permissions:check-all", async () => {
+		let i = process.platform, N = {};
+		return i === "darwin" ? (N.accessibility = await U(), N.fullDiskAccess = await W(), N.screenRecording = await G()) : i === "win32" && (N.fileAccess = await Y(), N.registryAccess = await X()), N.clipboard = await q(), N.launchAtLogin = await J(), N;
+	}), ipcMain.handle("permissions:check-accessibility", async () => process.platform === "darwin" ? await U() : {
+		status: "not-applicable",
+		message: "Only available on macOS"
+	}), ipcMain.handle("permissions:check-full-disk-access", async () => process.platform === "darwin" ? await W() : {
+		status: "not-applicable",
+		message: "Only available on macOS"
+	}), ipcMain.handle("permissions:check-screen-recording", async () => process.platform === "darwin" ? await G() : {
+		status: "not-applicable",
+		message: "Only available on macOS"
+	}), ipcMain.handle("permissions:test-clipboard", async () => await Z()), ipcMain.handle("permissions:test-file-access", async () => await Q()), ipcMain.handle("permissions:open-system-preferences", async (i, N) => await $(N));
+	async function U() {
 		if (process.platform !== "darwin") return { status: "not-applicable" };
 		try {
 			try {
-				const testShortcut = "CommandOrControl+Shift+TestPermission";
-				if (globalShortcut.register(testShortcut, () => {})) {
-					globalShortcut.unregister(testShortcut);
-					return { status: "granted" };
-				}
-			} catch (e) {}
-			if (globalShortcut.isRegistered("CommandOrControl+Shift+D")) return { status: "granted" };
-			return {
+				let i = "CommandOrControl+Shift+TestPermission";
+				if (globalShortcut.register(i, () => {})) return globalShortcut.unregister(i), { status: "granted" };
+			} catch {}
+			return globalShortcut.isRegistered("CommandOrControl+Shift+D") ? { status: "granted" } : {
 				status: "not-determined",
 				message: "Unable to determine status. Try testing."
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "error",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function checkFullDiskAccessPermission() {
+	async function W() {
 		if (process.platform !== "darwin") return { status: "not-applicable" };
 		try {
-			for (const testPath of [
+			for (let i of [
 				"/Library/Application Support",
 				"/System/Library",
 				"/private/var/db"
 			]) try {
-				await fs.access(testPath);
-				return { status: "granted" };
-			} catch (e) {}
-			const homeDir = os.homedir();
+				return await fs.access(i), { status: "granted" };
+			} catch {}
+			let i = os.homedir();
 			try {
-				await fs.readdir(homeDir);
-				return {
+				return await fs.readdir(i), {
 					status: "granted",
 					message: "Basic file access available"
 				};
-			} catch (e) {
+			} catch {
 				return {
 					status: "denied",
 					message: "Cannot access protected directories"
 				};
 			}
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "error",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function checkScreenRecordingPermission() {
+	async function G() {
 		if (process.platform !== "darwin") return { status: "not-applicable" };
 		try {
 			try {
-				const sources = await desktopCapturer.getSources({ types: ["screen"] });
-				if (sources && sources.length > 0) return { status: "granted" };
-			} catch (e) {}
+				let i = await desktopCapturer.getSources({ types: ["screen"] });
+				if (i && i.length > 0) return { status: "granted" };
+			} catch {}
 			return {
 				status: "not-determined",
 				message: "Unable to determine. Try testing screenshot feature."
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "error",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function checkClipboardPermission() {
+	async function q() {
 		try {
-			const originalText = clipboard.readText();
+			let i = clipboard.readText();
 			clipboard.writeText("__PERMISSION_TEST__");
-			const written = clipboard.readText();
-			clipboard.writeText(originalText);
-			if (written === "__PERMISSION_TEST__") return { status: "granted" };
-			return {
+			let N = clipboard.readText();
+			return clipboard.writeText(i), N === "__PERMISSION_TEST__" ? { status: "granted" } : {
 				status: "denied",
 				message: "Clipboard access failed"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "error",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function checkLaunchAtLoginPermission() {
+	async function J() {
 		try {
-			const loginItemSettings = app.getLoginItemSettings();
+			let i = app.getLoginItemSettings();
 			return {
-				status: loginItemSettings.openAtLogin ? "granted" : "not-determined",
-				message: loginItemSettings.openAtLogin ? "Launch at login is enabled" : "Launch at login is not enabled"
+				status: i.openAtLogin ? "granted" : "not-determined",
+				message: i.openAtLogin ? "Launch at login is enabled" : "Launch at login is not enabled"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "error",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function checkFileAccessPermission() {
+	async function Y() {
 		if (process.platform !== "win32") return { status: "not-applicable" };
 		try {
-			const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
-			const testContent = "permission test";
-			await fs.writeFile(testPath, testContent);
-			const readContent = await fs.readFile(testPath, "utf-8");
-			await fs.unlink(testPath);
-			if (readContent === testContent) return { status: "granted" };
-			return {
+			let i = join(os.tmpdir(), `permission-test-${Date.now()}.txt`), N = "permission test";
+			await fs.writeFile(i, N);
+			let P = await fs.readFile(i, "utf-8");
+			return await fs.unlink(i), P === N ? { status: "granted" } : {
 				status: "denied",
 				message: "File access test failed"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "denied",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function checkRegistryAccessPermission() {
+	async function X() {
 		if (process.platform !== "win32") return { status: "not-applicable" };
 		try {
-			const { stdout } = await execAsync("reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\" /v ProgramFilesDir 2>&1");
-			if (stdout && !stdout.includes("ERROR")) return { status: "granted" };
-			return {
+			let { stdout: i } = await execAsync("reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\" /v ProgramFilesDir 2>&1");
+			return i && !i.includes("ERROR") ? { status: "granted" } : {
 				status: "denied",
 				message: "Registry access test failed"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "denied",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function testClipboardPermission() {
+	async function Z() {
 		try {
-			const originalText = clipboard.readText();
-			const testText = `Permission test ${Date.now()}`;
-			clipboard.writeText(testText);
-			const readText = clipboard.readText();
-			clipboard.writeText(originalText);
-			if (readText === testText) return {
+			let i = clipboard.readText(), N = `Permission test ${Date.now()}`;
+			clipboard.writeText(N);
+			let P = clipboard.readText();
+			return clipboard.writeText(i), P === N ? {
 				status: "granted",
 				message: "Clipboard read/write test passed"
-			};
-			return {
+			} : {
 				status: "denied",
 				message: "Clipboard test failed"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "error",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function testFileAccessPermission() {
+	async function Q() {
 		try {
-			const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
-			const testContent = `Test ${Date.now()}`;
-			await fs.writeFile(testPath, testContent);
-			const readContent = await fs.readFile(testPath, "utf-8");
-			await fs.unlink(testPath);
-			if (readContent === testContent) return {
+			let i = join(os.tmpdir(), `permission-test-${Date.now()}.txt`), N = `Test ${Date.now()}`;
+			await fs.writeFile(i, N);
+			let P = await fs.readFile(i, "utf-8");
+			return await fs.unlink(i), P === N ? {
 				status: "granted",
 				message: "File access test passed"
-			};
-			return {
+			} : {
 				status: "denied",
 				message: "File access test failed"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
 				status: "denied",
-				message: error.message
+				message: i.message
 			};
 		}
 	}
-	async function openSystemPreferences(permissionType) {
-		const platform = process.platform;
+	async function $(i) {
+		let N = process.platform;
 		try {
-			if (platform === "darwin") {
-				let command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy\"";
-				if (permissionType === "accessibility") command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"";
-				else if (permissionType === "full-disk-access") command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles\"";
-				else if (permissionType === "screen-recording") command = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture\"";
-				await execAsync(command);
-				return {
-					success: true,
+			if (N === "darwin") {
+				let N = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy\"";
+				return i === "accessibility" ? N = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility\"" : i === "full-disk-access" ? N = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles\"" : i === "screen-recording" && (N = "open \"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture\""), await execAsync(N), {
+					success: !0,
 					message: "Opened System Preferences"
 				};
-			} else if (platform === "win32") {
-				await execAsync("start ms-settings:privacy");
-				return {
-					success: true,
-					message: "Opened Windows Settings"
-				};
-			}
+			} else if (N === "win32") return await execAsync("start ms-settings:privacy"), {
+				success: !0,
+				message: "Opened Windows Settings"
+			};
 			return {
-				success: false,
+				success: !1,
 				message: "Unsupported platform"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
-				success: false,
-				message: error.message
+				success: !1,
+				message: i.message
 			};
 		}
 	}
-	ipcMain.on("tray-update-menu", (_event, items) => {
-		recentTools = items || [];
-		updateTrayMenu();
-	});
-	ipcMain.on("tray-update-clipboard", (_event, items) => {
-		clipboardItems = (items || []).sort((a, b) => b.timestamp - a.timestamp);
-		updateTrayMenu();
-	});
-	ipcMain.handle("clipboard-read-text", () => {
+	ipcMain.on("tray-update-menu", (i, N) => {
+		recentTools = N || [], updateTrayMenu();
+	}), ipcMain.on("tray-update-clipboard", (i, N) => {
+		clipboardItems = (N || []).sort((i, N) => N.timestamp - i.timestamp), updateTrayMenu();
+	}), ipcMain.handle("clipboard-read-text", () => {
 		try {
 			return clipboard.readText();
-		} catch (error) {
-			console.error("Failed to read clipboard:", error);
-			return "";
+		} catch (i) {
+			return console.error("Failed to read clipboard:", i), "";
 		}
-	});
-	ipcMain.handle("clipboard-read-image", async () => {
+	}), ipcMain.handle("clipboard-read-image", async () => {
 		try {
-			const image = clipboard.readImage();
-			if (image.isEmpty()) return null;
-			return image.toDataURL();
-		} catch (error) {
-			console.error("Failed to read clipboard image:", error);
-			return null;
+			let i = clipboard.readImage();
+			return i.isEmpty() ? null : i.toDataURL();
+		} catch (i) {
+			return console.error("Failed to read clipboard image:", i), null;
 		}
-	});
-	ipcMain.on("sync-clipboard-monitoring", (_event, enabled) => {
-		clipboardMonitoringEnabled = enabled;
-		updateTrayMenu();
-	});
-	ipcMain.on("stats-update-tray", (_event, data) => {
-		statsMenuData = data;
-		updateTrayMenu();
-	});
-	ipcMain.on("health-update-tray", (_event, data) => {
-		healthMenuData = data;
-		updateTrayMenu();
-	});
-	ipcMain.handle("health-start-monitoring", async () => {
-		if (healthMonitoringInterval) clearInterval(healthMonitoringInterval);
-		const updateHealth = async () => {
+	}), ipcMain.on("sync-clipboard-monitoring", (i, N) => {
+		clipboardMonitoringEnabled = N, updateTrayMenu();
+	}), ipcMain.on("stats-update-tray", (i, N) => {
+		statsMenuData = N, updateTrayMenu();
+	}), ipcMain.on("health-update-tray", (i, N) => {
+		healthMenuData = N, updateTrayMenu();
+	}), ipcMain.handle("health-start-monitoring", async () => {
+		healthMonitoringInterval && clearInterval(healthMonitoringInterval);
+		let i = async () => {
 			try {
-				const mem = await si.mem();
-				const load = await si.currentLoad();
-				const disk = await si.fsSize();
-				const battery = await si.battery().catch(() => null);
-				const alerts = [];
-				const rootDisk = disk.find((d) => d.mount === "/" || d.mount === "C:") || disk[0];
-				if (rootDisk) {
-					const freePercent = rootDisk.available / rootDisk.size * 100;
-					if (freePercent < 10) alerts.push({
+				let i = await si.mem(), N = await si.currentLoad(), F = await si.fsSize(), I = await si.battery().catch(() => null), L = [], R = F.find((i) => i.mount === "/" || i.mount === "C:") || F[0];
+				if (R) {
+					let i = R.available / R.size * 100;
+					i < 10 ? L.push({
 						type: "low_space",
 						severity: "critical",
-						message: `Low disk space: ${formatBytes(rootDisk.available)} free`
-					});
-					else if (freePercent < 20) alerts.push({
+						message: `Low disk space: ${formatBytes(R.available)} free`
+					}) : i < 20 && L.push({
 						type: "low_space",
 						severity: "warning",
-						message: `Disk space getting low: ${formatBytes(rootDisk.available)} free`
+						message: `Disk space getting low: ${formatBytes(R.available)} free`
 					});
 				}
-				if (load.currentLoad > 90) alerts.push({
+				N.currentLoad > 90 && L.push({
 					type: "high_cpu",
 					severity: "warning",
-					message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
+					message: `High CPU usage: ${N.currentLoad.toFixed(1)}%`
 				});
-				const memPercent = mem.used / mem.total * 100;
-				if (memPercent > 90) alerts.push({
+				let z = i.used / i.total * 100;
+				z > 90 && L.push({
 					type: "memory_pressure",
 					severity: "warning",
-					message: `High memory usage: ${memPercent.toFixed(1)}%`
-				});
-				healthMenuData = {
-					cpu: load.currentLoad,
+					message: `High memory usage: ${z.toFixed(1)}%`
+				}), healthMenuData = {
+					cpu: N.currentLoad,
 					ram: {
-						used: mem.used,
-						total: mem.total,
-						percentage: memPercent
+						used: i.used,
+						total: i.total,
+						percentage: z
 					},
-					disk: rootDisk ? {
-						free: rootDisk.available,
-						total: rootDisk.size,
-						percentage: (rootDisk.size - rootDisk.available) / rootDisk.size * 100
+					disk: R ? {
+						free: R.available,
+						total: R.size,
+						percentage: (R.size - R.available) / R.size * 100
 					} : null,
-					battery: battery ? {
-						level: battery.percent,
-						charging: battery.isCharging || false
+					battery: I ? {
+						level: I.percent,
+						charging: I.isCharging || !1
 					} : null,
-					alerts
-				};
-				updateTrayMenu();
-				const criticalAlerts = alerts.filter((a) => a.severity === "critical");
-				if (criticalAlerts.length > 0 && win) criticalAlerts.forEach((alert) => {
+					alerts: L
+				}, updateTrayMenu();
+				let B = L.filter((i) => i.severity === "critical");
+				B.length > 0 && win && B.forEach((i) => {
 					new Notification({
 						title: "⚠️ System Alert",
-						body: alert.message,
-						silent: false
+						body: i.message,
+						silent: !1
 					}).show();
 				});
-			} catch (e) {
-				console.error("Health monitoring error:", e);
+			} catch (i) {
+				console.error("Health monitoring error:", i);
 			}
 		};
-		updateHealth();
-		healthMonitoringInterval = setInterval(updateHealth, 5e3);
-		return { success: true };
-	});
-	ipcMain.handle("health-stop-monitoring", () => {
-		if (healthMonitoringInterval) {
-			clearInterval(healthMonitoringInterval);
-			healthMonitoringInterval = null;
-		}
-		healthMenuData = null;
-		updateTrayMenu();
-		return { success: true };
-	});
-	ipcMain.on("window-minimize", () => {
+		return i(), healthMonitoringInterval = setInterval(i, 5e3), { success: !0 };
+	}), ipcMain.handle("health-stop-monitoring", () => (healthMonitoringInterval &&= (clearInterval(healthMonitoringInterval), null), healthMenuData = null, updateTrayMenu(), { success: !0 })), ipcMain.on("window-minimize", () => {
 		win?.minimize();
-	});
-	ipcMain.on("window-maximize", () => {
-		if (win?.isMaximized()) win.unmaximize();
-		else win?.maximize();
-	});
-	ipcMain.on("window-close", () => {
+	}), ipcMain.on("window-maximize", () => {
+		win?.isMaximized() ? win.unmaximize() : win?.maximize();
+	}), ipcMain.on("window-close", () => {
 		win?.close();
-	});
-	win.webContents.on("did-finish-load", () => {
+	}), win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-	});
-	if (VITE_DEV_SERVER_URL) win.loadURL(VITE_DEV_SERVER_URL);
-	else win.loadFile(join(process.env.DIST || "", "index.html"));
+	}), VITE_DEV_SERVER_URL ? win.loadURL(VITE_DEV_SERVER_URL) : win.loadFile(join(process.env.DIST || "", "index.html"));
 }
 app.on("window-all-closed", () => {
-	if (process.platform !== "darwin") app.quit();
-});
-app.on("activate", () => {
-	if (BrowserWindow.getAllWindows().length === 0) createWindow();
-	else if (win) win.show();
-});
-app.on("before-quit", () => {
-	app.isQuitting = true;
-	if (win) win.webContents.send("check-clear-clipboard-on-quit");
-});
-app.whenReady().then(() => {
+	process.platform !== "darwin" && app.quit();
+}), app.on("activate", () => {
+	BrowserWindow.getAllWindows().length === 0 ? createWindow() : win && win.show();
+}), app.on("before-quit", () => {
+	app.isQuitting = !0, win && win.webContents.send("check-clear-clipboard-on-quit");
+}), app.whenReady().then(() => {
 	setTimeout(() => {
-		if (win) win.webContents.executeJavaScript(`
-        (async () => {
-          if (window.cleanerAPI?.startHealthMonitoring) {
-            await window.cleanerAPI.startHealthMonitoring();
-          }
-        })()
-      `).catch(() => {});
+		win && win.webContents.executeJavaScript("\n        (async () => {\n          if (window.cleanerAPI?.startHealthMonitoring) {\n            await window.cleanerAPI.startHealthMonitoring();\n          }\n        })()\n      ").catch(() => {});
 	}, 2e3);
 	try {
 		globalShortcut.register("CommandOrControl+Shift+D", () => {
 			toggleWindow();
+		}), globalShortcut.register("CommandOrControl+Shift+C", () => {
+			win?.show(), win?.webContents.send("open-clipboard-manager");
 		});
-		globalShortcut.register("CommandOrControl+Shift+C", () => {
-			win?.show();
-			win?.webContents.send("open-clipboard-manager");
-		});
-	} catch (e) {
-		console.error("Failed to register global shortcut", e);
+	} catch (i) {
+		console.error("Failed to register global shortcut", i);
 	}
-	setLoginItemSettingsSafely(store.get("launchAtLogin") === true);
-	ipcMain.handle("get-cpu-stats", async () => {
-		const [cpu, currentLoad] = await Promise.all([si.cpu(), si.currentLoad()]);
+	setLoginItemSettingsSafely(store.get("launchAtLogin") === !0), ipcMain.handle("get-cpu-stats", async () => {
+		let [i, N] = await Promise.all([si.cpu(), si.currentLoad()]);
 		return {
-			manufacturer: cpu.manufacturer,
-			brand: cpu.brand,
-			speed: cpu.speed,
-			cores: cpu.cores,
-			physicalCores: cpu.physicalCores,
-			load: currentLoad
+			manufacturer: i.manufacturer,
+			brand: i.brand,
+			speed: i.speed,
+			cores: i.cores,
+			physicalCores: i.physicalCores,
+			load: N
 		};
-	});
-	ipcMain.handle("get-memory-stats", async () => {
-		return await si.mem();
-	});
-	ipcMain.handle("get-network-stats", async () => {
-		const [stats, interfaces] = await Promise.all([si.networkStats(), si.networkInterfaces()]);
+	}), ipcMain.handle("get-memory-stats", async () => await si.mem()), ipcMain.handle("get-network-stats", async () => {
+		let [i, N] = await Promise.all([si.networkStats(), si.networkInterfaces()]);
 		return {
-			stats,
-			interfaces
+			stats: i,
+			interfaces: N
 		};
-	});
-	ipcMain.handle("get-disk-stats", async () => {
+	}), ipcMain.handle("get-disk-stats", async () => {
 		try {
-			const [fsSize, ioStatsRaw] = await Promise.all([si.fsSize(), si.disksIO()]);
-			let ioStats = null;
-			if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
-				const firstDisk = ioStatsRaw[0];
-				ioStats = {
-					rIO: firstDisk.rIO || 0,
-					wIO: firstDisk.wIO || 0,
-					tIO: firstDisk.tIO || 0,
-					rIO_sec: firstDisk.rIO_sec || 0,
-					wIO_sec: firstDisk.wIO_sec || 0,
-					tIO_sec: firstDisk.tIO_sec || 0
+			let [i, N] = await Promise.all([si.fsSize(), si.disksIO()]), P = null;
+			if (N && Array.isArray(N) && N.length > 0) {
+				let i = N[0];
+				P = {
+					rIO: i.rIO || 0,
+					wIO: i.wIO || 0,
+					tIO: i.tIO || 0,
+					rIO_sec: i.rIO_sec || 0,
+					wIO_sec: i.wIO_sec || 0,
+					tIO_sec: i.tIO_sec || 0
 				};
-			} else if (ioStatsRaw && typeof ioStatsRaw === "object" && !Array.isArray(ioStatsRaw)) ioStats = {
-				rIO: ioStatsRaw.rIO || 0,
-				wIO: ioStatsRaw.wIO || 0,
-				tIO: ioStatsRaw.tIO || 0,
-				rIO_sec: ioStatsRaw.rIO_sec || 0,
-				wIO_sec: ioStatsRaw.wIO_sec || 0,
-				tIO_sec: ioStatsRaw.tIO_sec || 0
-			};
+			} else N && typeof N == "object" && !Array.isArray(N) && (P = {
+				rIO: N.rIO || 0,
+				wIO: N.wIO || 0,
+				tIO: N.tIO || 0,
+				rIO_sec: N.rIO_sec || 0,
+				wIO_sec: N.wIO_sec || 0,
+				tIO_sec: N.tIO_sec || 0
+			});
 			return {
-				fsSize,
-				ioStats
+				fsSize: i,
+				ioStats: P
 			};
-		} catch (error) {
-			console.error("Error fetching disk stats:", error);
-			return {
+		} catch (i) {
+			return console.error("Error fetching disk stats:", i), {
 				fsSize: await si.fsSize().catch(() => []),
 				ioStats: null
 			};
 		}
-	});
-	ipcMain.handle("get-gpu-stats", async () => {
-		return await si.graphics();
-	});
-	ipcMain.handle("get-battery-stats", async () => {
+	}), ipcMain.handle("get-gpu-stats", async () => await si.graphics()), ipcMain.handle("get-battery-stats", async () => {
 		try {
-			const battery = await si.battery();
-			let powerConsumptionRate;
-			let chargingPower;
-			if ("powerConsumptionRate" in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === "number") powerConsumptionRate = battery.powerConsumptionRate;
-			if (battery.voltage && battery.voltage > 0) {
-				if (!battery.isCharging && battery.timeRemaining > 0 && battery.currentCapacity > 0) {
-					const estimatedCurrent = battery.currentCapacity / battery.timeRemaining * 60;
-					powerConsumptionRate = battery.voltage * estimatedCurrent;
+			let i = await si.battery(), N, P;
+			if ("powerConsumptionRate" in i && i.powerConsumptionRate && typeof i.powerConsumptionRate == "number" && (N = i.powerConsumptionRate), i.voltage && i.voltage > 0) {
+				if (!i.isCharging && i.timeRemaining > 0 && i.currentCapacity > 0) {
+					let P = i.currentCapacity / i.timeRemaining * 60;
+					N = i.voltage * P;
 				}
-				if (battery.isCharging && battery.voltage > 0) chargingPower = battery.voltage * 2e3;
+				i.isCharging && i.voltage > 0 && (P = i.voltage * 2e3);
 			}
 			return {
-				...battery,
-				powerConsumptionRate,
-				chargingPower
+				...i,
+				powerConsumptionRate: N,
+				chargingPower: P
 			};
-		} catch (error) {
-			console.error("Error fetching battery stats:", error);
-			return null;
+		} catch (i) {
+			return console.error("Error fetching battery stats:", i), null;
 		}
-	});
-	ipcMain.handle("get-sensor-stats", async () => {
-		return await si.cpuTemperature();
-	});
-	ipcMain.handle("get-bluetooth-stats", async () => {
+	}), ipcMain.handle("get-sensor-stats", async () => await si.cpuTemperature()), ipcMain.handle("get-bluetooth-stats", async () => {
 		try {
-			const bluetooth = await si.bluetoothDevices();
+			let i = await si.bluetoothDevices();
 			return {
-				enabled: bluetooth.length > 0 || await checkBluetoothEnabled(),
-				devices: bluetooth.map((device) => ({
-					name: device.name || "Unknown",
-					mac: device.mac || device.address || "",
-					type: device.type || device.deviceClass || "unknown",
-					battery: device.battery || device.batteryLevel || void 0,
-					connected: device.connected !== false,
-					rssi: device.rssi || device.signalStrength || void 0,
-					manufacturer: device.manufacturer || device.vendor || void 0
+				enabled: i.length > 0 || await checkBluetoothEnabled(),
+				devices: i.map((i) => ({
+					name: i.name || "Unknown",
+					mac: i.mac || i.address || "",
+					type: i.type || i.deviceClass || "unknown",
+					battery: i.battery || i.batteryLevel || void 0,
+					connected: i.connected !== !1,
+					rssi: i.rssi || i.signalStrength || void 0,
+					manufacturer: i.manufacturer || i.vendor || void 0
 				}))
 			};
-		} catch (error) {
-			console.error("Error fetching bluetooth stats:", error);
-			return {
-				enabled: false,
+		} catch (i) {
+			return console.error("Error fetching bluetooth stats:", i), {
+				enabled: !1,
 				devices: []
 			};
 		}
-	});
-	ipcMain.handle("get-timezones-stats", async () => {
+	}), ipcMain.handle("get-timezones-stats", async () => {
 		try {
-			const time = await si.time();
-			const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-			const zones = [
+			let i = await si.time(), N = Intl.DateTimeFormat().resolvedOptions().timeZone, P = [
 				"America/New_York",
 				"Europe/London",
 				"Asia/Tokyo",
 				"Asia/Shanghai"
-			].map((tz) => {
-				const now = /* @__PURE__ */ new Date();
-				const formatter = new Intl.DateTimeFormat("en-US", {
-					timeZone: tz,
+			].map((i) => {
+				let N = /* @__PURE__ */ new Date(), P = new Intl.DateTimeFormat("en-US", {
+					timeZone: i,
 					hour: "2-digit",
 					minute: "2-digit",
 					second: "2-digit",
-					hour12: false
-				});
-				const dateFormatter = new Intl.DateTimeFormat("en-US", {
-					timeZone: tz,
+					hour12: !1
+				}), F = new Intl.DateTimeFormat("en-US", {
+					timeZone: i,
 					year: "numeric",
 					month: "short",
 					day: "numeric"
-				});
-				const offset = getTimezoneOffset(tz);
+				}), I = getTimezoneOffset(i);
 				return {
-					timezone: tz,
-					city: tz.split("/").pop()?.replace("_", " ") || tz,
-					time: formatter.format(now),
-					date: dateFormatter.format(now),
-					offset
+					timezone: i,
+					city: i.split("/").pop()?.replace("_", " ") || i,
+					time: P.format(N),
+					date: F.format(N),
+					offset: I
 				};
 			});
 			return {
 				local: {
-					timezone: localTz,
-					city: localTz.split("/").pop()?.replace("_", " ") || "Local",
-					time: time.current,
-					date: time.uptime ? (/* @__PURE__ */ new Date()).toLocaleDateString() : "",
-					offset: getTimezoneOffset(localTz)
+					timezone: N,
+					city: N.split("/").pop()?.replace("_", " ") || "Local",
+					time: i.current,
+					date: i.uptime ? (/* @__PURE__ */ new Date()).toLocaleDateString() : "",
+					offset: getTimezoneOffset(N)
 				},
-				zones
+				zones: P
 			};
-		} catch (error) {
-			console.error("Error fetching timezones stats:", error);
-			return null;
+		} catch (i) {
+			return console.error("Error fetching timezones stats:", i), null;
 		}
-	});
-	ipcMain.handle("app-manager:get-installed-apps", async () => {
+	}), ipcMain.handle("app-manager:get-installed-apps", async () => {
 		try {
-			const platform = process.platform;
-			const apps = [];
-			if (platform === "darwin") {
-				const appsDir = "/Applications";
-				const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
-				for (const file of files) if (file.name.endsWith(".app")) {
-					const appPath = join(appsDir, file.name);
+			let P = process.platform, F = [];
+			if (P === "darwin") {
+				let N = "/Applications", P = await fs.readdir(N, { withFileTypes: !0 }).catch(() => []);
+				for (let I of P) if (I.name.endsWith(".app")) {
+					let P = join(N, I.name);
 					try {
-						const stats = await fs.stat(appPath);
-						const appName = file.name.replace(".app", "");
-						const isSystemApp = appPath.startsWith("/System") || appPath.startsWith("/Library") || appName.startsWith("com.apple.");
-						apps.push({
-							id: `macos-${appName}-${stats.ino}`,
-							name: appName,
+						let N = await fs.stat(P), L = I.name.replace(".app", ""), R = P.startsWith("/System") || P.startsWith("/Library") || L.startsWith("com.apple.");
+						F.push({
+							id: `macos-${L}-${N.ino}`,
+							name: L,
 							version: void 0,
 							publisher: void 0,
-							installDate: stats.birthtime.toISOString(),
-							installLocation: appPath,
-							size: await getDirSize$1(appPath).catch(() => 0),
-							isSystemApp
+							installDate: N.birthtime.toISOString(),
+							installLocation: P,
+							size: await i(P).catch(() => 0),
+							isSystemApp: R
 						});
-					} catch (e) {}
+					} catch {}
 				}
-			} else if (platform === "win32") try {
-				const { stdout } = await execAsync(`powershell -Command "${`
-            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
-            Where-Object { $_.DisplayName } | 
-            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | 
-            ConvertTo-Json -Depth 3
-          `.replace(/"/g, "\\\"")}"`);
-				const data = JSON.parse(stdout);
-				const list = Array.isArray(data) ? data : [data];
-				for (const item of list) if (item.DisplayName) {
-					const publisher = item.Publisher || "";
-					const installLocation = item.InstallLocation || "";
-					const isSystemApp = publisher.includes("Microsoft") || publisher.includes("Windows") || installLocation.includes("Windows\\") || installLocation.includes("Program Files\\Windows");
-					apps.push({
-						id: `win-${item.DisplayName}-${item.InstallDate || "unknown"}`,
-						name: item.DisplayName,
-						version: item.DisplayVersion || void 0,
-						publisher: publisher || void 0,
-						installDate: item.InstallDate ? formatWindowsDate(item.InstallDate) : void 0,
-						installLocation: installLocation || void 0,
-						size: item.EstimatedSize ? item.EstimatedSize * 1024 : void 0,
-						isSystemApp
+			} else if (P === "win32") try {
+				let { stdout: i } = await execAsync(`powershell -Command "${"\n            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | \n            Where-Object { $_.DisplayName } | \n            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | \n            ConvertTo-Json -Depth 3\n          ".replace(/"/g, "\\\"")}"`), P = JSON.parse(i), I = Array.isArray(P) ? P : [P];
+				for (let i of I) if (i.DisplayName) {
+					let P = i.Publisher || "", I = i.InstallLocation || "", L = P.includes("Microsoft") || P.includes("Windows") || I.includes("Windows\\") || I.includes("Program Files\\Windows");
+					F.push({
+						id: `win-${i.DisplayName}-${i.InstallDate || "unknown"}`,
+						name: i.DisplayName,
+						version: i.DisplayVersion || void 0,
+						publisher: P || void 0,
+						installDate: i.InstallDate ? N(i.InstallDate) : void 0,
+						installLocation: I || void 0,
+						size: i.EstimatedSize ? i.EstimatedSize * 1024 : void 0,
+						isSystemApp: L
 					});
 				}
-			} catch (e) {
-				console.error("Error fetching Windows apps:", e);
+			} catch (i) {
+				console.error("Error fetching Windows apps:", i);
 			}
-			return apps;
-		} catch (error) {
-			console.error("Error fetching installed apps:", error);
-			return [];
+			return F;
+		} catch (i) {
+			return console.error("Error fetching installed apps:", i), [];
 		}
-	});
-	ipcMain.handle("app-manager:get-running-processes", async () => {
+	}), ipcMain.handle("app-manager:get-running-processes", async () => {
 		try {
-			const processes = await si.processes();
-			const memInfo = await si.mem();
-			return processes.list.map((proc) => ({
-				pid: proc.pid,
-				name: proc.name,
-				cpu: proc.cpu || 0,
-				memory: proc.mem || 0,
-				memoryPercent: memInfo.total > 0 ? (proc.mem || 0) / memInfo.total * 100 : 0,
-				started: proc.started || "",
-				user: proc.user || void 0,
-				command: proc.command || void 0,
-				path: proc.path || void 0
+			let i = await si.processes(), N = await si.mem();
+			return i.list.map((i) => ({
+				pid: i.pid,
+				name: i.name,
+				cpu: i.cpu || 0,
+				memory: i.mem || 0,
+				memoryPercent: N.total > 0 ? (i.mem || 0) / N.total * 100 : 0,
+				started: i.started || "",
+				user: i.user || void 0,
+				command: i.command || void 0,
+				path: i.path || void 0
 			}));
-		} catch (error) {
-			console.error("Error fetching running processes:", error);
-			return [];
+		} catch (i) {
+			return console.error("Error fetching running processes:", i), [];
 		}
-	});
-	ipcMain.handle("app-manager:uninstall-app", async (_event, app$1) => {
+	}), ipcMain.handle("app-manager:uninstall-app", async (i, N) => {
 		try {
-			const platform = process.platform;
-			if (platform === "darwin") {
-				if (app$1.installLocation) {
-					await fs.rm(app$1.installLocation, {
-						recursive: true,
-						force: true
-					});
-					return { success: true };
-				}
-			} else if (platform === "win32") try {
-				await execAsync(`powershell -Command "${`
+			let i = process.platform;
+			if (i === "darwin") {
+				if (N.installLocation) return await fs.rm(N.installLocation, {
+					recursive: !0,
+					force: !0
+				}), { success: !0 };
+			} else if (i === "win32") try {
+				return await execAsync(`powershell -Command "${`
             $app = Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
-                   Where-Object { $_.DisplayName -eq "${app$1.name.replace(/"/g, "\\\"")}" } | 
+                   Where-Object { $_.DisplayName -eq "${N.name.replace(/"/g, "\\\"")}" } | 
                    Select-Object -First 1
             if ($app.UninstallString) {
               $uninstallString = $app.UninstallString
@@ -3440,80 +2934,116 @@ app.whenReady().then(() => {
             } else {
               Write-Output "No uninstall string found"
             }
-          `.replace(/"/g, "\\\"")}"`);
-				return { success: true };
-			} catch (e) {
+          `.replace(/"/g, "\\\"")}"`), { success: !0 };
+			} catch (i) {
 				return {
-					success: false,
-					error: e.message
+					success: !1,
+					error: i.message
 				};
 			}
 			return {
-				success: false,
+				success: !1,
 				error: "Unsupported platform"
 			};
-		} catch (error) {
+		} catch (i) {
 			return {
-				success: false,
-				error: error.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	ipcMain.handle("app-manager:kill-process", async (_event, pid) => {
+	}), ipcMain.handle("app-manager:kill-process", async (i, N) => {
 		try {
-			process.kill(pid, "SIGTERM");
-			return { success: true };
-		} catch (error) {
+			return process.kill(N, "SIGTERM"), { success: !0 };
+		} catch (i) {
 			return {
-				success: false,
-				error: error.message
+				success: !1,
+				error: i.message
 			};
 		}
-	});
-	async function getDirSize$1(dirPath) {
+	}), ipcMain.handle("youtube:getInfo", async (i, N) => {
 		try {
-			let totalSize = 0;
-			const files = await fs.readdir(dirPath, { withFileTypes: true });
-			for (const file of files) {
-				const filePath = join(dirPath, file.name);
+			return await youtubeDownloader.getVideoInfo(N);
+		} catch (i) {
+			throw i;
+		}
+	}), ipcMain.handle("youtube:getPlaylistInfo", async (i, N) => {
+		try {
+			return await youtubeDownloader.getPlaylistInfo(N);
+		} catch (i) {
+			throw i;
+		}
+	}), ipcMain.handle("youtube:download", async (i, N) => {
+		try {
+			return {
+				success: !0,
+				filepath: await youtubeDownloader.downloadVideo(N, (N) => {
+					i.sender.send("youtube:progress", N);
+				})
+			};
+		} catch (i) {
+			return {
+				success: !1,
+				error: i instanceof Error ? i.message : "Download failed"
+			};
+		}
+	}), ipcMain.handle("youtube:cancel", async () => (youtubeDownloader.cancelDownload(), { success: !0 })), ipcMain.handle("youtube:openFile", async (i, N) => {
+		let { shell: P } = await import("electron");
+		return P.openPath(N);
+	}), ipcMain.handle("youtube:showInFolder", async (i, N) => {
+		let { shell: P } = await import("electron");
+		return P.showItemInFolder(N), !0;
+	}), ipcMain.handle("youtube:chooseFolder", async () => {
+		let { dialog: i } = await import("electron"), N = await i.showOpenDialog({
+			properties: ["openDirectory", "createDirectory"],
+			title: "Choose Download Location",
+			buttonLabel: "Select Folder"
+		});
+		return N.canceled || N.filePaths.length === 0 ? {
+			canceled: !0,
+			path: null
+		} : {
+			canceled: !1,
+			path: N.filePaths[0]
+		};
+	}), ipcMain.handle("youtube:getHistory", () => youtubeDownloader.getHistory()), ipcMain.handle("youtube:clearHistory", () => (youtubeDownloader.clearHistory(), !0)), ipcMain.handle("youtube:getSettings", () => youtubeDownloader.getSettings()), ipcMain.handle("youtube:saveSettings", (i, N) => youtubeDownloader.saveSettings(N)), ipcMain.handle("youtube:getCapabilities", () => youtubeDownloader.getCapabilities()), ipcMain.handle("youtube:installAria2", async () => await youtubeDownloader.installAria2());
+	async function i(N) {
+		try {
+			let P = 0, F = await fs.readdir(N, { withFileTypes: !0 });
+			for (let I of F) {
+				let F = join(N, I.name);
 				try {
-					if (file.isDirectory()) totalSize += await getDirSize$1(filePath);
+					if (I.isDirectory()) P += await i(F);
 					else {
-						const stats = await fs.stat(filePath);
-						totalSize += stats.size;
+						let i = await fs.stat(F);
+						P += i.size;
 					}
-				} catch (e) {}
+				} catch {}
 			}
-			return totalSize;
-		} catch (e) {
+			return P;
+		} catch {
 			return 0;
 		}
 	}
-	function formatWindowsDate(dateStr) {
-		if (dateStr && dateStr.length === 8) return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
-		return dateStr;
+	function N(i) {
+		return i && i.length === 8 ? `${i.substring(0, 4)}-${i.substring(4, 6)}-${i.substring(6, 8)}` : i;
 	}
-	setupCleanerHandlers();
-	createTray();
-	createWindow();
+	setupCleanerHandlers(), createTray(), createWindow();
 });
 async function checkBluetoothEnabled() {
 	try {
 		if (process.platform === "darwin") {
-			const { execSync } = __require("child_process");
-			return execSync("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
+			let { execSync: i } = __require("child_process");
+			return i("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
 		}
-		return true;
+		return !0;
 	} catch {
-		return false;
+		return !1;
 	}
 }
-function getTimezoneOffset(timezone) {
-	const now = /* @__PURE__ */ new Date();
-	const utcTime = now.getTime() + now.getTimezoneOffset() * 6e4;
-	const tzString = now.toLocaleString("en-US", {
-		timeZone: timezone,
-		hour12: false,
+function getTimezoneOffset(i) {
+	let N = /* @__PURE__ */ new Date(), P = N.getTime() + N.getTimezoneOffset() * 6e4, F = N.toLocaleString("en-US", {
+		timeZone: i,
+		hour12: !1,
 		year: "numeric",
 		month: "2-digit",
 		day: "2-digit",
@@ -3521,23 +3051,19 @@ function getTimezoneOffset(timezone) {
 		minute: "2-digit",
 		second: "2-digit"
 	});
-	return (new Date(tzString).getTime() - utcTime) / (1e3 * 60 * 60);
+	return (new Date(F).getTime() - P) / (1e3 * 60 * 60);
 }
-function formatBytes(bytes) {
-	if (bytes === 0) return "0 B";
-	const k = 1024;
-	const sizes = [
+function formatBytes(i) {
+	if (i === 0) return "0 B";
+	let N = 1024, P = [
 		"B",
 		"KB",
 		"MB",
 		"GB",
 		"TB"
-	];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+	], F = Math.floor(Math.log(i) / Math.log(N));
+	return `${(i / N ** +F).toFixed(1)} ${P[F]}`;
 }
-function formatSpeed(bytesPerSec) {
-	if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
-	if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-	return `${bytesPerSec.toFixed(0)} B/s`;
+function formatSpeed(i) {
+	return i > 1024 * 1024 ? `${(i / 1024 / 1024).toFixed(1)} MB/s` : i > 1024 ? `${(i / 1024).toFixed(1)} KB/s` : `${i.toFixed(0)} B/s`;
 }

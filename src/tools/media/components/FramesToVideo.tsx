@@ -13,7 +13,9 @@ export const FramesToVideo: React.FC = () => {
     const [videoSettings, setVideoSettings] = useState({
         fps: 24,
         codec: 'libx264' as 'libx264' | 'libvpx',
-        quality: 'high' as 'low' | 'medium' | 'high'
+        quality: 'high' as 'low' | 'medium' | 'high',
+        transition: 'none' as 'none' | 'crossfade',
+        transitionDuration: 0.5
     });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,7 +81,9 @@ export const FramesToVideo: React.FC = () => {
             logger.info('Starting video creation', { frames: frames.length, settings: videoSettings });
 
             // Create video using MediaRecorder API
-            const mediaStream = canvas.captureStream(videoSettings.fps);
+            // If transitions are on, we need a high render FPS (e.g. 30 or 60) regardless of input FPS
+            const renderFps = videoSettings.transition === 'none' ? videoSettings.fps : Math.max(30, videoSettings.fps);
+            const mediaStream = canvas.captureStream(renderFps);
             const audioContext = new AudioContext();
             const audioDestination = audioContext.createMediaStreamDestination();
 
@@ -123,24 +127,83 @@ export const FramesToVideo: React.FC = () => {
 
             mediaRecorder.start();
 
-            // Draw frames to canvas at specified rate
-            const frameInterval = 1000 / videoSettings.fps;
+            // Start Recording
+            mediaRecorder.start();
+
+            // Render Loop
+            
+            // Duration per image in ms
+            const imageDuration = 1000 / videoSettings.fps;
+            const transDuration = videoSettings.transitionDuration * 1000;
+
             const startTime = Date.now();
 
             const drawFrame = () => {
-                const elapsed = Date.now() - startTime;
-                const targetFrameIndex = Math.floor(elapsed / frameInterval);
-
-                if (targetFrameIndex < images.length) {
-                    ctx.drawImage(images[Math.min(targetFrameIndex, images.length - 1)], 0, 0);
-                    const renderProgress = Math.floor(50 + (targetFrameIndex / images.length) * 50);
-                    setProgress(renderProgress);
-                    setProcessingStatus(`Rendering frame ${Math.min(targetFrameIndex + 1, images.length)}/${images.length}...`);
-                    requestAnimationFrame(drawFrame);
-                } else {
+                const now = Date.now();
+                const elapsed = now - startTime;
+                
+                // Calculate which image index we are at
+                // Logic: index = floor(elapsed / imageDuration)
+                const currentIndex = Math.floor(elapsed / imageDuration);
+                
+                if (currentIndex >= images.length) {
                     setProcessingStatus('Finalizing video file...');
                     mediaRecorder.stop();
+                    return;
                 }
+
+                // Calculate local time within the current image slot
+                const localTime = elapsed % imageDuration;
+                
+                // Clear
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw Current Image
+                const currentImg = images[currentIndex];
+                
+                // Scaling logic (fit containment)
+                const drawImageFit = (img: HTMLImageElement, alpha: number = 1.0) => {
+                    ctx.globalAlpha = alpha;
+                    const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                    const x = (canvas.width / 2) - (img.width / 2) * scale;
+                    const y = (canvas.height / 2) - (img.height / 2) * scale;
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    ctx.globalAlpha = 1.0;
+                };
+
+                // Transition Logic
+                // If we are near the end of the slide, and have a next slide, blend
+                if (videoSettings.transition === 'crossfade' && 
+                    currentIndex < images.length - 1 && 
+                    localTime > (imageDuration - transDuration)) {
+                    
+                    // We are in transition zone
+                    const transProgress = (localTime - (imageDuration - transDuration)) / transDuration;
+                    
+                    // Draw Current (fading out? or just staying behind?)
+                    // Cross dissolve usually: A fades out, B fades in. Or A stays 1, B fades 0->1 on top.
+                    // Let's do B fades in on top of A.
+                    drawImageFit(currentImg, 1.0);
+                    
+                    const nextImg = images[currentIndex + 1];
+                    drawImageFit(nextImg, transProgress);
+
+                } else {
+                    // Normal display
+                    drawImageFit(currentImg, 1.0);
+                }
+
+                // Update Progress
+                const progress = Math.min(100, Math.floor((currentIndex / images.length) * 100));
+                setProgress(progress);
+                setProcessingStatus(`Rendering frame ${currentIndex + 1}/${images.length}...`);
+
+                // Wait for next frame time
+                // We use requestAnimationFrame but enable "throttle" to match renderFps roughly if needed, 
+                // but usually rAF is 60fps. Capturing at 30fps from a 60fps canvas is fine.
+                // However, logic relies on `elapsed`, so it's frame-rate independent.
+                requestAnimationFrame(drawFrame);
             };
 
             drawFrame();
@@ -162,7 +225,7 @@ export const FramesToVideo: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col overflow-y-auto p-1">
-            <div className="space-y-6 max-w-5xl mx-auto w-full pb-10">
+            <div className="space-y-6 mx-auto w-full pb-10">
                 {/* File Upload */}
                 <Card
                     className="border-2 border-dashed border-border-glass p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-indigo-500/50 hover:bg-glass-panel/50 transition-all group"
@@ -215,6 +278,49 @@ export const FramesToVideo: React.FC = () => {
                                         <p className="text-lg font-bold text-indigo-400">
                                             ~{(frames.length / videoSettings.fps).toFixed(1)}s
                                         </p>
+                                    </div>
+
+                                    <div className="space-y-4 pt-2 border-t border-border-glass">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-medium text-foreground-secondary">Transition Effect</label>
+                                            <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
+                                                <button
+                                                    onClick={() => setVideoSettings(prev => ({ ...prev, transition: 'none' }))}
+                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                                        videoSettings.transition === 'none' 
+                                                            ? 'bg-indigo-500/20 text-indigo-400' 
+                                                            : 'text-foreground-secondary hover:text-foreground'
+                                                    }`}
+                                                >
+                                                    None
+                                                </button>
+                                                <button
+                                                    onClick={() => setVideoSettings(prev => ({ ...prev, transition: 'crossfade' }))}
+                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                                        videoSettings.transition === 'crossfade' 
+                                                            ? 'bg-indigo-500/20 text-indigo-400' 
+                                                            : 'text-foreground-secondary hover:text-foreground'
+                                                    }`}
+                                                >
+                                                    Crossfade
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {videoSettings.transition === 'crossfade' && (
+                                            <Slider
+                                                label="Transition Duration"
+                                                value={videoSettings.transitionDuration}
+                                                min={0.1}
+                                                max={Math.max(0.1, (1 / videoSettings.fps) - 0.1)} 
+                                                // Max duration must be less than total Image Duration (1/FPS)
+                                                // Wait, if 1/FPS is small (e.g. 0.1s), transition can't be 0.5s.
+                                                // We should probably clamp or warn. 
+                                                step={0.1}
+                                                onChange={(val) => setVideoSettings(prev => ({ ...prev, transitionDuration: val }))}
+                                                unit="s"
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">

@@ -48,7 +48,8 @@ import {
     Move,
     Camera,
     Package,
-    Film
+    Film,
+    Youtube
 } from 'lucide-react';
 
 
@@ -150,6 +151,7 @@ const ApplicationManager = React.lazy(() => import('./utilities/ApplicationManag
 const SystemCleaner = React.lazy(() => import('./utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
 const Xnapper = React.lazy(() => import('./screenshot/Xnapper'));
 const VideoFrames = React.lazy(() => import('./media/VideoFrames'));
+const YoutubeDownloader = React.lazy(() => import('./media/YoutubeDownloader'));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -809,6 +811,17 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-pink-500',
         component: VideoFrames,
         keywords: ['video', 'frames', 'extract', 'frames to video', 'animation', 'screen record', 'gif'],
+    },
+    {
+        id: 'youtube-downloader',
+        name: 'YouTube Downloader',
+        path: '/youtube-downloader',
+        description: 'Download videos and audio from YouTube in various formats',
+        category: 'utilities',
+        icon: Youtube,
+        color: 'text-red-500',
+        component: YoutubeDownloader,
+        keywords: ['youtube', 'download', 'video', 'audio', 'mp4', 'mp3', 'yt'],
     },
 
     // Settings (Special tool - not in any category)

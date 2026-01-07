@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'glass' | 'ghost' | 'danger' | 'warning' | 'success' | 'outline';
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'xs' | 'sm' | 'md' | 'lg';
     loading?: boolean;
     icon?: React.ElementType;
 }
@@ -78,6 +78,7 @@ export const Button: React.FC<ButtonProps> = ({
                 variant === 'ghost' && "text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover rounded-lg",
 
                 // Sizes
+                size === 'xs' && "text-[10px] px-2 py-1",
                 size === 'sm' && "text-xs px-3 py-1.5",
                 size === 'md' && variant !== 'ghost' && "text-sm px-5 py-2.5",
                 size === 'md' && variant === 'ghost' && "p-2", // Icon button size usually

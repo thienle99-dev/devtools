@@ -134,3 +134,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('screenshot:area-cancelled'),
 })
 
+// YouTube Downloader API
+contextBridge.exposeInMainWorld('youtubeAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('youtube:getInfo', url),
+  getPlaylistInfo: (url: string) => ipcRenderer.invoke('youtube:getPlaylistInfo', url),
+  download: (options: any) => ipcRenderer.invoke('youtube:download', options),
+  cancel: () => ipcRenderer.invoke('youtube:cancel'),
+  openFile: (filePath: string) => ipcRenderer.invoke('youtube:openFile', filePath),
+  showInFolder: (filePath: string) => ipcRenderer.invoke('youtube:showInFolder', filePath),
+  chooseFolder: () => ipcRenderer.invoke('youtube:chooseFolder'),
+  getHistory: () => ipcRenderer.invoke('youtube:getHistory'),
+  clearHistory: () => ipcRenderer.invoke('youtube:clearHistory'),
+  getSettings: () => ipcRenderer.invoke('youtube:getSettings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('youtube:saveSettings', settings),
+  getCapabilities: () => ipcRenderer.invoke('youtube:getCapabilities'),
+  installAria2: () => ipcRenderer.invoke('youtube:installAria2'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('youtube:progress', listener);
+    return () => ipcRenderer.removeListener('youtube:progress', listener);
+  }
+})
+
+
+
