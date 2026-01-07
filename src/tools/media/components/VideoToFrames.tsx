@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, ChevronLeft, ChevronRight, Clock, Scan, List } from 'lucide-react';
 import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
@@ -21,11 +21,15 @@ export const VideoToFrames: React.FC = () => {
     const [progress, setProgress] = useState(0);
     const [processingStatus, setProcessingStatus] = useState<string>('');
     const [extractionSettings, setExtractionSettings] = useState({
+        mode: 'fps' as 'fps' | 'scene' | 'timestamps',
         fps: 1,
+        sceneThreshold: 15, // 0-100% difference
+        timestamps: '', // "00:05, 01:20"
         startTime: 0,
         endTime: 0,
         quality: 0.8,
-        format: 'png' as 'png' | 'jpg' | 'webp'
+        format: 'png' as 'png' | 'jpg' | 'webp',
+        detectDuplicates: false
     });
     const [videoMetadata, setVideoMetadata] = useState<{
         duration: number;
@@ -66,6 +70,40 @@ export const VideoToFrames: React.FC = () => {
         };
     };
 
+    const calculateFrameDiff = (ctx1: CanvasRenderingContext2D, ctx2: CanvasRenderingContext2D, width: number, height: number): number => {
+        const data1 = ctx1.getImageData(0, 0, width, height).data;
+        const data2 = ctx2.getImageData(0, 0, width, height).data;
+        let diff = 0;
+        let pixels = 0;
+
+        for (let i = 0; i < data1.length; i += 4) {
+            // Compare RGB only
+            const r = Math.abs(data1[i] - data2[i]);
+            const g = Math.abs(data1[i + 1] - data2[i + 1]);
+            const b = Math.abs(data1[i + 2] - data2[i + 2]);
+            
+            diff += (r + g + b) / 3;
+            pixels++;
+        }
+
+        // Return percentage difference (0-100)
+        return (diff / pixels / 255) * 100;
+    };
+
+    const parseTimestamps = (input: string): number[] => {
+        return input.split(/[,;\n]/).map(t => {
+            t = t.trim();
+            if (!t) return -1;
+            // Support "MM:SS" or "HH:MM:SS" or seconds
+            const parts = t.split(':').map(p => parseFloat(p));
+            if (parts.some(isNaN)) return -1;
+            
+            if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            if (parts.length === 2) return parts[0] * 60 + parts[1];
+            return parts[0];
+        }).filter(t => t >= 0).sort((a, b) => a - b);
+    };
+
     const extractFrames = async () => {
         if (!videoFile || !videoMetadata) return;
 
@@ -81,82 +119,165 @@ export const VideoToFrames: React.FC = () => {
         video.src = fileUrl;
 
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // Small canvas for diffing
+        const diffCanvas = document.createElement('canvas');
+        diffCanvas.width = 64; 
+        diffCanvas.height = 64;
+        const diffCtx = diffCanvas.getContext('2d', { willReadFrequently: true });
+        
+        // Check prev frame for scene detection
+        const prevCanvas = document.createElement('canvas');
+        prevCanvas.width = 64;
+        prevCanvas.height = 64;
+        const prevCtx = prevCanvas.getContext('2d', { willReadFrequently: true });
+
+        if (!ctx || !diffCtx || !prevCtx) return;
 
         canvas.width = videoMetadata.width;
         canvas.height = videoMetadata.height;
 
         const extractedFrames: FrameData[] = [];
-        const frameInterval = 1 / extractionSettings.fps;
-        let currentTime = extractionSettings.startTime;
         let frameIndex = 0;
 
-        const totalFrames = Math.floor((extractionSettings.endTime - extractionSettings.startTime) * extractionSettings.fps);
+        // Determine seek points
+        let seekTime = extractionSettings.startTime;
+        const endTime = extractionSettings.endTime;
+        
+        // Strategy setup
+        let nextSeek = (current: number) => current + (1 / extractionSettings.fps);
+        let shouldCapture = async (): Promise<boolean> => true;
+
+        if (extractionSettings.mode === 'timestamps') {
+            const timestamps = parseTimestamps(extractionSettings.timestamps);
+            let tsIndex = 0;
+            seekTime = timestamps[0] || -1;
+            if (seekTime === -1) {
+                setIsProcessing(false);
+                setProcessingStatus('No valid timestamps found');
+                return;
+            }
+            nextSeek = () => {
+                tsIndex++;
+                if (tsIndex < timestamps.length) return timestamps[tsIndex];
+                return endTime + 1; // Finish
+            };
+        } else if (extractionSettings.mode === 'scene') {
+            // For scene detection, we scan at a faster rate (e.g., 2fps or custom) but only capture on change
+            // Or we use the FPS slider as the "Scan Rate"
+            seekTime = extractionSettings.startTime;
+            let hasCapturedFirst = false;
+            
+            shouldCapture = async () => {
+                diffCtx.drawImage(video, 0, 0, 64, 64);
+                
+                if (!hasCapturedFirst) {
+                    prevCtx.drawImage(diffCanvas, 0, 0);
+                    hasCapturedFirst = true;
+                    return true;
+                }
+
+                const diff = calculateFrameDiff(diffCtx, prevCtx, 64, 64);
+                if (diff >= extractionSettings.sceneThreshold) {
+                    prevCtx.drawImage(diffCanvas, 0, 0); // Update prev
+                    return true;
+                }
+                return false;
+            };
+        } else {
+            // FPS Mode (Interval)
+            seekTime = extractionSettings.startTime;
+            let hasCapturedFirst = false;
+
+            if (extractionSettings.detectDuplicates) {
+                 shouldCapture = async () => {
+                    diffCtx.drawImage(video, 0, 0, 64, 64);
+                    
+                    if (!hasCapturedFirst) {
+                        prevCtx.drawImage(diffCanvas, 0, 0);
+                        hasCapturedFirst = true;
+                        return true;
+                    }
+
+                    const diff = calculateFrameDiff(diffCtx, prevCtx, 64, 64);
+                    // 2% threshold for duplicates
+                    if (diff > 2) { 
+                        prevCtx.drawImage(diffCanvas, 0, 0);
+                        return true;
+                    }
+                    return false;
+                 };
+            }
+        }
 
         return new Promise<void>((resolve, reject) => {
-            // Function to handle seeking and extraction
-            const onSeeked = () => {
-                if (currentTime <= extractionSettings.endTime) {
-                    ctx.drawImage(video, 0, 0);
+            const onSeeked = async () => {
+                if (seekTime <= endTime) {
+                    try {
+                        const captureFrame = await shouldCapture();
+                        
+                        if (captureFrame) {
+                            ctx.drawImage(video, 0, 0);
+                            
+                            // To Blob
+                            await new Promise<void>(res => {
+                                canvas.toBlob((blob) => {
+                                    if (blob) {
+                                        extractedFrames.push({
+                                            blob,
+                                            timestamp: seekTime,
+                                            index: frameIndex++
+                                        });
+                                        // Update UI less frequently to avoid lag
+                                        if (frameIndex % 5 === 0) {
+                                            setProcessingStatus(`Extracted ${frameIndex} frames...`);
+                                        }
+                                    }
+                                    res();
+                                }, `image/${extractionSettings.format}`, extractionSettings.quality);
+                            });
+                        }
 
-                    // Convert to blob
-                    canvas.toBlob(
-                        (blob) => {
-                            if (blob) {
-                                extractedFrames.push({
-                                    blob,
-                                    timestamp: currentTime,
-                                    index: frameIndex
-                                });
-                            }
+                        // Report progress
+                        const range = endTime - extractionSettings.startTime;
+                        const progress = range > 0 ? ((seekTime - extractionSettings.startTime) / range) * 100 : 0;
+                        setProgress(Math.min(100, Math.floor(progress)));
 
-                            frameIndex++;
-                            currentTime += frameInterval;
-                            const currentProgress = Math.min(100, Math.floor((frameIndex / totalFrames) * 100));
-                            setProgress(currentProgress);
-                            setProcessingStatus(`Extracted ${frameIndex} / ${totalFrames} frames`);
-
-                            // Log unexpected progress jumps or periodically
-                            if (frameIndex % 5 === 0) {
-                                logger.debug(`Extraction progress: ${currentProgress}% (Frame ${frameIndex}/${totalFrames})`);
-                            }
-
-                            if (currentTime <= extractionSettings.endTime) {
-                                video.currentTime = currentTime;
-                            } else {
-                                video.removeEventListener('seeked', onSeeked);
-                                setFrames(extractedFrames);
-                                setIsProcessing(false);
-                                logger.info(`Extraction complete. Extracted ${extractedFrames.length} frames.`);
-                                URL.revokeObjectURL(fileUrl);
-                                resolve();
-                            }
-                        },
-                        `image/${extractionSettings.format}`,
-                        extractionSettings.quality
-                    );
+                        // Next
+                        seekTime = nextSeek(seekTime);
+                        if (seekTime <= endTime) {
+                            video.currentTime = seekTime;
+                        } else {
+                            finish();
+                        }
+                    } catch (err) {
+                        logger.error('Error processing frame:', err);
+                        finish();
+                    }
+                } else {
+                    finish();
                 }
             };
 
-            // Error handling
-            video.onerror = (e) => {
-                logger.error('Video error during extraction:', e);
+            const finish = () => {
+                video.removeEventListener('seeked', onSeeked);
+                setFrames(extractedFrames);
                 setIsProcessing(false);
-                setProcessingStatus('Error initializing video');
+                setProcessingStatus(`Complete! ${extractedFrames.length} frames extracted.`);
+                URL.revokeObjectURL(fileUrl);
+                resolve();
+            };
+
+            video.onerror = (e) => {
+                logger.error('Video error:', e);
+                setIsProcessing(false);
                 URL.revokeObjectURL(fileUrl);
                 reject(new Error('Video loading failed'));
             };
 
-            // Start processing once video data is loaded
-            video.onloadeddata = () => {
-                video.addEventListener('seeked', onSeeked);
-                // Set initial time to trigger the first seeked event
-                video.currentTime = currentTime;
-            };
-
-            // Allow some time for loading, then check readyState if event didn't fire (fallback)
-            // But onloadeddata should generally work.
+            video.addEventListener('seeked', onSeeked);
+            video.currentTime = seekTime;
         });
     };
 
@@ -302,22 +423,109 @@ export const VideoToFrames: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-5">
-                                        <Slider
-                                            label="Frame Rate (FPS)"
-                                            value={extractionSettings.fps}
-                                            min={0.1}
-                                            max={30}
-                                            step={0.1}
-                                            onChange={(val) => setExtractionSettings(prev => ({ ...prev, fps: val }))}
-                                            unit=" FPS"
-                                        />
-
-                                        <div className="p-3 bg-glass-background/30 rounded-lg text-center">
-                                            <p className="text-xs text-foreground-secondary">Estimated Output</p>
-                                            <p className="text-lg font-bold text-indigo-400">
-                                                ~{Math.floor((extractionSettings.endTime - extractionSettings.startTime) * extractionSettings.fps)} frames
-                                            </p>
+                                        {/* Extraction Mode Tabs */}
+                                        <div className="grid grid-cols-3 bg-glass-background/30 p-1 rounded-lg">
+                                            {[
+                                                { id: 'fps', label: 'Interval', icon: Clock },
+                                                { id: 'scene', label: 'Scene', icon: Scan },
+                                                { id: 'timestamps', label: 'Manual', icon: List }
+                                            ].map(mode => (
+                                                <button
+                                                    key={mode.id}
+                                                    onClick={() => setExtractionSettings(prev => ({ ...prev, mode: mode.id as any }))}
+                                                    className={`flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all ${extractionSettings.mode === mode.id
+                                                        ? 'bg-indigo-500/20 text-indigo-400 shadow-sm'
+                                                        : 'text-foreground-secondary hover:text-foreground hover:bg-white/5'
+                                                    }`}
+                                                >
+                                                    <mode.icon className="w-3.5 h-3.5" />
+                                                    {mode.label}
+                                                </button>
+                                            ))}
                                         </div>
+
+                                        {extractionSettings.mode === 'fps' && (
+                                            <div className="space-y-4 animate-in fade-in duration-300">
+                                                <Slider
+                                                    label="Frame Rate (FPS)"
+                                                    value={extractionSettings.fps}
+                                                    min={0.1}
+                                                    max={30}
+                                                    step={0.1}
+                                                    onChange={(val) => setExtractionSettings(prev => ({ ...prev, fps: val }))}
+                                                    unit=" FPS"
+                                                />
+                                                
+                                                <div className="flex items-center justify-between bg-glass-background/30 p-3 rounded-lg border border-border-glass">
+                                                    <div className="space-y-0.5">
+                                                        <label className="text-xs font-medium text-foreground">Smart Sampling</label>
+                                                        <p className="text-[10px] text-foreground-secondary">Skip duplicate frames</p>
+                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={extractionSettings.detectDuplicates}
+                                                        onChange={(e) => setExtractionSettings(prev => ({ ...prev, detectDuplicates: e.target.checked }))}
+                                                        className="w-4 h-4 rounded border-border-glass bg-glass-panel text-indigo-500 focus:ring-indigo-500/50"
+                                                    />
+                                                </div>
+
+                                                <div className="p-3 bg-glass-background/30 rounded-lg text-center">
+                                                    <p className="text-xs text-foreground-secondary">Estimated Output</p>
+                                                    <p className="text-lg font-bold text-indigo-400">
+                                                        ~{Math.floor((extractionSettings.endTime - extractionSettings.startTime) * extractionSettings.fps)} frames
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {extractionSettings.mode === 'scene' && (
+                                            <div className="space-y-4 animate-in fade-in duration-300">
+                                                <div className="bg-glass-background/50 p-3 rounded-lg border border-indigo-500/20">
+                                                    <p className="text-xs text-foreground-secondary mb-2">How it works</p>
+                                                    <p className="text-sm text-foreground">
+                                                        Analyzes video for significant visual changes to capture shots automatically.
+                                                    </p>
+                                                </div>
+                                                <Slider
+                                                    label="Sensitivity Threshold"
+                                                    value={extractionSettings.sceneThreshold}
+                                                    min={1}
+                                                    max={50}
+                                                    step={1}
+                                                    onChange={(val) => setExtractionSettings(prev => ({ ...prev, sceneThreshold: val }))}
+                                                    unit="%"
+                                                />
+                                                <Slider
+                                                    label="Scan Rate (FPS)"
+                                                    value={extractionSettings.fps}
+                                                    min={1}
+                                                    max={10}
+                                                    step={1}
+                                                    onChange={(val) => setExtractionSettings(prev => ({ ...prev, fps: val }))}
+                                                    unit=" Hz"
+                                                />
+                                                <p className="text-xs text-foreground-secondary">Higher scan rate = more accurate but slower.</p>
+                                            </div>
+                                        )}
+
+                                        {extractionSettings.mode === 'timestamps' && (
+                                            <div className="space-y-4 animate-in fade-in duration-300">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-foreground-secondary flex justify-between">
+                                                        <span>Timestamps (comma/newline separated)</span>
+                                                        <span className="text-xs text-indigo-400 cursor-pointer hover:underline" onClick={() => setExtractionSettings(prev => ({ ...prev, timestamps: "00:05, 01:23, 10:00" }))}>Load Example</span>
+                                                    </label>
+                                                    <textarea
+                                                        value={extractionSettings.timestamps}
+                                                        onChange={(e) => setExtractionSettings(prev => ({ ...prev, timestamps: e.target.value }))}
+                                                        placeholder="e.g. 05:22, 12:30 or 120.5"
+                                                        className="w-full bg-input-bg border border-border-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[100px] font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="border-t border-border-glass pt-4"></div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
