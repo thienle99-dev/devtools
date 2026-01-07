@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
-    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors, MonitorPlay, Smartphone, Trash2, Filter, MoreHorizontal } from 'lucide-react';
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors, MonitorPlay, Smartphone, Trash2, Filter, MoreHorizontal, FileVideo } from 'lucide-react';
 import { FrameEditor } from './FrameEditor';
 import { TimelineEditor } from './TimelineEditor';
 import JSZip from 'jszip';
@@ -66,6 +66,9 @@ export const VideoToFrames: React.FC = () => {
     const [analyticsData, setAnalyticsData] = useState<Map<number, FrameAnalysisResult>>(new Map());
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    // Drag & Drop State
+    const [draggedFrameIndex, setDraggedFrameIndex] = useState<number | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -424,6 +427,109 @@ export const VideoToFrames: React.FC = () => {
         const newAnalytics = new Map(analyticsData);
         selectedFrames.forEach(idx => newAnalytics.delete(idx));
         setAnalyticsData(newAnalytics);
+    };
+
+
+
+    const handleDragStart = (e: React.DragEvent, index: number) => {
+        setDraggedFrameIndex(index);
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+        e.preventDefault();
+        if (draggedFrameIndex === null || draggedFrameIndex === dropIndex) return;
+
+        const newFrames = [...frames];
+        const [movedFrame] = newFrames.splice(draggedFrameIndex, 1);
+        newFrames.splice(dropIndex, 0, movedFrame);
+        
+        setFrames(newFrames);
+        setDraggedFrameIndex(null);
+    };
+
+    const exportAsVideo = async () => {
+        if (frames.length === 0) return;
+        setIsProcessing(true);
+        setProcessingStatus('Generating video...');
+
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set output size
+            const width = extractionSettings.targetWidth || videoMetadata?.width || 1920;
+            const height = extractionSettings.targetHeight || videoMetadata?.height || 1080;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Determine MIME type
+            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
+                ? 'video/webm;codecs=vp9' 
+                : 'video/webm';
+
+            const stream = canvas.captureStream(extractionSettings.fps || 30);
+            const recorder = new MediaRecorder(stream, { 
+                mimeType, 
+                videoBitsPerSecond: 8000000 // 8 Mbps
+            });
+            
+            const chunks: Blob[] = [];
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `video_export_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                setIsProcessing(false);
+                setProcessingStatus('');
+            };
+
+            recorder.start();
+
+            // Draw frames
+            if (ctx) {
+                // Calculate duration per frame to match target FPS
+                const targetFps = extractionSettings.fps || 1;
+                const frameDurationMs = 1000 / targetFps;
+
+                for (const frame of frames) {
+                    const img = await createImageBitmap(frame.blob);
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    // Center fit logic logic
+                    const scale = Math.min(width / img.width, height / img.height);
+                    const x = (width / 2) - (img.width / 2) * scale;
+                    const y = (height / 2) - (img.height / 2) * scale;
+                    
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    img.close();
+
+                    await new Promise(r => setTimeout(r, frameDurationMs));
+                }
+            }
+            
+            recorder.stop();
+        } catch (error) {
+            console.error('Video export failed:', error);
+            logger.error('Video export failed', error);
+            setIsProcessing(false);
+            setProcessingStatus('Export failed');
+        }
     };
 
     const formatFilename = (pattern: string, frame: FrameData, videoName: string, ext: string) => {
@@ -1006,7 +1112,11 @@ export const VideoToFrames: React.FC = () => {
                                                     >
                                                         <GalleryHorizontal className="w-4 h-4" />
                                                     </button>
-                                                </div>
+                                            </div>
+                                                <div className="h-6 w-[1px] bg-white/10 mx-2" />
+                                                <Button size="sm" variant="secondary" icon={FileVideo} onClick={exportAsVideo} disabled={isAnalyzing || isProcessing} title="Export as Video (WebM)">
+                                                    Video
+                                                </Button>
                                                 <Button size="sm" variant="primary" icon={FolderOutput} onClick={() => setShowExportOptions(true)}>
                                                     Export...
                                                 </Button>
@@ -1014,6 +1124,101 @@ export const VideoToFrames: React.FC = () => {
                                                     Analytics
                                                 </Button>
                                             </div>
+
+                                        {/* Frame Grid */}
+                                        <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-1 mt-4">
+                                            <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1'}`}>
+                                                {frames.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((frame, idx) => {
+                                                    const realIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx;
+                                                    const isSelected = selectedFrames.has(frame.index);
+                                                    const analysis = analyticsData.get(frame.index);
+                                                    const isDragging = draggedFrameIndex === realIdx;
+
+                                                    return (
+                                                        <div 
+                                                            key={frame.index} 
+                                                            className={`relative group rounded-xl overflow-hidden border transition-all duration-200 ${
+                                                                isSelected 
+                                                                    ? 'border-indigo-500 ring-1 ring-indigo-500 bg-indigo-500/10' 
+                                                                    : 'border-border-glass bg-glass-panel hover:border-indigo-500/50'
+                                                            } ${isDragging ? 'opacity-50 scale-95 border-dashed border-indigo-400' : ''}`}
+                                                            draggable={!isSelectionMode}
+                                                            onDragStart={(e) => handleDragStart(e, realIdx)}
+                                                            onDragOver={(e) => handleDragOver(e, realIdx)}
+                                                            onDrop={(e) => handleDrop(e, realIdx)}
+                                                        >
+                                                            {/* Selection Overlay */}
+                                                            <div 
+                                                                className={`absolute inset-0 z-10 transition-colors cursor-pointer ${
+                                                                    isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'
+                                                                }`}
+                                                                onClick={(e) => {
+                                                                    if (e.target === e.currentTarget) {
+                                                                        if (isSelectionMode) {
+                                                                            toggleFrameSelection(frame.index);
+                                                                        } else {
+                                                                            handleEditFrame(realIdx);
+                                                                        }
+                                                                    }
+                                                                }}
+                                                            />
+
+                                                            {/* Image */}
+                                                            <img 
+                                                                src={URL.createObjectURL(frame.blob)} 
+                                                                className="w-full aspect-video object-cover" 
+                                                                loading="lazy"
+                                                            />
+                                                            
+                                                            {/* Info Tag */}
+                                                            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                                <div className="flex justify-between items-end">
+                                                                    <div>
+                                                                        <p className="text-[10px] font-mono text-white/80">#{frame.index.toString().padStart(3, '0')}</p>
+                                                                        <p className="text-[10px] text-white/60">{new Date(frame.timestamp * 1000).toISOString().substr(14, 5)}</p>
+                                                                    </div>
+                                                                    {analysis && (
+                                                                        <div className={`text-[10px] px-1 rounded ${analysis.blurScore < 50 ? 'bg-red-500/50 text-white' : 'bg-green-500/50 text-white'}`}>
+                                                                            {Math.round(analysis.blurScore)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Selection Checkbox (Visual) */}
+                                                            {isSelected && (
+                                                                <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-md p-0.5 shadow-lg animate-in zoom-in duration-200">
+                                                                    <CheckSquare className="w-3 h-3" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            
+                                            {/* Pagination */}
+                                            {frames.length > ITEMS_PER_PAGE && (
+                                                <div className="flex items-center justify-center gap-4 mt-6 py-4">
+                                                    <button
+                                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                        disabled={currentPage === 1}
+                                                        className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-50 transition-colors"
+                                                    >
+                                                        <ChevronLeft className="w-4 h-4" />
+                                                    </button>
+                                                    <span className="text-sm text-foreground-secondary font-mono">
+                                                        {currentPage} / {Math.ceil(frames.length / ITEMS_PER_PAGE)}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(frames.length / ITEMS_PER_PAGE), p + 1))}
+                                                        disabled={currentPage === Math.ceil(frames.length / ITEMS_PER_PAGE)}
+                                                        className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-50 transition-colors"
+                                                    >
+                                                        <ChevronRight className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Analytics Modal */}
                                         {showAnalytics && (
