@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
-    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput } from 'lucide-react';
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap } from 'lucide-react';
 import { FrameEditor } from './FrameEditor';
 import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
@@ -10,6 +10,7 @@ import { Card } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { logger } from '../../../utils/logger';
+import { analyzeImage, type FrameAnalysisResult } from '../utils/imageAnalysis';
 
 interface FrameData {
     blob: Blob;
@@ -56,6 +57,11 @@ export const VideoToFrames: React.FC = () => {
         includeMetadata: true,
         zipFilename: 'frames_export'
     });
+
+    // Analytics State
+    const [analyticsData, setAnalyticsData] = useState<Map<number, FrameAnalysisResult>>(new Map());
+    const [showAnalytics, setShowAnalytics] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -409,6 +415,28 @@ export const VideoToFrames: React.FC = () => {
     
     // Kept generic download for backward compat or quick actions if needed
     // const downloadAsZip = () => setShowExportOptions(true);
+
+    const runAnalytics = async () => {
+        setIsAnalyzing(true);
+        setShowAnalytics(true);
+        const results = new Map<number, FrameAnalysisResult>();
+        
+        // Analyze in chunks to not block UI
+        for (let i = 0; i < frames.length; i++) {
+            const frame = frames[i];
+            const data = await analyzeImage(frame.blob);
+            results.set(frame.index, data);
+            
+            // Update UI every 10 frames
+            if (i % 10 === 0) {
+                 setAnalyticsData(new Map(results));
+            }
+            // Small break
+            if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
+        }
+        setAnalyticsData(results);
+        setIsAnalyzing(false);
+    };
 
     const handleEditFrame = (index: number) => {
         setEditingFrameIndex(index);
@@ -836,7 +864,113 @@ export const VideoToFrames: React.FC = () => {
                                                 <Button size="sm" variant="primary" icon={FolderOutput} onClick={() => setShowExportOptions(true)}>
                                                     Export...
                                                 </Button>
+                                                <Button size="sm" variant="secondary" icon={ChartBar} onClick={runAnalytics} disabled={isAnalyzing}>
+                                                    Analytics
+                                                </Button>
                                             </div>
+
+                                        {/* Analytics Modal */}
+                                        {showAnalytics && (
+                                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                                                <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
+                                                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                                                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                                            <Activity className="w-4 h-4 text-indigo-400" />
+                                                            Video Analytics Report
+                                                        </h3>
+                                                        <button onClick={() => setShowAnalytics(false)} className="text-white/50 hover:text-white">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                                                        {isAnalyzing && (
+                                                            <div className="flex items-center gap-3 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
+                                                                <Zap className="w-5 h-5 animate-pulse" />
+                                                                <span className="text-sm font-medium">Analyzing frames... ({analyticsData.size} / {frames.length})</span>
+                                                            </div>
+                                                        )}
+
+                                                        {!isAnalyzing && analyticsData.size > 0 && (
+                                                            <>
+                                                                {/* Summary Cards */}
+                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                                                        <p className="text-xs text-white/50 mb-1">Total Frames Analyzed</p>
+                                                                        <p className="text-2xl font-bold text-white">{analyticsData.size}</p>
+                                                                    </div>
+                                                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                                                        <p className="text-xs text-white/50 mb-1">Average Brightness</p>
+                                                                        <p className="text-2xl font-bold text-white">
+                                                                            {Math.round(Array.from(analyticsData.values()).reduce((acc, curr) => acc + curr.brightness, 0) / analyticsData.size)}
+                                                                             <span className="text-sm font-normal text-white/40 ml-1">/ 255</span>
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                                                        <p className="text-xs text-white/50 mb-1">Sharpest Frame</p>
+                                                                        <p className="text-2xl font-bold text-green-400">
+                                                                            #{Array.from(analyticsData.entries()).sort((a,b) => b[1].blurScore - a[1].blurScore)[0]?.[0]}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Blur/Quality Graph Visualization */}
+                                                                <div className="space-y-4">
+                                                                    <h4 className="text-sm font-semibold text-white/80">Quality & Blur Analysis</h4>
+                                                                    <div className="h-40 flex items-end gap-[1px] bg-black/40 rounded-lg p-2 border border-white/5 overflow-hidden">
+                                                                        {frames.map((frame) => {
+                                                                            const data = analyticsData.get(frame.index);
+                                                                            if (!data) return null;
+                                                                            // Normalize blur score for viz (usually 0-500 depending on image, clamping for display)
+                                                                            const height = Math.min(100, Math.max(5, (data.blurScore / 1000) * 100)); 
+                                                                             return (
+                                                                                <div 
+                                                                                    key={frame.index} 
+                                                                                    className="flex-1 bg-indigo-500/50 hover:bg-indigo-400 transition-colors min-w-[2px] relative group"
+                                                                                    style={{ height: `${height}%` }}
+                                                                                >
+                                                                                     <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/90 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
+                                                                                         Frame #{frame.index} - Score: {Math.round(data.blurScore)}
+                                                                                     </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    <p className="text-[10px] text-white/40 text-center">Frames (Left to Right)</p>
+                                                                </div>
+                                                                
+                                                                {/* Anomalies / Suggestions */}
+                                                                <div className="space-y-3">
+                                                                    <h4 className="text-sm font-semibold text-white/80">Suggestions</h4>
+                                                                    <div className="grid grid-cols-1 gap-2">
+                                                                         {Array.from(analyticsData.entries())
+                                                                             .filter(([_, data]) => data.blurScore < 50) // Arbitrary threshold for "Blurry"
+                                                                             .length > 0 ? (
+                                                                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+                                                                                     <div className="text-xs text-red-200">
+                                                                                         <span className="font-bold">Blurry Frames Detected:</span> {Array.from(analyticsData.entries()).filter(([_, data]) => data.blurScore < 50).length} frames appear to be blurry or low contrast.
+                                                                                     </div>
+                                                                                     <Button size="xs" variant="ghost" className="text-red-400 hover:bg-red-500/20" onClick={() => {
+                                                                                         const blurryIndices = new Set(Array.from(analyticsData.entries()).filter(([_, data]) => data.blurScore < 50).map(x => x[0]));
+                                                                                         setSelectedFrames(blurryIndices);
+                                                                                         setIsSelectionMode(true);
+                                                                                         setShowAnalytics(false);
+                                                                                     }}>Select Blurry Frames</Button>
+                                                                                 </div>
+                                                                             ) : (
+                                                                                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-xs text-green-200">
+                                                                                     No significantly blurry frames detected.
+                                                                                 </div>
+                                                                             )
+                                                                         }
+                                                                    </div>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Export Modal Overlay */}
                                         {showExportOptions && (
