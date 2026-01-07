@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, ChevronLeft, ChevronRight, Clock, Scan, List } from 'lucide-react';
+import { 
+    Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X } from 'lucide-react';
+import { FrameEditor } from './FrameEditor';
 import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
@@ -17,6 +20,7 @@ export const VideoToFrames: React.FC = () => {
     const [frames, setFrames] = useState<FrameData[]>([]);
     const [viewMode, setViewMode] = useState<'grid' | 'slide'>('grid');
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const [editingFrameIndex, setEditingFrameIndex] = useState<number | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [processingStatus, setProcessingStatus] = useState<string>('');
@@ -337,6 +341,30 @@ export const VideoToFrames: React.FC = () => {
         }
     };
 
+    const handleEditFrame = (index: number) => {
+        setEditingFrameIndex(index);
+    };
+
+    const handleSaveFrame = (blob: Blob) => {
+        if (editingFrameIndex === null) return;
+        
+        const newFrames = [...frames];
+        const frame = newFrames[editingFrameIndex];
+        
+        // Create new object for the updated frame
+        newFrames[editingFrameIndex] = {
+            ...frame,
+            blob: blob
+        };
+        
+        setFrames(newFrames);
+        setEditingFrameIndex(null);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingFrameIndex(null);
+    };
+
     const reset = () => {
         setVideoFile(null);
         setFrames([]);
@@ -346,6 +374,25 @@ export const VideoToFrames: React.FC = () => {
             fileInputRef.current.value = '';
         }
     };
+
+    if (editingFrameIndex !== null && frames[editingFrameIndex]) {
+         return (
+             <div className="h-full flex flex-col p-1">
+                 <div className="flex items-center justify-between mb-2 px-2">
+                     <h2 className="font-semibold text-foreground flex items-center gap-2">
+                         <Pencil className="w-4 h-4" /> Editing Frame #{frames[editingFrameIndex].index}
+                     </h2>
+                 </div>
+                 <div className="flex-1 overflow-hidden rounded-lg border border-border-glass shadow-xl">
+                     <FrameEditor 
+                         imageUrl={URL.createObjectURL(frames[editingFrameIndex].blob)}
+                         onSave={handleSaveFrame}
+                         onCancel={handleCancelEdit}
+                     />
+                 </div>
+             </div>
+         )
+    }
 
     return (
         <div className="h-full flex flex-col overflow-y-auto p-1">
@@ -683,12 +730,24 @@ export const VideoToFrames: React.FC = () => {
                                                             className="w-full h-full object-contain"
                                                         />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
-                                                            <span className="text-[10px] text-white font-mono">
-                                                                #{frame.index}
-                                                            </span>
-                                                            <span className="text-[10px] text-white/70 font-mono">
-                                                                {frame.timestamp.toFixed(2)}s
-                                                            </span>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] text-white font-mono">
+                                                                    #{frame.index}
+                                                                </span>
+                                                                <span className="text-[10px] text-white/70 font-mono">
+                                                                    {frame.timestamp.toFixed(2)}s
+                                                                </span>
+                                                            </div>
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEditFrame(idx);
+                                                                }}
+                                                                className="p-1.5 bg-indigo-500/80 rounded hover:bg-indigo-500 text-white transition-colors"
+                                                                title="Edit Frame"
+                                                            >
+                                                                <Pencil className="w-3 h-3" />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -712,7 +771,7 @@ export const VideoToFrames: React.FC = () => {
                                                     <button
                                                         onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
                                                         disabled={currentSlideIndex === 0}
-                                                        className="absolute left-4 p-3 rounded-full bg-black/50 text-white backdrop-blur-sm border border-white/10 hover:bg-indigo-500 hover:border-indigo-400 disabled:opacity-30 disabled:hover:bg-black/50 transition-all opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0"
+                                                        className="absolute left-4 p-3 rounded-full bg-black/50 text-white backdrop-blur-sm border border-white/10 hover:bg-indigo-500 hover:border-indigo-400 disabled:opacity-30 disabled:hover:bg-black/50 transition-all opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 cursor-pointer"
                                                     >
                                                         <ChevronLeft className="w-6 h-6" />
                                                     </button>
@@ -725,8 +784,21 @@ export const VideoToFrames: React.FC = () => {
                                                         <ChevronRight className="w-6 h-6" />
                                                     </button>
 
-                                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full text-xs text-white/80 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        Frame {frames[currentSlideIndex]?.index} ({currentSlideIndex + 1}/{frames.length})
+                                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full text-xs text-white/80 font-mono">
+                                                            Frame {frames[currentSlideIndex]?.index} ({currentSlideIndex + 1}/{frames.length})
+                                                        </div>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="primary" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditFrame(currentSlideIndex);
+                                                            }}
+                                                            icon={Pencil}
+                                                        >
+                                                            Edit
+                                                        </Button>
                                                     </div>
                                                 </div>
 
