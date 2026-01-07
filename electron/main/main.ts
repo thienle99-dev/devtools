@@ -541,8 +541,8 @@ function createWindow() {
       contextIsolation: true,
     },
     ...windowBounds,
-    minWidth: 1200, // Increased from 900
-    minHeight: 700, // Increased from 600
+    minWidth: 900, // Increased from 900
+    minHeight: 600, // Increased from 600
     show: !startMinimized, // Respect startMinimized
     // Frameless and transparent for custom UI
     frame: false,

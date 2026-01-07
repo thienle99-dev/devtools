@@ -43,6 +43,10 @@ export const VideoToFrames: React.FC = () => {
         height: number;
     } | null>(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 50;
+
     // Export & Organization State
     const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -84,6 +88,23 @@ export const VideoToFrames: React.FC = () => {
                 endTime: Math.floor(video.duration)
             }));
         };
+    };
+
+    const applyPreset = (preset: 'high' | 'web' | 'draft' | 'detailed') => {
+        switch (preset) {
+            case 'high': // PNG, Lossless, Normal FPS
+                setExtractionSettings(prev => ({ ...prev, format: 'png', fps: 1, quality: 1, detectDuplicates: false }));
+                break;
+            case 'web': // WebP, Good compression
+                setExtractionSettings(prev => ({ ...prev, format: 'webp', fps: 1, quality: 0.8, detectDuplicates: true }));
+                break;
+            case 'draft': // JPG, Low quality, Low FPS
+                setExtractionSettings(prev => ({ ...prev, format: 'jpg', fps: 0.5, quality: 0.6, detectDuplicates: false }));
+                break;
+            case 'detailed': // PNG, High FPS
+                setExtractionSettings(prev => ({ ...prev, format: 'png', fps: 5, quality: 1, detectDuplicates: false }));
+                break;
+        }
     };
 
     const calculateFrameDiff = (ctx1: CanvasRenderingContext2D, ctx2: CanvasRenderingContext2D, width: number, height: number): number => {
@@ -522,6 +543,24 @@ export const VideoToFrames: React.FC = () => {
                                         <h3 className="font-semibold text-foreground">Extraction Settings</h3>
                                     </div>
 
+                                    {/* Quality Presets */}
+                                    <div className="grid grid-cols-4 gap-2 mb-4">
+                                        {[
+                                            { id: 'high', label: 'High' },
+                                            { id: 'web', label: 'Web' },
+                                            { id: 'draft', label: 'Draft' },
+                                            { id: 'detailed', label: 'Detailed' }
+                                        ].map(preset => (
+                                            <button
+                                                key={preset.id}
+                                                onClick={() => applyPreset(preset.id as any)}
+                                                className="px-2 py-1.5 rounded-md text-xs font-medium bg-glass-panel border border-border-glass text-foreground-secondary hover:text-indigo-400 hover:border-indigo-500/50 transition-all"
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        ))}
+                                    </div>
+
                                     <div className="space-y-5">
                                         {/* Extraction Mode Tabs */}
                                         <div className="grid grid-cols-3 bg-glass-background/30 p-1 rounded-lg">
@@ -736,8 +775,17 @@ export const VideoToFrames: React.FC = () => {
                                         <div className="flex items-center justify-between">
                                             <h3 className="font-semibold text-foreground flex items-center gap-2">
                                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                                 Extracted Frames ({frames.length})
                                             </h3>
+                                            
+                                            {/* Pagination Info */}
+                                            {viewMode === 'grid' && frames.length > ITEMS_PER_PAGE && (
+                                                <span className="text-xs text-foreground-secondary ml-2">
+                                                    Page {currentPage} of {Math.ceil(frames.length / ITEMS_PER_PAGE)}
+                                                </span>
+                                            )}
+
                                             <div className="flex gap-2 items-center">
                                                 {/* Selection Controls */}
                                                 <div className="flex bg-glass-panel border border-border-glass rounded-lg p-1 mr-2 items-center gap-1">
@@ -868,62 +916,92 @@ export const VideoToFrames: React.FC = () => {
                                         </div>
 
                                         {viewMode === 'grid' ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
-                                                {frames.map((frame, idx) => (
-                                                    <div
-                                                        key={frame.index}
-                                                        className={`group relative aspect-video rounded-lg overflow-hidden border transition-all shadow-sm cursor-pointer ${
-                                                            isSelectionMode && selectedFrames.has(frame.index) 
-                                                                ? 'border-indigo-500 ring-1 ring-indigo-500/50 bg-indigo-500/10' 
-                                                                : 'border-border-glass bg-black/50 hover:border-indigo-500/50'
-                                                        }`}
-                                                        onClick={() => {
-                                                            if (isSelectionMode) {
-                                                                toggleFrameSelection(frame.index);
-                                                            } else {
-                                                                setCurrentSlideIndex(idx);
-                                                                setViewMode('slide');
-                                                            }
-                                                        }}
-                                                    >
-                                                        {isSelectionMode && (
-                                                            <div className="absolute top-2 left-2 z-20">
-                                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                                                                    selectedFrames.has(frame.index)
-                                                                        ? 'bg-indigo-500 border-indigo-500 text-white'
-                                                                        : 'bg-black/40 border-white/30 hover:border-white/60'
-                                                                }`}>
-                                                                    {selectedFrames.has(frame.index) && <CheckSquare className="w-3.5 h-3.5" />}
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                    {frames.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((frame, idx) => {
+                                                        const realIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx;
+                                                        return (
+                                                        <div
+                                                            key={frame.index}
+                                                            className={`group relative aspect-video rounded-lg overflow-hidden border transition-all shadow-sm cursor-pointer ${
+                                                                isSelectionMode && selectedFrames.has(frame.index) 
+                                                                    ? 'border-indigo-500 ring-1 ring-indigo-500/50 bg-indigo-500/10' 
+                                                                    : 'border-border-glass bg-black/50 hover:border-indigo-500/50'
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (isSelectionMode) {
+                                                                    toggleFrameSelection(frame.index);
+                                                                } else {
+                                                                    setCurrentSlideIndex(realIdx);
+                                                                    setViewMode('slide');
+                                                                }
+                                                            }}
+                                                        >
+                                                            {isSelectionMode && (
+                                                                <div className="absolute top-2 left-2 z-20">
+                                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                                                                        selectedFrames.has(frame.index)
+                                                                            ? 'bg-indigo-500 border-indigo-500 text-white'
+                                                                            : 'bg-black/40 border-white/30 hover:border-white/60'
+                                                                    }`}>
+                                                                        {selectedFrames.has(frame.index) && <CheckSquare className="w-3.5 h-3.5" />}
+                                                                    </div>
                                                                 </div>
+                                                            )}
+                                                            <img
+                                                                src={URL.createObjectURL(frame.blob)}
+                                                                alt={`Frame ${frame.index}`}
+                                                                className="w-full h-full object-contain"
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] text-white font-mono">
+                                                                        #{frame.index}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-white/70 font-mono">
+                                                                        {frame.timestamp.toFixed(2)}s
+                                                                    </span>
+                                                                </div>
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEditFrame(realIdx);
+                                                                    }}
+                                                                    className="p-1.5 bg-indigo-500/80 rounded hover:bg-indigo-500 text-white transition-colors"
+                                                                    title="Edit Frame"
+                                                                >
+                                                                    <Pencil className="w-3 h-3" />
+                                                                </button>
                                                             </div>
-                                                        )}
-                                                        <img
-                                                            src={URL.createObjectURL(frame.blob)}
-                                                            alt={`Frame ${frame.index}`}
-                                                            className="w-full h-full object-contain"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[10px] text-white font-mono">
-                                                                    #{frame.index}
-                                                                </span>
-                                                                <span className="text-[10px] text-white/70 font-mono">
-                                                                    {frame.timestamp.toFixed(2)}s
-                                                                </span>
-                                                            </div>
-                                                            <button 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEditFrame(idx);
-                                                                }}
-                                                                className="p-1.5 bg-indigo-500/80 rounded hover:bg-indigo-500 text-white transition-colors"
-                                                                title="Edit Frame"
-                                                            >
-                                                                <Pencil className="w-3 h-3" />
-                                                            </button>
                                                         </div>
+                                                    );
+                                                    })}
+                                                </div>
+                                                
+                                                {/* Pagination Controls */}
+                                                {frames.length > ITEMS_PER_PAGE && (
+                                                    <div className="flex justify-center gap-2 mt-4 pb-4">
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="secondary" 
+                                                            disabled={currentPage === 1}
+                                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                        >
+                                                            Previous
+                                                        </Button>
+                                                        <div className="flex items-center px-4 font-mono text-sm text-foreground-secondary">
+                                                            {currentPage} / {Math.ceil(frames.length / ITEMS_PER_PAGE)}
+                                                        </div>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="secondary" 
+                                                            disabled={currentPage === Math.ceil(frames.length / ITEMS_PER_PAGE)}
+                                                            onClick={() => setCurrentPage(p => Math.min(Math.ceil(frames.length / ITEMS_PER_PAGE), p + 1))}
+                                                        >
+                                                            Next
+                                                        </Button>
                                                     </div>
-                                                ))}
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="flex flex-col gap-4">
