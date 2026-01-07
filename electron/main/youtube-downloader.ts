@@ -2,6 +2,8 @@ import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import Store from 'electron-store';
+import { randomUUID } from 'crypto';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
@@ -10,7 +12,27 @@ export interface DownloadOptions {
     url: string;
     format: 'video' | 'audio' | 'best';
     quality?: string;
+    container?: string;
     outputPath?: string;
+}
+
+export interface HistoryItem {
+    id: string;
+    url: string;
+    title: string;
+    thumbnailUrl: string;
+    format: string;
+    quality: string;
+    timestamp: number;
+    path: string;
+    size: number;
+    duration: number;
+    status: 'completed' | 'failed';
+    playlistId?: string;
+}
+
+interface StoreSchema {
+    history: HistoryItem[];
 }
 
 export interface VideoFormat {
@@ -55,8 +77,13 @@ export class YouTubeDownloader {
     private binaryPath: string;
     private initPromise: Promise<void>;
     private hasAria2c: boolean = false;
+    private store: Store<StoreSchema>;
     
     constructor() {
+        this.store = new Store<StoreSchema>({
+            name: 'youtube-download-history',
+            defaults: { history: [] }
+        });
         // Set binary path in app data directory (add .exe for Windows)
         const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
         this.binaryPath = path.join(app.getPath('userData'), binaryName);
@@ -240,7 +267,7 @@ export class YouTubeDownloader {
     ): Promise<string> {
         await this.ensureInitialized();
         
-        const { url, format, quality, outputPath } = options;
+        const { url, format, quality, container, outputPath } = options;
         
         try {
             // Get video info for filename
@@ -249,7 +276,7 @@ export class YouTubeDownloader {
             
             // Determine output path
             const downloadsPath = outputPath || app.getPath('downloads');
-            const extension = format === 'audio' ? 'mp3' : 'mp4';
+            const extension = container || (format === 'audio' ? 'mp3' : 'mp4');
             const outputTemplate = path.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
             
             // Ensure directory exists
@@ -287,7 +314,7 @@ export class YouTubeDownloader {
             if (format === 'audio') {
                 args.push(
                     '-x', // Extract audio
-                    '--audio-format', 'mp3',
+                    '--audio-format', container || 'mp3',
                     '--audio-quality', quality || '0' // Use provided quality or default to best
                 );
             } else if (format === 'video') {
@@ -297,7 +324,7 @@ export class YouTubeDownloader {
                 } else {
                     args.push('-f', 'bestvideo+bestaudio/best');
                 }
-                args.push('--merge-output-format', 'mp4');
+                args.push('--merge-output-format', container || 'mp4');
             } else {
                 args.push('-f', 'best');
             }
@@ -425,6 +452,19 @@ export class YouTubeDownloader {
                                 state: 'complete'
                             });
                         }
+
+                        // Add to history
+                        this.addToHistory({
+                            url,
+                            title: info.title,
+                            thumbnailUrl: info.thumbnailUrl,
+                            format,
+                            quality: quality || (format === 'audio' ? 'best' : 'auto'),
+                            path: expectedFile,
+                            size: totalBytes,
+                            duration: info.lengthSeconds,
+                            status: 'completed'
+                        });
                         
                         resolve(expectedFile);
                     } else {
@@ -487,6 +527,31 @@ export class YouTubeDownloader {
             .replace(/\s+/g, ' ') // Replace multiple spaces with single space
             .trim()
             .substring(0, 200); // Limit length
+    }
+
+
+    /**
+     * History Methods
+     */
+    getHistory(): HistoryItem[] {
+        return this.store.get('history', []);
+    }
+
+    addToHistory(item: Omit<HistoryItem, 'id' | 'timestamp'>): void {
+        const history = this.store.get('history', []);
+        
+        const newItem: HistoryItem = {
+            ...item,
+            id: randomUUID(),
+            timestamp: Date.now()
+        };
+        
+        // Add to beginning (limit to 50 items)
+        this.store.set('history', [newItem, ...history].slice(0, 50));
+    }
+    
+    clearHistory(): void {
+        this.store.set('history', []);
     }
 }
 

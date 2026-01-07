@@ -76,10 +76,19 @@ const formatETA = (seconds: number): string => {
     return `${hours}h ${mins}m`;
 };
 
+const formatTime = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 export const YoutubeDownloader: React.FC = () => {
     const [url, setUrl] = useState('');
     const [format, setFormat] = useState<'video' | 'audio' | 'best'>('video');
     const [quality, setQuality] = useState<string>('720p');
+    const [container, setContainer] = useState<string>('mp4');
     const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({ status: 'idle' });
     const [videoInfo, setVideoInfo] = useState<VideoInfoData | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
@@ -88,6 +97,8 @@ export const YoutubeDownloader: React.FC = () => {
     const [playlistInfo, setPlaylistInfo] = useState<any | null>(null);
     const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
     const [isPlaylist, setIsPlaylist] = useState(false);
+    const [view, setView] = useState<'download' | 'history'>('download');
+    const [history, setHistory] = useState<any[]>([]);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
     const { toasts, removeToast, success, error, info } = useToast();
@@ -151,7 +162,8 @@ export const YoutubeDownloader: React.FC = () => {
             const downloadOptions: any = {
                 url,
                 format,
-                quality: format === 'audio' ? undefined : quality,
+                quality,
+                container,
             };
             
             // Use custom folder if selected
@@ -275,7 +287,8 @@ export const YoutubeDownloader: React.FC = () => {
                 const downloadOptions: any = {
                     url: video.url,
                     format,
-                    quality: format === 'audio' ? undefined : quality,
+                    quality,
+                    container,
                 };
 
                 if (downloadFolder) {
@@ -318,6 +331,103 @@ export const YoutubeDownloader: React.FC = () => {
         await (window as any).youtubeAPI.cancel();
         setDownloadStatus({ status: 'error', message: 'Download Cancelled' });
     };
+
+    const loadHistory = async () => {
+        try {
+            const data = await (window as any).youtubeAPI.getHistory();
+            setHistory(data);
+        } catch (err) {
+            console.error('Failed to load history', err);
+        }
+    };
+
+
+
+    useEffect(() => {
+        if (view === 'history') {
+            loadHistory();
+        }
+    }, [view]);
+
+    const renderHistory = () => (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-foreground-primary">Download History</h3>
+                <Button 
+                    onClick={async () => {
+                        if (confirm('Clear all history?')) {
+                            await (window as any).youtubeAPI.clearHistory();
+                            loadHistory();
+                        }
+                    }} 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                >
+                    Clear All
+                </Button>
+            </div>
+            
+            <div className="space-y-2">
+                {history.length === 0 ? (
+                    <div className="text-center py-10 text-foreground-tertiary">
+                        <p>No downloads yet.</p>
+                    </div>
+                ) : (
+                    history.map((item: any) => (
+                        <div key={item.id} className="bg-glass-panel border border-border-glass rounded-xl p-3 flex gap-4 transition-all hover:bg-white/5">
+                            {/* Thumbnail */}
+                            <div className="relative w-32 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-black/50 border border-border-glass">
+                                <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover opacity-80" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1 rounded font-mono">
+                                    {formatTime(item.duration)}
+                                </span>
+                            </div>
+                            
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                                <div>
+                                    <h4 className="font-medium text-sm text-foreground-primary truncate pr-4" title={item.title}>
+                                        {item.title}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1.5 text-xs text-foreground-tertiary font-mono">
+                                        <span className="uppercase bg-white/5 px-1.5 py-0.5 rounded border border-white/5 text-[10px]">{item.format}</span>
+                                        <span className="opacity-50">|</span>
+                                        <span>{item.quality}</span>
+                                        <span className="opacity-50">|</span>
+                                        <span>{formatBytes(item.size)}</span>
+                                        <span className="opacity-50">|</span>
+                                        <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-2 justify-end">
+                                    <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="h-7 text-xs bg-white/5 border-white/10 hover:bg-white/10" 
+                                        onClick={() => (window as any).youtubeAPI.openFile(item.path)}
+                                    >
+                                        Open
+                                    </Button>
+                                    <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        className="h-7 text-xs text-foreground-secondary hover:text-foreground" 
+                                        onClick={() => (window as any).youtubeAPI.showInFolder(item.path)}
+                                    >
+                                        <HardDrive className="w-3 h-3 mr-1" />
+                                        Folder
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
 
     const handleFetchInfo = async () => {
         if (!url.trim()) {
@@ -454,7 +564,7 @@ export const YoutubeDownloader: React.FC = () => {
             <ToastContainer toasts={toasts} onClose={removeToast} />
             
             {/* Header */}
-            <div className="px-4 py-3 border-b border-border-glass bg-glass-background/30 backdrop-blur-sm">
+            <div className="px-4 py-3 border-b border-border-glass bg-glass-background/30 backdrop-blur-sm flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-gradient-to-br from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400">
                         <Youtube className="w-4 h-4" />
@@ -463,16 +573,43 @@ export const YoutubeDownloader: React.FC = () => {
                         <h1 className="text-lg font-bold bg-gradient-to-r from-red-400 via-pink-400 to-rose-400 bg-clip-text text-transparent">
                             YouTube Video Downloader
                         </h1>
-                        <p className="text-xs text-foreground-secondary">
+                        <p className="text-xs text-foreground-secondary hidden sm:block">
                             Download videos and audio from YouTube in various formats and qualities
                         </p>
                     </div>
                 </div>
+
+                {/* View Toggle */}
+                <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
+                    <button
+                        onClick={() => setView('download')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
+                            view === 'download' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
+                        }`}
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        Download
+                    </button>
+                    <button
+                        onClick={() => setView('history')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
+                            view === 'history' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
+                        }`}
+                    >
+                        <Clock className="w-3.5 h-3.5" />
+                        History
+                    </button>
+                </div>
             </div>
+
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="max-w-4xl mx-auto space-y-6">
+                    {view === 'history' ? (
+                        renderHistory()
+                    ) : (
+                    <>
                     {/* Info Card */}
                     <Card className="p-4 bg-blue-500/5 border-blue-500/20">
                         <div className="flex gap-3">
@@ -489,7 +626,7 @@ export const YoutubeDownloader: React.FC = () => {
                     </Card>
 
                     {/* URL Input */}
-                    <Card className="p-6">
+                    <Card className="p-6 w-full">
                         <label className="block text-sm font-medium text-foreground-primary mb-2 flex items-center gap-2">
                             YouTube URL
                             {fetchingInfo && (
@@ -549,6 +686,7 @@ export const YoutubeDownloader: React.FC = () => {
                                     onClick={() => {
                                         setFormat('video');
                                         setQuality(videoInfo?.availableQualities?.[0] || '1080p');
+                                        setContainer('mp4');
                                     }}
                                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                                         format === 'video' ? 'bg-red-500/20 text-red-400' : 'text-foreground-secondary hover:text-foreground'
@@ -560,6 +698,7 @@ export const YoutubeDownloader: React.FC = () => {
                                     onClick={() => {
                                         setFormat('audio');
                                         setQuality('0');
+                                        setContainer('mp3');
                                     }}
                                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                                         format === 'audio' ? 'bg-pink-500/20 text-pink-400' : 'text-foreground-secondary hover:text-foreground'
@@ -591,6 +730,31 @@ export const YoutubeDownloader: React.FC = () => {
                             </p>
                         </div>
 
+                        {/* Format Selection */}
+                        <div className="mb-4">
+                            <label className="text-sm font-medium text-foreground-primary block mb-2 flex items-center gap-2">
+                                <FileVideo className="w-4 h-4 text-blue-400" />
+                                Output Format
+                            </label>
+                            <div className="flex gap-2 flex-wrap">
+                                {(format === 'video' ? ['mp4', 'mkv', 'webm'] : ['mp3', 'm4a', 'wav', 'flac', 'opus']).map(fmt => (
+                                    <button
+                                        key={fmt}
+                                        onClick={() => setContainer(fmt)}
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                            container === fmt 
+                                                ? format === 'video' 
+                                                    ? 'bg-red-500/20 text-red-400 border-red-500/50' 
+                                                    : 'bg-pink-500/20 text-pink-400 border-pink-500/50'
+                                                : 'bg-glass-panel text-foreground-secondary border-border-glass hover:bg-white/5 hover:text-foreground-primary'
+                                        }`}
+                                    >
+                                        {fmt.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
@@ -598,8 +762,8 @@ export const YoutubeDownloader: React.FC = () => {
                                     {format === 'video' ? 'Select Video Quality' : 'Select Audio Quality'}
                                 </label>
                                 {format === 'video' && (
-                                    <span className="text-[10px] text-foreground-tertiary bg-background-tertiary px-2 py-1 rounded-full">
-                                        MP4 (H.264)
+                                    <span className="text-[10px] text-foreground-tertiary bg-background-tertiary px-2 py-1 rounded-full font-mono">
+                                        {container ? container.toUpperCase() : 'MP4'} (H.264)
                                     </span>
                                 )}
                             </div>
@@ -630,7 +794,7 @@ export const YoutubeDownloader: React.FC = () => {
                                             '360p': 2.5, '240p': 1.5, '144p': 1
                                         };
                                         const sizeEst = lengthMB * (bitrateMap[q] || 5);
-                                        const sizeStr = sizeEst < 1024 ? `${sizeEst.toFixed(0)} MB` : `${(sizeEstimate / 1024).toFixed(1)} GB`;
+                                        const sizeStr = sizeEst < 1024 ? `${sizeEst.toFixed(0)} MB` : `${(sizeEst / 1024).toFixed(1)} GB`;
 
                                         return (
                                             <button
@@ -682,7 +846,7 @@ export const YoutubeDownloader: React.FC = () => {
                                                     {quality === opt.id && <CheckCircle2 className="w-4 h-4 text-pink-500" />}
                                                 </div>
                                                 <div className="flex justify-between items-end mt-2 px-1">
-                                                    <span className="text-[10px] font-mono opacity-60">MP3 • {opt.detail}</span>
+                                                    <span className="text-[10px] font-mono opacity-60">{(container || 'MP3').toUpperCase()} • {opt.detail}</span>
                                                     <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
                                                 </div>
                                             </button>
@@ -913,6 +1077,8 @@ export const YoutubeDownloader: React.FC = () => {
                             </div>
                         </div>
                     </Card>
+                    </>
+                )}
                 </div>
             </div>
         </div>

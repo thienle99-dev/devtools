@@ -143,6 +143,8 @@ contextBridge.exposeInMainWorld('youtubeAPI', {
   openFile: (filePath: string) => ipcRenderer.invoke('youtube:openFile', filePath),
   showInFolder: (filePath: string) => ipcRenderer.invoke('youtube:showInFolder', filePath),
   chooseFolder: () => ipcRenderer.invoke('youtube:chooseFolder'),
+  getHistory: () => ipcRenderer.invoke('youtube:getHistory'),
+  clearHistory: () => ipcRenderer.invoke('youtube:clearHistory'),
   onProgress: (callback: (progress: any) => void) => {
     const listener = (_event: any, progress: any) => callback(progress);
     ipcRenderer.on('youtube:progress', listener);

@@ -1602,6 +1602,15 @@ app.whenReady().then(() => {
     return { canceled: false, path: result.filePaths[0] };
   });
 
+  ipcMain.handle('youtube:getHistory', () => {
+    return youtubeDownloader.getHistory();
+  });
+
+  ipcMain.handle('youtube:clearHistory', () => {
+    youtubeDownloader.clearHistory();
+    return true;
+  });
+
   // Helper functions
   async function getDirSize(dirPath: string): Promise<number> {
     try {

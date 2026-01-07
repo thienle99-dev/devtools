@@ -11,6 +11,7 @@ import { createRequire } from "module";
 import fs$1 from "fs";
 import path$1 from "path";
 import Store from "electron-store";
+import { randomUUID as randomUUID$1 } from "crypto";
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
 	if (typeof require !== "undefined") return require.apply(this, arguments);
 	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
@@ -2259,6 +2260,10 @@ var YouTubeDownloader = class {
 	constructor() {
 		this.currentProcess = null;
 		this.hasAria2c = false;
+		this.store = new Store({
+			name: "youtube-download-history",
+			defaults: { history: [] }
+		});
 		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
 		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
 		this.initPromise = this.initYtDlp();
@@ -2376,12 +2381,12 @@ var YouTubeDownloader = class {
 	}
 	async downloadVideo(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, outputPath } = options;
+		const { url, format, quality, container, outputPath } = options;
 		try {
 			const info = await this.getVideoInfo(url);
 			const sanitizedTitle = this.sanitizeFilename(info.title);
 			const downloadsPath = outputPath || app.getPath("downloads");
-			const extension = format === "audio" ? "mp3" : "mp4";
+			const extension = container || (format === "audio" ? "mp3" : "mp4");
 			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
 			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
 			const args = [
@@ -2408,11 +2413,11 @@ var YouTubeDownloader = class {
 				console.log("🚀 Using aria2c for ultra-fast download!");
 				args.push("--external-downloader", "aria2c", "--external-downloader-args", "-x 16 -s 16 -k 1M --allow-overwrite=true");
 			}
-			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", quality || "0");
+			if (format === "audio") args.push("-x", "--audio-format", container || "mp3", "--audio-quality", quality || "0");
 			else if (format === "video") {
 				if (quality && quality !== "best") args.push("-f", `bestvideo[height<=${quality.replace("p", "")}]+bestaudio/best[height<=${quality.replace("p", "")}]`);
 				else args.push("-f", "bestvideo+bestaudio/best");
-				args.push("--merge-output-format", "mp4");
+				args.push("--merge-output-format", container || "mp4");
 			} else args.push("-f", "best");
 			return new Promise((resolve, reject) => {
 				let downloadedBytes = 0;
@@ -2496,6 +2501,17 @@ var YouTubeDownloader = class {
 							eta: 0,
 							state: "complete"
 						});
+						this.addToHistory({
+							url,
+							title: info.title,
+							thumbnailUrl: info.thumbnailUrl,
+							format,
+							quality: quality || (format === "audio" ? "best" : "auto"),
+							path: expectedFile,
+							size: totalBytes,
+							duration: info.lengthSeconds,
+							status: "completed"
+						});
 						resolve(expectedFile);
 					} else {
 						this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
@@ -2536,6 +2552,21 @@ var YouTubeDownloader = class {
 	}
 	sanitizeFilename(filename) {
 		return filename.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);
+	}
+	getHistory() {
+		return this.store.get("history", []);
+	}
+	addToHistory(item) {
+		const history = this.store.get("history", []);
+		const newItem = {
+			...item,
+			id: randomUUID$1(),
+			timestamp: Date.now()
+		};
+		this.store.set("history", [newItem, ...history].slice(0, 50));
+	}
+	clearHistory() {
+		this.store.set("history", []);
 	}
 };
 const youtubeDownloader = new YouTubeDownloader();
@@ -3815,6 +3846,13 @@ app.whenReady().then(() => {
 			canceled: false,
 			path: result.filePaths[0]
 		};
+	});
+	ipcMain.handle("youtube:getHistory", () => {
+		return youtubeDownloader.getHistory();
+	});
+	ipcMain.handle("youtube:clearHistory", () => {
+		youtubeDownloader.clearHistory();
+		return true;
 	});
 	async function getDirSize$1(dirPath) {
 		try {

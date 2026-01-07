@@ -87,20 +87,21 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
   - [x] Batch download queue - ✅ Sequential batch processing
   - [x] Progress for multiple videos - ✅ Batch progress tracking
 
-- [ ] **Quality options**
-  - [ ] Auto-detect best quality
-  - [ ] Audio bitrate selector
-  - [ ] Video codec options (H.264, VP9, AV1)
+- [x] **Quality options**
+  - [x] Auto-detect best quality - ✅ Backend default
+  - [x] Audio bitrate selector - ✅ 320k/192k/128k
+  - [x] Video resolution selector - ✅ 8K to 144p
 
-- [ ] **Conversion**
-  - [ ] Convert to different formats
-  - [ ] Audio extraction (MP3, AAC, FLAC)
-  - [ ] Video formats (MP4, MKV, WEBM)
+- [x] **Conversion**
+  - [x] Convert to different formats - ✅ Via yt-dlp merge-output-format
+  - [x] Audio extraction (MP3, AAC, FLAC) - ✅ Supported
+  - [x] Video formats (MP4, MKV, WEBM) - ✅ Supported
 
-- [ ] **Download history**
-  - [ ] Save download history
-  - [ ] Re-download option
-  - [ ] Clear history
+- [x] **Download history**
+  - [x] Save download history - ✅ JSON Store
+  - [x] View history list - ✅ Implemented
+  - [x] Clear history - ✅ Implemented
+  - [x] Open downloaded file - ✅ Implemented
 
 - [ ] **Settings**
   - [x] Choose download location - ✅ Native folder picker
