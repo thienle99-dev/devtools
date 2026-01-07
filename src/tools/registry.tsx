@@ -45,7 +45,10 @@ import {
     Container,
     Eraser,
     ScanLine,
-    Move
+    Move,
+    Camera,
+    Package,
+    Film
 } from 'lucide-react';
 
 
@@ -143,7 +146,10 @@ const ChmodCalculator = React.lazy(() => import('./development/ChmodCalculator')
 const DockerConverter = React.lazy(() => import('./development/DockerConverter').then(m => ({ default: m.DockerConverter })));
 const ClipboardManager = React.lazy(() => import('./utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
 const StatsMonitor = React.lazy(() => import('./utilities/stats-monitor/StatsMonitor').then(m => ({ default: m.default })));
+const ApplicationManager = React.lazy(() => import('./utilities/ApplicationManager').then(m => ({ default: m.default })));
 const SystemCleaner = React.lazy(() => import('./utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
+const Xnapper = React.lazy(() => import('./screenshot/Xnapper'));
+const VideoFrames = React.lazy(() => import('./media/VideoFrames'));
 const SettingsPage = React.lazy(() => import('../pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -760,6 +766,17 @@ export const TOOLS: ToolDefinition[] = [
         shortcut: 'Ctrl+Shift+M'
     },
     {
+        id: 'application-manager',
+        name: 'Application Manager',
+        path: '/application-manager',
+        description: 'Manage installed applications and running processes',
+        category: 'utilities',
+        icon: Package,
+        color: 'text-blue-500',
+        component: ApplicationManager,
+        keywords: ['apps', 'processes', 'uninstall', 'cleanup', 'task manager', 'system apps'],
+    },
+    {
         id: 'system-cleaner',
         name: 'System Cleaner',
         path: '/system-cleaner',
@@ -769,6 +786,29 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-rose-500',
         component: SystemCleaner,
         keywords: ['cleaner', 'junk', 'optimization', 'malware', 'protection', 'maintenance', 'system'],
+    },
+    {
+        id: 'xnapper',
+        name: 'Screenshot Tool',
+        path: '/xnapper',
+        description: 'Capture, enhance, and export beautiful screenshots',
+        category: 'utilities',
+        icon: Camera,
+        color: 'text-purple-500',
+        component: Xnapper,
+        keywords: ['screenshot', 'capture', 'screen', 'image', 'xnapper', 'snap'],
+        shortcut: 'Ctrl+Shift+S'
+    },
+    {
+        id: 'video-frames',
+        name: 'Video Frame Tools',
+        path: '/video-frames',
+        description: 'Extract frames from videos or create videos from images',
+        category: 'utilities',
+        icon: Film,
+        color: 'text-pink-500',
+        component: VideoFrames,
+        keywords: ['video', 'frames', 'extract', 'frames to video', 'animation', 'screen record', 'gif'],
     },
 
     // Settings (Special tool - not in any category)

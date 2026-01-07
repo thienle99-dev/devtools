@@ -101,3 +101,4 @@ coverage
 
 # Yarn Integrity file
 .yarn-integrity
+/video

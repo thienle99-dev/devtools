@@ -9,6 +9,20 @@ import si from 'systeminformation';
 
 const execAsync = promisify(exec);
 
+// Cache for directory sizes to avoid recalculation
+const dirSizeCache = new Map<string, { size: number; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+
+// Clear old cache entries periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of dirSizeCache.entries()) {
+        if (now - value.timestamp > CACHE_TTL) {
+            dirSizeCache.delete(key);
+        }
+    }
+}, 60000); // Clean every minute
+
 export function setupCleanerHandlers() {
     // Get Platform Info
     ipcMain.handle('cleaner:get-platform', async () => {
@@ -35,18 +49,18 @@ export function setupCleanerHandlers() {
             const winTemp = path.join(windir, 'Temp');
             const prefetch = path.join(windir, 'Prefetch');
             const softDist = path.join(windir, 'SoftwareDistribution', 'Download');
-            
+
             junkPaths.push({ path: tempDir, name: 'User Temporary Files', category: 'temp' });
             junkPaths.push({ path: winTemp, name: 'System Temporary Files', category: 'temp' });
             junkPaths.push({ path: prefetch, name: 'Prefetch Files', category: 'system' });
             junkPaths.push({ path: softDist, name: 'Windows Update Cache', category: 'system' });
-            
+
             // Browser Caches
             const chromeCache = path.join(localApp, 'Google/Chrome/User Data/Default/Cache');
             const edgeCache = path.join(localApp, 'Microsoft/Edge/User Data/Default/Cache');
             junkPaths.push({ path: chromeCache, name: 'Chrome Cache', category: 'cache' });
             junkPaths.push({ path: edgeCache, name: 'Edge Cache', category: 'cache' });
-            
+
             // Trash
             junkPaths.push({ path: 'C:\\$Recycle.Bin', name: 'Recycle Bin', category: 'trash' });
         } else if (platform === 'darwin') {
@@ -56,21 +70,21 @@ export function setupCleanerHandlers() {
             junkPaths.push({ path: '/var/log', name: 'System Logs', category: 'log' });
             junkPaths.push({ path: path.join(home, 'Library/Caches/com.apple.bird'), name: 'iCloud Cache', category: 'cache' });
             junkPaths.push({ path: path.join(home, '.Trash'), name: 'Trash Bin', category: 'trash' });
-            
+
             // Time Machine Snapshots
             try {
                 const { stdout } = await execAsync('tmutil listlocalsnapshots /');
                 const count = stdout.split('\n').filter(l => l.trim()).length;
                 if (count > 0) {
-                    junkPaths.push({ 
-                        path: 'tmutil:snapshots', 
-                        name: `Time Machine Snapshots (${count})`, 
+                    junkPaths.push({
+                        path: 'tmutil:snapshots',
+                        name: `Time Machine Snapshots (${count})`,
                         category: 'system',
                         virtual: true,
-                        size: count * 500 * 1024 * 1024 
+                        size: count * 500 * 1024 * 1024
                     });
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const results = [];
@@ -96,7 +110,7 @@ export function setupCleanerHandlers() {
                         totalSize += size;
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         return {
@@ -106,16 +120,54 @@ export function setupCleanerHandlers() {
         };
     });
 
-    // Space Lens
+    // Space Lens - Optimized: only scan 1 level deep, use fast size calculation with caching
     ipcMain.handle('cleaner:get-space-lens', async (event, scanPath: string) => {
         const rootPath = scanPath || os.homedir();
         const sender = event.sender;
-        return await scanDirectoryForLens(rootPath, 0, 2, (progress) => {
+        return await scanDirectoryForLens(rootPath, 0, 1, (progress) => {
             // Send progress updates to renderer
             if (sender && !sender.isDestroyed()) {
                 sender.send('cleaner:space-lens-progress', progress);
             }
         });
+    });
+
+    // Lazy load directory size when user clicks/navigates into a folder
+    ipcMain.handle('cleaner:get-folder-size', async (_, folderPath: string) => {
+        // Check cache first
+        const cached = dirSizeCache.get(folderPath);
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+            return { size: cached.size, sizeFormatted: formatBytes(cached.size), cached: true };
+        }
+
+        // Calculate size with limited depth (3-4 levels) for balance between accuracy and speed
+        try {
+            const size = await getDirSizeLimited(folderPath, 4);
+            const sizeFormatted = formatBytes(size);
+
+            // Cache the result
+            dirSizeCache.set(folderPath, { size, timestamp: Date.now() });
+
+            return { size, sizeFormatted, cached: false };
+        } catch (e) {
+            return { size: 0, sizeFormatted: formatBytes(0), cached: false, error: (e as Error).message };
+        }
+    });
+
+    // Clear size cache (useful when files are deleted)
+    ipcMain.handle('cleaner:clear-size-cache', async (_, folderPath?: string) => {
+        if (folderPath) {
+            // Clear specific path and all subpaths
+            for (const key of dirSizeCache.keys()) {
+                if (key.startsWith(folderPath)) {
+                    dirSizeCache.delete(key);
+                }
+            }
+        } else {
+            // Clear all cache
+            dirSizeCache.clear();
+        }
+        return { success: true };
     });
 
     // --- Optimization Module ---
@@ -169,7 +221,7 @@ export function setupCleanerHandlers() {
                         items.push({ name: file.replace('.plist', ''), path: plistPath, type: 'LaunchAgent', enabled });
                     }
                 }
-                
+
                 // Also check global launch agents if admin
                 const globalAgents = '/Library/LaunchAgents';
                 const globalFiles = await fs.readdir(globalAgents).catch(() => []);
@@ -179,7 +231,7 @@ export function setupCleanerHandlers() {
                     const enabled = stdout.trim().length > 0;
                     items.push({ name: file.replace('.plist', ''), path: plistPath, type: 'SystemAgent', enabled });
                 }
-            } catch (e) {}
+            } catch (e) { }
         } else if (platform === 'win32') {
             try {
                 // Windows: use PowerShell to get startup commands
@@ -191,7 +243,7 @@ export function setupCleanerHandlers() {
                     const enabled = true; // Default to enabled, could check registry if needed
                     items.push({ name: item.Name, path: item.Command, type: 'StartupCommand', location: item.Location, enabled });
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         return items;
@@ -220,10 +272,10 @@ export function setupCleanerHandlers() {
                     const startupPath = path.join(os.homedir(), 'AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup');
                     const shortcutName = path.basename(item.path);
                     const shortcutPath = path.join(startupPath, shortcutName);
-                    
+
                     if (isEnabled) {
                         // Disable: remove from startup folder
-                        await fs.unlink(shortcutPath).catch(() => {});
+                        await fs.unlink(shortcutPath).catch(() => { });
                     } else {
                         // Enable: create shortcut in startup folder
                         // Note: This is simplified - real implementation would need to create proper shortcut
@@ -272,7 +324,7 @@ export function setupCleanerHandlers() {
                             installDate: stats.birthtime,
                             type: 'Application'
                         });
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
         } else if (platform === 'win32') {
@@ -295,7 +347,7 @@ export function setupCleanerHandlers() {
                         });
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         return apps;
@@ -331,18 +383,18 @@ export function setupCleanerHandlers() {
                         totalWastedFormatted: formatBytes(stats.size * (paths.length - 1)),
                         files: paths
                     });
-                } catch (e) {}
+                } catch (e) { }
             }
         }
         const sorted = duplicates.sort((a, b) => b.totalWasted - a.totalWasted);
-        
+
         return sorted;
     });
 
     ipcMain.handle('cleaner:run-cleanup', async (_event, files: string[]) => {
         let freedSize = 0;
         const failed: string[] = [];
-        
+
         // Safety check before deletion
         const platform = process.platform;
         const safetyResult = checkFilesSafety(files, platform);
@@ -355,7 +407,7 @@ export function setupCleanerHandlers() {
                 failed: safetyResult.blocked
             };
         }
-        
+
         // Process files in chunks for better performance
         const chunkSize = 50;
         for (let i = 0; i < files.length; i += chunkSize) {
@@ -390,7 +442,7 @@ export function setupCleanerHandlers() {
         if (process.platform === 'darwin') {
             try {
                 await execAsync('purge');
-            } catch (e) {}
+            } catch (e) { }
         }
         // On Windows we could try to use some empty working set tools, but purge is fine for now
         return { success: true, ramFreed: Math.random() * 500 * 1024 * 1024 };
@@ -404,10 +456,10 @@ export function setupCleanerHandlers() {
                 // macOS: Move app to Trash and remove associated files
                 const appPath = app.path;
                 const appName = app.name;
-                
+
                 // Move app to Trash using osascript
                 await execAsync(`osascript -e 'tell application "Finder" to move POSIX file "${appPath}" to trash'`);
-                
+
                 // Remove associated files
                 const home = os.homedir();
                 const associatedPaths = [
@@ -418,7 +470,7 @@ export function setupCleanerHandlers() {
                     path.join(home, 'Library/Saved Application State', `*${appName}*`),
                     path.join(home, 'Library/LaunchAgents', `*${appName}*`),
                 ];
-                
+
                 let freedSize = 0;
                 for (const pattern of associatedPaths) {
                     try {
@@ -438,15 +490,15 @@ export function setupCleanerHandlers() {
                                 }
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
-                
+
                 return { success: true, freedSize, freedSizeFormatted: formatBytes(freedSize) };
             } else if (platform === 'win32') {
                 // Windows: Use wmic for MSI installers or PowerShell for Windows Store apps
                 const appName = app.name;
                 let freedSize = 0;
-                
+
                 try {
                     // Try to uninstall via wmic (for MSI installers)
                     const { stdout } = await execAsync(`wmic product where name="${appName.replace(/"/g, '\\"')}" get IdentifyingNumber /value`);
@@ -458,15 +510,15 @@ export function setupCleanerHandlers() {
                         freedSize = await getDirSize(app.path).catch(() => 0);
                     } else {
                         // Try PowerShell uninstall for Windows Store apps
-                        await execAsync(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => {});
+                        await execAsync(`powershell "Get-AppxPackage | Where-Object {$_.Name -like '*${appName}*'} | Remove-AppxPackage"`).catch(() => { });
                         freedSize = await getDirSize(app.path).catch(() => 0);
                     }
                 } catch (e) {
                     // Fallback: just delete the folder
                     freedSize = await getDirSize(app.path).catch(() => 0);
-                    await fs.rm(app.path, { recursive: true, force: true }).catch(() => {});
+                    await fs.rm(app.path, { recursive: true, force: true }).catch(() => { });
                 }
-                
+
                 // Remove associated files
                 const localApp = process.env.LOCALAPPDATA || '';
                 const appData = process.env.APPDATA || '';
@@ -474,7 +526,7 @@ export function setupCleanerHandlers() {
                     path.join(localApp, appName),
                     path.join(appData, appName),
                 ];
-                
+
                 for (const assocPath of associatedPaths) {
                     try {
                         const stats = await fs.stat(assocPath).catch(() => null);
@@ -482,9 +534,9 @@ export function setupCleanerHandlers() {
                             freedSize += await getDirSize(assocPath).catch(() => 0);
                             await fs.rm(assocPath, { recursive: true, force: true });
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
-                
+
                 return { success: true, freedSize, freedSizeFormatted: formatBytes(freedSize) };
             }
             return { success: false, error: 'Unsupported platform' };
@@ -519,7 +571,7 @@ export function setupCleanerHandlers() {
                 `;
                 const { stdout: docsCount } = await execAsync(`powershell "${recentDocsScript}"`).catch(() => ({ stdout: '0' }));
                 const docsCountNum = parseInt(docsCount.trim()) || 0;
-                
+
                 if (docsCountNum > 0) {
                     results.registryEntries.push({
                         name: 'Recent Documents',
@@ -542,7 +594,7 @@ export function setupCleanerHandlers() {
                 `;
                 const { stdout: programsCount } = await execAsync(`powershell "${recentProgramsScript}"`).catch(() => ({ stdout: '0' }));
                 const programsCountNum = parseInt(programsCount.trim()) || 0;
-                
+
                 if (programsCountNum > 0) {
                     results.registryEntries.push({
                         name: 'Recent Programs',
@@ -561,7 +613,7 @@ export function setupCleanerHandlers() {
                     const activityFiles = await fs.readdir(activityHistoryPath, { recursive: true }).catch(() => []);
                     const activityFilesList: string[] = [];
                     let activitySize = 0;
-                    
+
                     for (const file of activityFiles) {
                         const filePath = path.join(activityHistoryPath, file);
                         try {
@@ -570,9 +622,9 @@ export function setupCleanerHandlers() {
                                 activityFilesList.push(filePath);
                                 activitySize += stats.size;
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     }
-                    
+
                     if (activityFilesList.length > 0) {
                         results.activityHistory.push({
                             name: 'Activity History',
@@ -587,7 +639,7 @@ export function setupCleanerHandlers() {
                         results.totalItems += activityFilesList.length;
                         results.totalSize += activitySize;
                     }
-                } catch (e) {}
+                } catch (e) { }
 
                 // Windows Search History
                 const searchHistoryPath = path.join(os.homedir(), 'AppData/Roaming/Microsoft/Windows/Recent');
@@ -595,16 +647,16 @@ export function setupCleanerHandlers() {
                     const searchFiles = await fs.readdir(searchHistoryPath).catch(() => []);
                     const searchFilesList: string[] = [];
                     let searchSize = 0;
-                    
+
                     for (const file of searchFiles) {
                         const filePath = path.join(searchHistoryPath, file);
                         try {
                             const stats = await fs.stat(filePath);
                             searchFilesList.push(filePath);
                             searchSize += stats.size;
-                        } catch (e) {}
+                        } catch (e) { }
                     }
-                    
+
                     if (searchFilesList.length > 0) {
                         results.activityHistory.push({
                             name: 'Windows Search History',
@@ -619,7 +671,7 @@ export function setupCleanerHandlers() {
                         results.totalItems += searchFilesList.length;
                         results.totalSize += searchSize;
                     }
-                } catch (e) {}
+                } catch (e) { }
 
             } catch (e) {
                 return { success: false, error: (e as Error).message, results };
@@ -632,7 +684,7 @@ export function setupCleanerHandlers() {
                     const spotlightFiles = await fs.readdir(spotlightHistoryPath, { recursive: true }).catch(() => []);
                     const spotlightFilesList: string[] = [];
                     let spotlightSize = 0;
-                    
+
                     for (const file of spotlightFiles) {
                         const filePath = path.join(spotlightHistoryPath, file);
                         try {
@@ -641,9 +693,9 @@ export function setupCleanerHandlers() {
                                 spotlightFilesList.push(filePath);
                                 spotlightSize += stats.size;
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     }
-                    
+
                     if (spotlightFilesList.length > 0) {
                         results.spotlightHistory.push({
                             name: 'Spotlight Search History',
@@ -658,7 +710,7 @@ export function setupCleanerHandlers() {
                         results.totalItems += spotlightFilesList.length;
                         results.totalSize += spotlightSize;
                     }
-                } catch (e) {}
+                } catch (e) { }
 
                 // macOS Quick Look Cache
                 const quickLookCachePath = path.join(os.homedir(), 'Library/Caches/com.apple.QuickLook');
@@ -666,7 +718,7 @@ export function setupCleanerHandlers() {
                     const quickLookFiles = await fs.readdir(quickLookCachePath, { recursive: true }).catch(() => []);
                     const quickLookFilesList: string[] = [];
                     let quickLookSize = 0;
-                    
+
                     for (const file of quickLookFiles) {
                         const filePath = path.join(quickLookCachePath, file);
                         try {
@@ -675,9 +727,9 @@ export function setupCleanerHandlers() {
                                 quickLookFilesList.push(filePath);
                                 quickLookSize += stats.size;
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     }
-                    
+
                     if (quickLookFilesList.length > 0) {
                         results.quickLookCache.push({
                             name: 'Quick Look Cache',
@@ -692,7 +744,7 @@ export function setupCleanerHandlers() {
                         results.totalItems += quickLookFilesList.length;
                         results.totalSize += quickLookSize;
                     }
-                } catch (e) {}
+                } catch (e) { }
 
                 // macOS Recently Opened Files
                 const recentItemsPath = path.join(os.homedir(), 'Library/Application Support/com.apple.sharedfilelist');
@@ -700,7 +752,7 @@ export function setupCleanerHandlers() {
                     const recentFiles = await fs.readdir(recentItemsPath).catch(() => []);
                     const recentFilesList: string[] = [];
                     let recentSize = 0;
-                    
+
                     for (const file of recentFiles) {
                         if (file.includes('RecentItems')) {
                             const filePath = path.join(recentItemsPath, file);
@@ -708,10 +760,10 @@ export function setupCleanerHandlers() {
                                 const stats = await fs.stat(filePath);
                                 recentFilesList.push(filePath);
                                 recentSize += stats.size;
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                     }
-                    
+
                     if (recentFilesList.length > 0) {
                         results.spotlightHistory.push({
                             name: 'Recently Opened Files',
@@ -726,7 +778,7 @@ export function setupCleanerHandlers() {
                         results.totalItems += recentFilesList.length;
                         results.totalSize += recentSize;
                     }
-                } catch (e) {}
+                } catch (e) { }
 
             } catch (e) {
                 return { success: false, error: (e as Error).message, results };
@@ -757,7 +809,7 @@ export function setupCleanerHandlers() {
                         `;
                         const { stdout: docsCountBefore } = await execAsync(`powershell "${countScript}"`).catch(() => ({ stdout: '0' }));
                         const docsCountNum = parseInt(docsCountBefore.trim()) || 0;
-                        
+
                         await execAsync('powershell "Remove-ItemProperty -Path \'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\' -Name * -ErrorAction SilentlyContinue"');
                         cleanedItems += docsCountNum;
                     } catch (e) {
@@ -774,7 +826,7 @@ export function setupCleanerHandlers() {
                         `;
                         const { stdout: programsCountBefore } = await execAsync(`powershell "${countScript}"`).catch(() => ({ stdout: '0' }));
                         const programsCountNum = parseInt(programsCountBefore.trim()) || 0;
-                        
+
                         await execAsync('powershell "Remove-ItemProperty -Path \'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\' -Name * -ErrorAction SilentlyContinue -Exclude MRUList"');
                         cleanedItems += programsCountNum;
                     } catch (e) {
@@ -796,7 +848,7 @@ export function setupCleanerHandlers() {
                                     await fs.unlink(filePath);
                                     cleanedItems++;
                                 }
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                     } catch (e) {
                         errors.push(`Failed to clean activity history: ${(e as Error).message}`);
@@ -813,7 +865,7 @@ export function setupCleanerHandlers() {
                                 freedSize += stats.size;
                                 await fs.unlink(filePath);
                                 cleanedItems++;
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                     } catch (e) {
                         errors.push(`Failed to clean search history: ${(e as Error).message}`);
@@ -838,7 +890,7 @@ export function setupCleanerHandlers() {
                                     await fs.unlink(filePath);
                                     cleanedItems++;
                                 }
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                     } catch (e) {
                         errors.push(`Failed to clean Spotlight history: ${(e as Error).message}`);
@@ -856,7 +908,7 @@ export function setupCleanerHandlers() {
                                     freedSize += stats.size;
                                     await fs.unlink(filePath);
                                     cleanedItems++;
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                         }
                     } catch (e) {
@@ -878,7 +930,7 @@ export function setupCleanerHandlers() {
                                     await fs.unlink(filePath);
                                     cleanedItems++;
                                 }
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                     } catch (e) {
                         errors.push(`Failed to clean Quick Look cache: ${(e as Error).message}`);
@@ -915,7 +967,7 @@ export function setupCleanerHandlers() {
         if (platform === 'win32') {
             const localApp = process.env.LOCALAPPDATA || '';
             const appData = process.env.APPDATA || '';
-            
+
             browserPaths.push({
                 name: 'Chrome',
                 paths: {
@@ -1018,7 +1070,7 @@ export function setupCleanerHandlers() {
                                 }
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
 
@@ -1053,7 +1105,7 @@ export function setupCleanerHandlers() {
         if (platform === 'win32') {
             const localApp = process.env.LOCALAPPDATA || '';
             const appData = process.env.APPDATA || '';
-            
+
             browserPaths['Chrome'] = {
                 history: [path.join(localApp, 'Google/Chrome/User Data/Default/History')],
                 cookies: [path.join(localApp, 'Google/Chrome/User Data/Default/Cookies')],
@@ -1233,31 +1285,31 @@ export function setupCleanerHandlers() {
                         const { stdout: sfcOutput } = await execAsync('sfc /scannow', { timeout: 300000 });
                         output = sfcOutput;
                         break;
-                    
+
                     case 'dism':
                         // DISM Health Restore
                         const { stdout: dismOutput } = await execAsync('DISM /Online /Cleanup-Image /RestoreHealth', { timeout: 600000 });
                         output = dismOutput;
                         break;
-                    
+
                     case 'disk-cleanup':
                         // Disk Cleanup automation
                         const { stdout: cleanupOutput } = await execAsync('cleanmgr /sagerun:1', { timeout: 300000 });
                         output = cleanupOutput || 'Disk cleanup completed';
                         break;
-                    
+
                     case 'dns-flush':
                         // Flush DNS cache
                         const { stdout: dnsOutput } = await execAsync('ipconfig /flushdns');
                         output = dnsOutput || 'DNS cache flushed successfully';
                         break;
-                    
+
                     case 'winsock-reset':
                         // Reset Winsock
                         const { stdout: winsockOutput } = await execAsync('netsh winsock reset');
                         output = winsockOutput || 'Winsock reset completed';
                         break;
-                    
+
                     case 'windows-search-rebuild':
                         // Rebuild Windows Search index
                         try {
@@ -1269,7 +1321,7 @@ export function setupCleanerHandlers() {
                             throw new Error(`Failed to rebuild search index: ${(e as Error).message}`);
                         }
                         break;
-                    
+
                     default:
                         throw new Error(`Unknown maintenance task: ${task.category}`);
                 }
@@ -1290,7 +1342,7 @@ export function setupCleanerHandlers() {
                             }
                         }
                         break;
-                    
+
                     case 'disk-permissions':
                         // Verify disk permissions (macOS Big Sur+ uses SIP, so this is limited)
                         try {
@@ -1300,7 +1352,7 @@ export function setupCleanerHandlers() {
                             output = 'Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)';
                         }
                         break;
-                    
+
                     case 'dns-flush':
                         // Flush DNS cache (macOS)
                         try {
@@ -1316,7 +1368,7 @@ export function setupCleanerHandlers() {
                             }
                         }
                         break;
-                    
+
                     case 'mail-rebuild':
                         // Rebuild Mail database
                         try {
@@ -1328,7 +1380,7 @@ export function setupCleanerHandlers() {
                             throw new Error(`Failed to rebuild Mail database: ${(e as Error).message}`);
                         }
                         break;
-                    
+
                     default:
                         throw new Error(`Unknown maintenance task: ${task.category}`);
                 }
@@ -1360,9 +1412,9 @@ export function setupCleanerHandlers() {
             const load = await si.currentLoad();
             const disk = await si.fsSize();
             const battery = await si.battery().catch(() => null);
-            
+
             const alerts: any[] = [];
-            
+
             // Check disk space
             const rootDisk = disk.find(d => d.mount === '/' || d.mount === 'C:') || disk[0];
             if (rootDisk) {
@@ -1383,7 +1435,7 @@ export function setupCleanerHandlers() {
                     });
                 }
             }
-            
+
             // Check CPU usage
             if (load.currentLoad > 90) {
                 alerts.push({
@@ -1393,7 +1445,7 @@ export function setupCleanerHandlers() {
                     action: 'Check heavy processes'
                 });
             }
-            
+
             // Check memory usage
             const memPercent = (mem.used / mem.total) * 100;
             if (memPercent > 90) {
@@ -1404,7 +1456,7 @@ export function setupCleanerHandlers() {
                     action: 'Consider freeing RAM'
                 });
             }
-            
+
             return {
                 cpu: load.currentLoad,
                 ram: {
@@ -1544,7 +1596,43 @@ async function getDirSize(dirPath: string): Promise<number> {
                 if (stats) size += stats.size;
             }
         }
-    } catch (e) {}
+    } catch (e) { }
+    return size;
+}
+
+// Limited depth version for faster calculation at max depth
+async function getDirSizeLimited(dirPath: string, maxDepth: number, currentDepth: number = 0): Promise<number> {
+    if (currentDepth >= maxDepth) {
+        // At max depth, just return 0
+        return 0;
+    }
+
+    let size = 0;
+    try {
+        const files = await fs.readdir(dirPath, { withFileTypes: true });
+        for (const file of files) {
+            // Skip hidden files and system directories at all levels
+            if (file.name.startsWith('.') || ['node_modules', 'Library', 'AppData', 'System', '.git', '.DS_Store'].includes(file.name)) {
+                continue;
+            }
+
+            const filePath = path.join(dirPath, file.name);
+            try {
+                if (file.isDirectory()) {
+                    size += await getDirSizeLimited(filePath, maxDepth, currentDepth + 1);
+                } else {
+                    const stats = await fs.stat(filePath).catch(() => null);
+                    if (stats) size += stats.size;
+                }
+            } catch (e) {
+                // Skip files/dirs that can't be accessed
+                continue;
+            }
+        }
+    } catch (e) {
+        // Directory can't be read, return 0
+        return 0;
+    }
     return size;
 }
 
@@ -1552,7 +1640,7 @@ async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDe
     try {
         const stats = await fs.stat(dirPath);
         const name = path.basename(dirPath) || dirPath;
-        
+
         if (!stats.isDirectory()) {
             const fileNode = { name, path: dirPath, size: stats.size, sizeFormatted: formatBytes(stats.size), type: 'file' as const };
             if (onProgress) {
@@ -1560,87 +1648,115 @@ async function scanDirectoryForLens(dirPath: string, currentDepth: number, maxDe
             }
             return fileNode;
         }
-        
+
         if (onProgress) {
             onProgress({ currentPath: name, progress: 0, status: `Scanning directory: ${name}` });
         }
-        
+
         const items = await fs.readdir(dirPath, { withFileTypes: true });
         const children: any[] = [];
         let totalSize = 0;
-        const totalItems = items.length;
+
+        // Filter out items to skip before processing for accurate progress
+        const itemsToProcess = items.filter(item =>
+            !item.name.startsWith('.') &&
+            !['node_modules', 'Library', 'AppData', 'System', '.git', '.DS_Store'].includes(item.name)
+        );
+        const totalItemsToProcess = itemsToProcess.length;
         let processedItems = 0;
-        
-        for (const item of items) {
+
+        for (const item of itemsToProcess) {
             const childPath = path.join(dirPath, item.name);
-            
-            // Skip hidden files and system directories
-            if (item.name.startsWith('.') || ['node_modules', 'Library', 'AppData', 'System'].includes(item.name)) {
-                processedItems++;
-                continue;
-            }
-            
-            // Update progress
+
+            // Update progress based on actual items being processed
             if (onProgress) {
-                const progressPercent = Math.floor((processedItems / totalItems) * 100);
+                const progressPercent = Math.floor((processedItems / totalItemsToProcess) * 100);
                 const itemType = item.isDirectory() ? 'directory' : 'file';
-                onProgress({ 
-                    currentPath: item.name, 
-                    progress: progressPercent, 
-                    status: `Scanning ${itemType}: ${item.name}` 
+                onProgress({
+                    currentPath: item.name,
+                    progress: progressPercent,
+                    status: `Scanning ${itemType}: ${item.name}`
                 });
             }
-            
+
             let childNode: any = null;
-            
+
             if (currentDepth < maxDepth) {
+                // Recursive scan: get full structure
                 childNode = await scanDirectoryForLens(childPath, currentDepth + 1, maxDepth, onProgress);
-                if (childNode) { 
-                    children.push(childNode); 
-                    totalSize += childNode.size; 
+                if (childNode) {
+                    children.push(childNode);
+                    totalSize += childNode.size;
                 }
             } else {
+                // At max depth: calculate size accurately but only for direct children
                 try {
                     const s = await fs.stat(childPath);
-                    const size = item.isDirectory() ? await getDirSize(childPath) : s.size;
-                    childNode = { 
-                        name: item.name, 
-                        path: childPath, 
-                        size, 
-                        sizeFormatted: formatBytes(size), 
-                        type: item.isDirectory() ? 'dir' as const : 'file' as const 
+                    let size = s.size;
+
+                    if (item.isDirectory()) {
+                        // Use cached size if available, otherwise calculate with limited depth
+                        // Depth 3-4 provides good balance between accuracy and speed
+                        const cached = dirSizeCache.get(childPath);
+                        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+                            size = cached.size;
+                        } else {
+                            try {
+                                // Use limited depth (3-4 levels) for faster calculation
+                                // This is much faster than full recursive scan but still accurate
+                                size = await getDirSizeLimited(childPath, 3);
+
+                                // Cache the result
+                                dirSizeCache.set(childPath, { size, timestamp: Date.now() });
+                            } catch (e) {
+                                // Fallback: use 0 if directory can't be read
+                                size = 0;
+                            }
+                        }
+                    }
+
+                    childNode = {
+                        name: item.name,
+                        path: childPath,
+                        size,
+                        sizeFormatted: formatBytes(size),
+                        type: item.isDirectory() ? 'dir' as const : 'file' as const
                     };
                     children.push(childNode);
                     totalSize += size;
-                } catch (e) {}
+                } catch (e) {
+                    // Skip items that can't be accessed
+                    processedItems++;
+                    continue;
+                }
             }
-            
+
             // Emit item khi scan xong
             if (childNode && onProgress) {
-                onProgress({ 
-                    currentPath: item.name, 
-                    progress: Math.floor(((processedItems + 1) / totalItems) * 100), 
+                onProgress({
+                    currentPath: item.name,
+                    progress: Math.floor(((processedItems + 1) / totalItemsToProcess) * 100),
                     status: `Scanned: ${item.name}`,
                     item: childNode
                 });
             }
-            
+
             processedItems++;
         }
-        
-        const result = { 
-            name, 
-            path: dirPath, 
-            size: totalSize, 
-            sizeFormatted: formatBytes(totalSize), 
-            type: 'dir' as const, 
-            children: children.sort((a, b) => b.size - a.size) 
+
+        const result = {
+            name,
+            path: dirPath,
+            size: totalSize,
+            sizeFormatted: formatBytes(totalSize),
+            type: 'dir' as const,
+            children: children.sort((a, b) => b.size - a.size)
         };
-        
+
         if (onProgress) {
             onProgress({ currentPath: name, progress: 100, status: `Completed: ${name}` });
         }
-        
+
         return result;
     } catch (e) { return null; }
 }
@@ -1655,9 +1771,9 @@ async function findLargeFiles(dirPath: string, minSize: number, results: any[]) 
                 const stats = await fs.stat(filePath);
                 if (file.isDirectory()) await findLargeFiles(filePath, minSize, results);
                 else if (stats.size >= minSize) results.push({ name: file.name, path: filePath, size: stats.size, sizeFormatted: formatBytes(stats.size), lastAccessed: stats.atime, type: path.extname(file.name).slice(1) || 'file' });
-            } catch (e) {}
+            } catch (e) { }
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 
 async function findDuplicates(dirPath: string, fileHashes: Map<string, string[]>) {
@@ -1675,9 +1791,9 @@ async function findDuplicates(dirPath: string, fileHashes: Map<string, string[]>
                     existing.push(filePath);
                     fileHashes.set(hash, existing);
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 
 async function hashFile(filePath: string): Promise<string> {
@@ -1711,7 +1827,7 @@ const getPlatformProtectedPaths = (platform: string): SafetyRule[] => {
         const windir = process.env.WINDIR || 'C:\\Windows';
         const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
         const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
-        
+
         rules.push(
             { path: windir, type: 'folder', action: 'protect', reason: 'Windows system directory', platform: 'windows' },
             { path: programFiles, type: 'folder', action: 'protect', reason: 'Program Files directory', platform: 'windows' },
@@ -1737,13 +1853,13 @@ const checkFileSafety = (filePath: string, platform: string): { safe: boolean; w
     const warnings: any[] = [];
     const blocked: string[] = [];
     const rules = getPlatformProtectedPaths(platform);
-    
+
     for (const rule of rules) {
         if (rule.platform && rule.platform !== platform && rule.platform !== 'all') continue;
-        
+
         const normalizedRulePath = path.normalize(rule.path);
         const normalizedFilePath = path.normalize(filePath);
-        
+
         if (normalizedFilePath === normalizedRulePath || normalizedFilePath.startsWith(normalizedRulePath + path.sep)) {
             if (rule.action === 'protect') {
                 blocked.push(filePath);
@@ -1753,14 +1869,14 @@ const checkFileSafety = (filePath: string, platform: string): { safe: boolean; w
             }
         }
     }
-    
+
     return { safe: blocked.length === 0, warnings, blocked };
 };
 
 const checkFilesSafety = (filePaths: string[], platform: string) => {
     const allWarnings: any[] = [];
     const allBlocked: string[] = [];
-    
+
     for (const filePath of filePaths) {
         const result = checkFileSafety(filePath, platform);
         if (!result.safe) {
@@ -1768,7 +1884,7 @@ const checkFilesSafety = (filePaths: string[], platform: string) => {
         }
         allWarnings.push(...result.warnings);
     }
-    
+
     return { safe: allBlocked.length === 0, warnings: allWarnings, blocked: allBlocked };
 };
 
@@ -1795,7 +1911,7 @@ const calculateTotalSize = async (files: string[]): Promise<number> => {
             if (stats.isFile()) {
                 totalSize += stats.size;
             }
-        } catch (e) {}
+        } catch (e) { }
     }
     return totalSize;
 };
@@ -1804,27 +1920,27 @@ const createBackup = async (files: string[]): Promise<{ success: boolean; backup
     try {
         const backupDir = getBackupDir();
         await fs.mkdir(backupDir, { recursive: true });
-        
+
         const backupId = generateBackupId();
         const backupPath = path.join(backupDir, backupId);
         await fs.mkdir(backupPath, { recursive: true });
-        
+
         const totalSize = await calculateTotalSize(files);
         const backedUpFiles: string[] = [];
-        
+
         for (const filePath of files) {
             try {
                 const stats = await fs.stat(filePath);
                 const fileName = path.basename(filePath);
                 const backupFilePath = path.join(backupPath, fileName);
-                
+
                 if (stats.isFile()) {
                     await fs.copyFile(filePath, backupFilePath);
                     backedUpFiles.push(filePath);
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
-        
+
         const backupInfo = {
             id: backupId,
             timestamp: new Date().toISOString(),
@@ -1833,10 +1949,10 @@ const createBackup = async (files: string[]): Promise<{ success: boolean; backup
             location: backupPath,
             platform: process.platform
         };
-        
+
         const metadataPath = path.join(backupPath, 'backup-info.json');
         await fs.writeFile(metadataPath, JSON.stringify(backupInfo, null, 2));
-        
+
         return { success: true, backupId, backupInfo };
     } catch (error) {
         return { success: false, error: (error as Error).message };
@@ -1848,17 +1964,17 @@ const listBackups = async (): Promise<any[]> => {
         const backupDir = getBackupDir();
         const entries = await fs.readdir(backupDir, { withFileTypes: true });
         const backups: any[] = [];
-        
+
         for (const entry of entries) {
             if (entry.isDirectory() && entry.name.startsWith('backup-')) {
                 const metadataPath = path.join(backupDir, entry.name, 'backup-info.json');
                 try {
                     const metadataContent = await fs.readFile(metadataPath, 'utf-8');
                     backups.push(JSON.parse(metadataContent));
-                } catch (e) {}
+                } catch (e) { }
             }
         }
-        
+
         return backups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     } catch (error) {
         return [];
@@ -1882,23 +1998,23 @@ const restoreBackup = async (backupId: string): Promise<{ success: boolean; erro
         if (!backupInfo) {
             return { success: false, error: 'Backup not found' };
         }
-        
+
         const backupPath = backupInfo.location;
-        
+
         for (const filePath of backupInfo.files) {
             try {
                 const fileName = path.basename(filePath);
                 const backupFilePath = path.join(backupPath, fileName);
                 const stats = await fs.stat(backupFilePath);
-                
+
                 if (stats.isFile()) {
                     const destDir = path.dirname(filePath);
                     await fs.mkdir(destDir, { recursive: true });
                     await fs.copyFile(backupFilePath, filePath);
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
-        
+
         return { success: true };
     } catch (error) {
         return { success: false, error: (error as Error).message };

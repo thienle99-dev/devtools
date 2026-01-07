@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('cleanerAPI', {
   getLargeFiles: (options: any) => ipcRenderer.invoke('cleaner:get-large-files', options),
   getDuplicates: (scanPath: string) => ipcRenderer.invoke('cleaner:get-duplicates', scanPath),
   getSpaceLens: (scanPath: string) => ipcRenderer.invoke('cleaner:get-space-lens', scanPath),
+  getFolderSize: (folderPath: string) => ipcRenderer.invoke('cleaner:get-folder-size', folderPath),
+  clearSizeCache: (folderPath?: string) => ipcRenderer.invoke('cleaner:clear-size-cache', folderPath),
   getPerformanceData: () => ipcRenderer.invoke('cleaner:get-performance-data'),
   getStartupItems: () => ipcRenderer.invoke('cleaner:get-startup-items'),
   toggleStartupItem: (item: any) => ipcRenderer.invoke('cleaner:toggle-startup-item', item),
@@ -104,3 +106,31 @@ contextBridge.exposeInMainWorld('appManagerAPI', {
   uninstallApp: (app: any) => ipcRenderer.invoke('app-manager:uninstall-app', app),
   killProcess: (pid: number) => ipcRenderer.invoke('app-manager:kill-process', pid),
 })
+
+contextBridge.exposeInMainWorld('screenshotAPI', {
+  getSources: () => ipcRenderer.invoke('screenshot:get-sources'),
+  captureScreen: () => ipcRenderer.invoke('screenshot:capture-screen'),
+  captureWindow: (sourceId: string) => ipcRenderer.invoke('screenshot:capture-window', sourceId),
+  captureArea: () => ipcRenderer.invoke('screenshot:capture-area'),
+  saveFile: (dataUrl: string, options: { filename?: string; format?: string }) =>
+    ipcRenderer.invoke('screenshot:save-file', dataUrl, options),
+})
+
+contextBridge.exposeInMainWorld('permissionsAPI', {
+  checkAll: () => ipcRenderer.invoke('permissions:check-all'),
+  checkAccessibility: () => ipcRenderer.invoke('permissions:check-accessibility'),
+  checkFullDiskAccess: () => ipcRenderer.invoke('permissions:check-full-disk-access'),
+  checkScreenRecording: () => ipcRenderer.invoke('permissions:check-screen-recording'),
+  testClipboard: () => ipcRenderer.invoke('permissions:test-clipboard'),
+  testFileAccess: () => ipcRenderer.invoke('permissions:test-file-access'),
+  openSystemPreferences: (permissionType?: string) => ipcRenderer.invoke('permissions:open-system-preferences', permissionType),
+})
+
+// API for screenshot area selection overlay
+contextBridge.exposeInMainWorld('electronAPI', {
+  sendSelection: (bounds: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke('screenshot:area-selected', bounds),
+  cancelSelection: () =>
+    ipcRenderer.invoke('screenshot:area-cancelled'),
+})
+

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, desktopCapturer } from 'electron'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
+import { setupScreenshotHandlers } from './screenshot'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -347,7 +348,7 @@ function updateTrayMenu() {
   if (healthMenuData) {
     const alertCount = healthMenuData.alerts.filter((a: any) => a.severity === 'critical' || a.severity === 'warning').length;
     const healthLabel = alertCount > 0 ? `🛡️ System Health (${alertCount} alerts)` : '🛡️ System Health';
-    
+
     const healthSubmenu: Electron.MenuItemConstructorOptions[] = [
       {
         label: '📊 Health Metrics',
@@ -362,39 +363,39 @@ function updateTrayMenu() {
         enabled: false,
       },
     ];
-    
+
     if (healthMenuData.disk) {
       healthSubmenu.push({
         label: `Disk: ${healthMenuData.disk.percentage.toFixed(1)}% used (${formatBytes(healthMenuData.disk.free)} free)`,
         enabled: false,
       });
     }
-    
+
     if (healthMenuData.battery) {
       healthSubmenu.push({
         label: `Battery: ${healthMenuData.battery.level.toFixed(0)}% ${healthMenuData.battery.charging ? '(Charging)' : ''}`,
         enabled: false,
       });
     }
-    
+
     healthSubmenu.push({ type: 'separator' });
-    
+
     if (healthMenuData.alerts.length > 0) {
       healthSubmenu.push({
         label: `⚠️ Alerts (${healthMenuData.alerts.length})`,
         enabled: false,
       });
-      
+
       healthMenuData.alerts.slice(0, 5).forEach((alert: any) => {
         healthSubmenu.push({
           label: `${alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : '🔵'} ${alert.message.substring(0, 50)}${alert.message.length > 50 ? '...' : ''}`,
           enabled: false,
         });
       });
-      
+
       healthSubmenu.push({ type: 'separator' });
     }
-    
+
     healthSubmenu.push({
       label: '▸ Open Health Monitor',
       click: () => {
@@ -406,7 +407,7 @@ function updateTrayMenu() {
         }, 500);
       },
     });
-    
+
     healthSubmenu.push({
       label: '⚡ Quick Actions',
       submenu: [
@@ -476,7 +477,7 @@ function updateTrayMenu() {
         },
       ],
     });
-    
+
     template.push({
       label: healthLabel,
       submenu: healthSubmenu,
@@ -590,11 +591,11 @@ function createWindow() {
       properties: ['openDirectory'],
       title: 'Select Folder to Scan'
     });
-    
+
     if (result.canceled || result.filePaths.length === 0) {
       return { canceled: true, path: null };
     }
-    
+
     return { canceled: false, path: result.filePaths[0] };
   });
 
@@ -615,6 +616,321 @@ function createWindow() {
     }
   })
   ipcMain.handle('store-delete', (_event, key) => store.delete(key))
+
+  // Setup screenshot handlers
+  setupScreenshotHandlers(win);
+
+  // Window settings IPC handlers
+  ipcMain.on('window-set-opacity', (_event, opacity: number) => {
+    if (win) {
+      win.setOpacity(Math.max(0.5, Math.min(1.0, opacity)));
+    }
+  });
+
+  ipcMain.on('window-set-always-on-top', (_event, alwaysOnTop: boolean) => {
+    if (win) {
+      win.setAlwaysOnTop(alwaysOnTop);
+    }
+  });
+
+  // ========== Permissions IPC Handlers ==========
+  
+  // Check all permissions
+  ipcMain.handle('permissions:check-all', async () => {
+    const platform = process.platform;
+    const results: Record<string, any> = {};
+
+    if (platform === 'darwin') {
+      // macOS permissions
+      results.accessibility = await checkAccessibilityPermission();
+      results.fullDiskAccess = await checkFullDiskAccessPermission();
+      results.screenRecording = await checkScreenRecordingPermission();
+    } else if (platform === 'win32') {
+      // Windows permissions
+      results.fileAccess = await checkFileAccessPermission();
+      results.registryAccess = await checkRegistryAccessPermission();
+    }
+
+    // Common permissions
+    results.clipboard = await checkClipboardPermission();
+    results.launchAtLogin = await checkLaunchAtLoginPermission();
+
+    return results;
+  });
+
+  // Check Accessibility (macOS)
+  ipcMain.handle('permissions:check-accessibility', async () => {
+    if (process.platform !== 'darwin') {
+      return { status: 'not-applicable', message: 'Only available on macOS' };
+    }
+    return await checkAccessibilityPermission();
+  });
+
+  // Check Full Disk Access (macOS)
+  ipcMain.handle('permissions:check-full-disk-access', async () => {
+    if (process.platform !== 'darwin') {
+      return { status: 'not-applicable', message: 'Only available on macOS' };
+    }
+    return await checkFullDiskAccessPermission();
+  });
+
+  // Check Screen Recording (macOS)
+  ipcMain.handle('permissions:check-screen-recording', async () => {
+    if (process.platform !== 'darwin') {
+      return { status: 'not-applicable', message: 'Only available on macOS' };
+    }
+    return await checkScreenRecordingPermission();
+  });
+
+  // Test Clipboard
+  ipcMain.handle('permissions:test-clipboard', async () => {
+    return await testClipboardPermission();
+  });
+
+  // Test File Access
+  ipcMain.handle('permissions:test-file-access', async () => {
+    return await testFileAccessPermission();
+  });
+
+  // Open System Preferences/Settings
+  ipcMain.handle('permissions:open-system-preferences', async (_event, permissionType?: string) => {
+    return await openSystemPreferences(permissionType);
+  });
+
+  // ========== Permission Check Functions ==========
+
+  async function checkAccessibilityPermission(): Promise<{ status: string; message?: string }> {
+    if (process.platform !== 'darwin') {
+      return { status: 'not-applicable' };
+    }
+
+    try {
+      // Try to test by attempting to register a global shortcut
+      try {
+        const testShortcut = 'CommandOrControl+Shift+TestPermission';
+        const registered = globalShortcut.register(testShortcut, () => {});
+        if (registered) {
+          globalShortcut.unregister(testShortcut);
+          return { status: 'granted' };
+        }
+      } catch (e) {
+        // If registration fails, likely no permission
+      }
+
+      // Alternative: Check if we can access accessibility features
+      // This is a heuristic - if global shortcuts work, accessibility is likely granted
+      const existingShortcuts = globalShortcut.isRegistered('CommandOrControl+Shift+D');
+      if (existingShortcuts) {
+        return { status: 'granted' };
+      }
+
+      return { status: 'not-determined', message: 'Unable to determine status. Try testing.' };
+    } catch (error) {
+      return { status: 'error', message: (error as Error).message };
+    }
+  }
+
+  async function checkFullDiskAccessPermission(): Promise<{ status: string; message?: string }> {
+    if (process.platform !== 'darwin') {
+      return { status: 'not-applicable' };
+    }
+
+    try {
+      // Test by trying to access a protected directory
+      const protectedPaths = [
+        '/Library/Application Support',
+        '/System/Library',
+        '/private/var/db'
+      ];
+
+      for (const testPath of protectedPaths) {
+        try {
+          await fs.access(testPath);
+          // If we can access, likely have permission
+          return { status: 'granted' };
+        } catch (e) {
+          // Continue to next path
+        }
+      }
+
+      // If we can read home directory without issues, might be granted
+      const homeDir = os.homedir();
+      try {
+        await fs.readdir(homeDir);
+        return { status: 'granted', message: 'Basic file access available' };
+      } catch (e) {
+        return { status: 'denied', message: 'Cannot access protected directories' };
+      }
+    } catch (error) {
+      return { status: 'error', message: (error as Error).message };
+    }
+  }
+
+  async function checkScreenRecordingPermission(): Promise<{ status: string; message?: string }> {
+    if (process.platform !== 'darwin') {
+      return { status: 'not-applicable' };
+    }
+
+    try {
+      // Test by trying to use desktopCapturer (Electron's way)
+      try {
+        // Use desktopCapturer to check screen recording permission
+        const sources = await desktopCapturer.getSources({ types: ['screen'] });
+        if (sources && sources.length > 0) {
+          return { status: 'granted' };
+        }
+      } catch (e) {
+        // If getSources fails, likely no permission
+      }
+
+      return { status: 'not-determined', message: 'Unable to determine. Try testing screenshot feature.' };
+    } catch (error) {
+      return { status: 'error', message: (error as Error).message };
+    }
+  }
+
+  async function checkClipboardPermission(): Promise<{ status: string; message?: string }> {
+    try {
+      // Test read and write
+      const originalText = clipboard.readText();
+      clipboard.writeText('__PERMISSION_TEST__');
+      const written = clipboard.readText();
+      clipboard.writeText(originalText); // Restore
+
+      if (written === '__PERMISSION_TEST__') {
+        return { status: 'granted' };
+      }
+      return { status: 'denied', message: 'Clipboard access failed' };
+    } catch (error) {
+      return { status: 'error', message: (error as Error).message };
+    }
+  }
+
+  async function checkLaunchAtLoginPermission(): Promise<{ status: string; message?: string }> {
+    try {
+      const loginItemSettings = app.getLoginItemSettings();
+      // This doesn't check permission, just if it's enabled
+      // Permission is usually granted automatically, but may fail if not code-signed
+      return { 
+        status: loginItemSettings.openAtLogin ? 'granted' : 'not-determined',
+        message: loginItemSettings.openAtLogin ? 'Launch at login is enabled' : 'Launch at login is not enabled'
+      };
+    } catch (error) {
+      return { status: 'error', message: (error as Error).message };
+    }
+  }
+
+  async function checkFileAccessPermission(): Promise<{ status: string; message?: string }> {
+    if (process.platform !== 'win32') {
+      return { status: 'not-applicable' };
+    }
+
+    try {
+      // Test by trying to read/write a temp file
+      const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
+      const testContent = 'permission test';
+      
+      await fs.writeFile(testPath, testContent);
+      const readContent = await fs.readFile(testPath, 'utf-8');
+      await fs.unlink(testPath);
+
+      if (readContent === testContent) {
+        return { status: 'granted' };
+      }
+      return { status: 'denied', message: 'File access test failed' };
+    } catch (error) {
+      return { status: 'denied', message: (error as Error).message };
+    }
+  }
+
+  async function checkRegistryAccessPermission(): Promise<{ status: string; message?: string }> {
+    if (process.platform !== 'win32') {
+      return { status: 'not-applicable' };
+    }
+
+    try {
+      // Test by trying to read a registry key (read-only, safe)
+      const { stdout } = await execAsync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion" /v ProgramFilesDir 2>&1');
+      if (stdout && !stdout.includes('ERROR')) {
+        return { status: 'granted' };
+      }
+      return { status: 'denied', message: 'Registry access test failed' };
+    } catch (error) {
+      return { status: 'denied', message: (error as Error).message };
+    }
+  }
+
+  async function testClipboardPermission(): Promise<{ status: string; message?: string }> {
+    try {
+      const originalText = clipboard.readText();
+      const testText = `Permission test ${Date.now()}`;
+      
+      clipboard.writeText(testText);
+      const readText = clipboard.readText();
+      clipboard.writeText(originalText); // Restore
+
+      if (readText === testText) {
+        return { status: 'granted', message: 'Clipboard read/write test passed' };
+      }
+      return { status: 'denied', message: 'Clipboard test failed' };
+    } catch (error) {
+      return { status: 'error', message: (error as Error).message };
+    }
+  }
+
+  async function testFileAccessPermission(): Promise<{ status: string; message?: string }> {
+    try {
+      const testDir = os.tmpdir();
+      const testPath = join(testDir, `permission-test-${Date.now()}.txt`);
+      const testContent = `Test ${Date.now()}`;
+
+      // Test write
+      await fs.writeFile(testPath, testContent);
+      
+      // Test read
+      const readContent = await fs.readFile(testPath, 'utf-8');
+      
+      // Test delete
+      await fs.unlink(testPath);
+
+      if (readContent === testContent) {
+        return { status: 'granted', message: 'File access test passed' };
+      }
+      return { status: 'denied', message: 'File access test failed' };
+    } catch (error) {
+      return { status: 'denied', message: (error as Error).message };
+    }
+  }
+
+  async function openSystemPreferences(permissionType?: string): Promise<{ success: boolean; message?: string }> {
+    const platform = process.platform;
+
+    try {
+      if (platform === 'darwin') {
+        // macOS - Open System Preferences to specific pane
+        let command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy"';
+        
+        if (permissionType === 'accessibility') {
+          command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"';
+        } else if (permissionType === 'full-disk-access') {
+          command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"';
+        } else if (permissionType === 'screen-recording') {
+          command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"';
+        }
+
+        await execAsync(command);
+        return { success: true, message: 'Opened System Preferences' };
+      } else if (platform === 'win32') {
+        // Windows - Open Settings to Privacy section
+        await execAsync('start ms-settings:privacy');
+        return { success: true, message: 'Opened Windows Settings' };
+      }
+
+      return { success: false, message: 'Unsupported platform' };
+    } catch (error) {
+      return { success: false, message: (error as Error).message };
+    }
+  }
 
   // Tray IPC
   ipcMain.on('tray-update-menu', (_event, items) => {
@@ -678,17 +994,17 @@ function createWindow() {
     if (healthMonitoringInterval) {
       clearInterval(healthMonitoringInterval);
     }
-    
+
     const updateHealth = async () => {
       try {
         const mem = await si.mem();
         const load = await si.currentLoad();
         const disk = await si.fsSize();
         const battery = await si.battery().catch(() => null);
-        
+
         const alerts: any[] = [];
         const rootDisk = disk.find(d => d.mount === '/' || d.mount === 'C:') || disk[0];
-        
+
         if (rootDisk) {
           const freePercent = (rootDisk.available / rootDisk.size) * 100;
           if (freePercent < 10) {
@@ -705,7 +1021,7 @@ function createWindow() {
             });
           }
         }
-        
+
         if (load.currentLoad > 90) {
           alerts.push({
             type: 'high_cpu',
@@ -713,7 +1029,7 @@ function createWindow() {
             message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
           });
         }
-        
+
         const memPercent = (mem.used / mem.total) * 100;
         if (memPercent > 90) {
           alerts.push({
@@ -722,7 +1038,7 @@ function createWindow() {
             message: `High memory usage: ${memPercent.toFixed(1)}%`
           });
         }
-        
+
         healthMenuData = {
           cpu: load.currentLoad,
           ram: {
@@ -741,9 +1057,9 @@ function createWindow() {
           } : null,
           alerts
         };
-        
+
         updateTrayMenu();
-        
+
         // Send notification for critical alerts
         const criticalAlerts = alerts.filter(a => a.severity === 'critical');
         if (criticalAlerts.length > 0 && win) {
@@ -759,11 +1075,11 @@ function createWindow() {
         console.error('Health monitoring error:', e);
       }
     };
-    
+
     // Update immediately and then every 5 seconds
     updateHealth();
     healthMonitoringInterval = setInterval(updateHealth, 5000);
-    
+
     return { success: true };
   });
 
@@ -844,10 +1160,10 @@ app.whenReady().then(() => {
             await window.cleanerAPI.startHealthMonitoring();
           }
         })()
-      `).catch(() => {});
+      `).catch(() => { });
     }
   }, 2000); // Wait for renderer to be ready
-  
+
   // Register Global Shortcuts
   try {
     // Toggle window shortcut
@@ -902,7 +1218,7 @@ app.whenReady().then(() => {
         si.fsSize(),
         si.disksIO()
       ]);
-      
+
       // si.disksIO() returns an array, we need to aggregate or use the first disk
       let ioStats = null;
       if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
@@ -927,7 +1243,7 @@ app.whenReady().then(() => {
           tIO_sec: ioStatsRaw.tIO_sec || 0,
         };
       }
-      
+
       return { fsSize, ioStats };
     } catch (error) {
       console.error('Error fetching disk stats:', error);
@@ -944,16 +1260,16 @@ app.whenReady().then(() => {
   ipcMain.handle('get-battery-stats', async () => {
     try {
       const battery = await si.battery();
-      
+
       // Tính toán power consumption và charging power
       let powerConsumptionRate: number | undefined;
       let chargingPower: number | undefined;
-      
+
       // Nếu systeminformation có sẵn powerConsumptionRate
       if ('powerConsumptionRate' in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === 'number') {
         powerConsumptionRate = battery.powerConsumptionRate;
       }
-      
+
       // Nếu có voltage và currentCapacity, có thể ước tính
       if (battery.voltage && battery.voltage > 0) {
         // Ước tính power consumption dựa trên voltage và trạng thái
@@ -964,7 +1280,7 @@ app.whenReady().then(() => {
           const estimatedCurrent = (battery.currentCapacity / battery.timeRemaining) * 60;
           powerConsumptionRate = battery.voltage * estimatedCurrent;
         }
-        
+
         // Nếu đang charge, ước tính charging power
         if (battery.isCharging && battery.voltage > 0) {
           // Ước tính charging current (thường 1-3A cho laptop)
@@ -972,7 +1288,7 @@ app.whenReady().then(() => {
           chargingPower = battery.voltage * estimatedChargingCurrent;
         }
       }
-      
+
       return {
         ...battery,
         powerConsumptionRate,
@@ -1015,7 +1331,7 @@ app.whenReady().then(() => {
     try {
       const time = await si.time();
       const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       // Default time zones (có thể config từ preferences)
       const defaultZones = [
         'America/New_York',
@@ -1023,7 +1339,7 @@ app.whenReady().then(() => {
         'Asia/Tokyo',
         'Asia/Shanghai',
       ];
-      
+
       const zones = defaultZones.map(tz => {
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -1039,10 +1355,10 @@ app.whenReady().then(() => {
           month: 'short',
           day: 'numeric',
         });
-        
+
         const offset = getTimezoneOffset(tz);
         const cityName = tz.split('/').pop()?.replace('_', ' ') || tz;
-        
+
         return {
           timezone: tz,
           city: cityName,
@@ -1051,7 +1367,7 @@ app.whenReady().then(() => {
           offset,
         };
       });
-      
+
       return {
         local: {
           timezone: localTz,
@@ -1083,10 +1399,10 @@ app.whenReady().then(() => {
             try {
               const stats = await fs.stat(appPath);
               const appName = file.name.replace('.app', '');
-              const isSystemApp = appPath.startsWith('/System') || 
-                                  appPath.startsWith('/Library') ||
-                                  appName.startsWith('com.apple.');
-              
+              const isSystemApp = appPath.startsWith('/System') ||
+                appPath.startsWith('/Library') ||
+                appName.startsWith('com.apple.');
+
               apps.push({
                 id: `macos-${appName}-${stats.ino}`,
                 name: appName,
@@ -1113,16 +1429,16 @@ app.whenReady().then(() => {
           const { stdout } = await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
           const data = JSON.parse(stdout);
           const list = Array.isArray(data) ? data : [data];
-          
+
           for (const item of list) {
             if (item.DisplayName) {
               const publisher = item.Publisher || '';
               const installLocation = item.InstallLocation || '';
-              const isSystemApp = publisher.includes('Microsoft') || 
-                                  publisher.includes('Windows') ||
-                                  installLocation.includes('Windows\\') ||
-                                  installLocation.includes('Program Files\\Windows');
-              
+              const isSystemApp = publisher.includes('Microsoft') ||
+                publisher.includes('Windows') ||
+                installLocation.includes('Windows\\') ||
+                installLocation.includes('Program Files\\Windows');
+
               apps.push({
                 id: `win-${item.DisplayName}-${item.InstallDate || 'unknown'}`,
                 name: item.DisplayName,
@@ -1151,7 +1467,7 @@ app.whenReady().then(() => {
     try {
       const processes = await si.processes();
       const memInfo = await si.mem();
-      
+
       return processes.list.map((proc: any) => ({
         pid: proc.pid,
         name: proc.name,
@@ -1172,7 +1488,7 @@ app.whenReady().then(() => {
   ipcMain.handle('app-manager:uninstall-app', async (_event, app: any) => {
     try {
       const platform = process.platform;
-      
+
       if (platform === 'darwin') {
         // macOS: Remove .app bundle
         if (app.installLocation) {
@@ -1206,7 +1522,7 @@ app.whenReady().then(() => {
           return { success: false, error: (e as Error).message };
         }
       }
-      
+
       return { success: false, error: 'Unsupported platform' };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -1227,7 +1543,7 @@ app.whenReady().then(() => {
     try {
       let totalSize = 0;
       const files = await fs.readdir(dirPath, { withFileTypes: true });
-      
+
       for (const file of files) {
         const filePath = join(dirPath, file.name);
         try {
@@ -1241,7 +1557,7 @@ app.whenReady().then(() => {
           // Skip errors
         }
       }
-      
+
       return totalSize;
     } catch (e) {
       return 0;
@@ -1285,10 +1601,10 @@ function getTimezoneOffset(timezone: string): number {
   const now = new Date();
   // Get UTC time in milliseconds
   const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-  
+
   // Get time string in target timezone
-  const tzString = now.toLocaleString('en-US', { 
-    timeZone: timezone, 
+  const tzString = now.toLocaleString('en-US', {
+    timeZone: timezone,
     hour12: false,
     year: 'numeric',
     month: '2-digit',
@@ -1297,11 +1613,11 @@ function getTimezoneOffset(timezone: string): number {
     minute: '2-digit',
     second: '2-digit'
   });
-  
+
   // Parse the timezone time
   const tzDate = new Date(tzString);
   const tzTime = tzDate.getTime();
-  
+
   // Calculate offset in hours
   const offset = (tzTime - utcTime) / (1000 * 60 * 60);
   return offset;

@@ -15,6 +15,8 @@ import { CATEGORIES, getToolsByCategory, type ToolCategory } from '../../tools/r
 import { Select } from '../ui/Select';
 import { useSettingsStore } from '../../store/settingsStore';
 import { motion } from 'framer-motion';
+import { ShortcutBadge } from '../ui/KeyboardShortcut';
+import { usePlatform } from '../../hooks/usePlatform';
 
 export const Sidebar: React.FC = React.memo(() => {
     const openTab = useTabStore(state => state.openTab);
@@ -25,7 +27,7 @@ export const Sidebar: React.FC = React.memo(() => {
     const location = useLocation();
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
     const isDashboard = location.pathname === '/dashboard';
-    
+
     // Count preview tabs
     const previewTabsCount = useMemo(() => tabs.filter(t => t.isPreview).length, [tabs]);
 
@@ -34,9 +36,13 @@ export const Sidebar: React.FC = React.memo(() => {
 
     const favorites = useToolStore(state => state.favorites);
     const toggleFavorite = useToolStore(state => state.toggleFavorite);
-    
+
     const sidebarCollapsed = useSettingsStore(state => state.sidebarCollapsed);
     const toggleSidebar = useSettingsStore(state => state.toggleSidebar);
+
+    // Platform detection for shortcuts
+    const { isMac } = usePlatform();
+    const searchShortcut = isMac ? '⌘K' : 'Ctrl+K';
 
     // Global shortcut for Search (Cmd+K)
     useEffect(() => {
@@ -61,9 +67,9 @@ export const Sidebar: React.FC = React.memo(() => {
         const uniqueTools = Array.from(new Set(allCategories.map(t => t.id)))
             .map(id => allCategories.find(t => t.id === id)!)
             .filter(t => t.id !== 'settings');
-        
-        let results = uniqueTools.filter(tool => 
-            tool.name.toLowerCase().includes(query) || 
+
+        let results = uniqueTools.filter(tool =>
+            tool.name.toLowerCase().includes(query) ||
             tool.description.toLowerCase().includes(query) ||
             tool.keywords?.some(k => k.toLowerCase().includes(query))
         );
@@ -85,7 +91,7 @@ export const Sidebar: React.FC = React.memo(() => {
     }, []);
 
     return (
-        <motion.aside 
+        <motion.aside
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -124,7 +130,7 @@ export const Sidebar: React.FC = React.memo(() => {
                         "p-2 rounded-lg text-foreground-muted hover:text-foreground hover:bg-[var(--color-glass-input)]/70 border border-transparent hover:border-border-glass transition-all duration-200",
                         sidebarCollapsed && "w-full"
                     )}
-                    title={sidebarCollapsed ? "Expand Sidebar (⌘B)" : "Collapse Sidebar (⌘B)"}
+                    title={sidebarCollapsed ? `Expand Sidebar (${isMac ? '⌘B' : 'Ctrl+B'})` : `Collapse Sidebar (${isMac ? '⌘B' : 'Ctrl+B'})`}
                 >
                     {sidebarCollapsed ? (
                         <ChevronRight className="w-4 h-4" />
@@ -141,7 +147,7 @@ export const Sidebar: React.FC = React.memo(() => {
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/70 group-focus-within:text-foreground-muted pointer-events-none transition-colors duration-200 z-10" />
                         <input
                             type="text"
-                            placeholder="Search tools... (⌘K)"
+                            placeholder={`Search tools... (${searchShortcut})`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="sidebar-search-input w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 hover:border-white/30 dark:hover:border-white/20 focus:border-indigo-400/50 dark:focus:border-indigo-500/50 focus:bg-white/15 dark:focus:bg-white/10 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200 placeholder:text-foreground-muted/60 text-foreground shadow-sm hover:shadow-md focus:shadow-lg"
@@ -172,17 +178,17 @@ export const Sidebar: React.FC = React.memo(() => {
             )}>
                 {!sidebarCollapsed && filteredContent ? (
                     <div className="space-y-1">
-                         {filteredContent.length === 0 ? (
-                             <div className="text-center text-xs text-foreground-muted py-8">
-                                 No tools found
-                             </div>
+                        {filteredContent.length === 0 ? (
+                            <div className="text-center text-xs text-foreground-muted py-8">
+                                No tools found
+                            </div>
                         ) : filteredContent.map(tool => {
                             const isActive = activeTab?.toolId === tool.id;
                             const Icon = tool.icon;
                             // Get configured or default shortcut
                             const toolShortcuts = useSettingsStore.getState().toolShortcuts;
                             const shortcut = toolShortcuts[tool.id] || tool.shortcut;
-                            
+
                             const category = CATEGORIES.find(c => c.id === tool.category);
                             const colorClass = tool.color || category?.color || 'text-foreground-muted';
 
@@ -233,138 +239,142 @@ export const Sidebar: React.FC = React.memo(() => {
                                             )} />
                                         </button>
                                         {shortcut && (
-                                            <span className={cn(
-                                                "text-[10px] opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded font-mono",
-                                                isActive && "opacity-70 bg-black/5 dark:bg-white/10 text-foreground"
-                                            )}>
-                                                {shortcut.replace('Ctrl', 'Win').replace('Cmd', '⌘').replace('Shift', '⇧').replace('Alt', 'Alt').split('+').map(k => k.trim()).join('+').replace('Win+⇧', 'Win+⇧').replace(/\+/g, '')}
-                                            </span>
+                                            <ShortcutBadge
+                                                shortcut={shortcut}
+                                                size="sm"
+                                                className={cn(
+                                                    "opacity-0 group-hover:opacity-100 transition-opacity",
+                                                    isActive && "opacity-70"
+                                                )}
+                                            />
                                         )}
                                     </div>
                                 </div>
                             );
-                         })}
+                        })}
                     </div>
                 ) : !sidebarCollapsed ? (
                     CATEGORIES
-                    .filter(category => selectedCategory === 'all' || category.id === selectedCategory)
-                    .map((category, categoryIndex) => {
-                    const tools = getToolsByCategory(category.id);
+                        .filter(category => selectedCategory === 'all' || category.id === selectedCategory)
+                        .map((category, categoryIndex) => {
+                            const tools = getToolsByCategory(category.id);
 
-                    // Skip Favorites/Recent if empty for now
-                    if (['favorites', 'recent'].includes(category.id) && tools.length === 0) return null;
-                    if (tools.length === 0) return null;
+                            // Skip Favorites/Recent if empty for now
+                            if (['favorites', 'recent'].includes(category.id) && tools.length === 0) return null;
+                            if (tools.length === 0) return null;
 
-                    const visibleTools = tools.filter(tool => tool.id !== 'settings');
+                            const visibleTools = tools.filter(tool => tool.id !== 'settings');
 
-                    return (
-                        <div key={category.id} className="space-y-2">
-                            {/* Category Separator - chỉ hiển thị nếu không phải category đầu tiên */}
-                            {categoryIndex > 0 && !sidebarCollapsed && (
-                                <div className="h-px mx-2 my-3 bg-gradient-to-r from-transparent via-border-glass/80 to-transparent" />
-                            )}
-                            
-                            {/* Enhanced Category Header với background & accent */}
-                            {!sidebarCollapsed && (
-                                <div className="px-3 py-1.5 rounded-lg bg-[var(--color-glass-panel)]/85 border border-border-glass/80 shadow-sm relative overflow-hidden">
-                                    {/* Left accent bar */}
-                                    <div className={cn("absolute inset-y-1 left-1 w-[3px] rounded-full bg-current opacity-70", category.color || "text-foreground")} />
-                                    <h3 className="pl-3 text-[10px] font-semibold text-foreground uppercase tracking-[0.16em] flex items-center gap-2">
-                                        <category.icon className={cn("w-3.5 h-3.5", category.color || "text-foreground/80")} />
-                                        <span>{category.name}</span>
-                                        <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/5 text-foreground/70 border border-border-glass/60">
-                                            {visibleTools.length}
-                                        </span>
-                                    </h3>
-                                </div>
-                            )}
+                            return (
+                                <div key={category.id} className="space-y-2">
+                                    {/* Category Separator - chỉ hiển thị nếu không phải category đầu tiên */}
+                                    {categoryIndex > 0 && !sidebarCollapsed && (
+                                        <div className="h-px mx-2 my-3 bg-gradient-to-r from-transparent via-border-glass/80 to-transparent" />
+                                    )}
 
-                            {/* Enhanced Tool Items với padding để tạo khoảng cách */}
-                            <div className={cn(
-                                "space-y-1",
-                                sidebarCollapsed ? "" : "pl-1"
-                            )}>
-                                {visibleTools.map((tool) => {
-                                    const isActive = activeTab?.toolId === tool.id;
-                                    const Icon = tool.icon;
-                                    // Get configured or default shortcut
-                                    const toolShortcuts = useSettingsStore.getState().toolShortcuts;
-                                    const shortcut = toolShortcuts[tool.id] || tool.shortcut;
-                                    
-                                    const colorClass = tool.color || category.color || 'text-foreground-muted';
-
-                                    return (
-                                <div
-                                    key={tool.id}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (e.altKey) {
-                                            // Alt+Click: Force new tab and activate immediately
-                                            openTab(tool.id, tool.path, tool.name, tool.description, true, false);
-                                            navigate(tool.path);
-                                        } else {
-                                            // Single click: Activate immediately (no preview)
-                                            openTab(tool.id, tool.path, tool.name, tool.description, false, false);
-                                            navigate(tool.path);
-                                        }
-                                    }}
-                                            title={tool.description + (shortcut ? ` (${shortcut})` : '')}
-                                            className={cn(
-                                                "sidebar-nav-item flex items-center rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
-                                                sidebarCollapsed 
-                                                    ? "px-2 py-2.5 justify-center w-full" 
-                                                    : "px-3 py-2.5 gap-3",
-                                                isActive
-                                                    ? "sidebar-nav-item-active"
-                                                    : "sidebar-nav-item-inactive"
-                                            )}
-                                        >
-                                            {Icon && (
-                                                <Icon className={cn(
-                                                    "shrink-0 transition-opacity",
-                                                    sidebarCollapsed ? "w-5 h-5" : "w-4 h-4",
-                                                    isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
-                                                )} />
-                                            )}
-                                            {!sidebarCollapsed && (
-                                                <>
-                                                    <span className="truncate flex-1 font-medium">{tool.name}</span>
-                                                    {shortcut && (
-                                                        <span className={cn(
-                                                            "text-[10px] opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded font-mono",
-                                                            isActive && "opacity-70 bg-black/5 dark:bg-white/10 text-foreground"
-                                                        )}>
-                                                            {shortcut.replace('Ctrl', 'Win').replace('Cmd', '⌘').replace('Shift', '⇧').replace('Alt', 'Alt').split('+').map(k => k.trim()).join('+').replace('Win+⇧', 'Win+⇧').replace(/\+/g, '')}
-                                                        </span>
-                                                    )}
-                                                </>
-                                            )}
+                                    {/* Enhanced Category Header với background & accent */}
+                                    {!sidebarCollapsed && (
+                                        <div className="px-3 py-1.5 rounded-lg bg-[var(--color-glass-panel)]/85 border border-border-glass/80 shadow-sm relative overflow-hidden">
+                                            {/* Left accent bar */}
+                                            <div className={cn("absolute inset-y-1 left-1 w-[3px] rounded-full bg-current opacity-70", category.color || "text-foreground")} />
+                                            <h3 className="pl-3 text-[10px] font-semibold text-foreground uppercase tracking-[0.16em] flex items-center gap-2">
+                                                <category.icon className={cn("w-3.5 h-3.5", category.color || "text-foreground/80")} />
+                                                <span>{category.name}</span>
+                                                <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/5 text-foreground/70 border border-border-glass/60">
+                                                    {visibleTools.length}
+                                                </span>
+                                            </h3>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })) : (
+                                    )}
+
+                                    {/* Enhanced Tool Items với padding để tạo khoảng cách */}
+                                    <div className={cn(
+                                        "space-y-1",
+                                        sidebarCollapsed ? "" : "pl-1"
+                                    )}>
+                                        {visibleTools.map((tool) => {
+                                            const isActive = activeTab?.toolId === tool.id;
+                                            const Icon = tool.icon;
+                                            // Get configured or default shortcut
+                                            const toolShortcuts = useSettingsStore.getState().toolShortcuts;
+                                            const shortcut = toolShortcuts[tool.id] || tool.shortcut;
+
+                                            const colorClass = tool.color || category.color || 'text-foreground-muted';
+
+                                            return (
+                                                <div
+                                                    key={tool.id}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (e.altKey) {
+                                                            // Alt+Click: Force new tab and activate immediately
+                                                            openTab(tool.id, tool.path, tool.name, tool.description, true, false);
+                                                            navigate(tool.path);
+                                                        } else {
+                                                            // Single click: Activate immediately (no preview)
+                                                            openTab(tool.id, tool.path, tool.name, tool.description, false, false);
+                                                            navigate(tool.path);
+                                                        }
+                                                    }}
+                                                    title={tool.description + (shortcut ? ` (${shortcut})` : '')}
+                                                    className={cn(
+                                                        "sidebar-nav-item flex items-center rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
+                                                        sidebarCollapsed
+                                                            ? "px-2 py-2.5 justify-center w-full"
+                                                            : "px-3 py-2.5 gap-3",
+                                                        isActive
+                                                            ? "sidebar-nav-item-active"
+                                                            : "sidebar-nav-item-inactive"
+                                                    )}
+                                                >
+                                                    {Icon && (
+                                                        <Icon className={cn(
+                                                            "shrink-0 transition-opacity",
+                                                            sidebarCollapsed ? "w-5 h-5" : "w-4 h-4",
+                                                            isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
+                                                        )} />
+                                                    )}
+                                                    {!sidebarCollapsed && (
+                                                        <>
+                                                            <span className="truncate flex-1 font-medium">{tool.name}</span>
+                                                            {shortcut && (
+                                                                <ShortcutBadge
+                                                                    shortcut={shortcut}
+                                                                    size="sm"
+                                                                    className={cn(
+                                                                        "opacity-0 group-hover:opacity-100 transition-opacity",
+                                                                        isActive && "opacity-70"
+                                                                    )}
+                                                                />
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })) : (
                     // Collapsed view: Show all tools as icons only
                     <div className="space-y-1">
                         {CATEGORIES
                             .flatMap(category => {
                                 const tools = getToolsByCategory(category.id);
                                 // Determine fallback color for tools in this category in expanded view
-                                return tools.map(t => ({...t, categoryColor: category.color}));
+                                return tools.map(t => ({ ...t, categoryColor: category.color }));
                             })
                             .filter(tool => tool.id !== 'settings')
                             .map((tool, index, array) => {
                                 // Group by category for visual separation
                                 const prevTool = index > 0 ? array[index - 1] : null;
                                 const showSeparator = prevTool && prevTool.category !== tool.category;
-                                
+
                                 const isActive = activeTab?.toolId === tool.id;
                                 const Icon = tool.icon;
                                 const colorClass = tool.color || tool.categoryColor || 'text-foreground-muted';
-                                
+
                                 return (
                                     <React.Fragment key={tool.id}>
                                         {showSeparator && (
@@ -436,8 +446,8 @@ export const Sidebar: React.FC = React.memo(() => {
                     }}
                     className={cn(
                         "sidebar-settings-button flex items-center rounded-lg text-sm transition-all duration-200 cursor-pointer font-medium",
-                        sidebarCollapsed 
-                            ? "px-2 py-2 justify-center w-full" 
+                        sidebarCollapsed
+                            ? "px-2 py-2 justify-center w-full"
                             : "px-3.5 py-2 gap-3",
                         activeTab?.toolId === 'settings' && "sidebar-settings-button-active"
                     )}

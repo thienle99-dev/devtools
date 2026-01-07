@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, Play, RotateCcw, Video, Settings, Film } from 'lucide-react';
+import { Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -14,6 +15,8 @@ interface FrameData {
 export const VideoToFrames: React.FC = () => {
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [frames, setFrames] = useState<FrameData[]>([]);
+    const [viewMode, setViewMode] = useState<'grid' | 'slide'>('grid');
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [processingStatus, setProcessingStatus] = useState<string>('');
@@ -186,8 +189,7 @@ export const VideoToFrames: React.FC = () => {
         if (frames.length === 0) return;
 
         try {
-            // Dynamic import of jszip
-            const JSZip = (await import('jszip')).default;
+
             const zip = new JSZip();
 
             frames.forEach((frame) => {
@@ -428,32 +430,111 @@ export const VideoToFrames: React.FC = () => {
                                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                                 Extracted Frames ({frames.length})
                                             </h3>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 items-center">
+                                                <div className="flex bg-glass-panel border border-border-glass rounded-lg p-1 mr-2">
+                                                    <button
+                                                        onClick={() => setViewMode('grid')}
+                                                        className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-indigo-500/20 text-indigo-400' : 'text-foreground-secondary hover:text-foreground hover:bg-white/5'}`}
+                                                        title="Grid View"
+                                                    >
+                                                        <Grid className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setViewMode('slide')}
+                                                        className={`p-1.5 rounded-md transition-all ${viewMode === 'slide' ? 'bg-indigo-500/20 text-indigo-400' : 'text-foreground-secondary hover:text-foreground hover:bg-white/5'}`}
+                                                        title="Slide View"
+                                                    >
+                                                        <GalleryHorizontal className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                                 <Button size="sm" variant="secondary" icon={Download} onClick={downloadAsZip}>
                                                     Download ZIP
                                                 </Button>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
-                                            {frames.map((frame) => (
-                                                <div key={frame.index} className="group relative aspect-video rounded-lg overflow-hidden border border-border-glass bg-black/50 hover:border-indigo-500/50 transition-all shadow-sm">
-                                                    <img
-                                                        src={URL.createObjectURL(frame.blob)}
-                                                        alt={`Frame ${frame.index}`}
-                                                        className="w-full h-full object-contain"
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
-                                                        <span className="text-[10px] text-white font-mono">
-                                                            #{frame.index}
-                                                        </span>
-                                                        <span className="text-[10px] text-white/70 font-mono">
-                                                            {frame.timestamp.toFixed(2)}s
-                                                        </span>
+                                        {viewMode === 'grid' ? (
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
+                                                {frames.map((frame, idx) => (
+                                                    <div
+                                                        key={frame.index}
+                                                        className="group relative aspect-video rounded-lg overflow-hidden border border-border-glass bg-black/50 hover:border-indigo-500/50 transition-all shadow-sm cursor-pointer"
+                                                        onClick={() => {
+                                                            setCurrentSlideIndex(idx);
+                                                            setViewMode('slide');
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={URL.createObjectURL(frame.blob)}
+                                                            alt={`Frame ${frame.index}`}
+                                                            className="w-full h-full object-contain"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
+                                                            <span className="text-[10px] text-white font-mono">
+                                                                #{frame.index}
+                                                            </span>
+                                                            <span className="text-[10px] text-white/70 font-mono">
+                                                                {frame.timestamp.toFixed(2)}s
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col gap-4">
+                                                <div className="relative h-[400px] bg-black/40 rounded-xl border border-border-glass flex items-center justify-center p-4 group overflow-hidden">
+                                                    {frames[currentSlideIndex] && (
+                                                        <>
+                                                            <img
+                                                                src={URL.createObjectURL(frames[currentSlideIndex].blob)}
+                                                                alt={`Frame ${frames[currentSlideIndex].index}`}
+                                                                className="max-w-full max-h-full object-contain shadow-2xl"
+                                                            />
+                                                            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-white/90">
+                                                                {frames[currentSlideIndex].timestamp.toFixed(3)}s
+                                                            </div>
+                                                        </>
+                                                    )}
+
+                                                    <button
+                                                        onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+                                                        disabled={currentSlideIndex === 0}
+                                                        className="absolute left-4 p-3 rounded-full bg-black/50 text-white backdrop-blur-sm border border-white/10 hover:bg-indigo-500 hover:border-indigo-400 disabled:opacity-30 disabled:hover:bg-black/50 transition-all opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0"
+                                                    >
+                                                        <ChevronLeft className="w-6 h-6" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setCurrentSlideIndex(prev => Math.min(frames.length - 1, prev + 1))}
+                                                        disabled={currentSlideIndex === frames.length - 1}
+                                                        className="absolute right-4 p-3 rounded-full bg-black/50 text-white backdrop-blur-sm border border-white/10 hover:bg-indigo-500 hover:border-indigo-400 disabled:opacity-30 disabled:hover:bg-black/50 transition-all opacity-0 group-hover:opacity-100 translate-x-[10px] group-hover:translate-x-0"
+                                                    >
+                                                        <ChevronRight className="w-6 h-6" />
+                                                    </button>
+
+                                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full text-xs text-white/80 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        Frame {frames[currentSlideIndex]?.index} ({currentSlideIndex + 1}/{frames.length})
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
+
+                                                <div className="bg-glass-panel/50 border border-border-glass rounded-xl p-4">
+                                                    <Slider
+                                                        value={currentSlideIndex}
+                                                        min={0}
+                                                        max={Math.max(0, frames.length - 1)}
+                                                        step={1}
+                                                        onChange={(val) => setCurrentSlideIndex(val)}
+                                                        label="Timeline Navigation"
+                                                        // Using the timestamp as the unit might be confusing on a slider, stick to index or just empty
+                                                        className="w-full"
+                                                    />
+                                                    <div className="flex justify-between mt-1 text-xs text-foreground-secondary font-mono">
+                                                        <span>00:00</span>
+                                                        <span>{(frames[frames.length - 1]?.timestamp || 0).toFixed(2)}s</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

@@ -27,6 +27,7 @@
     "@codemirror/view": "^6.39.8",
     "@types/diff": "^8.0.0",
     "@types/he": "^1.2.3",
+    "@types/jszip": "^3.4.1",
     "@types/ua-parser-js": "^0.7.39",
     "@types/zxcvbn": "^4.4.5",
     "@uiw/codemirror-theme-github": "^4.25.4",
@@ -39,12 +40,14 @@
     "date-fns": "^4.1.0",
     "diff": "^8.0.2",
     "electron-store": "^10.0.0",
+    "fabric": "^7.1.0",
     "fast-xml-parser": "^5.3.3",
     "framer-motion": "^12.23.26",
     "he": "^1.2.0",
     "ip-subnet-calculator": "^2.0.1",
     "js-yaml": "^4.1.0",
     "jspdf": "^4.0.0",
+    "jszip": "^3.10.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.562.0",
     "marked": "^17.0.1",
@@ -57,6 +60,7 @@
     "sql-formatter": "^15.6.12",
     "systeminformation": "^5.29.0",
     "tailwind-merge": "^3.4.0",
+    "tesseract.js": "^7.0.0",
     "ua-parser-js": "^2.0.7",
     "ulid": "^2.3.0",
     "uuid": "^11.1.0",
@@ -102,7 +106,12 @@
     "onlyBuiltDependencies": [
       "electron",
       "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "core-js",
+      "electron",
+      "electron-winstaller",
+      "esbuild"
     ]
-  },
-  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a"
+  }
 }
