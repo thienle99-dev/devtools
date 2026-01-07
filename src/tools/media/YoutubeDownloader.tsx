@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/Select';
 import { Card } from '../../components/ui/Card';
 import { VideoInfo } from './components/VideoInfo';
 import { FormatsList } from './components/FormatsList';
@@ -13,6 +12,7 @@ interface DownloadStatus {
     message?: string;
     progress?: number;
     filename?: string;
+    detailedLogs?: string[];
 }
 
 interface VideoFormat {
@@ -119,11 +119,21 @@ export const YoutubeDownloader: React.FC = () => {
             } else {
                 throw new Error(result.error || 'Download failed');
             }
-        } catch (err) {
+        } catch (err: any) {
             const errorMessage = err instanceof Error ? err.message : 'Download failed';
+            const logs = [
+                `Time: ${new Date().toLocaleTimeString()}`,
+                `Error: ${errorMessage}`,
+                `Quality: ${quality}`,
+                `Format: ${format}`,
+                err.stack ? `Stack: ${err.stack.split('\n')[0]}` : '',
+                err.statusCode ? `HTTP Status: ${err.statusCode}` : ''
+            ].filter(Boolean);
+
             setDownloadStatus({
                 status: 'error',
-                message: errorMessage
+                message: errorMessage,
+                detailedLogs: logs
             });
             
             // Auto-retry logic (max 3 attempts)
@@ -242,50 +252,6 @@ export const YoutubeDownloader: React.FC = () => {
         };
     }, [url]);
 
-    // Estimate file size and download time
-    const estimateFileSize = (): string => {
-        if (!videoInfo) return 'Unknown';
-        const lengthMB = videoInfo.lengthSeconds / 60;
-        let sizeEstimate = 0;
-        
-        if (format === 'audio') {
-            sizeEstimate = lengthMB * 1.5; // ~1.5MB per minute for audio
-        } else {
-            const qualityMultiplier = {
-                '144p': 2, '240p': 4, '360p': 8, '480p': 15,
-                '720p': 25, '1080p': 50, '1440p': 100, '2160p': 200, 'best': 50
-            };
-            sizeEstimate = lengthMB * (qualityMultiplier[quality as keyof typeof qualityMultiplier] || 25);
-        }
-        
-        if (sizeEstimate < 1024) {
-            return `~${sizeEstimate.toFixed(0)} MB`;
-        }
-        return `~${(sizeEstimate / 1024).toFixed(1)} GB`;
-    };
-
-    const estimateDownloadTime = (): string => {
-        if (!videoInfo) return 'Unknown';
-        const lengthMB = videoInfo.lengthSeconds / 60;
-        let sizeMB = 0;
-        
-        if (format === 'audio') {
-            sizeMB = lengthMB * 1.5;
-        } else {
-            const qualityMultiplier = {
-                '144p': 2, '240p': 4, '360p': 8, '480p': 15,
-                '720p': 25, '1080p': 50, '1440p': 100, '2160p': 200, 'best': 50
-            };
-            sizeMB = lengthMB * (qualityMultiplier[quality as keyof typeof qualityMultiplier] || 25);
-        }
-        
-        // Assume 5 Mbps download speed
-        const speedMBps = 5 / 8; // Convert Mbps to MBps
-        const seconds = sizeMB / speedMBps;
-        
-        if (seconds < 60) return `~${Math.ceil(seconds)}s`;
-        return `~${Math.ceil(seconds / 60)}m`;
-    };
 
     return (
         <div className="h-full flex flex-col bg-background/50">
@@ -361,19 +327,7 @@ export const YoutubeDownloader: React.FC = () => {
                         <>
                             <VideoInfo {...videoInfo} />
                             
-                            {/* Download Estimates */}
-                            <Card className="p-4 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border-indigo-500/20">
-                                <div className="grid grid-cols-2 gap-4 text-center">
-                                    <div>
-                                        <p className="text-xs text-foreground-secondary mb-1">Estimated Size</p>
-                                        <p className="text-lg font-bold text-indigo-400">{estimateFileSize()}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-foreground-secondary mb-1">Estimated Time</p>
-                                        <p className="text-lg font-bold text-purple-400">{estimateDownloadTime()}</p>
-                                    </div>
-                                </div>
-                            </Card>
+                            {/* Download Estimates Removed as they are now per item */}
 
                             {/* Available Formats */}
                             <FormatsList formats={videoInfo.formats} />
@@ -382,77 +336,120 @@ export const YoutubeDownloader: React.FC = () => {
 
                     {/* Download Options */}
                     <Card className="p-6">
-                        <h3 className="text-lg font-semibold text-foreground-primary mb-4">Download Options</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Format Selection */}
-                            {/* Format Selection */}
-                            <div>
-                                <label className="block text-sm font-medium text-foreground-primary mb-2">
-                                    Format
-                                    {videoInfo && (
-                                        <span className="text-xs text-foreground-secondary ml-2">
-                                            ({videoInfo.hasVideo ? 'Video ✓' : ''} {videoInfo.hasAudio ? 'Audio ✓' : ''})
-                                        </span>
-                                    )}
-                                </label>
-                                <Select
-                                    value={format}
-                                    onChange={(e) => setFormat(e.target.value as 'video' | 'audio' | 'best')}
-                                    disabled={downloadStatus.status === 'downloading' || !videoInfo}
-                                    options={
-                                        videoInfo ? [
-                                            ...(videoInfo.hasVideo && videoInfo.hasAudio ? [{ value: 'video' as const, label: 'Video + Audio (MP4)' }] : []),
-                                            ...(videoInfo.hasAudio ? [{ value: 'audio' as const, label: 'Audio Only (MP3)' }] : []),
-                                            { value: 'best' as const, label: 'Best Quality Available' }
-                                        ] : [
-                                            { value: 'video' as const, label: 'Video + Audio (MP4)' },
-                                            { value: 'audio' as const, label: 'Audio Only (MP3)' },
-                                            { value: 'best' as const, label: 'Best Quality Available' }
-                                        ]
-                                    }
-                                />
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-foreground-primary">Download Options</h3>
+                            <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
+                                <button
+                                    onClick={() => setFormat('video')}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                        format === 'video' ? 'bg-red-500/20 text-red-400' : 'text-foreground-secondary hover:text-foreground'
+                                    }`}
+                                >
+                                    Video + Audio
+                                </button>
+                                <button
+                                    onClick={() => setFormat('audio')}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                        format === 'audio' ? 'bg-pink-500/20 text-pink-400' : 'text-foreground-secondary hover:text-foreground'
+                                    }`}
+                                >
+                                    Audio Only
+                                </button>
                             </div>
+                        </div>
 
-                            {/* Quality Selection */}
-                            {format !== 'audio' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground-primary mb-2">
-                                        Video Quality
-                                        {videoInfo && (
-                                            <span className="text-xs text-foreground-secondary ml-2">
-                                                (Available from video)
-                                            </span>
-                                        )}
-                                    </label>
-                                    <Select
-                                        value={quality}
-                                        onChange={(e) => setQuality(e.target.value)}
-                                        disabled={downloadStatus.status === 'downloading' || !videoInfo}
-                                        options={
-                                            videoInfo && videoInfo.availableQualities ? [
-                                                { value: 'best', label: 'Best Available' },
-                                                ...videoInfo.availableQualities.map(q => {
-                                                    const labels: Record<string, string> = {
-                                                        '2160p': '2160p (4K)',
-                                                        '1440p': '1440p (2K)',
-                                                        '1080p': '1080p (Full HD)',
-                                                        '720p': '720p (HD)',
-                                                        '480p': '480p (SD)',
-                                                        '360p': '360p',
-                                                        '240p': '240p',
-                                                        '144p': '144p',
-                                                    };
-                                                    return { value: q, label: labels[q] || q };
-                                                })
-                                            ] : [
-                                                { value: 'best', label: 'Best Available' },
-                                                { value: '1080p', label: '1080p (Full HD)' },
-                                                { value: '720p', label: '720p (HD)' },
-                                                { value: '480p', label: '480p (SD)' },
-                                                { value: '360p', label: '360p' },
-                                            ]
-                                        }
-                                    />
+                        <div className="space-y-2">
+                            {/* Quality Checklist */}
+                            {format === 'video' ? (
+                                (videoInfo?.availableQualities && videoInfo.availableQualities.length > 0
+                                    ? videoInfo.availableQualities 
+                                    : ['720p', '480p', '360p']
+                                ).map((q) => {
+                                    const labels: Record<string, string> = {
+                                        '2160p': '4K Ultra HD',
+                                        '1440p': '2K Quad HD',
+                                        '1080p': 'Full HD',
+                                        '720p': 'High Definition',
+                                        '480p': 'Standard Definition',
+                                        '360p': 'Medium Quality',
+                                        '240p': 'Low Quality',
+                                        '144p': 'Very Low Quality'
+                                    };
+                                    
+                                    // Check if this quality is available as a combined format
+                                    const isCombined = videoInfo?.formats?.some(f => 
+                                        f.qualityLabel && f.qualityLabel.includes(q) && f.hasVideo && f.hasAudio
+                                    );
+                                    
+                                    const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
+                                    const qualityMultiplier = {
+                                        '144p': 2, '240p': 4, '360p': 8, '480p': 15,
+                                        '720p': 25, '1080p': 50, '1440p': 100, '2160p': 200, 'best': 50
+                                    };
+                                    const sizeEstimate = lengthMB * (qualityMultiplier[q as keyof typeof qualityMultiplier] || 25);
+                                    const sizeStr = sizeEstimate < 1024 ? `${sizeEstimate.toFixed(0)} MB` : `${(sizeEstimate / 1024).toFixed(1)} GB`;
+
+                                    return (
+                                        <div 
+                                            key={q}
+                                            onClick={() => setQuality(q)}
+                                            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group ${
+                                                quality === q 
+                                                ? 'bg-red-500/10 border-red-500/50' 
+                                                : 'bg-glass-panel border-border-glass hover:border-red-500/30'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                                    quality === q ? 'border-red-500 bg-red-500' : 'border-border-glass'
+                                                }`}>
+                                                    {quality === q && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className={`text-sm font-semibold ${quality === q ? 'text-foreground-primary' : 'text-foreground-secondary'}`}>
+                                                            {q} - {labels[q] || q}
+                                                        </p>
+                                                        {!isCombined && (
+                                                            <span className="text-[8px] bg-yellow-500/20 text-yellow-400 px-1 rounded border border-yellow-500/30">
+                                                                DASH (No Sound)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-foreground-tertiary">MP4 • {isCombined ? 'Video + Audio' : 'Video Only'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-sm font-bold ${quality === q ? 'text-red-400' : 'text-foreground-secondary'}`}>
+                                                    {sizeStr}
+                                                </p>
+                                                <p className="text-[10px] text-foreground-tertiary">Size approx.</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div 
+                                    onClick={() => setQuality('best')}
+                                    className="flex items-center justify-between p-4 rounded-xl border bg-pink-500/10 border-pink-500/50 cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Music className="w-5 h-5 text-pink-400" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-foreground-primary">High Quality Audio</p>
+                                            <p className="text-[10px] text-foreground-tertiary">MP3 • 320kbps</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-pink-400">
+                                            {(() => {
+                                                const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
+                                                const sizeEstimate = lengthMB * 1.5;
+                                                return sizeEstimate < 1024 ? `${sizeEstimate.toFixed(0)} MB` : `${(sizeEstimate / 1024).toFixed(1)} GB`;
+                                            })()}
+                                        </p>
+                                        <p className="text-[10px] text-foreground-tertiary">Size approx.</p>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -516,6 +513,19 @@ export const YoutubeDownloader: React.FC = () => {
                                     }`}>
                                         {downloadStatus.message}
                                     </p>
+
+                                    {downloadStatus.status === 'error' && downloadStatus.detailedLogs && (
+                                        <div className="mt-3 p-3 bg-black/40 rounded-lg border border-red-500/20 font-mono text-[10px] text-red-300">
+                                            <p className="font-bold mb-1 uppercase text-[9px] opacity-70">Error Diagnostic Logs:</p>
+                                            {downloadStatus.detailedLogs.map((log, i) => (
+                                                <div key={i} className="flex gap-2">
+                                                    <span className="opacity-40">[{i+1}]</span>
+                                                    <span>{log}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     {downloadStatus.status === 'downloading' && downloadStatus.progress !== undefined && (
                                         <div className="mt-3">
                                             <div className="flex justify-between text-sm text-foreground-secondary mb-1">

@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import os from "node:os";
 import si from "systeminformation";
-import ytdl from "@distube/ytdl-core";
+import { createRequire } from "module";
 import fs$1 from "fs";
 import path$1 from "path";
 import Store from "electron-store";
@@ -2254,30 +2254,55 @@ function setupScreenshotHandlers(win$1) {
 		}
 	});
 }
+var require$1 = createRequire(import.meta.url);
 var YouTubeDownloader = class {
 	constructor() {
-		this.currentDownload = null;
-		this.startTime = 0;
+		this.currentProcess = null;
+		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
+		this.initPromise = this.initYtDlp();
+	}
+	async initYtDlp() {
+		try {
+			const ytDlpModule = require$1("yt-dlp-wrap");
+			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
+			if (!fs$1.existsSync(this.binaryPath)) {
+				console.log("Downloading yt-dlp binary to:", this.binaryPath);
+				try {
+					await YTDlpWrap.downloadFromGithub(this.binaryPath);
+					console.log("yt-dlp binary downloaded successfully");
+				} catch (downloadError) {
+					console.error("Failed to download yt-dlp binary:", downloadError);
+					throw new Error(`Failed to download yt-dlp: ${downloadError}`);
+				}
+			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
+			this.ytDlp = new YTDlpWrap(this.binaryPath);
+		} catch (error) {
+			console.error("Failed to initialize yt-dlp:", error);
+			throw error;
+		}
+	}
+	async ensureInitialized() {
+		await this.initPromise;
 	}
 	async getVideoInfo(url) {
+		await this.ensureInitialized();
 		try {
-			if (!ytdl.validateURL(url)) throw new Error("Invalid YouTube URL");
-			const info = await ytdl.getInfo(url);
-			const videoDetails = info.videoDetails;
-			const formats = info.formats.map((format) => ({
-				itag: format.itag,
-				quality: format.quality || "unknown",
-				qualityLabel: format.qualityLabel,
-				hasVideo: !!format.hasVideo,
-				hasAudio: !!format.hasAudio,
-				container: format.container || "unknown",
-				codecs: format.codecs,
-				bitrate: format.bitrate,
-				audioBitrate: format.audioBitrate
+			const info = await this.ytDlp.getVideoInfo(url);
+			const formats = (info.formats || []).map((format) => ({
+				itag: format.format_id ? parseInt(format.format_id) : 0,
+				quality: format.quality || format.format_note || "unknown",
+				qualityLabel: format.format_note || format.resolution,
+				hasVideo: !!format.vcodec && format.vcodec !== "none",
+				hasAudio: !!format.acodec && format.acodec !== "none",
+				container: format.ext || "unknown",
+				codecs: format.vcodec || format.acodec,
+				bitrate: format.tbr ? format.tbr * 1e3 : void 0,
+				audioBitrate: format.abr
 			}));
 			const qualityLabels = /* @__PURE__ */ new Set();
 			formats.forEach((format) => {
-				if (format.qualityLabel && format.hasVideo) {
+				if (format.qualityLabel) {
 					const match = format.qualityLabel.match(/(\d+p)/);
 					if (match) qualityLabels.add(match[1]);
 				}
@@ -2289,14 +2314,14 @@ var YouTubeDownloader = class {
 			const hasVideo = formats.some((f) => f.hasVideo);
 			const hasAudio = formats.some((f) => f.hasAudio);
 			return {
-				videoId: videoDetails.videoId,
-				title: videoDetails.title,
-				author: videoDetails.author.name,
-				lengthSeconds: parseInt(videoDetails.lengthSeconds),
-				thumbnailUrl: videoDetails.thumbnails[videoDetails.thumbnails.length - 1]?.url || "",
-				description: videoDetails.description,
-				viewCount: parseInt(videoDetails.viewCount),
-				uploadDate: videoDetails.uploadDate,
+				videoId: info.id || "",
+				title: info.title || "Unknown",
+				author: info.uploader || info.channel || "Unknown",
+				lengthSeconds: parseInt(info.duration) || 0,
+				thumbnailUrl: info.thumbnail || "",
+				description: info.description || void 0,
+				viewCount: parseInt(info.view_count) || void 0,
+				uploadDate: info.upload_date || void 0,
 				formats,
 				availableQualities,
 				hasVideo,
@@ -2307,50 +2332,62 @@ var YouTubeDownloader = class {
 		}
 	}
 	async downloadVideo(options, progressCallback) {
+		await this.ensureInitialized();
 		const { url, format, quality, outputPath } = options;
 		try {
-			if (!ytdl.validateURL(url)) throw new Error("Invalid YouTube URL");
 			const info = await this.getVideoInfo(url);
 			const sanitizedTitle = this.sanitizeFilename(info.title);
 			const downloadsPath = outputPath || app.getPath("downloads");
 			const extension = format === "audio" ? "mp3" : "mp4";
-			const outputFile = path$1.join(downloadsPath, `${sanitizedTitle}.${extension}`);
+			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
 			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			const args = [
+				url,
+				"-o",
+				outputTemplate,
+				"--no-playlist",
+				"--no-warnings",
+				"--newline"
+			];
+			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+			else if (format === "video") {
+				if (quality && quality !== "best") args.push("-f", `bestvideo[height<=${quality.replace("p", "")}]+bestaudio/best[height<=${quality.replace("p", "")}]`);
+				else args.push("-f", "bestvideo+bestaudio/best");
+				args.push("--merge-output-format", "mp4");
+			} else args.push("-f", "best");
 			return new Promise((resolve, reject) => {
-				try {
-					const downloadOptions = { quality: this.getQualityFilter(quality, format) };
-					if (format === "audio") downloadOptions.filter = "audioonly";
-					else if (format === "video") downloadOptions.filter = "audioandvideo";
-					this.currentDownload = ytdl(url, downloadOptions);
-					const writeStream = fs$1.createWriteStream(outputFile);
-					let downloadedBytes = 0;
-					let totalBytes = 0;
-					this.startTime = Date.now();
-					this.currentDownload.on("response", (response) => {
-						totalBytes = parseInt(response.headers["content-length"] || "0");
-					});
-					this.currentDownload.on("data", (chunk) => {
-						downloadedBytes += chunk.length;
-						if (progressCallback && totalBytes > 0) {
-							const percent = Math.round(downloadedBytes / totalBytes * 100);
-							const elapsedTime = (Date.now() - this.startTime) / 1e3;
-							const speed = downloadedBytes / elapsedTime;
-							const eta = (totalBytes - downloadedBytes) / speed;
-							progressCallback({
-								percent,
-								downloaded: downloadedBytes,
-								total: totalBytes,
-								speed,
-								eta,
-								state: "downloading"
-							});
-						}
-					});
-					this.currentDownload.on("error", (error) => {
-						if (fs$1.existsSync(outputFile)) fs$1.unlink(outputFile, () => {});
-						reject(error);
-					});
-					writeStream.on("finish", () => {
+				let downloadedBytes = 0;
+				let totalBytes = 0;
+				let startTime = Date.now();
+				this.currentProcess = this.ytDlp.exec(args);
+				this.currentProcess.stdout?.on("data", (data) => {
+					const progressMatch = data.toString().match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)(\w+)/);
+					if (progressMatch && progressCallback) {
+						const percent = parseFloat(progressMatch[1]);
+						const size = parseFloat(progressMatch[2]);
+						const unit = progressMatch[3];
+						let multiplier = 1;
+						if (unit.includes("KiB")) multiplier = 1024;
+						else if (unit.includes("MiB")) multiplier = 1024 * 1024;
+						else if (unit.includes("GiB")) multiplier = 1024 * 1024 * 1024;
+						totalBytes = size * multiplier;
+						downloadedBytes = percent / 100 * totalBytes;
+						const elapsedTime = (Date.now() - startTime) / 1e3;
+						const speed = downloadedBytes / elapsedTime;
+						const eta = (totalBytes - downloadedBytes) / speed;
+						progressCallback({
+							percent: Math.round(percent),
+							downloaded: downloadedBytes,
+							total: totalBytes,
+							speed,
+							eta,
+							state: "downloading"
+						});
+					}
+				});
+				this.currentProcess.on("close", (code) => {
+					if (code === 0) {
+						const expectedFile = path$1.join(downloadsPath, `${sanitizedTitle}.${extension}`);
 						if (progressCallback) progressCallback({
 							percent: 100,
 							downloaded: totalBytes,
@@ -2359,37 +2396,22 @@ var YouTubeDownloader = class {
 							eta: 0,
 							state: "complete"
 						});
-						resolve(outputFile);
-					});
-					writeStream.on("error", (error) => {
-						if (fs$1.existsSync(outputFile)) fs$1.unlink(outputFile, () => {});
-						reject(error);
-					});
-					this.currentDownload.pipe(writeStream);
-				} catch (error) {
+						resolve(expectedFile);
+					} else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
+				});
+				this.currentProcess.on("error", (error) => {
 					reject(error);
-				}
+				});
 			});
 		} catch (error) {
 			throw new Error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
 	}
 	cancelDownload() {
-		if (this.currentDownload) {
-			this.currentDownload.destroy();
-			this.currentDownload = null;
+		if (this.currentProcess) {
+			this.currentProcess.kill();
+			this.currentProcess = null;
 		}
-	}
-	getQualityFilter(quality, format) {
-		if (!quality || quality === "best") return format === "audio" ? "highestaudio" : "highestvideo";
-		return {
-			"144p": "tiny",
-			"240p": "small",
-			"360p": "medium",
-			"480p": "large",
-			"720p": "hd720",
-			"1080p": "hd1080"
-		}[quality] || "highest";
 	}
 	sanitizeFilename(filename) {
 		return filename.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);

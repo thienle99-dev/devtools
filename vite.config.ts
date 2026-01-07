@@ -14,7 +14,18 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['systeminformation', 'electron-store', '@distube/ytdl-core'],
+              external: [
+                'systeminformation', 
+                'electron-store', 
+                'yt-dlp-wrap',
+                'child_process',
+                'events',
+                'stream',
+                'util',
+                'path',
+                'fs',
+                'os'
+              ],
             },
           },
         },
