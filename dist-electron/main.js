@@ -2407,14 +2407,13 @@ var YouTubeDownloader = class {
 				"--concurrent-fragments",
 				`${options.concurrentFragments || 4}`,
 				"--buffer-size",
-				"16K",
+				"1M",
 				"--retries",
 				"10",
 				"--fragment-retries",
 				"10",
 				"--throttled-rate",
 				"100K",
-				"--no-continue",
 				"--no-overwrites"
 			];
 			if (maxSpeed) args.push("--limit-rate", maxSpeed);

@@ -313,11 +313,10 @@ export class YouTubeDownloader {
                 '--newline', // For progress parsing
                 // Performance optimizations
                 '--concurrent-fragments', `${options.concurrentFragments || 4}`, // Download N fragments simultaneously
-                '--buffer-size', '16K', // Increase buffer size
+                '--buffer-size', '1M', // Increase buffer size
                 '--retries', '10', // Retry on errors
                 '--fragment-retries', '10',
                 '--throttled-rate', '100K', // Minimum rate before retry
-                '--no-continue', // Don't resume partial downloads (fixes HTTP 416)
                 '--no-overwrites', // Don't overwrite existing files
             ];
 

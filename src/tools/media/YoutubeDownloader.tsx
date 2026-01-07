@@ -114,6 +114,7 @@ export const YoutubeDownloader: React.FC = () => {
         maxConcurrentDownloads: 3,
         maxSpeedLimit: ''
     });
+    const [isDragOver, setIsDragOver] = useState(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
     const { toasts, removeToast, success, error, info } = useToast();
@@ -775,8 +776,25 @@ export const YoutubeDownloader: React.FC = () => {
                         </div>
                     </Card>
 
-                    {/* URL Input */}
-                    <Card className="p-6 w-full">
+                    {/* Search Input */}
+                    <Card 
+                        className={`p-6 bg-glass-panel border-border-glass transition-all ${
+                            isDragOver ? 'border-red-500 ring-2 ring-red-500/20 bg-red-500/5' : ''
+                        }`}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(false);
+                            const dropped = e.dataTransfer.getData('text');
+                            if (dropped) {
+                                setUrl(dropped);
+                            }
+                        }}
+                    >
                         <label className="block text-sm font-medium text-foreground-primary mb-2 flex items-center gap-2">
                             YouTube URL
                             {fetchingInfo && (
@@ -791,7 +809,11 @@ export const YoutubeDownloader: React.FC = () => {
                                 type="text"
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://www.youtube.com/watch?v=... (auto-fetch on paste)"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleFetchInfo();
+                                    if (e.key === 'Escape') handleClear();
+                                }}
+                                placeholder="https://www.youtube.com/watch?v=... (or drop link here)"
                                 className="flex-1"
                                 disabled={downloadStatus.status === 'downloading'}
                             />

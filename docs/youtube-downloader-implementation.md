@@ -119,17 +119,17 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
   - [ ] Test audio-only downloads
   - [ ] Test với slow network
 
-- [ ] **Performance**
-  - [ ] Optimize memory usage
-  - [ ] Handle large files efficiently
-  - [ ] Background download support
-  - [ ] Resume broken downloads
+- [x] **Performance**
+  - [x] Optimize memory usage - ✅ History limit
+  - [x] Handle large files efficiently - ✅ Buffer tuned, Aria2c support
+  - [x] Background download support - ✅ Main process handling
+  - [x] Resume broken downloads - ✅ Enabled via yt-dlp defaults
 
-- [ ] **UI/UX**
-  - [ ] Loading states
-  - [ ] Toast notifications
-  - [ ] Keyboard shortcuts
-  - [ ] Drag & drop URL support
+- [x] **UI/UX**
+  - [x] Loading states - ✅ Fetching, Downloading spinner/bars
+  - [x] Toast notifications - ✅ Integrated
+  - [x] Keyboard shortcuts - ✅ Enter/Escape support
+  - [x] Drag & drop URL support - ✅ Drop zone on input
 
 ---
 
