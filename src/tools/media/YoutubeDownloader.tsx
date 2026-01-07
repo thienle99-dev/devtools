@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw } from 'lucide-react';
+import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw, Clock, HardDrive } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
@@ -41,6 +41,39 @@ interface VideoInfoData {
     hasVideo: boolean;
     hasAudio: boolean;
 }
+
+// Helper functions for formatting
+const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+};
+
+const formatSpeed = (bytesPerSec: number): string => {
+    if (bytesPerSec === 0) return '0 B/s';
+    if (bytesPerSec > 1024 * 1024) {
+        return `${(bytesPerSec / 1024 / 1024).toFixed(2)} MB/s`;
+    }
+    if (bytesPerSec > 1024) {
+        return `${(bytesPerSec / 1024).toFixed(2)} KB/s`;
+    }
+    return `${bytesPerSec.toFixed(0)} B/s`;
+};
+
+const formatETA = (seconds: number): string => {
+    if (seconds === 0 || !isFinite(seconds)) return '--';
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return `${mins}m ${secs}s`;
+    }
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${mins}m`;
+};
 
 export const YoutubeDownloader: React.FC = () => {
     const [url, setUrl] = useState('');
@@ -527,16 +560,68 @@ export const YoutubeDownloader: React.FC = () => {
                                     )}
 
                                     {downloadStatus.status === 'downloading' && downloadStatus.progress !== undefined && (
-                                        <div className="mt-3">
-                                            <div className="flex justify-between text-sm text-foreground-secondary mb-1">
-                                                <span>Progress</span>
-                                                <span>{downloadStatus.progress}%</span>
+                                        <div className="mt-4 space-y-3">
+                                            {/* Progress Bar */}
+                                            <div>
+                                                <div className="flex justify-between text-sm text-foreground-secondary mb-2">
+                                                    <span className="font-medium">Downloading...</span>
+                                                    <span className="font-mono font-semibold text-blue-400">{downloadStatus.progress}%</span>
+                                                </div>
+                                                <div className="w-full h-3 bg-background-tertiary rounded-full overflow-hidden relative">
+                                                    <div 
+                                                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 relative"
+                                                        style={{ width: `${downloadStatus.progress}%` }}
+                                                    >
+                                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="w-full h-2 bg-background-tertiary rounded-full overflow-hidden">
-                                                <div 
-                                                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
-                                                    style={{ width: `${downloadStatus.progress}%` }}
-                                                />
+
+                                            {/* Download Stats Grid */}
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                {/* Speed */}
+                                                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">Speed</span>
+                                                    </div>
+                                                    <p className="text-lg font-bold text-blue-400 font-mono">
+                                                        {formatSpeed((downloadStatus as any).speed || 0)}
+                                                    </p>
+                                                </div>
+
+                                                {/* ETA */}
+                                                <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Clock className="w-3 h-3 text-purple-400" />
+                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">ETA</span>
+                                                    </div>
+                                                    <p className="text-lg font-bold text-purple-400 font-mono">
+                                                        {formatETA((downloadStatus as any).eta || 0)}
+                                                    </p>
+                                                </div>
+
+                                                {/* Downloaded */}
+                                                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Download className="w-3 h-3 text-green-400" />
+                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">Downloaded</span>
+                                                    </div>
+                                                    <p className="text-lg font-bold text-green-400 font-mono">
+                                                        {formatBytes((downloadStatus as any).downloaded || 0)}
+                                                    </p>
+                                                </div>
+
+                                                {/* Total Size */}
+                                                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <HardDrive className="w-3 h-3 text-orange-400" />
+                                                        <span className="text-xs text-foreground-secondary uppercase tracking-wide">Total</span>
+                                                    </div>
+                                                    <p className="text-lg font-bold text-orange-400 font-mono">
+                                                        {formatBytes((downloadStatus as any).total || 0)}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
