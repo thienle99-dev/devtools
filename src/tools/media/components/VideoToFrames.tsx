@@ -1124,9 +1124,11 @@ export const VideoToFrames: React.FC = () => {
                                                     Analytics
                                                 </Button>
                                             </div>
+                                        </div>
 
                                         {/* Frame Grid */}
-                                        <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-1 mt-4">
+                                        {viewMode === 'grid' ? (
+                                            <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-1 mt-4">
                                             <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1'}`}>
                                                 {frames.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((frame, idx) => {
                                                     const realIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx;
@@ -1219,275 +1221,6 @@ export const VideoToFrames: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Analytics Modal */}
-                                        {showAnalytics && (
-                                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                                                <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
-                                                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                                                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                                                            <Activity className="w-4 h-4 text-indigo-400" />
-                                                            Video Analytics Report
-                                                        </h3>
-                                                        <button onClick={() => setShowAnalytics(false)} className="text-white/50 hover:text-white">
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                    
-                                                    <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                                                        {isAnalyzing && (
-                                                            <div className="flex items-center gap-3 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
-                                                                <Zap className="w-5 h-5 animate-pulse" />
-                                                                <span className="text-sm font-medium">Analyzing frames... ({analyticsData.size} / {frames.length})</span>
-                                                            </div>
-                                                        )}
-
-                                                        {!isAnalyzing && analyticsData.size > 0 && (
-                                                            <>
-                                                                {/* Summary Cards */}
-                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                                                                        <p className="text-xs text-white/50 mb-1">Total Frames Analyzed</p>
-                                                                        <p className="text-2xl font-bold text-white">{analyticsData.size}</p>
-                                                                    </div>
-                                                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                                                                        <p className="text-xs text-white/50 mb-1">Average Brightness</p>
-                                                                        <p className="text-2xl font-bold text-white">
-                                                                            {Math.round(Array.from(analyticsData.values()).reduce((acc, curr) => acc + curr.brightness, 0) / analyticsData.size)}
-                                                                             <span className="text-sm font-normal text-white/40 ml-1">/ 255</span>
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                                                                        <p className="text-xs text-white/50 mb-1">Sharpest Frame</p>
-                                                                        <p className="text-2xl font-bold text-green-400">
-                                                                            #{Array.from(analyticsData.entries()).sort((a,b) => b[1].blurScore - a[1].blurScore)[0]?.[0]}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Blur/Quality Graph Visualization */}
-                                                                <div className="space-y-4">
-                                                                    <h4 className="text-sm font-semibold text-white/80">Quality & Blur Analysis</h4>
-                                                                    <div className="h-40 flex items-end gap-[1px] bg-black/40 rounded-lg p-2 border border-white/5 overflow-hidden">
-                                                                        {frames.map((frame) => {
-                                                                            const data = analyticsData.get(frame.index);
-                                                                            if (!data) return null;
-                                                                            // Normalize blur score for viz (usually 0-500 depending on image, clamping for display)
-                                                                            const height = Math.min(100, Math.max(5, (data.blurScore / 1000) * 100)); 
-                                                                             return (
-                                                                                <div 
-                                                                                    key={frame.index} 
-                                                                                    className="flex-1 bg-indigo-500/50 hover:bg-indigo-400 transition-colors min-w-[2px] relative group"
-                                                                                    style={{ height: `${height}%` }}
-                                                                                >
-                                                                                     <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/90 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
-                                                                                         Frame #{frame.index} - Score: {Math.round(data.blurScore)}
-                                                                                     </div>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                    <p className="text-[10px] text-white/40 text-center">Frames (Left to Right)</p>
-                                                                </div>
-                                                                
-                                                                {/* Anomalies / Suggestions */}
-                                                                <div className="space-y-3">
-                                                                    <h4 className="text-sm font-semibold text-white/80">Suggestions</h4>
-                                                                    <div className="grid grid-cols-1 gap-2">
-                                                                         {Array.from(analyticsData.entries())
-                                                                             .filter(([_, data]) => data.blurScore < 50) // Arbitrary threshold for "Blurry"
-                                                                             .length > 0 ? (
-                                                                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
-                                                                                     <div className="text-xs text-red-200">
-                                                                                         <span className="font-bold">Blurry Frames Detected:</span> {Array.from(analyticsData.entries()).filter(([_, data]) => data.blurScore < 50).length} frames appear to be blurry or low contrast.
-                                                                                     </div>
-                                                                                     <Button size="xs" variant="ghost" className="text-red-400 hover:bg-red-500/20" onClick={() => {
-                                                                                         const blurryIndices = new Set(Array.from(analyticsData.entries()).filter(([_, data]) => data.blurScore < 50).map(x => x[0]));
-                                                                                         setSelectedFrames(blurryIndices);
-                                                                                         setIsSelectionMode(true);
-                                                                                         setShowAnalytics(false);
-                                                                                     }}>Select Blurry Frames</Button>
-                                                                                 </div>
-                                                                             ) : (
-                                                                                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-xs text-green-200">
-                                                                                     No significantly blurry frames detected.
-                                                                                 </div>
-                                                                             )
-                                                                         }
-                                                                    </div>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Export Modal Overlay */}
-                                        {showExportOptions && (
-                                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                                                <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-                                                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                                                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                                                            <FolderOutput className="w-4 h-4 text-indigo-400" />
-                                                            Export Configuration
-                                                        </h3>
-                                                        <button onClick={() => setShowExportOptions(false)} className="text-white/50 hover:text-white">
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                    
-                                                    <div className="p-6 space-y-6">
-                                                        <div className="space-y-3">
-                                                            <label className="text-xs font-medium text-white/80">Naming Pattern</label>
-                                                            <div className="space-y-1.5">
-                                                                <Input 
-                                                                    value={exportConfig.namingPattern}
-                                                                    onChange={(e) => setExportConfig(prev => ({ ...prev, namingPattern: e.target.value }))}
-                                                                    placeholder="{video}_{index}"
-                                                                    className="bg-black/20"
-                                                                />
-                                                                <div className="flex flex-wrap gap-2 text-[10px] text-white/40">
-                                                                    <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{index}'}))}>{'{index}'}</span>
-                                                                    <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{timestamp}'}))}>{'{timestamp}'}</span>
-                                                                    <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{video}'}))}>{'{video}'}</span>
-                                                                </div>
-                                                                <p className="text-[10px] text-white/50 italic">
-                                                                    Example: {formatFilename(exportConfig.namingPattern, { index: 1, timestamp: 12.5, blob: new Blob() } as any, videoFile?.name || 'video', extractionSettings.format)}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="space-y-3">
-                                                            <label className="text-xs font-medium text-white/80">Options</label>
-                                                            <div className="space-y-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Checkbox 
-                                                                        checked={exportConfig.includeMetadata}
-                                                                        onChange={(e) => setExportConfig(prev => ({ ...prev, includeMetadata: e.target.checked }))}
-                                                                        id="meta-check"
-                                                                    />
-                                                                    <label htmlFor="meta-check" className="text-xs text-white/70">Include metadata.json</label>
-                                                                </div>
-                                                                <div className="flex items-center gap-2 opacity-60">
-                                                                    <div className="w-4 h-4 rounded border border-white/20 flex items-center justify-center">
-                                                                        <div className="w-2 h-2 bg-white/50 rounded-sm"></div>
-                                                                    </div>
-                                                                    <span className="text-xs text-white/70">Export selected only ({selectedFrames.size > 0 ? selectedFrames.size : frames.length} frames)</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="space-y-3">
-                                                            <label className="text-xs font-medium text-white/80">Output Filename</label>
-                                                            <div className="flex items-center gap-2">
-                                                                <Input 
-                                                                    value={exportConfig.zipFilename}
-                                                                    onChange={(e) => setExportConfig(prev => ({ ...prev, zipFilename: e.target.value }))}
-                                                                    className="bg-black/20 flex-1"
-                                                                />
-                                                                <span className="text-xs text-white/50 font-mono">.zip</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="p-4 border-t border-white/10 bg-white/5 flex justify-end gap-2">
-                                                        <Button variant="ghost" size="sm" onClick={() => setShowExportOptions(false)}>Cancel</Button>
-                                                        <Button variant="primary" size="sm" onClick={handleExport} icon={Download}>Download ZIP</Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        </div>
-
-                                        {viewMode === 'grid' ? (
-                                            <div className="space-y-4">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                                    {frames.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((frame, idx) => {
-                                                        const realIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx;
-                                                        return (
-                                                        <div
-                                                            key={frame.index}
-                                                            className={`group relative aspect-video rounded-lg overflow-hidden border transition-all shadow-sm cursor-pointer ${
-                                                                isSelectionMode && selectedFrames.has(frame.index) 
-                                                                    ? 'border-indigo-500 ring-1 ring-indigo-500/50 bg-indigo-500/10' 
-                                                                    : 'border-border-glass bg-black/50 hover:border-indigo-500/50'
-                                                            }`}
-                                                            onClick={() => {
-                                                                if (isSelectionMode) {
-                                                                    toggleFrameSelection(frame.index);
-                                                                } else {
-                                                                    setCurrentSlideIndex(realIdx);
-                                                                    setViewMode('slide');
-                                                                }
-                                                            }}
-                                                        >
-                                                            {isSelectionMode && (
-                                                                <div className="absolute top-2 left-2 z-20">
-                                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                                                                        selectedFrames.has(frame.index)
-                                                                            ? 'bg-indigo-500 border-indigo-500 text-white'
-                                                                            : 'bg-black/40 border-white/30 hover:border-white/60'
-                                                                    }`}>
-                                                                        {selectedFrames.has(frame.index) && <CheckSquare className="w-3.5 h-3.5" />}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                            <img
-                                                                src={URL.createObjectURL(frame.blob)}
-                                                                alt={`Frame ${frame.index}`}
-                                                                className="w-full h-full object-contain"
-                                                            />
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[10px] text-white font-mono">
-                                                                        #{frame.index}
-                                                                    </span>
-                                                                    <span className="text-[10px] text-white/70 font-mono">
-                                                                        {frame.timestamp.toFixed(2)}s
-                                                                    </span>
-                                                                </div>
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleEditFrame(realIdx);
-                                                                    }}
-                                                                    className="p-1.5 bg-indigo-500/80 rounded hover:bg-indigo-500 text-white transition-colors"
-                                                                    title="Edit Frame"
-                                                                >
-                                                                    <Pencil className="w-3 h-3" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                    })}
-                                                </div>
-                                                
-                                                {/* Pagination Controls */}
-                                                {frames.length > ITEMS_PER_PAGE && (
-                                                    <div className="flex justify-center gap-2 mt-4 pb-4">
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="secondary" 
-                                                            disabled={currentPage === 1}
-                                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                                        >
-                                                            Previous
-                                                        </Button>
-                                                        <div className="flex items-center px-4 font-mono text-sm text-foreground-secondary">
-                                                            {currentPage} / {Math.ceil(frames.length / ITEMS_PER_PAGE)}
-                                                        </div>
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="secondary" 
-                                                            disabled={currentPage === Math.ceil(frames.length / ITEMS_PER_PAGE)}
-                                                            onClick={() => setCurrentPage(p => Math.min(Math.ceil(frames.length / ITEMS_PER_PAGE), p + 1))}
-                                                        >
-                                                            Next
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
                                         ) : (
                                             <div className="flex flex-col gap-4">
                                                 <div className="relative h-[400px] bg-black/40 rounded-xl border border-border-glass flex items-center justify-center p-4 group overflow-hidden">
@@ -1567,11 +1300,190 @@ export const VideoToFrames: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
+                            
                             </div>
                         </div>
                     </div>
                 )}
             </div>
+            {/* Analytics Modal */}
+            {showAnalytics && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-indigo-400" />
+                                Video Analytics Report
+                            </h3>
+                            <button onClick={() => setShowAnalytics(false)} className="text-white/50 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                            {isAnalyzing && (
+                                <div className="flex items-center gap-3 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
+                                    <Zap className="w-5 h-5 animate-pulse" />
+                                    <span className="text-sm font-medium">Analyzing frames... ({analyticsData.size} / {frames.length})</span>
+                                </div>
+                            )}
+
+                            {!isAnalyzing && analyticsData.size > 0 && (
+                                <>
+                                    {/* Summary Cards */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                            <p className="text-xs text-white/50 mb-1">Total Frames Analyzed</p>
+                                            <p className="text-2xl font-bold text-white">{analyticsData.size}</p>
+                                        </div>
+                                        <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                            <p className="text-xs text-white/50 mb-1">Average Brightness</p>
+                                            <p className="text-2xl font-bold text-white">
+                                                {Math.round(Array.from(analyticsData.values()).reduce((acc, curr) => acc + curr.brightness, 0) / analyticsData.size)}
+                                                 <span className="text-sm font-normal text-white/40 ml-1">/ 255</span>
+                                            </p>
+                                        </div>
+                                        <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                            <p className="text-xs text-white/50 mb-1">Sharpest Frame</p>
+                                            <p className="text-2xl font-bold text-green-400">
+                                                #{Array.from(analyticsData.entries()).sort((a,b) => b[1].blurScore - a[1].blurScore)[0]?.[0]}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Blur/Quality Graph Visualization */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-semibold text-white/80">Quality & Blur Analysis</h4>
+                                        <div className="h-40 flex items-end gap-[1px] bg-black/40 rounded-lg p-2 border border-white/5 overflow-hidden">
+                                            {frames.map((frame) => {
+                                                const data = analyticsData.get(frame.index);
+                                                if (!data) return null;
+                                                // Normalize blur score for viz (usually 0-500 depending on image, clamping for display)
+                                                const height = Math.min(100, Math.max(5, (data.blurScore / 1000) * 100)); 
+                                                 return (
+                                                    <div 
+                                                        key={frame.index} 
+                                                        className="flex-1 bg-indigo-500/50 hover:bg-indigo-400 transition-colors min-w-[2px] relative group"
+                                                        style={{ height: `${height}%` }}
+                                                    >
+                                                         <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/90 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
+                                                             Frame #{frame.index} - Score: {Math.round(data.blurScore)}
+                                                         </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <p className="text-[10px] text-white/40 text-center">Frames (Left to Right)</p>
+                                    </div>
+                                    
+                                    {/* Anomalies / Suggestions */}
+                                    <div className="space-y-3">
+                                        <h4 className="text-sm font-semibold text-white/80">Suggestions</h4>
+                                        <div className="grid grid-cols-1 gap-2">
+                                             {Array.from(analyticsData.entries())
+                                                 .filter(([_, data]) => data.blurScore < 50) // Arbitrary threshold for "Blurry"
+                                                 .length > 0 ? (
+                                                     <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+                                                         <div className="text-xs text-red-200">
+                                                             <span className="font-bold">Blurry Frames Detected:</span> {Array.from(analyticsData.entries()).filter(([_, data]) => data.blurScore < 50).length} frames appear to be blurry or low contrast.
+                                                         </div>
+                                                         <Button size="xs" variant="ghost" className="text-red-400 hover:bg-red-500/20" onClick={() => {
+                                                             const blurryIndices = new Set(Array.from(analyticsData.entries()).filter(([_, data]) => data.blurScore < 50).map(x => x[0]));
+                                                             setSelectedFrames(blurryIndices);
+                                                             setIsSelectionMode(true);
+                                                             setShowAnalytics(false);
+                                                         }}>Select Blurry Frames</Button>
+                                                     </div>
+                                                 ) : (
+                                                     <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-xs text-green-200">
+                                                         No significantly blurry frames detected.
+                                                     </div>
+                                                 )
+                                             }
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Export Modal Overlay */}
+            {showExportOptions && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                <FolderOutput className="w-4 h-4 text-indigo-400" />
+                                Export Configuration
+                            </h3>
+                            <button onClick={() => setShowExportOptions(false)} className="text-white/50 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-3">
+                                <label className="text-xs font-medium text-white/80">Naming Pattern</label>
+                                <div className="space-y-1.5">
+                                    <Input 
+                                        value={exportConfig.namingPattern}
+                                        onChange={(e) => setExportConfig(prev => ({ ...prev, namingPattern: e.target.value }))}
+                                        placeholder="{video}_{index}"
+                                        className="bg-black/20"
+                                    />
+                                    <div className="flex flex-wrap gap-2 text-[10px] text-white/40">
+                                        <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{index}'}))}>{'{index}'}</span>
+                                        <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{timestamp}'}))}>{'{timestamp}'}</span>
+                                        <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{video}'}))}>{'{video}'}</span>
+                                    </div>
+                                    <p className="text-[10px] text-white/50 italic">
+                                        Example: {formatFilename(exportConfig.namingPattern, { index: 1, timestamp: 12.5, blob: new Blob() } as any, videoFile?.name || 'video', extractionSettings.format)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-xs font-medium text-white/80">Options</label>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox 
+                                            checked={exportConfig.includeMetadata}
+                                            onChange={(e) => setExportConfig(prev => ({ ...prev, includeMetadata: e.target.checked }))}
+                                            id="meta-check"
+                                        />
+                                        <label htmlFor="meta-check" className="text-xs text-white/70">Include metadata.json</label>
+                                    </div>
+                                    <div className="flex items-center gap-2 opacity-60">
+                                        <div className="w-4 h-4 rounded border border-white/20 flex items-center justify-center">
+                                            <div className="w-2 h-2 bg-white/50 rounded-sm"></div>
+                                        </div>
+                                        <span className="text-xs text-white/70">Export selected only ({selectedFrames.size > 0 ? selectedFrames.size : frames.length} frames)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-xs font-medium text-white/80">Output Filename</label>
+                                <div className="flex items-center gap-2">
+                                    <Input 
+                                        value={exportConfig.zipFilename}
+                                        onChange={(e) => setExportConfig(prev => ({ ...prev, zipFilename: e.target.value }))}
+                                        className="bg-black/20 flex-1"
+                                    />
+                                    <span className="text-xs text-white/50 font-mono">.zip</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-white/10 bg-white/5 flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setShowExportOptions(false)}>Cancel</Button>
+                            <Button variant="primary" size="sm" onClick={handleExport} icon={Download}>Download ZIP</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

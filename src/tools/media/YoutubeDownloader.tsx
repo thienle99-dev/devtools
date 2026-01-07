@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Card } from '../../components/ui/Card';
+import { VideoInfo } from './components/VideoInfo';
 
 interface DownloadOptions {
     url: string;
@@ -18,11 +19,26 @@ interface DownloadStatus {
     filename?: string;
 }
 
+interface VideoInfoData {
+    videoId: string;
+    title: string;
+    author: string;
+    lengthSeconds: number;
+    thumbnailUrl: string;
+    description?: string;
+    viewCount?: number;
+    uploadDate?: string;
+}
+
 export const YoutubeDownloader: React.FC = () => {
     const [url, setUrl] = useState('');
     const [format, setFormat] = useState<'video' | 'audio' | 'best'>('video');
     const [quality, setQuality] = useState<string>('720p');
     const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({ status: 'idle' });
+    const [videoInfo, setVideoInfo] = useState<VideoInfoData | null>(null);
+    const [fetchingInfo, setFetchingInfo] = useState(false);
+    const [availableQualities, setAvailableQualities] = useState<string[]>(['144p', '240p', '360p', '480p', '720p', '1080p']);
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     const isValidYoutubeUrl = (url: string): boolean => {
         const patterns = [
@@ -87,10 +103,71 @@ export const YoutubeDownloader: React.FC = () => {
         }
     };
 
+    const handleFetchInfo = async () => {
+        if (!url.trim()) {
+            return;
+        }
+
+        if (!isValidYoutubeUrl(url)) {
+            setDownloadStatus({ status: 'error', message: 'Invalid YouTube URL' });
+            return;
+        }
+
+        setFetchingInfo(true);
+        setVideoInfo(null);
+        setDownloadStatus({ status: 'idle' });
+
+        try {
+            // Check if YouTube API is available
+            if (!(window as any).youtubeAPI) {
+                throw new Error('YouTube API not available');
+            }
+
+            const info = await (window as any).youtubeAPI.getInfo(url);
+            setVideoInfo(info);
+        } catch (error) {
+            setDownloadStatus({
+                status: 'error',
+                message: error instanceof Error ? error.message : 'Failed to fetch video info'
+            });
+        } finally {
+            setFetchingInfo(false);
+        }
+    };
+
     const handleClear = () => {
         setUrl('');
+        setVideoInfo(null);
         setDownloadStatus({ status: 'idle' });
+        setAvailableQualities(['144p', '240p', '360p', '480p', '720p', '1080p']);
     };
+
+    // Auto-fetch video info when URL changes
+    useEffect(() => {
+        // Clear previous timer
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
+        }
+
+        // Check if URL is valid
+        if (url.trim() && isValidYoutubeUrl(url)) {
+            // Debounce: wait 1 second after user stops typing
+            debounceTimer.current = setTimeout(() => {
+                handleFetchInfo();
+            }, 1000);
+        } else {
+            // Clear video info if URL is invalid
+            setVideoInfo(null);
+            setAvailableQualities(['144p', '240p', '360p', '480p', '720p', '1080p']);
+        }
+
+        // Cleanup
+        return () => {
+            if (debounceTimer.current) {
+                clearTimeout(debounceTimer.current);
+            }
+        };
+    }, [url]);
 
     return (
         <div className="h-full flex flex-col bg-background/50">
@@ -131,16 +208,23 @@ export const YoutubeDownloader: React.FC = () => {
 
                     {/* URL Input */}
                     <Card className="p-6">
-                        <label className="block text-sm font-medium text-foreground-primary mb-2">
+                        <label className="block text-sm font-medium text-foreground-primary mb-2 flex items-center gap-2">
                             YouTube URL
+                            {fetchingInfo && (
+                                <span className="flex items-center gap-1.5 text-xs text-blue-400">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Fetching info...
+                                </span>
+                            )}
                         </label>
                         <div className="flex gap-2">
                             <Input
                                 type="text"
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://www.youtube.com/watch?v=..."
+                                placeholder="https://www.youtube.com/watch?v=... (auto-fetch on paste)"
                                 className="flex-1"
+                                disabled={downloadStatus.status === 'downloading'}
                             />
                             <Button
                                 onClick={handleClear}
@@ -151,6 +235,11 @@ export const YoutubeDownloader: React.FC = () => {
                             </Button>
                         </div>
                     </Card>
+
+                    {/* Video Info Preview */}
+                    {videoInfo && (
+                        <VideoInfo {...videoInfo} />
+                    )}
 
                     {/* Download Options */}
                     <Card className="p-6">
@@ -179,6 +268,11 @@ export const YoutubeDownloader: React.FC = () => {
                                 <div>
                                     <label className="block text-sm font-medium text-foreground-primary mb-2">
                                         Video Quality
+                                        {videoInfo && (
+                                            <span className="text-xs text-foreground-secondary ml-2">
+                                                (Available from video)
+                                            </span>
+                                        )}
                                     </label>
                                     <Select
                                         value={quality}
@@ -186,12 +280,14 @@ export const YoutubeDownloader: React.FC = () => {
                                         disabled={downloadStatus.status === 'downloading'}
                                         options={[
                                             { value: 'best', label: 'Best Available' },
-                                            { value: '1080p', label: '1080p (Full HD)' },
-                                            { value: '720p', label: '720p (HD)' },
-                                            { value: '480p', label: '480p (SD)' },
-                                            { value: '360p', label: '360p' },
-                                            { value: '240p', label: '240p' },
-                                            { value: '144p', label: '144p' }
+                                            ...(availableQualities.includes('2160p') ? [{ value: '2160p', label: '2160p (4K)' }] : []),
+                                            ...(availableQualities.includes('1440p') ? [{ value: '1440p', label: '1440p (2K)' }] : []),
+                                            ...(availableQualities.includes('1080p') ? [{ value: '1080p', label: '1080p (Full HD)' }] : []),
+                                            ...(availableQualities.includes('720p') ? [{ value: '720p', label: '720p (HD)' }] : []),
+                                            ...(availableQualities.includes('480p') ? [{ value: '480p', label: '480p (SD)' }] : []),
+                                            ...(availableQualities.includes('360p') ? [{ value: '360p', label: '360p' }] : []),
+                                            ...(availableQualities.includes('240p') ? [{ value: '240p', label: '240p' }] : []),
+                                            ...(availableQualities.includes('144p') ? [{ value: '144p', label: '144p' }] : []),
                                         ]}
                                     />
                                 </div>

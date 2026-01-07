@@ -14,7 +14,7 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['systeminformation', 'electron-store', 'ytdl-core'],
+              external: ['systeminformation', 'electron-store', '@distube/ytdl-core'],
             },
           },
         },

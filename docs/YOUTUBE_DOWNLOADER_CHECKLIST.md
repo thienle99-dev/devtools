@@ -6,14 +6,14 @@
 
 ---
 
-## 📊 Overall Progress: 20%
+## 📊 Overall Progress: 47%
 
 ```
-[████░░░░░░░░░░░░░░░░] 20% Complete
+[█████████░░░░░░░░░░░] 47% Complete
 
 ✅ Phase 1: UI & Documentation (100%)
-⏳ Phase 2: Backend Integration (0%)
-⏳ Phase 3: Frontend Connection (0%)
+✅ Phase 2: Backend Integration (100%)
+⏳ Phase 3: Frontend Connection (73%)
 ⏳ Phase 4: Advanced Features (0%)
 ⏳ Phase 5: Testing & Polish (0%)
 ```
@@ -79,75 +79,82 @@
 
 ---
 
-## ⏳ Phase 2: Backend Integration (0%)
+## ✅ Phase 2: Backend Integration (100%)
 
 ### Dependencies
-- [ ] Choose backend library
-  - [ ] Option A: Install ytdl-core (`pnpm add ytdl-core @types/ytdl-core`)
-  - [ ] Option B: Download yt-dlp binary and bundle with electron
-- [ ] Add to package.json
-- [ ] Test installation
+- [x] Choose backend library
+  - [x] Option A: Install @distube/ytdl-core (`pnpm add @distube/ytdl-core`)
+  - [x] Switched from ytdl-core to @distube/ytdl-core for better YouTube API compatibility
+- [x] Add to package.json
+- [x] Test installation
+- [x] Add to vite.config.ts external array
 
 ### Electron Main Process
-- [ ] Create `electron/main/youtube-downloader.ts`
-- [ ] Implement `YouTubeDownloader` class
-- [ ] Implement `getVideoInfo()` method
-- [ ] Implement `downloadVideo()` method
-- [ ] Implement `cancelDownload()` method
-- [ ] Implement `getQualityFilter()` helper
-- [ ] Implement `sanitizeFilename()` helper
-- [ ] Add error handling
-- [ ] Add logging
+- [x] Create `electron/main/youtube-downloader.ts`
+- [x] Implement `YouTubeDownloader` class
+- [x] Implement `getVideoInfo()` method
+- [x] Implement `downloadVideo()` method
+- [x] Implement `cancelDownload()` method
+- [x] Implement `getQualityFilter()` helper
+- [x] Implement `sanitizeFilename()` helper
+- [x] Add error handling
+- [x] Add logging
 
 ### IPC Handlers
-- [ ] Add handlers to `electron/main/main.ts`
-- [ ] Implement `youtube:getInfo` handler
-- [ ] Implement `youtube:download` handler
-- [ ] Implement `youtube:cancel` handler
-- [ ] Implement `youtube:progress` event emitter
-- [ ] Test IPC communication
+- [x] Add handlers to `electron/main/main.ts`
+- [x] Implement `youtube:getInfo` handler
+- [x] Implement `youtube:download` handler
+- [x] Implement `youtube:cancel` handler
+- [x] Implement `youtube:progress` event emitter
+- [x] Test IPC communication
 
 ### Preload Script
-- [ ] Update `electron/preload/preload.ts`
-- [ ] Expose `youtube.getInfo()` API
-- [ ] Expose `youtube.download()` API
-- [ ] Expose `youtube.cancel()` API
-- [ ] Expose `youtube.onProgress()` API
-- [ ] Add type definitions for exposed APIs
+- [x] Update `electron/preload/preload.ts`
+- [x] Expose `youtubeAPI.getInfo()` API
+- [x] Expose `youtubeAPI.download()` API
+- [x] Expose `youtubeAPI.cancel()` API
+- [x] Expose `youtubeAPI.onProgress()` API
+- [x] Add type definitions for exposed APIs
 
 ### File Management
-- [ ] Implement download path selection
-- [ ] Create downloads directory if not exists
-- [ ] Handle file naming conflicts
-- [ ] Implement file cleanup on error
-- [ ] Add disk space check
+- [x] Implement download path selection (user's Downloads folder)
+- [x] Create downloads directory if not exists
+- [x] Handle file naming conflicts
+- [x] Implement file cleanup on error
+- [x] Add disk space check
 
-**Phase 2 Status**: ⏳ 0% Complete
+**Phase 2 Status**: ✅ 100% Complete (30/30 tasks)
 
 ---
 
-## ⏳ Phase 3: Frontend Connection (0%)
+## ⏳ Phase 3: Frontend Connection (73%)
 
 ### Component Updates
-- [ ] Replace mock download logic in `YoutubeDownloader.tsx`
-- [ ] Connect to `window.electron.youtube` API
-- [ ] Implement real progress tracking
-- [ ] Handle download cancellation
-- [ ] Update error handling
+- [x] Replace mock download logic in `YoutubeDownloader.tsx`
+- [x] Connect to `window.youtubeAPI` API
+- [x] Implement real progress tracking
+- [x] Handle download cancellation
+- [x] Update error handling
 - [ ] Add retry logic
 
 ### Video Info Preview
-- [ ] Create `VideoInfo` component
-- [ ] Fetch and display video info before download
-- [ ] Show thumbnail
-- [ ] Display title
-- [ ] Display author
-- [ ] Display duration
-- [ ] Display view count
-- [ ] Show available formats
+- [x] Create `VideoInfo` component
+- [x] Fetch and display video info before download
+- [x] Show thumbnail
+- [x] Display title
+- [x] Display author
+- [x] Display duration
+- [x] Display view count & upload date
+- [x] Show available formats
+
+### Auto-Fetch & Quality Detection
+- [x] Auto-fetch video info on URL paste (with 1s debounce)
+- [x] Remove manual "Get Info" button
+- [x] Show loading indicator during fetch
+- [x] Dynamic quality dropdown (shows only available qualities)
 
 ### UI Enhancements
-- [ ] Add video thumbnail preview
+- [x] Add video thumbnail preview
 - [ ] Show estimated file size
 - [ ] Display estimated download time
 - [ ] Add "Open file" button after download
@@ -156,7 +163,7 @@
 - [ ] Add toast notifications
 
 ### State Management
-- [ ] Handle download queue
+- [x] Handle download queue
 - [ ] Manage multiple downloads
 - [ ] Track download history
 - [ ] Persist settings

@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import os from "node:os";
 import si from "systeminformation";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import fs$1 from "fs";
 import path$1 from "path";
 import Store from "electron-store";
