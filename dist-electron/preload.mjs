@@ -116,3 +116,13 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
 	sendSelection: (bounds) => electron.ipcRenderer.invoke("screenshot:area-selected", bounds),
 	cancelSelection: () => electron.ipcRenderer.invoke("screenshot:area-cancelled")
 });
+electron.contextBridge.exposeInMainWorld("youtubeAPI", {
+	getInfo: (url) => electron.ipcRenderer.invoke("youtube:getInfo", url),
+	download: (options) => electron.ipcRenderer.invoke("youtube:download", options),
+	cancel: () => electron.ipcRenderer.invoke("youtube:cancel"),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("youtube:progress", listener);
+		return () => electron.ipcRenderer.removeListener("youtube:progress", listener);
+	}
+});

@@ -7,6 +7,9 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import os from "node:os";
 import si from "systeminformation";
+import ytdl from "ytdl-core";
+import fs$1 from "fs";
+import path$1 from "path";
 import Store from "electron-store";
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
 	if (typeof require !== "undefined") return require.apply(this, arguments);
@@ -2251,6 +2254,119 @@ function setupScreenshotHandlers(win$1) {
 		}
 	});
 }
+var YouTubeDownloader = class {
+	constructor() {
+		this.currentDownload = null;
+		this.startTime = 0;
+	}
+	async getVideoInfo(url) {
+		try {
+			if (!ytdl.validateURL(url)) throw new Error("Invalid YouTube URL");
+			const videoDetails = (await ytdl.getInfo(url)).videoDetails;
+			return {
+				videoId: videoDetails.videoId,
+				title: videoDetails.title,
+				author: videoDetails.author.name,
+				lengthSeconds: parseInt(videoDetails.lengthSeconds),
+				thumbnailUrl: videoDetails.thumbnails[videoDetails.thumbnails.length - 1]?.url || "",
+				description: videoDetails.description,
+				viewCount: parseInt(videoDetails.viewCount),
+				uploadDate: videoDetails.uploadDate
+			};
+		} catch (error) {
+			throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
+	async downloadVideo(options, progressCallback) {
+		const { url, format, quality, outputPath } = options;
+		try {
+			if (!ytdl.validateURL(url)) throw new Error("Invalid YouTube URL");
+			const info = await this.getVideoInfo(url);
+			const sanitizedTitle = this.sanitizeFilename(info.title);
+			const downloadsPath = outputPath || app.getPath("downloads");
+			const extension = format === "audio" ? "mp3" : "mp4";
+			const outputFile = path$1.join(downloadsPath, `${sanitizedTitle}.${extension}`);
+			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			return new Promise((resolve, reject) => {
+				try {
+					const downloadOptions = { quality: this.getQualityFilter(quality, format) };
+					if (format === "audio") downloadOptions.filter = "audioonly";
+					else if (format === "video") downloadOptions.filter = "audioandvideo";
+					this.currentDownload = ytdl(url, downloadOptions);
+					const writeStream = fs$1.createWriteStream(outputFile);
+					let downloadedBytes = 0;
+					let totalBytes = 0;
+					this.startTime = Date.now();
+					this.currentDownload.on("response", (response) => {
+						totalBytes = parseInt(response.headers["content-length"] || "0");
+					});
+					this.currentDownload.on("data", (chunk) => {
+						downloadedBytes += chunk.length;
+						if (progressCallback && totalBytes > 0) {
+							const percent = Math.round(downloadedBytes / totalBytes * 100);
+							const elapsedTime = (Date.now() - this.startTime) / 1e3;
+							const speed = downloadedBytes / elapsedTime;
+							const eta = (totalBytes - downloadedBytes) / speed;
+							progressCallback({
+								percent,
+								downloaded: downloadedBytes,
+								total: totalBytes,
+								speed,
+								eta,
+								state: "downloading"
+							});
+						}
+					});
+					this.currentDownload.on("error", (error) => {
+						if (fs$1.existsSync(outputFile)) fs$1.unlink(outputFile, () => {});
+						reject(error);
+					});
+					writeStream.on("finish", () => {
+						if (progressCallback) progressCallback({
+							percent: 100,
+							downloaded: totalBytes,
+							total: totalBytes,
+							speed: 0,
+							eta: 0,
+							state: "complete"
+						});
+						resolve(outputFile);
+					});
+					writeStream.on("error", (error) => {
+						if (fs$1.existsSync(outputFile)) fs$1.unlink(outputFile, () => {});
+						reject(error);
+					});
+					this.currentDownload.pipe(writeStream);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		} catch (error) {
+			throw new Error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
+	cancelDownload() {
+		if (this.currentDownload) {
+			this.currentDownload.destroy();
+			this.currentDownload = null;
+		}
+	}
+	getQualityFilter(quality, format) {
+		if (!quality || quality === "best") return format === "audio" ? "highestaudio" : "highestvideo";
+		return {
+			"144p": "tiny",
+			"240p": "small",
+			"360p": "medium",
+			"480p": "large",
+			"720p": "hd720",
+			"1080p": "hd1080"
+		}[quality] || "highest";
+	}
+	sanitizeFilename(filename) {
+		return filename.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);
+	}
+};
+const youtubeDownloader = new YouTubeDownloader();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -3469,6 +3585,32 @@ app.whenReady().then(() => {
 				error: error.message
 			};
 		}
+	});
+	ipcMain.handle("youtube:getInfo", async (_event, url) => {
+		try {
+			return await youtubeDownloader.getVideoInfo(url);
+		} catch (error) {
+			throw error;
+		}
+	});
+	ipcMain.handle("youtube:download", async (event, options) => {
+		try {
+			return {
+				success: true,
+				filepath: await youtubeDownloader.downloadVideo(options, (progress) => {
+					event.sender.send("youtube:progress", progress);
+				})
+			};
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : "Download failed"
+			};
+		}
+	});
+	ipcMain.handle("youtube:cancel", async () => {
+		youtubeDownloader.cancelDownload();
+		return { success: true };
 	});
 	async function getDirSize$1(dirPath) {
 		try {

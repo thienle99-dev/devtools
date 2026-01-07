@@ -134,3 +134,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('screenshot:area-cancelled'),
 })
 
+// YouTube Downloader API
+contextBridge.exposeInMainWorld('youtubeAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('youtube:getInfo', url),
+  download: (options: any) => ipcRenderer.invoke('youtube:download', options),
+  cancel: () => ipcRenderer.invoke('youtube:cancel'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('youtube:progress', listener);
+    return () => ipcRenderer.removeListener('youtube:progress', listener);
+  }
+})
+

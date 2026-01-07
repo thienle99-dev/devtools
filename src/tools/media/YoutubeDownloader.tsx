@@ -47,27 +47,41 @@ export const YoutubeDownloader: React.FC = () => {
         setDownloadStatus({ status: 'downloading', message: 'Preparing download...', progress: 0 });
 
         try {
-            // TODO: Implement actual download logic using yt-dlp or ytdl-core
-            // This is a placeholder implementation
-            
-            // Simulate download progress
-            for (let i = 0; i <= 100; i += 10) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                setDownloadStatus({ 
-                    status: 'downloading', 
-                    message: 'Downloading...', 
-                    progress: i 
-                });
+            // Check if YouTube API is available
+            if (!(window as any).youtubeAPI) {
+                throw new Error('YouTube API not available');
             }
 
-            setDownloadStatus({ 
-                status: 'success', 
-                message: 'Download completed successfully!',
-                filename: 'video.mp4'
+            // Set up progress listener
+            const unsubscribe = (window as any).youtubeAPI.onProgress((progress: any) => {
+                setDownloadStatus({
+                    status: 'downloading',
+                    message: `Downloading... ${progress.percent}%`,
+                    progress: progress.percent
+                });
             });
+
+            // Start download
+            const result = await (window as any).youtubeAPI.download({
+                url,
+                format,
+                quality: format === 'audio' ? undefined : quality,
+            });
+
+            unsubscribe();
+
+            if (result.success) {
+                setDownloadStatus({
+                    status: 'success',
+                    message: 'Download completed successfully!',
+                    filename: result.filepath
+                });
+            } else {
+                throw new Error(result.error || 'Download failed');
+            }
         } catch (error) {
-            setDownloadStatus({ 
-                status: 'error', 
+            setDownloadStatus({
+                status: 'error',
                 message: error instanceof Error ? error.message : 'Download failed'
             });
         }

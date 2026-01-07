@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { 
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
-    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X } from 'lucide-react';
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput } from 'lucide-react';
 import { FrameEditor } from './FrameEditor';
 import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/Input';
+import { Checkbox } from '../../../components/ui/Checkbox';
 import { logger } from '../../../utils/logger';
 
 interface FrameData {
@@ -40,6 +42,16 @@ export const VideoToFrames: React.FC = () => {
         width: number;
         height: number;
     } | null>(null);
+
+    // Export & Organization State
+    const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set());
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [showExportOptions, setShowExportOptions] = useState(false);
+    const [exportConfig, setExportConfig] = useState({
+        namingPattern: '{video}_{index}_{timestamp}',
+        includeMetadata: true,
+        zipFilename: 'frames_export'
+    });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -290,56 +302,92 @@ export const VideoToFrames: React.FC = () => {
         });
     };
 
-    const downloadFrames = async () => {
-        if (frames.length === 0) return;
 
-        // Create zip file in memory
-        try {
-            // Note: In production, you'd use a library like jszip
-            // For now, we'll download frames individually
-            for (const frame of frames) {
-                const url = URL.createObjectURL(frame.blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `frame-${frame.index.toString().padStart(6, '0')}.${extractionSettings.format}`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
 
-                // Small delay between downloads
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-        } catch (error) {
-            console.error('Download failed:', error);
+    const toggleFrameSelection = (index: number) => {
+        const newSelected = new Set(selectedFrames);
+        if (newSelected.has(index)) {
+            newSelected.delete(index);
+        } else {
+            newSelected.add(index);
+        }
+        setSelectedFrames(newSelected);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedFrames.size === frames.length) {
+            setSelectedFrames(new Set());
+        } else {
+            setSelectedFrames(new Set(frames.map(f => f.index)));
         }
     };
 
-    const downloadAsZip = async () => {
+    const formatFilename = (pattern: string, frame: FrameData, videoName: string, ext: string) => {
+        let name = pattern;
+        const vName = videoName.split('.')[0] || 'video';
+        
+        name = name.replace(/{video}/g, vName);
+        name = name.replace(/{index}/g, frame.index.toString().padStart(4, '0'));
+        name = name.replace(/{timestamp}/g, frame.timestamp.toFixed(2).replace('.', '_'));
+        
+        // Sanitize
+        return `${name.replace(/[^a-z0-9_\-]/gi, '_')}.${ext}`;
+    };
+
+    const handleExport = async () => {
         if (frames.length === 0) return;
 
+        const framesToExport = selectedFrames.size > 0 
+            ? frames.filter(f => selectedFrames.has(f.index))
+            : frames;
+
         try {
-
             const zip = new JSZip();
+            const format = extractionSettings.format;
+            const videoName = videoFile?.name || 'video';
 
-            frames.forEach((frame) => {
-                zip.file(`frame-${frame.index.toString().padStart(6, '0')}.${extractionSettings.format}`, frame.blob);
+            // frames
+            framesToExport.forEach((frame) => {
+                const filename = formatFilename(exportConfig.namingPattern, frame, videoName, format);
+                zip.file(filename, frame.blob);
             });
+
+            // metadata
+            if (exportConfig.includeMetadata) {
+                const metadata = {
+                    source_video: videoName,
+                    export_date: new Date().toISOString(),
+                    total_frames: framesToExport.length,
+                    format: format,
+                    frames: framesToExport.map(f => ({
+                        index: f.index,
+                        timestamp: f.timestamp,
+                        filename: formatFilename(exportConfig.namingPattern, f, videoName, format),
+                        size_bytes: f.blob.size
+                    }))
+                };
+                zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+            }
 
             const content = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(content);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `frames-${Date.now()}.zip`;
+            a.download = `${exportConfig.zipFilename}.zip`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            
+            setShowExportOptions(false);
         } catch (error) {
-            console.error('ZIP download failed:', error);
-            downloadFrames();
+            console.error('Export failed:', error);
+            logger.error('Export failed', error);
         }
     };
+    
+    // Kept generic download for backward compat or quick actions if needed
+    // const downloadAsZip = () => setShowExportOptions(true);
 
     const handleEditFrame = (index: number) => {
         setEditingFrameIndex(index);
@@ -691,6 +739,36 @@ export const VideoToFrames: React.FC = () => {
                                                 Extracted Frames ({frames.length})
                                             </h3>
                                             <div className="flex gap-2 items-center">
+                                                {/* Selection Controls */}
+                                                <div className="flex bg-glass-panel border border-border-glass rounded-lg p-1 mr-2 items-center gap-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsSelectionMode(!isSelectionMode);
+                                                            if (isSelectionMode) setSelectedFrames(new Set());
+                                                        }}
+                                                        className={`p-1.5 rounded-md transition-all flex items-center gap-1.5 ${isSelectionMode ? 'bg-indigo-500/20 text-indigo-400' : 'text-foreground-secondary hover:text-foreground hover:bg-white/5'}`}
+                                                        title="Toggle Selection Mode"
+                                                    >
+                                                        <CheckSquare className="w-4 h-4" />
+                                                        {isSelectionMode && <span className="text-xs font-medium pr-1">Selecting</span>}
+                                                    </button>
+                                                    
+                                                    {isSelectionMode && (
+                                                        <>
+                                                            <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+                                                            <button 
+                                                                onClick={toggleSelectAll}
+                                                                className="text-xs px-2 py-1 text-foreground-secondary hover:text-foreground"
+                                                            >
+                                                                {selectedFrames.size === frames.length ? 'None' : 'All'}
+                                                            </button>
+                                                            <span className="text-xs text-indigo-400 font-mono px-2">
+                                                                {selectedFrames.size}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
+
                                                 <div className="flex bg-glass-panel border border-border-glass rounded-lg p-1 mr-2">
                                                     <button
                                                         onClick={() => setViewMode('grid')}
@@ -707,10 +785,86 @@ export const VideoToFrames: React.FC = () => {
                                                         <GalleryHorizontal className="w-4 h-4" />
                                                     </button>
                                                 </div>
-                                                <Button size="sm" variant="secondary" icon={Download} onClick={downloadAsZip}>
-                                                    Download ZIP
+                                                <Button size="sm" variant="primary" icon={FolderOutput} onClick={() => setShowExportOptions(true)}>
+                                                    Export...
                                                 </Button>
                                             </div>
+
+                                        {/* Export Modal Overlay */}
+                                        {showExportOptions && (
+                                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                                                <div className="bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+                                                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                                                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                                            <FolderOutput className="w-4 h-4 text-indigo-400" />
+                                                            Export Configuration
+                                                        </h3>
+                                                        <button onClick={() => setShowExportOptions(false)} className="text-white/50 hover:text-white">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div className="p-6 space-y-6">
+                                                        <div className="space-y-3">
+                                                            <label className="text-xs font-medium text-white/80">Naming Pattern</label>
+                                                            <div className="space-y-1.5">
+                                                                <Input 
+                                                                    value={exportConfig.namingPattern}
+                                                                    onChange={(e) => setExportConfig(prev => ({ ...prev, namingPattern: e.target.value }))}
+                                                                    placeholder="{video}_{index}"
+                                                                    className="bg-black/20"
+                                                                />
+                                                                <div className="flex flex-wrap gap-2 text-[10px] text-white/40">
+                                                                    <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{index}'}))}>{'{index}'}</span>
+                                                                    <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{timestamp}'}))}>{'{timestamp}'}</span>
+                                                                    <span className="cursor-pointer hover:text-indigo-400" onClick={() => setExportConfig(prev => ({...prev, namingPattern: prev.namingPattern + '{video}'}))}>{'{video}'}</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-white/50 italic">
+                                                                    Example: {formatFilename(exportConfig.namingPattern, { index: 1, timestamp: 12.5, blob: new Blob() } as any, videoFile?.name || 'video', extractionSettings.format)}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <label className="text-xs font-medium text-white/80">Options</label>
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Checkbox 
+                                                                        checked={exportConfig.includeMetadata}
+                                                                        onChange={(e) => setExportConfig(prev => ({ ...prev, includeMetadata: e.target.checked }))}
+                                                                        id="meta-check"
+                                                                    />
+                                                                    <label htmlFor="meta-check" className="text-xs text-white/70">Include metadata.json</label>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 opacity-60">
+                                                                    <div className="w-4 h-4 rounded border border-white/20 flex items-center justify-center">
+                                                                        <div className="w-2 h-2 bg-white/50 rounded-sm"></div>
+                                                                    </div>
+                                                                    <span className="text-xs text-white/70">Export selected only ({selectedFrames.size > 0 ? selectedFrames.size : frames.length} frames)</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <label className="text-xs font-medium text-white/80">Output Filename</label>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input 
+                                                                    value={exportConfig.zipFilename}
+                                                                    onChange={(e) => setExportConfig(prev => ({ ...prev, zipFilename: e.target.value }))}
+                                                                    className="bg-black/20 flex-1"
+                                                                />
+                                                                <span className="text-xs text-white/50 font-mono">.zip</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-4 border-t border-white/10 bg-white/5 flex justify-end gap-2">
+                                                        <Button variant="ghost" size="sm" onClick={() => setShowExportOptions(false)}>Cancel</Button>
+                                                        <Button variant="primary" size="sm" onClick={handleExport} icon={Download}>Download ZIP</Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         </div>
 
                                         {viewMode === 'grid' ? (
@@ -718,12 +872,31 @@ export const VideoToFrames: React.FC = () => {
                                                 {frames.map((frame, idx) => (
                                                     <div
                                                         key={frame.index}
-                                                        className="group relative aspect-video rounded-lg overflow-hidden border border-border-glass bg-black/50 hover:border-indigo-500/50 transition-all shadow-sm cursor-pointer"
+                                                        className={`group relative aspect-video rounded-lg overflow-hidden border transition-all shadow-sm cursor-pointer ${
+                                                            isSelectionMode && selectedFrames.has(frame.index) 
+                                                                ? 'border-indigo-500 ring-1 ring-indigo-500/50 bg-indigo-500/10' 
+                                                                : 'border-border-glass bg-black/50 hover:border-indigo-500/50'
+                                                        }`}
                                                         onClick={() => {
-                                                            setCurrentSlideIndex(idx);
-                                                            setViewMode('slide');
+                                                            if (isSelectionMode) {
+                                                                toggleFrameSelection(frame.index);
+                                                            } else {
+                                                                setCurrentSlideIndex(idx);
+                                                                setViewMode('slide');
+                                                            }
                                                         }}
                                                     >
+                                                        {isSelectionMode && (
+                                                            <div className="absolute top-2 left-2 z-20">
+                                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                                                                    selectedFrames.has(frame.index)
+                                                                        ? 'bg-indigo-500 border-indigo-500 text-white'
+                                                                        : 'bg-black/40 border-white/30 hover:border-white/60'
+                                                                }`}>
+                                                                    {selectedFrames.has(frame.index) && <CheckSquare className="w-3.5 h-3.5" />}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                         <img
                                                             src={URL.createObjectURL(frame.blob)}
                                                             alt={`Frame ${frame.index}`}

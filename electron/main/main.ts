@@ -9,6 +9,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
 import { setupScreenshotHandlers } from './screenshot'
+import { youtubeDownloader } from './youtube-downloader'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1536,6 +1537,35 @@ app.whenReady().then(() => {
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
+  });
+
+  // YouTube Downloader IPC Handlers
+  ipcMain.handle('youtube:getInfo', async (_event, url: string) => {
+    try {
+      return await youtubeDownloader.getVideoInfo(url);
+    } catch (error) {
+      throw error;
+    }
+  });
+
+  ipcMain.handle('youtube:download', async (event, options) => {
+    try {
+      const filepath = await youtubeDownloader.downloadVideo(
+        options,
+        (progress) => {
+          // Send progress to renderer
+          event.sender.send('youtube:progress', progress);
+        }
+      );
+      return { success: true, filepath };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Download failed' };
+    }
+  });
+
+  ipcMain.handle('youtube:cancel', async () => {
+    youtubeDownloader.cancelDownload();
+    return { success: true };
   });
 
   // Helper functions
