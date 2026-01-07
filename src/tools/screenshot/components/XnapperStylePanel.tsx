@@ -18,6 +18,12 @@ export const XnapperStylePanel: React.FC = () => {
         setBackground,
         autoBalance,
         setAutoBalance,
+        showWindowControls,
+        setShowWindowControls,
+        watermark,
+        setWatermark,
+        shadowOffsetY,
+        setShadowOffsetY,
     } = useXnapperStore();
 
     const [selectedBg, setSelectedBg] = useState('desktop');
@@ -183,19 +189,13 @@ export const XnapperStylePanel: React.FC = () => {
                 </button>
             </div>
 
-            {/* Shadow Slider (only when enabled) */}
+            {/* Shadow Settings (only when enabled) */}
             {showShadow && (
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <label className="text-xs font-medium text-foreground-secondary">Shadow</label>
-                        <span className="text-xs text-foreground-muted">{shadowBlur}px</span>
-                    </div>
-                    <div className="relative">
-                        <div className="h-1.5 bg-background rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                                style={{ width: `${(shadowBlur / 100) * 100}%` }}
-                            />
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-foreground-secondary">Blur</label>
+                            <span className="text-xs text-foreground-muted">{shadowBlur}px</span>
                         </div>
                         <input
                             type="range"
@@ -203,15 +203,97 @@ export const XnapperStylePanel: React.FC = () => {
                             max={100}
                             value={shadowBlur}
                             onChange={(e) => setShadowBlur(Number(e.target.value))}
-                            className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                            className="w-full h-1.5 bg-background rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:rounded-full"
                         />
-                        <div
-                            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-indigo-500 rounded-full shadow-lg pointer-events-none"
-                            style={{ left: `calc(${(shadowBlur / 100) * 100}% - 8px)` }}
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-foreground-secondary">Offset Y</label>
+                            <span className="text-xs text-foreground-muted">{shadowOffsetY}px</span>
+                        </div>
+                        <input
+                            type="range"
+                            min={-50}
+                            max={50}
+                            value={shadowOffsetY}
+                            onChange={(e) => setShadowOffsetY(Number(e.target.value))}
+                            className="w-full h-1.5 bg-background rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:rounded-full"
                         />
                     </div>
                 </div>
             )}
+
+            {/* Window Controls Toggle */}
+            <button
+                onClick={() => setShowWindowControls(!showWindowControls)}
+                className={cn(
+                    "flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-medium transition-all border",
+                    showWindowControls
+                        ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
+                        : "bg-glass-panel text-foreground-secondary border-border-glass hover:bg-white/5"
+                )}
+            >
+                <span>Window Controls (Traffic Lights)</span>
+                <div className={cn(
+                    "w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out",
+                    showWindowControls ? "bg-indigo-500" : "bg-zinc-600"
+                )}>
+                    <div className={cn(
+                        "w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-200 ease-in-out",
+                        showWindowControls ? "translate-x-4" : "translate-x-0"
+                    )} />
+                </div>
+            </button>
+
+            {/* Watermark Section */}
+            <div className="space-y-3 pt-4 border-t border-border-glass">
+                <label className="text-xs font-semibold text-foreground">Watermark</label>
+                <div className="space-y-3">
+                    <input
+                        type="text"
+                        value={watermark?.text || ''}
+                        onChange={(e) => setWatermark({ text: e.target.value })}
+                        placeholder="Enter watermark text..."
+                        className="w-full px-3 py-2 bg-background/50 border border-border-glass rounded-lg text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50"
+                    />
+
+                    {watermark?.text && (
+                        <div className="space-y-3 animate-in fade-in">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-medium text-foreground-secondary">Opacity</label>
+                                    <span className="text-xs text-foreground-muted">{Math.round((watermark.opacity || 0.3) * 100)}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    value={(watermark.opacity || 0.3) * 100}
+                                    onChange={(e) => setWatermark({ opacity: Number(e.target.value) / 100 })}
+                                    className="w-full h-1.5 bg-background rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:rounded-full"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                {['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'].map((pos) => (
+                                    <button
+                                        key={pos}
+                                        onClick={() => setWatermark({ position: pos as any })}
+                                        className={cn(
+                                            "p-1.5 text-[10px] rounded border transition-all",
+                                            watermark.position === pos
+                                                ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400"
+                                                : "bg-glass-panel border-border-glass text-foreground-secondary hover:bg-white/5"
+                                        )}
+                                    >
+                                        {pos.replace('-', ' ')}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Background Presets */}
             <div className="space-y-2">

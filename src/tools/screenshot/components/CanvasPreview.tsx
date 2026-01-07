@@ -48,6 +48,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         shadowOffsetX,
         shadowOffsetY,
         inset,
+        showWindowControls,
+        watermark,
     } = useXnapperStore();
 
     const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -243,6 +245,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                 shadowOffsetX,
                 shadowOffsetY,
                 inset,
+                showWindowControls,
+                watermark,
             });
 
             // Handle promise or callback based on Fabric version
@@ -300,7 +304,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         };
 
         loadContent();
-    }, [currentScreenshot, autoBalance, redactionAreas, background, backgroundPadding]);
+    }, [currentScreenshot, autoBalance, redactionAreas, background, backgroundPadding, borderRadius, shadowBlur, shadowOpacity, shadowOffsetX, shadowOffsetY, inset, showWindowControls, watermark]);
 
     const loadObjects = (jsonString: string) => {
         const objects = JSON.parse(jsonString);

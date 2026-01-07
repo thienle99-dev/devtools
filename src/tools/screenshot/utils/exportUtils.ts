@@ -22,6 +22,8 @@ export async function generateFinalImage(
         shadowOffsetX?: number;
         shadowOffsetY?: number;
         inset?: number;
+        showWindowControls?: boolean;
+        watermark?: { text: string; opacity: number; position: string };
     }
 ): Promise<string> {
     // 1. Generate the base image (Auto-balance + Redactions + Background/Padding) using Native Canvas API
@@ -181,6 +183,8 @@ export async function generateFinalImage(
             shadowOffsetX: options.shadowOffsetX,
             shadowOffsetY: options.shadowOffsetY,
             inset: options.inset,
+            showWindowControls: options.showWindowControls,
+            watermark: options.watermark,
         });
     }
 
@@ -347,6 +351,8 @@ export async function applyBorderRadiusAndShadow(
         shadowOffsetX?: number;
         shadowOffsetY?: number;
         inset?: number;
+        showWindowControls?: boolean;
+        watermark?: { text: string; opacity: number; position: string };
     }
 ): Promise<string> {
     return new Promise((resolve) => {
@@ -359,6 +365,8 @@ export async function applyBorderRadiusAndShadow(
                 shadowOffsetX = 0,
                 shadowOffsetY = 0,
                 inset = 0,
+                showWindowControls = false,
+                watermark,
             } = options;
 
             // Calculate canvas size (add space for shadow)
@@ -439,6 +447,80 @@ export async function applyBorderRadiusAndShadow(
                 } else {
                     ctx.drawImage(img, x, y);
                 }
+            }
+
+            // Draw Window Controls (Traffic Lights)
+            if (showWindowControls) {
+                const rectX = x + inset;
+                const rectY = y + inset;
+                const cx = rectX + 20;
+                const cy = rectY + 20;
+                const gap = 20;
+                const size = 12;
+
+                // Red
+                ctx.beginPath();
+                ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#FF5F56';
+                ctx.fill();
+
+                // Yellow
+                ctx.beginPath();
+                ctx.arc(cx + gap, cy, size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFBD2E';
+                ctx.fill();
+
+                // Green
+                ctx.beginPath();
+                ctx.arc(cx + gap * 2, cy, size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#27C93F';
+                ctx.fill();
+            }
+
+            // Draw Watermark
+            if (watermark && watermark.text) {
+                ctx.save();
+                ctx.font = 'bold 16px Inter, sans-serif';
+                ctx.fillStyle = `rgba(255, 255, 255, ${watermark.opacity})`;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+
+                const metrics = ctx.measureText(watermark.text);
+                const padding = 20;
+                // Coordinates relative to the drawn image (x, y) + dimensions
+                // If inset is used, the visual image is smaller.
+                // We typically want watermark inside the "Window" (which includes inset padding?)
+                // Xnapper "Window" is the rounded rect.
+                // So we use x + inset, y + inset as origin, and img.width - inset*2 as size?
+                // Actually img.width is the source. The rect width is img.width - inset*2.
+
+                const rectX = x + inset;
+                const rectY = y + inset;
+                const rectW = img.width - inset * 2;
+                const rectH = img.height - inset * 2;
+
+                let wx = rectX + padding;
+                let wy = rectY + rectH - padding;
+
+                if (watermark.position === 'bottom-right') {
+                    wx = rectX + rectW - metrics.width - padding;
+                    wy = rectY + rectH - padding;
+                } else if (watermark.position === 'bottom-left') {
+                    wx = rectX + padding;
+                    wy = rectY + rectH - padding;
+                } else if (watermark.position === 'top-right') {
+                    wx = rectX + rectW - metrics.width - padding;
+                    wy = rectY + padding + 14;
+                } else if (watermark.position === 'top-left') {
+                    wx = rectX + padding;
+                    wy = rectY + padding + 14;
+                } else if (watermark.position === 'center') {
+                    wx = rectX + (rectW / 2) - (metrics.width / 2);
+                    wy = rectY + (rectH / 2);
+                }
+
+                ctx.fillText(watermark.text, wx, wy);
+                ctx.restore();
             }
 
             resolve(canvas.toDataURL('image/png'));

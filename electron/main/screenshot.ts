@@ -383,6 +383,77 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
         }
     });
 
+    // Capture URL (Full Page)
+    ipcMain.handle('screenshot:capture-url', async (_event, url: string) => {
+        try {
+            console.log('Capturing URL:', url);
+            const win = new BrowserWindow({
+                width: 1200,
+                height: 800,
+                show: false,
+                webPreferences: {
+                    offscreen: false,
+                    contextIsolation: true
+                }
+            });
+
+            await win.loadURL(url);
+
+            // Access CDP
+            try {
+                const dbg = win.webContents.debugger;
+                dbg.attach('1.3');
+
+                // Get layout metrics
+                const layout = await dbg.sendCommand('Page.getLayoutMetrics');
+                // @ts-ignore
+                const contentSize = layout.contentSize || layout.cssContentSize || { width: 1200, height: 800 };
+                const width = Math.ceil(contentSize.width);
+                const height = Math.ceil(contentSize.height);
+
+                console.log(`Page dimensions: ${width}x${height}`);
+
+                // Emulate device metrics to full height
+                await dbg.sendCommand('Emulation.setDeviceMetricsOverride', {
+                    width: width,
+                    height: height,
+                    deviceScaleFactor: 1,
+                    mobile: false,
+                });
+
+                // Capture
+                const result = await dbg.sendCommand('Page.captureScreenshot', {
+                    format: 'png',
+                    captureBeyondViewport: true
+                });
+
+                dbg.detach();
+                win.close();
+
+                return {
+                    dataUrl: 'data:image/png;base64,' + result.data,
+                    width,
+                    height
+                };
+
+            } catch (cdpError) {
+                console.error('CDP Error:', cdpError);
+                // Fallback
+                const img = await win.webContents.capturePage();
+                win.close();
+                return {
+                    dataUrl: img.toDataURL(),
+                    width: img.getSize().width,
+                    height: img.getSize().height
+                };
+            }
+
+        } catch (error) {
+            console.error('Failed to capture URL:', error);
+            throw error;
+        }
+    });
+
     // Save screenshot to file
     ipcMain.handle('screenshot:save-file', async (_event, dataUrl: string, options: { filename?: string; format?: string }) => {
         try {

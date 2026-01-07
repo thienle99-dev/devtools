@@ -2218,6 +2218,62 @@ function setupScreenshotHandlers(win$1) {
 			throw error;
 		}
 	});
+	ipcMain.handle("screenshot:capture-url", async (_event, url) => {
+		try {
+			console.log("Capturing URL:", url);
+			const win$2 = new BrowserWindow({
+				width: 1200,
+				height: 800,
+				show: false,
+				webPreferences: {
+					offscreen: false,
+					contextIsolation: true
+				}
+			});
+			await win$2.loadURL(url);
+			try {
+				const dbg = win$2.webContents.debugger;
+				dbg.attach("1.3");
+				const layout = await dbg.sendCommand("Page.getLayoutMetrics");
+				const contentSize = layout.contentSize || layout.cssContentSize || {
+					width: 1200,
+					height: 800
+				};
+				const width = Math.ceil(contentSize.width);
+				const height = Math.ceil(contentSize.height);
+				console.log(`Page dimensions: ${width}x${height}`);
+				await dbg.sendCommand("Emulation.setDeviceMetricsOverride", {
+					width,
+					height,
+					deviceScaleFactor: 1,
+					mobile: false
+				});
+				const result = await dbg.sendCommand("Page.captureScreenshot", {
+					format: "png",
+					captureBeyondViewport: true
+				});
+				dbg.detach();
+				win$2.close();
+				return {
+					dataUrl: "data:image/png;base64," + result.data,
+					width,
+					height
+				};
+			} catch (cdpError) {
+				console.error("CDP Error:", cdpError);
+				const img = await win$2.webContents.capturePage();
+				win$2.close();
+				return {
+					dataUrl: img.toDataURL(),
+					width: img.getSize().width,
+					height: img.getSize().height
+				};
+			}
+		} catch (error) {
+			console.error("Failed to capture URL:", error);
+			throw error;
+		}
+	});
 	ipcMain.handle("screenshot:save-file", async (_event, dataUrl, options) => {
 		try {
 			const { filename, format = "png" } = options;

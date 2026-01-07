@@ -101,6 +101,7 @@ electron.contextBridge.exposeInMainWorld("screenshotAPI", {
 	captureScreen: () => electron.ipcRenderer.invoke("screenshot:capture-screen"),
 	captureWindow: (sourceId) => electron.ipcRenderer.invoke("screenshot:capture-window", sourceId),
 	captureArea: () => electron.ipcRenderer.invoke("screenshot:capture-area"),
+	captureUrl: (url) => electron.ipcRenderer.invoke("screenshot:capture-url", url),
 	saveFile: (dataUrl, options) => electron.ipcRenderer.invoke("screenshot:save-file", dataUrl, options)
 });
 electron.contextBridge.exposeInMainWorld("permissionsAPI", {

@@ -112,6 +112,7 @@ contextBridge.exposeInMainWorld('screenshotAPI', {
   captureScreen: () => ipcRenderer.invoke('screenshot:capture-screen'),
   captureWindow: (sourceId: string) => ipcRenderer.invoke('screenshot:capture-window', sourceId),
   captureArea: () => ipcRenderer.invoke('screenshot:capture-area'),
+  captureUrl: (url: string) => ipcRenderer.invoke('screenshot:capture-url', url),
   saveFile: (dataUrl: string, options: { filename?: string; format?: string }) =>
     ipcRenderer.invoke('screenshot:save-file', dataUrl, options),
 })

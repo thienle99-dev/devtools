@@ -6,7 +6,7 @@ import type { AnnotationType, AnnotationConfig } from '../tools/screenshot/utils
 import { DEFAULT_ANNOTATION_CONFIG } from '../tools/screenshot/utils/annotations';
 import type { CropBounds } from '../tools/screenshot/utils/crop';
 
-export type CaptureMode = 'fullscreen' | 'window' | 'area';
+export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url';
 export type ExportFormat = 'png' | 'jpg' | 'webp';
 
 export interface Screenshot {
@@ -63,6 +63,16 @@ interface XnapperState {
     setShadowOffsetY: (offset: number) => void;
     inset: number; // Inner padding, 0-100px
     setInset: (inset: number) => void;
+
+    // Window Controls & Watermark
+    showWindowControls: boolean;
+    setShowWindowControls: (show: boolean) => void;
+    watermark: {
+        text: string;
+        opacity: number;
+        position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+    };
+    setWatermark: (watermark: Partial<{ text: string; opacity: number; position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center' }>) => void;
 
     // Annotations
     activeAnnotationTool: AnnotationType | null;
@@ -149,6 +159,12 @@ export const useXnapperStore = create<XnapperState>()(
             inset: 0,
             setInset: (inset) => set({ inset: inset }),
 
+            // Window Controls & Watermark
+            showWindowControls: true,
+            setShowWindowControls: (show) => set({ showWindowControls: show }),
+            watermark: { text: '', opacity: 0.3, position: 'bottom-right' },
+            setWatermark: (watermark) => set((state) => ({ watermark: { ...state.watermark, ...watermark } })),
+
             // Annotations
             activeAnnotationTool: null,
             setActiveAnnotationTool: (tool) => set({ activeAnnotationTool: tool }),
@@ -197,6 +213,8 @@ export const useXnapperStore = create<XnapperState>()(
                 shadowOffsetX: state.shadowOffsetX,
                 shadowOffsetY: state.shadowOffsetY,
                 inset: state.inset,
+                showWindowControls: state.showWindowControls,
+                watermark: state.watermark,
                 annotationConfig: state.annotationConfig,
                 history: state.history,
             }),

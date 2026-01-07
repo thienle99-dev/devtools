@@ -1,4 +1,4 @@
-export type CaptureMode = 'fullscreen' | 'window' | 'area';
+export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url';
 
 export interface CaptureSource {
     id: string;
@@ -8,7 +8,7 @@ export interface CaptureSource {
 }
 
 export interface CaptureOptions {
-    mode: 'fullscreen' | 'window' | 'area';
+    mode: CaptureMode;
     sourceId?: string; // For window capture
     x?: number; // For area capture
     y?: number;

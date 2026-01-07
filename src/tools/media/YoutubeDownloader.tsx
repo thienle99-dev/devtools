@@ -105,6 +105,41 @@ export const YoutubeDownloader: React.FC = () => {
         return playlistPatterns.some(pattern => pattern.test(url));
     };
 
+    /**
+     * Clean YouTube URL - Remove unnecessary query parameters
+     * Keeps only video ID (and optionally timestamp)
+     */
+    const cleanYoutubeUrl = (url: string): string => {
+        try {
+            // Check if it's a playlist URL - keep as is
+            if (isPlaylistUrl(url)) {
+                return url;
+            }
+
+            const urlObj = new URL(url);
+            
+            // Handle different YouTube URL formats
+            if (urlObj.hostname.includes('youtu.be')) {
+                // Short format: https://youtu.be/VIDEO_ID?params
+                const videoId = urlObj.pathname.slice(1).split('?')[0];
+                const timestamp = urlObj.searchParams.get('t');
+                return `https://youtu.be/${videoId}${timestamp ? `?t=${timestamp}` : ''}`;
+            } else if (urlObj.hostname.includes('youtube.com')) {
+                // Standard format: https://www.youtube.com/watch?v=VIDEO_ID&params
+                const videoId = urlObj.searchParams.get('v');
+                if (!videoId) return url; // Not a video URL
+                
+                const timestamp = urlObj.searchParams.get('t');
+                return `https://www.youtube.com/watch?v=${videoId}${timestamp ? `&t=${timestamp}` : ''}`;
+            }
+            
+            return url;
+        } catch (e) {
+            // If URL parsing fails, return original
+            return url;
+        }
+    };
+
     const handleDownload = async (isRetry = false) => {
         if (!url.trim()) {
             error('Invalid URL', 'Please enter a YouTube URL');
@@ -782,6 +817,13 @@ export const YoutubeDownloader: React.FC = () => {
 
         // Check if URL is valid
         if (url.trim() && isValidYoutubeUrl(url)) {
+            // Clean the URL first (remove unnecessary params)
+            const cleanedUrl = cleanYoutubeUrl(url);
+            if (cleanedUrl !== url) {
+                setUrl(cleanedUrl);
+                return; // Will trigger again with cleaned URL
+            }
+
             // Debounce: wait 1 second after user stops typing
             debounceTimer.current = setTimeout(() => {
                 handleFetchInfo();

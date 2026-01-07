@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Monitor, Square, MousePointer2, Camera, Clock } from 'lucide-react';
+import { Monitor, Square, MousePointer2, Camera, Clock, Globe } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { CaptureMode, CaptureSource } from '../types';
@@ -23,6 +23,7 @@ export const CaptureSection: React.FC = () => {
     const [sources, setSources] = useState<CaptureSource[]>([]);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
     const [isLoadingSources, setIsLoadingSources] = useState(false);
+    const [urlInput, setUrlInput] = useState('');
 
     // Load available capture sources (screens and windows)
     const loadSources = async () => {
@@ -61,6 +62,18 @@ export const CaptureSection: React.FC = () => {
                 screenshot = await (window as any).screenshotAPI?.captureWindow(selectedSource);
             } else if (captureMode === 'area') {
                 screenshot = await (window as any).screenshotAPI?.captureArea();
+            } else if (captureMode === 'url') {
+                if (!urlInput) {
+                    toast.error('Please enter a URL');
+                    setIsCapturing(false);
+                    return;
+                }
+                let targetUrl = urlInput;
+                if (!/^https?:\/\//i.test(targetUrl)) {
+                    targetUrl = 'https://' + targetUrl;
+                }
+                toast.loading('Capturing full page...', { duration: 2000 });
+                screenshot = await (window as any).screenshotAPI?.captureUrl(targetUrl);
             }
 
             if (screenshot) {
@@ -104,6 +117,12 @@ export const CaptureSection: React.FC = () => {
             icon: MousePointer2,
             label: 'Area',
             description: 'Select area to capture',
+        },
+        {
+            mode: 'url',
+            icon: Globe,
+            label: 'Web Page',
+            description: 'Capture full scrolling page',
         },
     ];
 
@@ -179,6 +198,26 @@ export const CaptureSection: React.FC = () => {
                             No windows available
                         </div>
                     )}
+                </div>
+            )}
+
+            {captureMode === 'url' && (
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">Enter Web Page URL</h3>
+                    <div className="flex flex-col gap-2">
+                        <input
+                            type="text"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                            placeholder="example.com"
+                            className="w-full px-4 py-3 bg-background/50 border border-border-glass rounded-xl focus:border-indigo-500 focus:outline-none text-foreground placeholder-foreground-muted transition-all"
+                            onKeyDown={(e) => e.key === 'Enter' && handleCapture()}
+                            autoFocus
+                        />
+                        <p className="text-xs text-foreground-muted">
+                            We will load the page in the background, scroll to the bottom, and capture the entire content.
+                        </p>
+                    </div>
                 </div>
             )}
 
