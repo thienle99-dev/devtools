@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { 
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
-    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap } from 'lucide-react';
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors } from 'lucide-react';
 import { FrameEditor } from './FrameEditor';
+import { TimelineEditor } from './TimelineEditor';
 import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
@@ -694,38 +695,23 @@ export const VideoToFrames: React.FC = () => {
 
                                         <div className="border-t border-border-glass pt-4"></div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-foreground-secondary">Start Time</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max={videoMetadata?.duration}
-                                                    value={extractionSettings.startTime}
-                                                    onChange={(e) => setExtractionSettings(prev => ({
-                                                        ...prev,
-                                                        startTime: Math.max(0, parseFloat(e.target.value) || 0)
-                                                    }))}
-                                                    className="w-full bg-input-bg border border-border-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                    disabled={isProcessing}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-foreground-secondary">End Time</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max={videoMetadata?.duration}
-                                                    value={extractionSettings.endTime}
-                                                    onChange={(e) => setExtractionSettings(prev => ({
-                                                        ...prev,
-                                                        endTime: Math.min(videoMetadata?.duration || 0, parseFloat(e.target.value) || 0)
-                                                    }))}
-                                                    className="w-full bg-input-bg border border-border-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                    disabled={isProcessing}
-                                                />
-                                            </div>
+                                    {/* Timeline Editor */}
+                                    <div className="space-y-3 pt-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-medium text-foreground-secondary flex items-center gap-2">
+                                                <Scissors className="w-3.5 h-3.5" />
+                                                Video Range
+                                            </label>
                                         </div>
+                                        
+                                        <TimelineEditor 
+                                            videoFile={videoFile}
+                                            duration={videoMetadata?.duration || 0}
+                                            startTime={extractionSettings.startTime}
+                                            endTime={extractionSettings.endTime}
+                                            onRangeChange={(start, end) => setExtractionSettings(prev => ({ ...prev, startTime: start, endTime: end }))}
+                                        />
+                                    </div>
 
                                         <div className="space-y-2">
                                             <label className="text-xs font-medium text-foreground-secondary">Format</label>
