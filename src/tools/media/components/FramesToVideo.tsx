@@ -3,11 +3,13 @@ import { Upload, Download, RotateCcw, Settings, X, Film } from 'lucide-react';
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { logger } from '../../../utils/logger';
 
 export const FramesToVideo: React.FC = () => {
     const [frames, setFrames] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [processingStatus, setProcessingStatus] = useState<string>('');
     const [videoSettings, setVideoSettings] = useState({
         fps: 24,
         codec: 'libx264' as 'libx264' | 'libvpx',
@@ -23,7 +25,10 @@ export const FramesToVideo: React.FC = () => {
         );
 
         if (imageFiles.length > 0) {
+            logger.info(`Added ${imageFiles.length} frames.`);
             setFrames(prev => [...prev, ...imageFiles]);
+        } else {
+            logger.warn('No valid image files selected.');
         }
     };
 
@@ -39,6 +44,7 @@ export const FramesToVideo: React.FC = () => {
 
         setIsProcessing(true);
         setProgress(0);
+        setProcessingStatus('Starting video creation...');
 
         try {
             // Load images into canvas
@@ -51,7 +57,9 @@ export const FramesToVideo: React.FC = () => {
                 await new Promise<void>((resolve) => {
                     img.onload = () => {
                         images.push(img);
-                        setProgress(Math.floor((i / frames.length) * 50));
+                        const loadProgress = Math.floor((i / frames.length) * 50);
+                        setProgress(loadProgress);
+                        setProcessingStatus(`Loading frame ${i + 1}/${frames.length}...`);
                         resolve();
                     };
                 });
@@ -64,8 +72,11 @@ export const FramesToVideo: React.FC = () => {
             const ctx = canvas.getContext('2d');
 
             if (!ctx) {
+                logger.error('Failed to get canvas context');
                 throw new Error('Could not get canvas context');
             }
+
+            logger.info('Starting video creation', { frames: frames.length, settings: videoSettings });
 
             // Create video using MediaRecorder API
             const mediaStream = canvas.captureStream(videoSettings.fps);
@@ -81,6 +92,9 @@ export const FramesToVideo: React.FC = () => {
             const mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: 'video/webm;codecs=vp9'
             });
+
+            logger.debug('MediaRecorder initialized', { mimeType: mediaRecorder.mimeType });
+            setProcessingStatus('Rendering video...');
 
             const chunks: BlobPart[] = [];
 
@@ -103,6 +117,8 @@ export const FramesToVideo: React.FC = () => {
 
                 setIsProcessing(false);
                 setProgress(0);
+                setProcessingStatus('');
+                logger.info('Video creation complete and downloaded.');
             };
 
             mediaRecorder.start();
@@ -117,9 +133,12 @@ export const FramesToVideo: React.FC = () => {
 
                 if (targetFrameIndex < images.length) {
                     ctx.drawImage(images[Math.min(targetFrameIndex, images.length - 1)], 0, 0);
-                    setProgress(Math.floor(50 + (targetFrameIndex / images.length) * 50));
+                    const renderProgress = Math.floor(50 + (targetFrameIndex / images.length) * 50);
+                    setProgress(renderProgress);
+                    setProcessingStatus(`Rendering frame ${Math.min(targetFrameIndex + 1, images.length)}/${images.length}...`);
                     requestAnimationFrame(drawFrame);
                 } else {
+                    setProcessingStatus('Finalizing video file...');
                     mediaRecorder.stop();
                 }
             };
@@ -127,6 +146,7 @@ export const FramesToVideo: React.FC = () => {
             drawFrame();
         } catch (error) {
             console.error('Video creation failed:', error);
+            logger.error('Video creation error:', error);
             alert('Failed to create video. Check console for details.');
             setIsProcessing(false);
         }
@@ -252,7 +272,10 @@ export const FramesToVideo: React.FC = () => {
                                             style={{ width: `${progress}%` }}
                                         />
                                     </div>
-                                    <p className="text-sm font-medium text-foreground">{progress}% Complete</p>
+                                    <div className="flex justify-between text-xs text-foreground-secondary mt-1">
+                                        <span className="font-mono">{processingStatus}</span>
+                                        <span>{progress}%</span>
+                                    </div>
                                 </Card>
                             )}
                         </div>

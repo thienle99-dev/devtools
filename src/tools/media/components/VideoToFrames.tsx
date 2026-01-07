@@ -3,6 +3,7 @@ import { Upload, Download, Play, RotateCcw, Video, Settings, Film } from 'lucide
 import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { logger } from '../../../utils/logger';
 
 interface FrameData {
     blob: Blob;
@@ -15,6 +16,7 @@ export const VideoToFrames: React.FC = () => {
     const [frames, setFrames] = useState<FrameData[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [processingStatus, setProcessingStatus] = useState<string>('');
     const [extractionSettings, setExtractionSettings] = useState({
         fps: 1,
         startTime: 0,
@@ -38,17 +40,22 @@ export const VideoToFrames: React.FC = () => {
         setFrames([]);
         setProgress(0);
 
+        logger.info('Video selected:', { name: file.name, size: file.size, type: file.type });
+
         // Get video metadata
         const url = URL.createObjectURL(file);
         const video = document.createElement('video');
         video.src = url;
 
         video.onloadedmetadata = () => {
-            setVideoMetadata({
+            const metadata = {
                 duration: video.duration,
                 width: video.videoWidth,
                 height: video.videoHeight
-            });
+            };
+            logger.debug('Video metadata loaded:', metadata);
+
+            setVideoMetadata(metadata);
             setExtractionSettings(prev => ({
                 ...prev,
                 endTime: Math.floor(video.duration)
@@ -59,11 +66,16 @@ export const VideoToFrames: React.FC = () => {
     const extractFrames = async () => {
         if (!videoFile || !videoMetadata) return;
 
+        logger.info('Starting frame extraction:', extractionSettings);
         setIsProcessing(true);
-        const url = URL.createObjectURL(videoFile);
+        setProcessingStatus('Initializing video...');
+
+        const fileUrl = URL.createObjectURL(videoFile);
         const video = document.createElement('video');
-        video.src = url;
+        video.muted = true;
+        video.playsInline = true;
         video.crossOrigin = 'anonymous';
+        video.src = fileUrl;
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -79,7 +91,8 @@ export const VideoToFrames: React.FC = () => {
 
         const totalFrames = Math.floor((extractionSettings.endTime - extractionSettings.startTime) * extractionSettings.fps);
 
-        return new Promise<void>((resolve) => {
+        return new Promise<void>((resolve, reject) => {
+            // Function to handle seeking and extraction
             const onSeeked = () => {
                 if (currentTime <= extractionSettings.endTime) {
                     ctx.drawImage(video, 0, 0);
@@ -97,7 +110,14 @@ export const VideoToFrames: React.FC = () => {
 
                             frameIndex++;
                             currentTime += frameInterval;
-                            setProgress(Math.floor((frameIndex / totalFrames) * 100));
+                            const currentProgress = Math.min(100, Math.floor((frameIndex / totalFrames) * 100));
+                            setProgress(currentProgress);
+                            setProcessingStatus(`Extracted ${frameIndex} / ${totalFrames} frames`);
+
+                            // Log unexpected progress jumps or periodically
+                            if (frameIndex % 5 === 0) {
+                                logger.debug(`Extraction progress: ${currentProgress}% (Frame ${frameIndex}/${totalFrames})`);
+                            }
 
                             if (currentTime <= extractionSettings.endTime) {
                                 video.currentTime = currentTime;
@@ -105,7 +125,8 @@ export const VideoToFrames: React.FC = () => {
                                 video.removeEventListener('seeked', onSeeked);
                                 setFrames(extractedFrames);
                                 setIsProcessing(false);
-                                URL.revokeObjectURL(url);
+                                logger.info(`Extraction complete. Extracted ${extractedFrames.length} frames.`);
+                                URL.revokeObjectURL(fileUrl);
                                 resolve();
                             }
                         },
@@ -115,8 +136,24 @@ export const VideoToFrames: React.FC = () => {
                 }
             };
 
-            video.addEventListener('seeked', onSeeked);
-            video.currentTime = currentTime;
+            // Error handling
+            video.onerror = (e) => {
+                logger.error('Video error during extraction:', e);
+                setIsProcessing(false);
+                setProcessingStatus('Error initializing video');
+                URL.revokeObjectURL(fileUrl);
+                reject(new Error('Video loading failed'));
+            };
+
+            // Start processing once video data is loaded
+            video.onloadeddata = () => {
+                video.addEventListener('seeked', onSeeked);
+                // Set initial time to trigger the first seeked event
+                video.currentTime = currentTime;
+            };
+
+            // Allow some time for loading, then check readyState if event didn't fire (fallback)
+            // But onloadeddata should generally work.
         });
     };
 
@@ -376,9 +413,10 @@ export const VideoToFrames: React.FC = () => {
                                                     style={{ width: `${progress}%` }}
                                                 />
                                             </div>
-                                            <p className="text-xs text-foreground-secondary">
-                                                Please wait while we process your video
-                                            </p>
+                                            <div className="flex justify-between text-xs text-foreground-secondary mt-2">
+                                                <span>Processing...</span>
+                                                <span className="font-mono">{processingStatus}</span>
+                                            </div>
                                         </div>
                                     </Card>
                                 )}
