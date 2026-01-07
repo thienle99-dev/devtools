@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
-    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors } from 'lucide-react';
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors, MonitorPlay, Smartphone } from 'lucide-react';
 import { FrameEditor } from './FrameEditor';
 import { TimelineEditor } from './TimelineEditor';
 import JSZip from 'jszip';
@@ -37,7 +37,9 @@ export const VideoToFrames: React.FC = () => {
         endTime: 0,
         quality: 0.8,
         format: 'png' as 'png' | 'jpg' | 'webp',
-        detectDuplicates: false
+        detectDuplicates: false,
+        targetWidth: 0, // 0 means original
+        targetHeight: 0
     });
     const [videoMetadata, setVideoMetadata] = useState<{
         duration: number;
@@ -114,6 +116,24 @@ export const VideoToFrames: React.FC = () => {
         }
     };
 
+    const applyPlatformPreset = (preset: 'instagram_story' | 'instagram_post' | 'tiktok' | 'youtube_1080p' | 'twitter') => {
+        const presets = {
+            instagram_story: { fps: 30, targetWidth: 1080, targetHeight: 1920, format: 'jpg' as const },
+            instagram_post: { fps: 30, targetWidth: 1080, targetHeight: 1080, format: 'jpg' as const },
+            tiktok: { fps: 30, targetWidth: 1080, targetHeight: 1920, format: 'jpg' as const },
+            youtube_1080p: { fps: 60, targetWidth: 1920, targetHeight: 1080, format: 'jpg' as const },
+            twitter: { fps: 30, targetWidth: 1280, targetHeight: 720, format: 'jpg' as const },
+        };
+        const p = presets[preset];
+        setExtractionSettings(prev => ({
+            ...prev,
+            fps: p.fps,
+            targetWidth: p.targetWidth,
+            targetHeight: p.targetHeight,
+            format: p.format
+        }));
+    };
+
     const calculateFrameDiff = (ctx1: CanvasRenderingContext2D, ctx2: CanvasRenderingContext2D, width: number, height: number): number => {
         const data1 = ctx1.getImageData(0, 0, width, height).data;
         const data2 = ctx2.getImageData(0, 0, width, height).data;
@@ -179,8 +199,12 @@ export const VideoToFrames: React.FC = () => {
 
         if (!ctx || !diffCtx || !prevCtx) return;
 
-        canvas.width = videoMetadata.width;
-        canvas.height = videoMetadata.height;
+        // Determine output size
+        const targetWidth = extractionSettings.targetWidth || videoMetadata.width;
+        const targetHeight = extractionSettings.targetHeight || videoMetadata.height;
+        
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
 
         const extractedFrames: FrameData[] = [];
         let frameIndex = 0;
@@ -256,13 +280,45 @@ export const VideoToFrames: React.FC = () => {
         }
 
         return new Promise<void>((resolve, reject) => {
+            const finish = () => {
+                video.removeEventListener('seeked', onSeeked);
+                setFrames(extractedFrames);
+                setIsProcessing(false);
+                setProcessingStatus(`Complete! ${extractedFrames.length} frames extracted.`);
+                URL.revokeObjectURL(fileUrl);
+                resolve();
+            };
+
             const onSeeked = async () => {
                 if (seekTime <= endTime) {
                     try {
                         const captureFrame = await shouldCapture();
                         
                         if (captureFrame) {
-                            ctx.drawImage(video, 0, 0);
+                            // Draw resized/contain logic
+                            // For simplicity, we stretch or fit. 
+                            // Ideally we center crop or letterbox. Let's do a simple "cover" draw
+                            const srcRatio = video.videoWidth / video.videoHeight;
+                            const dstRatio = targetWidth / targetHeight;
+                            
+                            let drawWidth = targetWidth;
+                            let drawHeight = targetHeight;
+                            let offsetX = 0;
+                            let offsetY = 0;
+
+                            if (srcRatio > dstRatio) {
+                                // Source is wider than dest: Crop sides
+                                drawHeight = targetHeight;
+                                drawWidth = drawHeight * srcRatio;
+                                offsetX = (targetWidth - drawWidth) / 2;
+                            } else {
+                                // Source is taller than dest: Crop top/bottom
+                                drawWidth = targetWidth;
+                                drawHeight = drawWidth / srcRatio;
+                                offsetY = (targetHeight - drawHeight) / 2;
+                            }
+
+                            ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
                             
                             // To Blob
                             await new Promise<void>(res => {
@@ -302,15 +358,6 @@ export const VideoToFrames: React.FC = () => {
                 } else {
                     finish();
                 }
-            };
-
-            const finish = () => {
-                video.removeEventListener('seeked', onSeeked);
-                setFrames(extractedFrames);
-                setIsProcessing(false);
-                setProcessingStatus(`Complete! ${extractedFrames.length} frames extracted.`);
-                URL.revokeObjectURL(fileUrl);
-                resolve();
             };
 
             video.onerror = (e) => {
@@ -494,7 +541,7 @@ export const VideoToFrames: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col overflow-y-auto p-1">
-            <div className="space-y-6 max-w-5xl mx-auto w-full pb-10">
+            <div className="space-y-6 mx-auto w-full pb-10">
                 {/* File Upload */}
                 {!videoFile ? (
                     <Card
@@ -712,6 +759,54 @@ export const VideoToFrames: React.FC = () => {
                                             onRangeChange={(start, end) => setExtractionSettings(prev => ({ ...prev, startTime: start, endTime: end }))}
                                         />
                                     </div>
+
+                                        <div className="space-y-4 pt-4 border-t border-border-glass">
+                                            <label className="text-xs font-medium text-foreground-secondary flex items-center justify-between">
+                                                <span>Output Resolution</span>
+                                                <button 
+                                                    onClick={() => setExtractionSettings(prev => ({...prev, targetWidth: 0, targetHeight: 0}))} 
+                                                    className="text-[10px] text-indigo-400 hover:underline"
+                                                >
+                                                    Reset to Original
+                                                </button>
+                                            </label>
+                                            
+                                            {/* Platform Presets */}
+                                            <div className="grid grid-cols-5 gap-1">
+                                                <button onClick={() => applyPlatformPreset('instagram_story')} title="IG Story" className="p-2 bg-glass-background/40 hover:bg-glass-panel rounded border border-white/5 flex items-center justify-center">
+                                                    <Smartphone className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={() => applyPlatformPreset('instagram_post')} title="IG Post" className="p-2 bg-glass-background/40 hover:bg-glass-panel rounded border border-white/5 flex items-center justify-center text-[10px] font-bold">1:1</button>
+                                                <button onClick={() => applyPlatformPreset('youtube_1080p')} title="YouTube HD" className="p-2 bg-glass-background/40 hover:bg-glass-panel rounded border border-white/5 flex items-center justify-center">
+                                                    <MonitorPlay className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={() => applyPlatformPreset('tiktok')} title="TikTok" className="p-2 bg-glass-background/40 hover:bg-glass-panel rounded border border-white/5 flex items-center justify-center text-[10px] font-bold">9:16</button>
+                                                <button onClick={() => applyPlatformPreset('twitter')} title="Twitter" className="p-2 bg-glass-background/40 hover:bg-glass-panel rounded border border-white/5 flex items-center justify-center text-[10px] font-bold">16:9</button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2">
+                                                 <div className="relative">
+                                                     <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none text-xs text-foreground-secondary">W</div>
+                                                     <Input 
+                                                         type="number" 
+                                                         placeholder="Width" 
+                                                         value={extractionSettings.targetWidth || ''}
+                                                         onChange={(e) => setExtractionSettings(prev => ({...prev, targetWidth: parseInt(e.target.value) || 0}))}
+                                                         className="pl-6 h-8 text-xs bg-glass-background/30" 
+                                                     />
+                                                 </div>
+                                                 <div className="relative">
+                                                     <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none text-xs text-foreground-secondary">H</div>
+                                                     <Input 
+                                                         type="number" 
+                                                         placeholder="Height" 
+                                                         value={extractionSettings.targetHeight || ''}
+                                                         onChange={(e) => setExtractionSettings(prev => ({...prev, targetHeight: parseInt(e.target.value) || 0}))}
+                                                         className="pl-6 h-8 text-xs bg-glass-background/30" 
+                                                     />
+                                                 </div>
+                                            </div>
+                                        </div>
 
                                         <div className="space-y-2">
                                             <label className="text-xs font-medium text-foreground-secondary">Format</label>
