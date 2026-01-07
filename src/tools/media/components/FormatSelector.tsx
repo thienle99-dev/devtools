@@ -1,7 +1,15 @@
 import React from 'react';
 import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { CheckCircle2, FileVideo, Settings, Music, Video } from 'lucide-react';
+import { 
+    CheckCircle2, 
+    Settings, 
+    Music, 
+    Video, 
+    MonitorPlay, 
+    Smartphone, 
+    Tv,
+    Box
+} from 'lucide-react';
 
 interface FormatSelectorProps {
     format: 'video' | 'audio' | 'best';
@@ -26,6 +34,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
 }) => {
 
     const handleFormatChange = (newFormat: 'video' | 'audio') => {
+        if (format === newFormat) return;
         setFormat(newFormat);
         // Reset defaults
         if (newFormat === 'video') {
@@ -37,162 +46,210 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
         }
     };
 
+    const estimateSize = (q: string): string => {
+        if (!videoInfo?.lengthSeconds) return 'Unknown';
+        
+        let sizeEst = 0;
+        const lengthMB = videoInfo.lengthSeconds / 60;
+        
+        if (format === 'video') {
+            const bitrateMap: Record<string, number> = {
+                '4320p': 150, '2160p': 60, '1440p': 30,
+                '1080p': 15, '720p': 7.5, '480p': 4,
+                '360p': 2.5, '240p': 1.5, '144p': 1
+            };
+            sizeEst = lengthMB * (bitrateMap[q] || 5);
+        } else {
+            const bitrateMapApi: Record<string, number> = {
+                '0': 2.5, // 320k
+                '5': 1.5, // 192k
+                '9': 1.0  // 128k
+            };
+            sizeEst = lengthMB * (bitrateMapApi[q] || 1);
+        }
+        
+        return sizeEst < 1024 
+            ? `${sizeEst.toFixed(0)} MB` 
+            : `${(sizeEst / 1024).toFixed(1)} GB`;
+    };
+
+    const getQualityIcon = (q: string) => {
+        if (q.includes('4320') || q.includes('2160')) return <Tv className="w-5 h-5" />;
+        if (q.includes('1440') || q.includes('1080')) return <MonitorPlay className="w-5 h-5" />;
+        return <Smartphone className="w-5 h-5" />;
+    };
+
+    const getQualityLabel = (q: string) => {
+        const labels: Record<string, string> = {
+            '4320p': '8K Ultra HD',
+            '2160p': '4K Ultra HD',
+            '1440p': '2K QHD',
+            '1080p': 'Full HD',
+            '720p': 'High Definition',
+            '480p': 'Standard Definition',
+            '360p': 'Low Quality',
+            '240p': 'Very Low Quality',
+            '144p': 'Data Saver'
+        };
+        return labels[q] || 'Video';
+    };
+
     return (
-        <Card className="p-6 bg-glass-panel border-border-glass">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-foreground-primary">Download Options</h3>
-                <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
-                    <button
-                        onClick={() => handleFormatChange('video')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
-                            format === 'video' ? 'bg-red-500/20 text-red-400' : 'text-foreground-secondary hover:text-foreground'
-                        }`}
-                        disabled={disabled}
-                    >
-                        <Video className="w-3.5 h-3.5" />
-                        Video
-                    </button>
-                    <button
-                        onClick={() => handleFormatChange('audio')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
-                            format === 'audio' ? 'bg-pink-500/20 text-pink-400' : 'text-foreground-secondary hover:text-foreground'
-                        }`}
-                        disabled={disabled}
-                    >
-                        <Music className="w-3.5 h-3.5" />
-                        Audio
-                    </button>
-                </div>
+        <div className="space-y-4">
+             {/* Format Tabs - Segmented Control Style */}
+            <div className="bg-background-tertiary/50 p-1.5 rounded-2xl border border-border-glass flex gap-1">
+                <button
+                    onClick={() => handleFormatChange('video')}
+                    disabled={disabled}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        format === 'video'
+                            ? 'bg-gradient-to-br from-red-600 to-red-500 text-white shadow-lg shadow-red-500/20'
+                            : 'text-foreground-secondary hover:text-foreground-primary hover:bg-white/5'
+                    }`}
+                >
+                    <Video className="w-4 h-4" />
+                    Video
+                </button>
+                <button
+                    onClick={() => handleFormatChange('audio')}
+                    disabled={disabled}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        format === 'audio'
+                            ? 'bg-gradient-to-br from-pink-600 to-pink-500 text-white shadow-lg shadow-pink-500/20'
+                            : 'text-foreground-secondary hover:text-foreground-primary hover:bg-white/5'
+                    }`}
+                >
+                    <Music className="w-4 h-4" />
+                    Audio
+                </button>
             </div>
 
-            {/* Format Selection */}
-            <div className="mb-6">
-                <label className="text-sm font-medium text-foreground-primary block mb-2 flex items-center gap-2">
-                    <FileVideo className="w-4 h-4 text-blue-400" />
-                    Output Container
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                    {(format === 'video' ? ['mp4', 'mkv', 'webm'] : ['mp3', 'm4a', 'wav', 'flac', 'opus']).map(fmt => (
-                        <button
-                            key={fmt}
-                            onClick={() => setContainer(fmt)}
-                            disabled={disabled}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all uppercase ${
-                                container === fmt 
-                                    ? format === 'video' 
-                                        ? 'bg-red-500/20 text-red-400 border-red-500/50' 
-                                        : 'bg-pink-500/20 text-pink-400 border-pink-500/50'
-                                    : 'bg-glass-panel text-foreground-secondary border-border-glass hover:bg-white/5 hover:text-foreground-primary'
-                            }`}
-                        >
-                            {fmt}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
-                        <Settings className="w-4 h-4 text-purple-400" />
-                        {format === 'video' ? 'Select Video Quality' : 'Select Audio Quality'}
-                    </label>
-                    {format === 'video' && (
-                        <span className="text-[10px] text-foreground-tertiary bg-background-tertiary px-2 py-1 rounded-full font-mono">
-                            {(container || 'MP4').toUpperCase()} (H.264)
-                        </span>
-                    )}
-                </div>
-
-                {format === 'video' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {(videoInfo?.availableQualities && videoInfo.availableQualities.length > 0
-                            ? videoInfo.availableQualities 
-                            : ['1080p', '720p', '480p', '360p']
-                        ).map((q: string) => {
-                            const labels: Record<string, string> = {
-                                '4320p': '8K Ultra HD',
-                                '2160p': '4K Ultra HD',
-                                '1440p': '2K QHD',
-                                '1080p': 'Full HD',
-                                '720p': 'HD',
-                                '480p': 'SD',
-                                '360p': 'Low',
-                                '240p': 'Very Low',
-                                '144p': 'Potato'
-                            };
-                            
-                            // Estimate size
-                            const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
-                            const bitrateMap: Record<string, number> = {
-                                '4320p': 150, '2160p': 60, '1440p': 30,
-                                '1080p': 15, '720p': 7.5, '480p': 4,
-                                '360p': 2.5, '240p': 1.5, '144p': 1
-                            };
-                            const sizeEst = lengthMB * (bitrateMap[q] || 5);
-                            const sizeStr = sizeEst < 1024 ? `${sizeEst.toFixed(0)} MB` : `${(sizeEst / 1024).toFixed(1)} GB`;
-
-                            return (
+            {/* Main Selection Card */}
+            <Card className="p-1 bg-glass-panel border-border-glass overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-border-glass bg-background-secondary/30">
+                     <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-foreground-secondary uppercase tracking-wider flex items-center gap-2">
+                            <Box className="w-3.5 h-3.5 text-blue-400" />
+                            Container
+                        </label>
+                        <div className="flex gap-2">
+                             {(format === 'video' ? ['mp4', 'mkv', 'webm'] : ['mp3', 'm4a', 'wav']).map(fmt => (
                                 <button
-                                    key={q}
-                                    onClick={() => setQuality(q)}
+                                    key={fmt}
+                                    onClick={() => setContainer(fmt)}
                                     disabled={disabled}
-                                    className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                                        quality === q 
-                                            ? 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_4px_20px_-12px_var(--red-500)]' 
-                                            : 'bg-glass-panel border-transparent hover:bg-background-secondary hover:border-border-glass text-foreground-secondary hover:text-foreground-primary'
+                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${
+                                        container === fmt
+                                            ? format === 'video' 
+                                                ? 'bg-red-500/10 border-red-500/50 text-red-400' 
+                                                : 'bg-pink-500/10 border-pink-500/50 text-pink-400'
+                                            : 'border-transparent text-foreground-tertiary hover:text-foreground-secondary hover:bg-white/5'
                                     }`}
                                 >
-                                    {quality === q && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-red-500 shadow-[0_-2px_8px_var(--red-500)]" />}
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-bold text-sm">{q}</span>
-                                        {quality === q && <CheckCircle2 className="w-4 h-4 text-red-500" />}
-                                    </div>
-                                    <div className="flex justify-between items-end">
-                                        <span className="text-[10px] opacity-70">{labels[q] || 'Video'}</span>
-                                        <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
-                                    </div>
+                                    {fmt}
                                 </button>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                        {[
-                            { id: '0', label: 'Best Quality', detail: '320kbps', size: 2.5 },
-                            { id: '5', label: 'High Quality', detail: '192kbps', size: 1.5 },
-                            { id: '9', label: 'Standard', detail: '128kbps', size: 1.0 }
-                        ].map((opt) => {
-                            const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
-                            const sizeEst = lengthMB * opt.size;
-                            const sizeStr = `${sizeEst.toFixed(1)} MB`;
+                             ))}
+                        </div>
+                     </div>
+                </div>
 
-                            return (
-                                <button
-                                    key={opt.id}
-                                    onClick={() => setQuality(opt.id)}
-                                    disabled={disabled}
-                                    className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                                        quality === opt.id 
-                                            ? 'bg-pink-500/10 border-pink-500 text-pink-400 shadow-[0_4px_20px_-12px_var(--pink-500)]' 
-                                            : 'bg-glass-panel border-transparent hover:bg-background-secondary hover:border-border-glass text-foreground-secondary hover:text-foreground-primary'
-                                    }`}
-                                >
-                                    {quality === opt.id && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-pink-500 shadow-[0_-2px_8px_var(--pink-500)]" />}
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-bold text-sm px-2 py-0.5 rounded-full bg-background/30 border border-white/5">{opt.label}</span>
-                                        {quality === opt.id && <CheckCircle2 className="w-4 h-4 text-pink-500" />}
+                <div className="p-2 space-y-1 max-h-[400px] overflow-y-auto custom-scrollbar">
+                     <div className="px-3 py-2 text-xs font-bold text-foreground-secondary uppercase tracking-wider flex items-center gap-2">
+                        <Settings className="w-3.5 h-3.5 text-purple-400" />
+                        Quality
+                     </div>
+                     
+                     {format === 'video' ? (
+                        /* Video List */
+                        (videoInfo?.availableQualities || ['1080p', '720p', '480p']).map((q: string) => (
+                             <button
+                                key={q}
+                                onClick={() => setQuality(q)}
+                                disabled={disabled}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group ${
+                                    quality === q
+                                        ? 'bg-red-500/5 border-red-500/30 shadow-inner'
+                                        : 'border-transparent hover:bg-white/5 hover:border-white/5'
+                                }`}
+                             >
+                                <div className="flex items-center gap-4">
+                                     <div className={`p-2 rounded-lg ${
+                                         quality === q ? 'bg-red-500/10 text-red-400' : 'bg-background-tertiary text-foreground-tertiary group-hover:bg-background-secondary group-hover:text-foreground-secondary'
+                                     }`}>
+                                         {getQualityIcon(q)}
+                                     </div>
+                                     <div className="text-left">
+                                         <div className={`text-sm font-bold ${
+                                             quality === q ? 'text-red-400' : 'text-foreground-primary'
+                                         }`}>
+                                            {q}
+                                         </div>
+                                         <div className="text-xs text-foreground-secondary opacity-80">
+                                            {getQualityLabel(q)}
+                                         </div>
+                                     </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-mono font-medium text-foreground-secondary">
+                                        ~{estimateSize(q)}
                                     </div>
-                                    <div className="flex justify-between items-end mt-2 px-1">
-                                        <span className="text-[10px] font-mono opacity-60">{(container || 'MP3').toUpperCase()} • {opt.detail}</span>
-                                        <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
+                                    {quality === q && (
+                                        <div className="flex justify-end mt-1">
+                                            <CheckCircle2 className="w-4 h-4 text-red-500" />
+                                        </div>
+                                    )}
+                                </div>
+                             </button>
+                        ))
+                     ) : (
+                        /* Audio List */
+                        [
+                            { id: '0', label: 'Best Quality', detail: '320kbps' },
+                            { id: '5', label: 'High Quality', detail: '192kbps' },
+                            { id: '9', label: 'Standard', detail: '128kbps' }
+                        ].map((opt) => (
+                             <button
+                                key={opt.id}
+                                onClick={() => setQuality(opt.id)}
+                                disabled={disabled}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group ${
+                                    quality === opt.id
+                                        ? 'bg-pink-500/5 border-pink-500/30 shadow-inner'
+                                        : 'border-transparent hover:bg-white/5 hover:border-white/5'
+                                }`}
+                             >
+                                <div className="flex items-center gap-4">
+                                     <div className={`p-2 rounded-lg ${
+                                         quality === opt.id ? 'bg-pink-500/10 text-pink-400' : 'bg-background-tertiary text-foreground-tertiary group-hover:bg-background-secondary group-hover:text-foreground-secondary'
+                                     }`}>
+                                         <Music className="w-5 h-5" />
+                                     </div>
+                                     <div className="text-left">
+                                         <div className={`text-sm font-bold ${
+                                             quality === opt.id ? 'text-pink-400' : 'text-foreground-primary'
+                                         }`}>
+                                            {opt.label}
+                                         </div>
+                                         <div className="text-xs text-foreground-secondary opacity-80">
+                                            {opt.detail}
+                                         </div>
+                                     </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-mono font-medium text-foreground-secondary">
+                                        ~{estimateSize(opt.id)}
                                     </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-        </Card>
+                                    {quality === opt.id && (
+                                        <div className="flex justify-end mt-1">
+                                            <CheckCircle2 className="w-4 h-4 text-pink-500" />
+                                        </div>
+                                    )}
+                                </div>
+                             </button>
+                        ))
+                     )}
+                </div>
+            </Card>
+        </div>
     );
 };
