@@ -82,6 +82,7 @@ export const YoutubeDownloader: React.FC = () => {
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
+    const progressMapRef = useRef<Map<string, any>>(new Map());
     const { toasts, removeToast, success, error, info } = useToast();
 
     const isValidYoutubeUrl = (url: string): boolean => {
@@ -226,72 +227,121 @@ export const YoutubeDownloader: React.FC = () => {
         if (selected.length === 0) return;
 
         isCancelledRef.current = false;
+        progressMapRef.current.clear();
+        
         let successCount = 0;
         let failCount = 0;
+        let completedCount = 0;
+        const totalCount = selected.length;
+        const limit = settings.maxConcurrentDownloads || 3;
 
-        info('Starting Batch Download', `Queued ${selected.length} videos`);
+        info('Starting Batch Download', `Queued ${totalCount} videos (Parallel: ${limit})`);
 
         // Set up progress listener for batch download
         const unsubscribe = (window as any).youtubeAPI.onProgress((progress: any) => {
+            // Update the map with latest progress for this ID
+            if (progress.id) {
+                progressMapRef.current.set(progress.id, progress);
+            }
+
+            // Calculate aggregated stats
+            let totalSpeed = 0;
+            
+            progressMapRef.current.forEach(p => {
+                if (p.state === 'downloading') {
+                    totalSpeed += p.speed || 0;
+                }
+            });
+
+            // Calculate overall percentage based on COMPLETED videos
+            const basePercent = (completedCount / totalCount) * 100;
+            
             setDownloadStatus(prev => ({
-                ...prev, // Keep existing message structure if needed, or overwrite
+                ...prev,
                 status: 'downloading',
-                // Update message to show current video progress but keep the "Downloading X/Y" context if possible, 
-                // but since we don't have easy access to 'i' here without closure issues, 
-                // we might need to rely on the loop updating the 'message' header and this updating the 'progress' details.
-                // Actually, let's just update the progress parts and keep the message generic or updated by the loop.
-                // Better approach: The loop sets the title "Downloading 1/5: Title", 
-                // and here we append percent? Or we just update progress/speed/eta fields.
-                progress: progress.percent,
-                speed: progress.speed,
-                eta: progress.eta,
-                downloaded: progress.downloaded,
-                total: progress.total,
+                message: `Downloading... (${completedCount}/${totalCount})`,
+                progress: basePercent,
+                speed: totalSpeed,
+                eta: 0, // Hard to estimate global ETA
+                downloaded: 0, // Not tracking global bytes
                 detailedLogs: prev.status === 'downloading' ? prev.detailedLogs : undefined
             }));
         });
 
-        for (let i = 0; i < selected.length; i++) {
-            if (isCancelledRef.current) break;
+        // Concurrency Control Helper
+        const queue = [...selected];
+        const activePromises = new Set<Promise<void>>();
 
-            const videoId = selected[i];
-            const video = playlistInfo.videos.find((v: any) => v.id === videoId);
-            if (!video) continue;
+        try {
+            while (queue.length > 0 || activePromises.size > 0) {
+                if (isCancelledRef.current) break;
 
-            // Reset progress for new video
-            setDownloadStatus({
-                status: 'downloading',
-                message: `Downloading ${i + 1}/${selected.length}: ${video.title}`,
-                progress: 0
-            });
+                // Fill the pool
+                while (queue.length > 0 && activePromises.size < limit) {
+                    if (isCancelledRef.current) break;
+                    
+                    const videoId = queue.shift();
+                    if (!videoId) continue;
 
-            try {
-                const downloadOptions: any = {
-                    url: video.url,
-                    format,
-                    quality,
-                    container,
-                    maxSpeed: settings.maxSpeedLimit || undefined
-                };
+                    const video = playlistInfo.videos.find((v: any) => v.id === videoId);
+                    if (!video) {
+                        failCount++;
+                        completedCount++;
+                        continue;
+                    }
 
-                if (downloadFolder) {
-                    downloadOptions.outputPath = downloadFolder;
+                    const promise = (async () => {
+                        try {
+                            const downloadOptions: any = {
+                                url: video.url,
+                                format,
+                                quality,
+                                container,
+                                maxSpeed: settings.maxSpeedLimit || undefined
+                            };
+
+                            if (downloadFolder) {
+                                downloadOptions.outputPath = downloadFolder;
+                            }
+
+                            const result = await (window as any).youtubeAPI.download(downloadOptions);
+                            
+                            if (result.success) {
+                                successCount++;
+                            } else {
+                                failCount++;
+                            }
+                        } catch (err) {
+                            failCount++;
+                        } finally {
+                            completedCount++;
+                            // Trigger a progress update to refresh the count in UI
+                            if (!isCancelledRef.current) {
+                                setDownloadStatus(prev => ({
+                                    ...prev,
+                                    message: `Downloading... (${completedCount}/${totalCount})`,
+                                    progress: (completedCount / totalCount) * 100
+                                }));
+                            }
+                        }
+                    })();
+
+                    // Add to set and cleanup when done
+                    const p = promise.then(() => {
+                        activePromises.delete(p);
+                    });
+                    activePromises.add(p);
                 }
 
-                const result = await (window as any).youtubeAPI.download(downloadOptions);
-                
-                if (result.success) {
-                    successCount++;
-                } else {
-                    failCount++;
+                // Wait for at least one to finish before next iteration if full or queue empty
+                if (activePromises.size > 0) {
+                    await Promise.race(activePromises);
                 }
-            } catch (err) {
-                 failCount++;
             }
+        } finally {
+            unsubscribe();
+            progressMapRef.current.clear();
         }
-        
-        // Cleanup listener
-        unsubscribe();
 
         if (isCancelledRef.current) {
              setDownloadStatus({ status: 'error', message: 'Download Cancelled' });
@@ -299,6 +349,7 @@ export const YoutubeDownloader: React.FC = () => {
              setDownloadStatus({
                 status: successCount > 0 ? 'success' : 'error',
                 message: `Playlist Download Complete. Success: ${successCount}, Failed: ${failCount}`,
+                progress: 100
              });
              
              if (successCount > 0) {

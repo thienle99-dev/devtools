@@ -75,20 +75,23 @@ export interface VideoInfo {
 }
 
 export interface DownloadProgress {
+    id?: string;
     percent: number;
     downloaded: number;
     total: number;
     speed: number;
     eta: number;
     state: 'downloading' | 'processing' | 'complete' | 'error';
+    filename?: string;
 }
 
 export class YouTubeDownloader {
     private ytDlp: any;
-    private currentProcess: any = null;
+    private activeProcesses: Map<string, any> = new Map();
     private binaryPath: string;
     private initPromise: Promise<void>;
     private hasAria2c: boolean = false;
+    private hasFFmpeg: boolean = false;
     private store: Store<StoreSchema>;
     
     constructor() {
@@ -135,24 +138,35 @@ export class YouTubeDownloader {
             // Initialize with binary path
             this.ytDlp = new YTDlpWrap(this.binaryPath);
             
-            // Check if aria2c is available
-            await this.checkAria2c();
+            // Check for helpers
+            await this.checkHelpers();
         } catch (error) {
             console.error('Failed to initialize yt-dlp:', error);
             throw error;
         }
     }
 
-    private async checkAria2c(): Promise<void> {
+    private async checkHelpers(): Promise<void> {
+        const { execSync } = require('child_process');
+        
+        // Check Aria2c
         try {
-            const { execSync } = require('child_process');
-            // Try to run aria2c --version
             execSync('aria2c --version', { stdio: 'ignore' });
             this.hasAria2c = true;
-            console.log('✅ aria2c detected - will use for ultra-fast downloads!');
+            console.log('✅ aria2c detected - Ultra-fast download mode enabled');
         } catch {
             this.hasAria2c = false;
-            console.log('ℹ️ aria2c not found - using default downloader');
+            console.log('ℹ️ aria2c not found - Standard download mode');
+        }
+
+        // Check FFmpeg
+        try {
+            execSync('ffmpeg -version', { stdio: 'ignore' });
+            this.hasFFmpeg = true;
+            console.log('✅ FFmpeg detected - Merge/Convert enabled');
+        } catch {
+            this.hasFFmpeg = false;
+            console.warn('⚠️ FFmpeg not found - Post-processing may fail for high quality videos');
         }
     }
 
@@ -170,8 +184,8 @@ export class YouTubeDownloader {
             // Use yt-dlp to get video info with optimizations
             const info: any = await this.ytDlp.getVideoInfo([
                 url,
-                '--skip-download', // Don't download, just get info
-                '--no-playlist', // Faster for single videos
+                '--skip-download',
+                '--no-playlist',
             ]);
             
             // Parse available formats
@@ -187,11 +201,10 @@ export class YouTubeDownloader {
                 audioBitrate: format.abr,
             }));
 
-            // Extract unique quality labels (ALL qualities)
+            // Extract unique quality labels
             const qualityLabels = new Set<string>();
             formats.forEach(format => {
                 if (format.qualityLabel) {
-                    // Extract quality like "720p", "1080p" from labels
                     const match = format.qualityLabel.match(/(\d+p)/);
                     if (match) {
                         qualityLabels.add(match[1]);
@@ -202,10 +215,9 @@ export class YouTubeDownloader {
             const availableQualities = Array.from(qualityLabels).sort((a, b) => {
                 const aNum = parseInt(a);
                 const bNum = parseInt(b);
-                return bNum - aNum; // Descending order
+                return bNum - aNum;
             });
 
-            // Check if video has video/audio
             const hasVideo = formats.some(f => f.hasVideo);
             const hasAudio = formats.some(f => f.hasAudio);
             
@@ -228,9 +240,6 @@ export class YouTubeDownloader {
         }
     }
     
-    /**
-     * Get playlist information
-     */
     async getPlaylistInfo(url: string): Promise<{
         playlistId: string;
         title: string;
@@ -246,19 +255,16 @@ export class YouTubeDownloader {
         await this.ensureInitialized();
         
         try {
-            // Use yt-dlp to get playlist info with --flat-playlist for speed
             const info: any = await this.ytDlp.getVideoInfo([
                 url,
                 '--flat-playlist',
                 '--skip-download',
             ]);
             
-            // Check if it's a playlist
             if (!info.entries || !Array.isArray(info.entries)) {
                 throw new Error('Not a valid playlist URL');
             }
             
-            // Parse playlist videos
             const videos = info.entries.map((entry: any) => ({
                 id: entry.id || entry.url,
                 title: entry.title || 'Unknown Title',
@@ -279,7 +285,7 @@ export class YouTubeDownloader {
     }
     
     /**
-     * Download video using yt-dlp
+     * Download video using yt-dlp with optimized buffer and concurrency
      */
     async downloadVideo(
         options: DownloadOptions,
@@ -288,62 +294,59 @@ export class YouTubeDownloader {
         await this.ensureInitialized();
         
         const { url, format, quality, container, outputPath, maxSpeed } = options;
+        const downloadId = randomUUID(); // Unique ID for this download (for concurrency)
         
         try {
-            // Get video info for filename
             const info = await this.getVideoInfo(url);
             const sanitizedTitle = this.sanitizeFilename(info.title);
             
-            // Determine output path
             const downloadsPath = outputPath || app.getPath('downloads');
             const extension = container || (format === 'audio' ? 'mp3' : 'mp4');
             const outputTemplate = path.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
             
-            // Ensure directory exists
             if (!fs.existsSync(downloadsPath)) {
                 fs.mkdirSync(downloadsPath, { recursive: true });
             }
 
-            // Build yt-dlp arguments with performance optimizations
+            // Build yt-dlp arguments
             const args: string[] = [
                 url,
                 '-o', outputTemplate,
                 '--no-playlist',
                 '--no-warnings',
-                '--newline', // For progress parsing
-                // Performance optimizations
-                '--concurrent-fragments', `${options.concurrentFragments || 4}`, // Download N fragments simultaneously
-                '--buffer-size', '1M', // Increase buffer size
-                '--retries', '10', // Retry on errors
-                '--fragment-retries', '10',
-                '--throttled-rate', '100K', // Minimum rate before retry
-                '--no-overwrites', // Don't overwrite existing files
+                '--newline',
+                // Optimizations
+                '--concurrent-fragments', `${options.concurrentFragments || 4}`,
+                '--buffer-size', '1M',
+                '--retries', '10',
+                '--fragment-retries', '10', 
+                '--no-overwrites',
+                // Metadata (New)
+                '--embed-thumbnail',
+                '--add-metadata',
             ];
 
             if (maxSpeed) {
                 args.push('--limit-rate', maxSpeed);
             }
 
-
-            // Use aria2c if available for ultra-fast downloads (10-16x faster!)
             if (this.hasAria2c) {
-                console.log('🚀 Using aria2c for ultra-fast download!');
+                console.log(`[${downloadId}] Using aria2c`);
                 args.push(
                     '--external-downloader', 'aria2c',
-                    '--external-downloader-args', '-x 16 -s 16 -k 1M --allow-overwrite=true'
+                    '--external-downloader-args', '-x 16 -s 16 -k 1M'
                 );
             }
 
-            // Format selection
+            // Format Logic
             if (format === 'audio') {
                 args.push(
                     '-x', // Extract audio
                     '--audio-format', container || 'mp3',
-                    '--audio-quality', quality || '0' // Use provided quality or default to best
+                    '--audio-quality', quality || '0'
                 );
             } else if (format === 'video') {
                 if (quality && quality !== 'best') {
-                    // Try to get the exact quality with audio
                     args.push('-f', `bestvideo[height<=${quality.replace('p', '')}]+bestaudio/best[height<=${quality.replace('p', '')}]`);
                 } else {
                     args.push('-f', 'bestvideo+bestaudio/best');
@@ -358,44 +361,39 @@ export class YouTubeDownloader {
                 let totalBytes = 0;
                 let startTime = Date.now();
 
-                // Execute yt-dlp
-                this.currentProcess = this.ytDlp.exec(args);
+                // Spawn Process
+                const process = this.ytDlp.exec(args);
+                this.activeProcesses.set(downloadId, process);
 
-                // Buffer for handling split lines
                 let outputBuffer = '';
 
-                this.currentProcess.stdout?.on('data', (data: Buffer) => {
+                process.stdout?.on('data', (data: Buffer) => {
                     const chunk = data.toString();
                     outputBuffer += chunk;
-
-                    // Process complete lines
                     const lines = outputBuffer.split(/\r?\n/);
-                    
-                    // Keep the last partial line in the buffer
                     outputBuffer = lines.pop() || '';
 
                     for (const line of lines) {
                         if (!line.trim()) continue;
                         
-                        // Debug log for troubleshooting
-                        console.log('[yt-dlp output]', line);
-
-                        // Check for completion message
+                        // Check completion
                         if (line.includes('100%') || line.includes('has already been downloaded')) {
                             if (progressCallback) {
                                 progressCallback({
+                                    id: downloadId,
                                     percent: 100,
                                     downloaded: totalBytes,
                                     total: totalBytes,
                                     speed: 0,
                                     eta: 0,
-                                    state: 'complete'
+                                    state: 'complete',
+                                    filename: `${sanitizedTitle}.${extension}`
                                 });
                             }
                             continue;
                         }
 
-                        // Regex to capture: percent, total_size, unit, speed, speed_unit, eta
+                        // Parse Progress
                         const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/);
                         
                         if (progressMatch && progressCallback) {
@@ -406,38 +404,29 @@ export class YouTubeDownloader {
                             const speedUnitStr = progressMatch[5];
                             const etaStr = progressMatch[6];
                             
-                            // Helper to convert to bytes
                             const getMultiplier = (unit: string) => {
                                 if (!unit) return 1;
-                                if (unit.includes('KiB') || unit.includes('KB') || unit.includes('K')) return 1024;
-                                if (unit.includes('MiB') || unit.includes('MB') || unit.includes('M')) return 1024 * 1024;
-                                if (unit.includes('GiB') || unit.includes('GB') || unit.includes('G')) return 1024 * 1024 * 1024;
+                                if (unit.includes('KiB') || unit.includes('K')) return 1024;
+                                if (unit.includes('MiB') || unit.includes('M')) return 1024 * 1024;
+                                if (unit.includes('GiB') || unit.includes('G')) return 1024 * 1024 * 1024;
                                 return 1;
                             };
                             
-                            // Calculate Total Size
                             totalBytes = parseFloat(sizeStr) * getMultiplier(unitStr);
                             downloadedBytes = (percent / 100) * totalBytes;
                             
-                            // Parse Speed
                             let speed = 0;
                             if (speedStr && speedUnitStr) {
                                 speed = parseFloat(speedStr) * getMultiplier(speedUnitStr);
                             }
                             
-                            // Parse ETA
                             let eta = 0;
                             if (etaStr) {
                                 const parts = etaStr.split(':').map(Number);
-                                if (parts.length === 3) { // HH:MM:SS
-                                    eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
-                                } else if (parts.length === 2) { // MM:SS
-                                    eta = parts[0] * 60 + parts[1];
-                                } else {
-                                    eta = parts[0]; // SS
-                                }
+                                if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                                else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
+                                else eta = parts[0];
                             } else {
-                                // Fallback calculation if ETA missing
                                 const elapsedTime = (Date.now() - startTime) / 1000;
                                 const currentSpeed = downloadedBytes / elapsedTime; 
                                 if (!speed) speed = currentSpeed;
@@ -445,29 +434,34 @@ export class YouTubeDownloader {
                             }
                             
                             progressCallback({
+                                id: downloadId,
                                 percent: Math.round(percent),
                                 downloaded: downloadedBytes,
                                 total: totalBytes,
                                 speed,
                                 eta,
-                                state: 'downloading'
+                                state: 'downloading',
+                                filename: `${sanitizedTitle}.${extension}`
                             });
                         }
                     }
                 });
 
-                this.currentProcess.stderr?.on('data', (data: Buffer) => {
-                    const error = data.toString();
-                    console.error('[yt-dlp error]', error);
+                process.stderr?.on('data', (data: Buffer) => {
+                    // Log errors but don't reject immediately as stderr includes warnings
+                    // console.error(`[${downloadId}]`, data.toString());
                 });
 
-                this.currentProcess.on('close', (code: number) => {
+                process.on('close', (code: number) => {
+                    this.activeProcesses.delete(downloadId);
+                    
                     if (code === 0) {
-                        // Find the downloaded file
                         const expectedFile = path.join(downloadsPath, `${sanitizedTitle}.${extension}`);
                         
+                        // Final success callback
                         if (progressCallback) {
-                            progressCallback({
+                             progressCallback({
+                                id: downloadId,
                                 percent: 100,
                                 downloaded: totalBytes,
                                 total: totalBytes,
@@ -477,7 +471,6 @@ export class YouTubeDownloader {
                             });
                         }
 
-                        // Add to history
                         this.addToHistory({
                             url,
                             title: info.title,
@@ -492,36 +485,43 @@ export class YouTubeDownloader {
                         
                         resolve(expectedFile);
                     } else {
-                        // Clean up partial files on error
                         this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
                         reject(new Error(`yt-dlp exited with code ${code}`));
                     }
                 });
 
-                this.currentProcess.on('error', (error: Error) => {
-                    // Clean up partial files on error
+                process.on('error', (error: Error) => {
+                    this.activeProcesses.delete(downloadId);
                     this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
                     reject(error);
                 });
             });
         } catch (error) {
+            this.activeProcesses.delete(downloadId);
             throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
     
     /**
-     * Cancel current download
+     * Cancel download(s)
+     * @param id Optional download ID to cancel specific download. If omitted, cancels all.
      */
-    cancelDownload(): void {
-        if (this.currentProcess) {
-            this.currentProcess.kill();
-            this.currentProcess = null;
+    cancelDownload(id?: string): void {
+        if (id) {
+            const proc = this.activeProcesses.get(id);
+            if (proc) {
+                console.log(`Cancelling download ${id}`);
+                proc.kill();
+                this.activeProcesses.delete(id);
+            }
+        } else {
+            console.log(`Cancelling all ${this.activeProcesses.size} downloads`);
+            this.activeProcesses.forEach(proc => proc.kill());
+            this.activeProcesses.clear();
         }
     }
     
-    /**
-     * Clean up partial files to prevent HTTP 416 errors
-     */
+    // ... helper methods ...
     private cleanupPartialFiles(directory: string, filename: string, extension: string): void {
         try {
             const patterns = [
@@ -530,57 +530,31 @@ export class YouTubeDownloader {
                 path.join(directory, `${filename}.${extension}.ytdl`),
                 path.join(directory, `${filename}.part`),
             ];
-
-            patterns.forEach(pattern => {
-                if (fs.existsSync(pattern)) {
-                    console.log('Cleaning up partial file:', pattern);
-                    fs.unlinkSync(pattern);
-                }
-            });
+            patterns.forEach(p => { if (fs.existsSync(p)) fs.unlinkSync(p); });
         } catch (error) {
-            console.error('Failed to cleanup partial files:', error);
+            console.error('Cleanup failed:', error);
         }
     }
     
-    /**
-     * Sanitize filename
-     */
     private sanitizeFilename(filename: string): string {
         return filename
-            .replace(/[<>:"/\\|?*]/g, '') // Remove invalid characters
-            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .replace(/[<>:"/\\|?*]/g, '')
+            .replace(/\s+/g, ' ')
             .trim()
-            .substring(0, 200); // Limit length
+            .substring(0, 200);
     }
 
-
-    /**
-     * History Methods
-     */
-    getHistory(): HistoryItem[] {
-        return this.store.get('history', []);
-    }
+    getHistory(): HistoryItem[] { return this.store.get('history', []); }
 
     addToHistory(item: Omit<HistoryItem, 'id' | 'timestamp'>): void {
         const history = this.store.get('history', []);
-        
-        const newItem: HistoryItem = {
-            ...item,
-            id: randomUUID(),
-            timestamp: Date.now()
-        };
-        
-        // Add to beginning (limit to 50 items)
+        const newItem: HistoryItem = { ...item, id: randomUUID(), timestamp: Date.now() };
         this.store.set('history', [newItem, ...history].slice(0, 50));
     }
     
-    clearHistory(): void {
-        this.store.set('history', []);
-    }
+    clearHistory(): void { this.store.set('history', []); }
 
-    getSettings(): Settings {
-        return this.store.get('settings');
-    }
+    getSettings(): Settings { return this.store.get('settings'); }
 
     saveSettings(settings: Partial<Settings>): Settings {
         const current = this.store.get('settings');
@@ -590,5 +564,4 @@ export class YouTubeDownloader {
     }
 }
 
-// Export singleton instance
 export const youtubeDownloader = new YouTubeDownloader();
