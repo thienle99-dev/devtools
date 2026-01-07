@@ -1568,6 +1568,17 @@ app.whenReady().then(() => {
     return { success: true };
   });
 
+  ipcMain.handle('youtube:openFile', async (_event, filePath: string) => {
+    const { shell } = await import('electron');
+    return shell.openPath(filePath);
+  });
+
+  ipcMain.handle('youtube:showInFolder', async (_event, filePath: string) => {
+    const { shell } = await import('electron');
+    shell.showItemInFolder(filePath);
+    return true;
+  });
+
   // Helper functions
   async function getDirSize(dirPath: string): Promise<number> {
     try {

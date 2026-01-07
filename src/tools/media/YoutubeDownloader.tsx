@@ -1,22 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo } from 'lucide-react';
+import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Card } from '../../components/ui/Card';
 import { VideoInfo } from './components/VideoInfo';
-
-interface DownloadOptions {
-    url: string;
-    format: 'video' | 'audio' | 'best';
-    quality: '144p' | '240p' | '360p' | '480p' | '720p' | '1080p' | 'best';
-}
+import { FormatsList } from './components/FormatsList';
+import { ToastContainer, useToast } from '../../components/ui/Toast';
 
 interface DownloadStatus {
     status: 'idle' | 'downloading' | 'success' | 'error';
     message?: string;
     progress?: number;
     filename?: string;
+}
+
+interface VideoFormat {
+    itag: number;
+    quality: string;
+    qualityLabel?: string;
+    hasVideo: boolean;
+    hasAudio: boolean;
+    container: string;
+    codecs?: string;
+    bitrate?: number;
+    audioBitrate?: number;
 }
 
 interface VideoInfoData {
@@ -28,6 +36,10 @@ interface VideoInfoData {
     description?: string;
     viewCount?: number;
     uploadDate?: string;
+    formats: VideoFormat[];
+    availableQualities: string[];
+    hasVideo: boolean;
+    hasAudio: boolean;
 }
 
 export const YoutubeDownloader: React.FC = () => {
@@ -37,8 +49,9 @@ export const YoutubeDownloader: React.FC = () => {
     const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({ status: 'idle' });
     const [videoInfo, setVideoInfo] = useState<VideoInfoData | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
-    const [availableQualities, setAvailableQualities] = useState<string[]>(['144p', '240p', '360p', '480p', '720p', '1080p']);
+    const [retryCount, setRetryCount] = useState(0);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const { toasts, removeToast, success, error, info } = useToast();
 
     const isValidYoutubeUrl = (url: string): boolean => {
         const patterns = [
@@ -49,15 +62,24 @@ export const YoutubeDownloader: React.FC = () => {
         return patterns.some(pattern => pattern.test(url));
     };
 
-    const handleDownload = async () => {
+    const handleDownload = async (isRetry = false) => {
         if (!url.trim()) {
+            error('Invalid URL', 'Please enter a YouTube URL');
             setDownloadStatus({ status: 'error', message: 'Please enter a YouTube URL' });
             return;
         }
 
         if (!isValidYoutubeUrl(url)) {
+            error('Invalid URL', 'Please enter a valid YouTube URL');
             setDownloadStatus({ status: 'error', message: 'Invalid YouTube URL' });
             return;
+        }
+
+        if (isRetry) {
+            info('Retrying download', `Attempt ${retryCount + 1} of 3`);
+        } else {
+            info('Starting download', videoInfo?.title || 'Video');
+            setRetryCount(0);
         }
 
         setDownloadStatus({ status: 'downloading', message: 'Preparing download...', progress: 0 });
@@ -92,14 +114,29 @@ export const YoutubeDownloader: React.FC = () => {
                     message: 'Download completed successfully!',
                     filename: result.filepath
                 });
+                success('Download Complete!', videoInfo?.title || 'Video downloaded successfully');
+                setRetryCount(0);
             } else {
                 throw new Error(result.error || 'Download failed');
             }
-        } catch (error) {
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Download failed';
             setDownloadStatus({
                 status: 'error',
-                message: error instanceof Error ? error.message : 'Download failed'
+                message: errorMessage
             });
+            
+            // Auto-retry logic (max 3 attempts)
+            if (!isRetry && retryCount < 2) {
+                setRetryCount(retryCount + 1);
+                error('Download Failed', `Will retry in 3 seconds... (Attempt ${retryCount + 1}/3)`);
+                setTimeout(() => handleDownload(true), 3000);
+            } else {
+                error('Download Failed', errorMessage);
+                if (retryCount >= 2) {
+                    error('Max Retries Reached', 'Please try again later or check your internet connection');
+                }
+            }
         }
     };
 
@@ -125,21 +162,58 @@ export const YoutubeDownloader: React.FC = () => {
 
             const info = await (window as any).youtubeAPI.getInfo(url);
             setVideoInfo(info);
-        } catch (error) {
+            
+            // Auto-select best available quality
+            if (info.availableQualities && info.availableQualities.length > 0) {
+                setQuality(info.availableQualities[0]); // Select highest quality
+            }
+            
+            success('Video Info Loaded', info.title);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch video info';
             setDownloadStatus({
                 status: 'error',
-                message: error instanceof Error ? error.message : 'Failed to fetch video info'
+                message: errorMessage
             });
+            error('Failed to Load Video', errorMessage);
         } finally {
             setFetchingInfo(false);
         }
+    };
+
+    const handleOpenFile = async () => {
+        if (downloadStatus.filename) {
+            try {
+                await (window as any).youtubeAPI.openFile(downloadStatus.filename);
+                info('Opening File', 'Launching with default application...');
+            } catch (err) {
+                error('Failed to Open', 'Could not open the file');
+            }
+        }
+    };
+
+    const handleShowInFolder = async () => {
+        if (downloadStatus.filename) {
+            try {
+                await (window as any).youtubeAPI.showInFolder(downloadStatus.filename);
+                info('Showing File', 'Opening in file manager...');
+            } catch (err) {
+                error('Failed to Show', 'Could not open folder');
+            }
+        }
+    };
+
+    const handleRetry = () => {
+        setRetryCount(0);
+        handleDownload(false);
     };
 
     const handleClear = () => {
         setUrl('');
         setVideoInfo(null);
         setDownloadStatus({ status: 'idle' });
-        setAvailableQualities(['144p', '240p', '360p', '480p', '720p', '1080p']);
+        setQuality('720p');
+        setFormat('video');
     };
 
     // Auto-fetch video info when URL changes
@@ -158,7 +232,6 @@ export const YoutubeDownloader: React.FC = () => {
         } else {
             // Clear video info if URL is invalid
             setVideoInfo(null);
-            setAvailableQualities(['144p', '240p', '360p', '480p', '720p', '1080p']);
         }
 
         // Cleanup
@@ -169,8 +242,55 @@ export const YoutubeDownloader: React.FC = () => {
         };
     }, [url]);
 
+    // Estimate file size and download time
+    const estimateFileSize = (): string => {
+        if (!videoInfo) return 'Unknown';
+        const lengthMB = videoInfo.lengthSeconds / 60;
+        let sizeEstimate = 0;
+        
+        if (format === 'audio') {
+            sizeEstimate = lengthMB * 1.5; // ~1.5MB per minute for audio
+        } else {
+            const qualityMultiplier = {
+                '144p': 2, '240p': 4, '360p': 8, '480p': 15,
+                '720p': 25, '1080p': 50, '1440p': 100, '2160p': 200, 'best': 50
+            };
+            sizeEstimate = lengthMB * (qualityMultiplier[quality as keyof typeof qualityMultiplier] || 25);
+        }
+        
+        if (sizeEstimate < 1024) {
+            return `~${sizeEstimate.toFixed(0)} MB`;
+        }
+        return `~${(sizeEstimate / 1024).toFixed(1)} GB`;
+    };
+
+    const estimateDownloadTime = (): string => {
+        if (!videoInfo) return 'Unknown';
+        const lengthMB = videoInfo.lengthSeconds / 60;
+        let sizeMB = 0;
+        
+        if (format === 'audio') {
+            sizeMB = lengthMB * 1.5;
+        } else {
+            const qualityMultiplier = {
+                '144p': 2, '240p': 4, '360p': 8, '480p': 15,
+                '720p': 25, '1080p': 50, '1440p': 100, '2160p': 200, 'best': 50
+            };
+            sizeMB = lengthMB * (qualityMultiplier[quality as keyof typeof qualityMultiplier] || 25);
+        }
+        
+        // Assume 5 Mbps download speed
+        const speedMBps = 5 / 8; // Convert Mbps to MBps
+        const seconds = sizeMB / speedMBps;
+        
+        if (seconds < 60) return `~${Math.ceil(seconds)}s`;
+        return `~${Math.ceil(seconds / 60)}m`;
+    };
+
     return (
         <div className="h-full flex flex-col bg-background/50">
+            <ToastContainer toasts={toasts} onClose={removeToast} />
+            
             {/* Header */}
             <div className="px-4 py-3 border-b border-border-glass bg-glass-background/30 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
@@ -238,7 +358,26 @@ export const YoutubeDownloader: React.FC = () => {
 
                     {/* Video Info Preview */}
                     {videoInfo && (
-                        <VideoInfo {...videoInfo} />
+                        <>
+                            <VideoInfo {...videoInfo} />
+                            
+                            {/* Download Estimates */}
+                            <Card className="p-4 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border-indigo-500/20">
+                                <div className="grid grid-cols-2 gap-4 text-center">
+                                    <div>
+                                        <p className="text-xs text-foreground-secondary mb-1">Estimated Size</p>
+                                        <p className="text-lg font-bold text-indigo-400">{estimateFileSize()}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-foreground-secondary mb-1">Estimated Time</p>
+                                        <p className="text-lg font-bold text-purple-400">{estimateDownloadTime()}</p>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            {/* Available Formats */}
+                            <FormatsList formats={videoInfo.formats} />
+                        </>
                     )}
 
                     {/* Download Options */}
@@ -250,16 +389,27 @@ export const YoutubeDownloader: React.FC = () => {
                             <div>
                                 <label className="block text-sm font-medium text-foreground-primary mb-2">
                                     Format
+                                    {videoInfo && (
+                                        <span className="text-xs text-foreground-secondary ml-2">
+                                            ({videoInfo.hasVideo ? 'Video ✓' : ''} {videoInfo.hasAudio ? 'Audio ✓' : ''})
+                                        </span>
+                                    )}
                                 </label>
                                 <Select
                                     value={format}
                                     onChange={(e) => setFormat(e.target.value as 'video' | 'audio' | 'best')}
-                                    disabled={downloadStatus.status === 'downloading'}
-                                    options={[
-                                        { value: 'video', label: 'Video + Audio (MP4)' },
-                                        { value: 'audio', label: 'Audio Only (MP3)' },
-                                        { value: 'best', label: 'Best Quality Available' }
-                                    ]}
+                                    disabled={downloadStatus.status === 'downloading' || !videoInfo}
+                                    options={
+                                        videoInfo ? [
+                                            ...(videoInfo.hasVideo && videoInfo.hasAudio ? [{ value: 'video' as const, label: 'Video + Audio (MP4)' }] : []),
+                                            ...(videoInfo.hasAudio ? [{ value: 'audio' as const, label: 'Audio Only (MP3)' }] : []),
+                                            { value: 'best' as const, label: 'Best Quality Available' }
+                                        ] : [
+                                            { value: 'video' as const, label: 'Video + Audio (MP4)' },
+                                            { value: 'audio' as const, label: 'Audio Only (MP3)' },
+                                            { value: 'best' as const, label: 'Best Quality Available' }
+                                        ]
+                                    }
                                 />
                             </div>
 
@@ -277,18 +427,31 @@ export const YoutubeDownloader: React.FC = () => {
                                     <Select
                                         value={quality}
                                         onChange={(e) => setQuality(e.target.value)}
-                                        disabled={downloadStatus.status === 'downloading'}
-                                        options={[
-                                            { value: 'best', label: 'Best Available' },
-                                            ...(availableQualities.includes('2160p') ? [{ value: '2160p', label: '2160p (4K)' }] : []),
-                                            ...(availableQualities.includes('1440p') ? [{ value: '1440p', label: '1440p (2K)' }] : []),
-                                            ...(availableQualities.includes('1080p') ? [{ value: '1080p', label: '1080p (Full HD)' }] : []),
-                                            ...(availableQualities.includes('720p') ? [{ value: '720p', label: '720p (HD)' }] : []),
-                                            ...(availableQualities.includes('480p') ? [{ value: '480p', label: '480p (SD)' }] : []),
-                                            ...(availableQualities.includes('360p') ? [{ value: '360p', label: '360p' }] : []),
-                                            ...(availableQualities.includes('240p') ? [{ value: '240p', label: '240p' }] : []),
-                                            ...(availableQualities.includes('144p') ? [{ value: '144p', label: '144p' }] : []),
-                                        ]}
+                                        disabled={downloadStatus.status === 'downloading' || !videoInfo}
+                                        options={
+                                            videoInfo && videoInfo.availableQualities ? [
+                                                { value: 'best', label: 'Best Available' },
+                                                ...videoInfo.availableQualities.map(q => {
+                                                    const labels: Record<string, string> = {
+                                                        '2160p': '2160p (4K)',
+                                                        '1440p': '1440p (2K)',
+                                                        '1080p': '1080p (Full HD)',
+                                                        '720p': '720p (HD)',
+                                                        '480p': '480p (SD)',
+                                                        '360p': '360p',
+                                                        '240p': '240p',
+                                                        '144p': '144p',
+                                                    };
+                                                    return { value: q, label: labels[q] || q };
+                                                })
+                                            ] : [
+                                                { value: 'best', label: 'Best Available' },
+                                                { value: '1080p', label: '1080p (Full HD)' },
+                                                { value: '720p', label: '720p (HD)' },
+                                                { value: '480p', label: '480p (SD)' },
+                                                { value: '360p', label: '360p' },
+                                            ]
+                                        }
                                     />
                                 </div>
                             )}
@@ -296,9 +459,9 @@ export const YoutubeDownloader: React.FC = () => {
                     </Card>
 
                     {/* Download Button */}
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-3">
                         <Button
-                            onClick={handleDownload}
+                            onClick={() => handleDownload(false)}
                             disabled={!url || downloadStatus.status === 'downloading'}
                             className="min-w-[200px]"
                             size="lg"
@@ -315,6 +478,17 @@ export const YoutubeDownloader: React.FC = () => {
                                 </>
                             )}
                         </Button>
+                        
+                        {downloadStatus.status === 'error' && (
+                            <Button
+                                onClick={handleRetry}
+                                variant="outline"
+                                size="lg"
+                            >
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Retry
+                            </Button>
+                        )}
                     </div>
 
                     {/* Status Display */}
@@ -357,9 +531,31 @@ export const YoutubeDownloader: React.FC = () => {
                                         </div>
                                     )}
                                     {downloadStatus.status === 'success' && downloadStatus.filename && (
-                                        <p className="text-sm text-foreground-secondary mt-1">
-                                            File: {downloadStatus.filename}
-                                        </p>
+                                        <>
+                                            <p className="text-sm text-foreground-secondary mt-2">
+                                                File: {downloadStatus.filename.split(/[/\\]/).pop()}
+                                            </p>
+                                            <div className="flex gap-2 mt-4">
+                                                <Button
+                                                    onClick={handleOpenFile}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                                    Open File
+                                                </Button>
+                                                <Button
+                                                    onClick={handleShowInFolder}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1"
+                                                >
+                                                    <FolderOpen className="w-3.5 h-3.5 mr-1.5" />
+                                                    Show in Folder
+                                                </Button>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>

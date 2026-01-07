@@ -414,9 +414,9 @@ Low Priority (Nice to have):
 
 ### Phase 2: Core Features (3-4 weeks)
 
-- [ ] GIF creation tab
+- [x] GIF creation tab (Basic UI & Flow)
 - [x] Basic frame editing (crop, resize, rotate) (Resize logic in place)
-- [ ] Transition effects
+- [x] Transition effects (Crossfade)
 - [x] Metadata export
 
 ### Phase 3: Advanced Features (4-6 weeks)

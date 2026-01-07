@@ -2262,7 +2262,32 @@ var YouTubeDownloader = class {
 	async getVideoInfo(url) {
 		try {
 			if (!ytdl.validateURL(url)) throw new Error("Invalid YouTube URL");
-			const videoDetails = (await ytdl.getInfo(url)).videoDetails;
+			const info = await ytdl.getInfo(url);
+			const videoDetails = info.videoDetails;
+			const formats = info.formats.map((format) => ({
+				itag: format.itag,
+				quality: format.quality || "unknown",
+				qualityLabel: format.qualityLabel,
+				hasVideo: !!format.hasVideo,
+				hasAudio: !!format.hasAudio,
+				container: format.container || "unknown",
+				codecs: format.codecs,
+				bitrate: format.bitrate,
+				audioBitrate: format.audioBitrate
+			}));
+			const qualityLabels = /* @__PURE__ */ new Set();
+			formats.forEach((format) => {
+				if (format.qualityLabel && format.hasVideo) {
+					const match = format.qualityLabel.match(/(\d+p)/);
+					if (match) qualityLabels.add(match[1]);
+				}
+			});
+			const availableQualities = Array.from(qualityLabels).sort((a, b) => {
+				const aNum = parseInt(a);
+				return parseInt(b) - aNum;
+			});
+			const hasVideo = formats.some((f) => f.hasVideo);
+			const hasAudio = formats.some((f) => f.hasAudio);
 			return {
 				videoId: videoDetails.videoId,
 				title: videoDetails.title,
@@ -2271,7 +2296,11 @@ var YouTubeDownloader = class {
 				thumbnailUrl: videoDetails.thumbnails[videoDetails.thumbnails.length - 1]?.url || "",
 				description: videoDetails.description,
 				viewCount: parseInt(videoDetails.viewCount),
-				uploadDate: videoDetails.uploadDate
+				uploadDate: videoDetails.uploadDate,
+				formats,
+				availableQualities,
+				hasVideo,
+				hasAudio
 			};
 		} catch (error) {
 			throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -3611,6 +3640,15 @@ app.whenReady().then(() => {
 	ipcMain.handle("youtube:cancel", async () => {
 		youtubeDownloader.cancelDownload();
 		return { success: true };
+	});
+	ipcMain.handle("youtube:openFile", async (_event, filePath) => {
+		const { shell } = await import("electron");
+		return shell.openPath(filePath);
+	});
+	ipcMain.handle("youtube:showInFolder", async (_event, filePath) => {
+		const { shell } = await import("electron");
+		shell.showItemInFolder(filePath);
+		return true;
 	});
 	async function getDirSize$1(dirPath) {
 		try {

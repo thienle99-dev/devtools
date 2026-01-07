@@ -139,6 +139,8 @@ contextBridge.exposeInMainWorld('youtubeAPI', {
   getInfo: (url: string) => ipcRenderer.invoke('youtube:getInfo', url),
   download: (options: any) => ipcRenderer.invoke('youtube:download', options),
   cancel: () => ipcRenderer.invoke('youtube:cancel'),
+  openFile: (filePath: string) => ipcRenderer.invoke('youtube:openFile', filePath),
+  showInFolder: (filePath: string) => ipcRenderer.invoke('youtube:showInFolder', filePath),
   onProgress: (callback: (progress: any) => void) => {
     const listener = (_event: any, progress: any) => callback(progress);
     ipcRenderer.on('youtube:progress', listener);

@@ -10,6 +10,18 @@ export interface DownloadOptions {
     outputPath?: string;
 }
 
+export interface VideoFormat {
+    itag: number;
+    quality: string;
+    qualityLabel?: string;
+    hasVideo: boolean;
+    hasAudio: boolean;
+    container: string;
+    codecs?: string;
+    bitrate?: number;
+    audioBitrate?: number;
+}
+
 export interface VideoInfo {
     videoId: string;
     title: string;
@@ -19,6 +31,10 @@ export interface VideoInfo {
     description?: string;
     viewCount?: number;
     uploadDate?: string;
+    formats: VideoFormat[];
+    availableQualities: string[];
+    hasVideo: boolean;
+    hasAudio: boolean;
 }
 
 export interface DownloadProgress {
@@ -46,6 +62,41 @@ export class YouTubeDownloader {
             const info = await ytdl.getInfo(url);
             const videoDetails = info.videoDetails;
             
+            // Parse available formats
+            const formats: VideoFormat[] = info.formats.map(format => ({
+                itag: format.itag,
+                quality: format.quality || 'unknown',
+                qualityLabel: format.qualityLabel,
+                hasVideo: !!format.hasVideo,
+                hasAudio: !!format.hasAudio,
+                container: format.container || 'unknown',
+                codecs: format.codecs,
+                bitrate: format.bitrate,
+                audioBitrate: format.audioBitrate,
+            }));
+
+            // Extract unique quality labels (for video formats with both video and audio)
+            const qualityLabels = new Set<string>();
+            formats.forEach(format => {
+                if (format.qualityLabel && format.hasVideo) {
+                    // Extract quality like "720p", "1080p" from labels like "720p60", "1080p HD"
+                    const match = format.qualityLabel.match(/(\d+p)/);
+                    if (match) {
+                        qualityLabels.add(match[1]);
+                    }
+                }
+            });
+
+            const availableQualities = Array.from(qualityLabels).sort((a, b) => {
+                const aNum = parseInt(a);
+                const bNum = parseInt(b);
+                return bNum - aNum; // Descending order
+            });
+
+            // Check if video has video/audio
+            const hasVideo = formats.some(f => f.hasVideo);
+            const hasAudio = formats.some(f => f.hasAudio);
+            
             return {
                 videoId: videoDetails.videoId,
                 title: videoDetails.title,
@@ -55,6 +106,10 @@ export class YouTubeDownloader {
                 description: videoDetails.description,
                 viewCount: parseInt(videoDetails.viewCount),
                 uploadDate: videoDetails.uploadDate,
+                formats,
+                availableQualities,
+                hasVideo,
+                hasAudio,
             };
         } catch (error) {
             throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : 'Unknown error'}`);

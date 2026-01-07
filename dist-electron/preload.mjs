@@ -120,6 +120,8 @@ electron.contextBridge.exposeInMainWorld("youtubeAPI", {
 	getInfo: (url) => electron.ipcRenderer.invoke("youtube:getInfo", url),
 	download: (options) => electron.ipcRenderer.invoke("youtube:download", options),
 	cancel: () => electron.ipcRenderer.invoke("youtube:cancel"),
+	openFile: (filePath) => electron.ipcRenderer.invoke("youtube:openFile", filePath),
+	showInFolder: (filePath) => electron.ipcRenderer.invoke("youtube:showInFolder", filePath),
 	onProgress: (callback) => {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("youtube:progress", listener);

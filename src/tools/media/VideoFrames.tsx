@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { VideoToFrames } from './components/VideoToFrames';
 import { FramesToVideo } from './components/FramesToVideo';
+import { GifCreator } from './components/GifCreator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
-import { Video, Image as ImagesIcon, Film } from 'lucide-react';
+import { Video, Image as ImagesIcon, Film, Aperture } from 'lucide-react';
 
 export const VideoFrames: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'extract' | 'create'>('extract');
+    const [activeTab, setActiveTab] = useState<'extract' | 'create' | 'gif'>('extract');
 
     return (
         <div className="h-full flex flex-col bg-background/50">
@@ -28,8 +29,8 @@ export const VideoFrames: React.FC = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-hidden p-4">
-                <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'extract' | 'create')} className="h-full flex flex-col gap-4">
-                    <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto">
+                <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'extract' | 'create' | 'gif')} className="h-full flex flex-col gap-4">
+                    <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
                         <TabsTrigger value="extract" className="flex items-center gap-2">
                             <Video className="w-4 h-4" />
                             Video to Frames
@@ -37,6 +38,10 @@ export const VideoFrames: React.FC = () => {
                         <TabsTrigger value="create" className="flex items-center gap-2">
                             <ImagesIcon className="w-4 h-4" />
                             Frames to Video
+                        </TabsTrigger>
+                        <TabsTrigger value="gif" className="flex items-center gap-2">
+                            <Aperture className="w-4 h-4" />
+                            GIF Creator
                         </TabsTrigger>
                     </TabsList>
 
@@ -46,6 +51,9 @@ export const VideoFrames: React.FC = () => {
                         </TabsContent>
                         <TabsContent value="create" className="h-full m-0 absolute inset-0">
                             <FramesToVideo />
+                        </TabsContent>
+                        <TabsContent value="gif" className="h-full m-0 absolute inset-0">
+                            <GifCreator />
                         </TabsContent>
                     </div>
                 </Tabs>
