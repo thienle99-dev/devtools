@@ -2408,7 +2408,7 @@ var YouTubeDownloader = class {
 				console.log("🚀 Using aria2c for ultra-fast download!");
 				args.push("--external-downloader", "aria2c", "--external-downloader-args", "-x 16 -s 16 -k 1M --allow-overwrite=true");
 			}
-			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", quality || "0");
 			else if (format === "video") {
 				if (quality && quality !== "best") args.push("-f", `bestvideo[height<=${quality.replace("p", "")}]+bestaudio/best[height<=${quality.replace("p", "")}]`);
 				else args.push("-f", "bestvideo+bestaudio/best");
@@ -2419,41 +2419,66 @@ var YouTubeDownloader = class {
 				let totalBytes = 0;
 				let startTime = Date.now();
 				this.currentProcess = this.ytDlp.exec(args);
+				let outputBuffer = "";
 				this.currentProcess.stdout?.on("data", (data) => {
-					const output = data.toString();
-					console.log("[yt-dlp]", output.trim());
-					const progressMatch = output.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)(\w+)/);
-					if (progressMatch && progressCallback) {
-						const percent = parseFloat(progressMatch[1]);
-						const size = parseFloat(progressMatch[2]);
-						const unit = progressMatch[3];
-						let multiplier = 1;
-						if (unit.includes("KiB") || unit.includes("KB")) multiplier = 1024;
-						else if (unit.includes("MiB") || unit.includes("MB")) multiplier = 1024 * 1024;
-						else if (unit.includes("GiB") || unit.includes("GB")) multiplier = 1024 * 1024 * 1024;
-						totalBytes = size * multiplier;
-						downloadedBytes = percent / 100 * totalBytes;
-						const elapsedTime = (Date.now() - startTime) / 1e3;
-						const speed = downloadedBytes / elapsedTime;
-						const eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
-						progressCallback({
-							percent: Math.round(percent),
-							downloaded: downloadedBytes,
-							total: totalBytes,
-							speed,
-							eta,
-							state: "downloading"
-						});
-					}
-					if (output.includes("[download] 100%") || output.includes("has already been downloaded")) {
-						if (progressCallback) progressCallback({
-							percent: 100,
-							downloaded: totalBytes,
-							total: totalBytes,
-							speed: 0,
-							eta: 0,
-							state: "complete"
-						});
+					const chunk = data.toString();
+					outputBuffer += chunk;
+					const lines = outputBuffer.split(/\r?\n/);
+					outputBuffer = lines.pop() || "";
+					for (const line of lines) {
+						if (!line.trim()) continue;
+						console.log("[yt-dlp output]", line);
+						if (line.includes("100%") || line.includes("has already been downloaded")) {
+							if (progressCallback) progressCallback({
+								percent: 100,
+								downloaded: totalBytes,
+								total: totalBytes,
+								speed: 0,
+								eta: 0,
+								state: "complete"
+							});
+							continue;
+						}
+						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/);
+						if (progressMatch && progressCallback) {
+							const percent = parseFloat(progressMatch[1]);
+							const sizeStr = progressMatch[2];
+							const unitStr = progressMatch[3];
+							const speedStr = progressMatch[4];
+							const speedUnitStr = progressMatch[5];
+							const etaStr = progressMatch[6];
+							const getMultiplier = (unit) => {
+								if (!unit) return 1;
+								if (unit.includes("KiB") || unit.includes("KB") || unit.includes("K")) return 1024;
+								if (unit.includes("MiB") || unit.includes("MB") || unit.includes("M")) return 1024 * 1024;
+								if (unit.includes("GiB") || unit.includes("GB") || unit.includes("G")) return 1024 * 1024 * 1024;
+								return 1;
+							};
+							totalBytes = parseFloat(sizeStr) * getMultiplier(unitStr);
+							downloadedBytes = percent / 100 * totalBytes;
+							let speed = 0;
+							if (speedStr && speedUnitStr) speed = parseFloat(speedStr) * getMultiplier(speedUnitStr);
+							let eta = 0;
+							if (etaStr) {
+								const parts = etaStr.split(":").map(Number);
+								if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
+								else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
+								else eta = parts[0];
+							} else {
+								const elapsedTime = (Date.now() - startTime) / 1e3;
+								const currentSpeed = downloadedBytes / elapsedTime;
+								if (!speed) speed = currentSpeed;
+								eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
+							}
+							progressCallback({
+								percent: Math.round(percent),
+								downloaded: downloadedBytes,
+								total: totalBytes,
+								speed,
+								eta,
+								state: "downloading"
+							});
+						}
 					}
 				});
 				this.currentProcess.stderr?.on("data", (data) => {

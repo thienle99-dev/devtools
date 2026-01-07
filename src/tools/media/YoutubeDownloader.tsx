@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw, Clock, HardDrive } from 'lucide-react';
+import { Download, Youtube, Video, Music, Film, Loader2, CheckCircle2, AlertCircle, Info, FileVideo, FolderOpen, ExternalLink, RotateCcw, Clock, HardDrive, Settings } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { VideoInfo } from './components/VideoInfo';
 import { FormatsList } from './components/FormatsList';
+import { PlaylistView } from './components/PlaylistView';
 import { ToastContainer, useToast } from '../../components/ui/Toast';
 
 interface DownloadStatus {
@@ -88,6 +89,7 @@ export const YoutubeDownloader: React.FC = () => {
     const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
     const [isPlaylist, setIsPlaylist] = useState(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const isCancelledRef = useRef(false);
     const { toasts, removeToast, success, error, info } = useToast();
 
     const isValidYoutubeUrl = (url: string): boolean => {
@@ -201,6 +203,120 @@ export const YoutubeDownloader: React.FC = () => {
                 }
             }
         }
+    };
+
+    const handleToggleVideo = (videoId: string) => {
+        setSelectedVideos(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(videoId)) {
+                newSet.delete(videoId);
+            } else {
+                newSet.add(videoId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (!playlistInfo) return;
+        const allIds = new Set<string>(playlistInfo.videos.map((v: any) => v.id));
+        setSelectedVideos(allIds);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedVideos(new Set());
+    };
+
+    const handleDownloadPlaylist = async () => {
+        const selected = Array.from(selectedVideos);
+        if (selected.length === 0) return;
+
+        isCancelledRef.current = false;
+        let successCount = 0;
+        let failCount = 0;
+
+        info('Starting Batch Download', `Queued ${selected.length} videos`);
+
+        // Set up progress listener for batch download
+        const unsubscribe = (window as any).youtubeAPI.onProgress((progress: any) => {
+            setDownloadStatus(prev => ({
+                ...prev, // Keep existing message structure if needed, or overwrite
+                status: 'downloading',
+                // Update message to show current video progress but keep the "Downloading X/Y" context if possible, 
+                // but since we don't have easy access to 'i' here without closure issues, 
+                // we might need to rely on the loop updating the 'message' header and this updating the 'progress' details.
+                // Actually, let's just update the progress parts and keep the message generic or updated by the loop.
+                // Better approach: The loop sets the title "Downloading 1/5: Title", 
+                // and here we append percent? Or we just update progress/speed/eta fields.
+                progress: progress.percent,
+                speed: progress.speed,
+                eta: progress.eta,
+                downloaded: progress.downloaded,
+                total: progress.total,
+                detailedLogs: prev.status === 'downloading' ? prev.detailedLogs : undefined
+            }));
+        });
+
+        for (let i = 0; i < selected.length; i++) {
+            if (isCancelledRef.current) break;
+
+            const videoId = selected[i];
+            const video = playlistInfo.videos.find((v: any) => v.id === videoId);
+            if (!video) continue;
+
+            // Reset progress for new video
+            setDownloadStatus({
+                status: 'downloading',
+                message: `Downloading ${i + 1}/${selected.length}: ${video.title}`,
+                progress: 0
+            });
+
+            try {
+                const downloadOptions: any = {
+                    url: video.url,
+                    format,
+                    quality: format === 'audio' ? undefined : quality,
+                };
+
+                if (downloadFolder) {
+                    downloadOptions.outputPath = downloadFolder;
+                }
+
+                const result = await (window as any).youtubeAPI.download(downloadOptions);
+                
+                if (result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (err) {
+                 failCount++;
+            }
+        }
+        
+        // Cleanup listener
+        unsubscribe();
+
+        if (isCancelledRef.current) {
+             setDownloadStatus({ status: 'error', message: 'Download Cancelled' });
+        } else {
+             setDownloadStatus({
+                status: successCount > 0 ? 'success' : 'error',
+                message: `Playlist Download Complete. Success: ${successCount}, Failed: ${failCount}`,
+             });
+             
+             if (successCount > 0) {
+                success('Batch Download Complete', `Successfully downloaded ${successCount} videos.`);
+             } else {
+                error('Batch Download Failed', 'No videos were downloaded successfully.');
+             }
+        }
+    };
+
+    const handleCancel = async () => {
+        isCancelledRef.current = true;
+        await (window as any).youtubeAPI.cancel();
+        setDownloadStatus({ status: 'error', message: 'Download Cancelled' });
     };
 
     const handleFetchInfo = async () => {
@@ -403,7 +519,17 @@ export const YoutubeDownloader: React.FC = () => {
                     </Card>
 
                     {/* Video Info Preview */}
-                    {videoInfo && (
+                    {/* Content Switcher: Playlist vs Single Video */}
+                    {isPlaylist && playlistInfo ? (
+                        <PlaylistView
+                            playlistInfo={playlistInfo}
+                            selectedVideos={selectedVideos}
+                            onToggleVideo={handleToggleVideo}
+                            onSelectAll={handleSelectAll}
+                            onDeselectAll={handleDeselectAll}
+                            onDownloadSelected={handleDownloadPlaylist}
+                        />
+                    ) : videoInfo ? (
                         <>
                             <VideoInfo {...videoInfo} />
                             
@@ -412,7 +538,7 @@ export const YoutubeDownloader: React.FC = () => {
                             {/* Available Formats */}
                             <FormatsList formats={videoInfo.formats} />
                         </>
-                    )}
+                    ) : null}
 
                     {/* Download Options */}
                     <Card className="p-6">
@@ -420,7 +546,10 @@ export const YoutubeDownloader: React.FC = () => {
                             <h3 className="text-lg font-semibold text-foreground-primary">Download Options</h3>
                             <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
                                 <button
-                                    onClick={() => setFormat('video')}
+                                    onClick={() => {
+                                        setFormat('video');
+                                        setQuality(videoInfo?.availableQualities?.[0] || '1080p');
+                                    }}
                                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                                         format === 'video' ? 'bg-red-500/20 text-red-400' : 'text-foreground-secondary hover:text-foreground'
                                     }`}
@@ -428,7 +557,10 @@ export const YoutubeDownloader: React.FC = () => {
                                     Video + Audio
                                 </button>
                                 <button
-                                    onClick={() => setFormat('audio')}
+                                    onClick={() => {
+                                        setFormat('audio');
+                                        setQuality('0');
+                                    }}
                                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                                         format === 'audio' ? 'bg-pink-500/20 text-pink-400' : 'text-foreground-secondary hover:text-foreground'
                                     }`}
@@ -459,135 +591,143 @@ export const YoutubeDownloader: React.FC = () => {
                             </p>
                         </div>
 
-                        <div className="space-y-2">
-                            {/* Quality Checklist */}
-                            {format === 'video' ? (
-                                (videoInfo?.availableQualities && videoInfo.availableQualities.length > 0
-                                    ? videoInfo.availableQualities 
-                                    : ['720p', '480p', '360p']
-                                ).map((q) => {
-                                    const labels: Record<string, string> = {
-                                        '2160p': '4K Ultra HD',
-                                        '1440p': '2K Quad HD',
-                                        '1080p': 'Full HD',
-                                        '720p': 'High Definition',
-                                        '480p': 'Standard Definition',
-                                        '360p': 'Medium Quality',
-                                        '240p': 'Low Quality',
-                                        '144p': 'Very Low Quality'
-                                    };
-                                    
-                                    // Check if this quality is available as a combined format
-                                    const isCombined = videoInfo?.formats?.some(f => 
-                                        f.qualityLabel && f.qualityLabel.includes(q) && f.hasVideo && f.hasAudio
-                                    );
-                                    
-                                    const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
-                                    const qualityMultiplier = {
-                                        '144p': 2, '240p': 4, '360p': 8, '480p': 15,
-                                        '720p': 25, '1080p': 50, '1440p': 100, '2160p': 200, 'best': 50
-                                    };
-                                    const sizeEstimate = lengthMB * (qualityMultiplier[q as keyof typeof qualityMultiplier] || 25);
-                                    const sizeStr = sizeEstimate < 1024 ? `${sizeEstimate.toFixed(0)} MB` : `${(sizeEstimate / 1024).toFixed(1)} GB`;
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
+                                    <Settings className="w-4 h-4 text-purple-400" />
+                                    {format === 'video' ? 'Select Video Quality' : 'Select Audio Quality'}
+                                </label>
+                                {format === 'video' && (
+                                    <span className="text-[10px] text-foreground-tertiary bg-background-tertiary px-2 py-1 rounded-full">
+                                        MP4 (H.264)
+                                    </span>
+                                )}
+                            </div>
 
-                                    return (
-                                        <div 
-                                            key={q}
-                                            onClick={() => setQuality(q)}
-                                            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group ${
-                                                quality === q 
-                                                ? 'bg-red-500/10 border-red-500/50' 
-                                                : 'bg-glass-panel border-border-glass hover:border-red-500/30'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                                    quality === q ? 'border-red-500 bg-red-500' : 'border-border-glass'
-                                                }`}>
-                                                    {quality === q && <div className="w-2 h-2 rounded-full bg-white" />}
+                            {format === 'video' ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {(videoInfo?.availableQualities && videoInfo.availableQualities.length > 0
+                                        ? videoInfo.availableQualities 
+                                        : ['1080p', '720p', '480p', '360p']
+                                    ).map((q) => {
+                                        const labels: Record<string, string> = {
+                                            '4320p': '8K Ultra HD',
+                                            '2160p': '4K Ultra HD',
+                                            '1440p': '2K QHD',
+                                            '1080p': 'Full HD',
+                                            '720p': 'HD',
+                                            '480p': 'SD',
+                                            '360p': 'Low',
+                                            '240p': 'Very Low',
+                                            '144p': 'Potato'
+                                        };
+                                        
+                                        // Estimate size
+                                        const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
+                                        const bitrateMap: Record<string, number> = {
+                                            '4320p': 150, '2160p': 60, '1440p': 30,
+                                            '1080p': 15, '720p': 7.5, '480p': 4,
+                                            '360p': 2.5, '240p': 1.5, '144p': 1
+                                        };
+                                        const sizeEst = lengthMB * (bitrateMap[q] || 5);
+                                        const sizeStr = sizeEst < 1024 ? `${sizeEst.toFixed(0)} MB` : `${(sizeEstimate / 1024).toFixed(1)} GB`;
+
+                                        return (
+                                            <button
+                                                key={q}
+                                                onClick={() => setQuality(q)}
+                                                className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
+                                                    quality === q 
+                                                        ? 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_4px_20px_-12px_var(--red-500)]' 
+                                                        : 'bg-glass-panel border-transparent hover:bg-background-secondary hover:border-border-glass text-foreground-secondary hover:text-foreground-primary'
+                                                }`}
+                                            >
+                                                {quality === q && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-red-500 shadow-[0_-2px_8px_var(--red-500)]" />}
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <span className="font-bold text-sm">{q}</span>
+                                                    {quality === q && <CheckCircle2 className="w-4 h-4 text-red-500" />}
                                                 </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className={`text-sm font-semibold ${quality === q ? 'text-foreground-primary' : 'text-foreground-secondary'}`}>
-                                                            {q} - {labels[q] || q}
-                                                        </p>
-                                                        {!isCombined && (
-                                                            <span className="text-[8px] bg-yellow-500/20 text-yellow-400 px-1 rounded border border-yellow-500/30">
-                                                                DASH (No Sound)
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[10px] text-foreground-tertiary">MP4 • {isCombined ? 'Video + Audio' : 'Video Only'}</p>
+                                                <div className="flex justify-between items-end">
+                                                    <span className="text-[10px] opacity-70">{labels[q] || 'Video'}</span>
+                                                    <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
                                                 </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className={`text-sm font-bold ${quality === q ? 'text-red-400' : 'text-foreground-secondary'}`}>
-                                                    {sizeStr}
-                                                </p>
-                                                <p className="text-[10px] text-foreground-tertiary">Size approx.</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             ) : (
-                                <div 
-                                    onClick={() => setQuality('best')}
-                                    className="flex items-center justify-between p-4 rounded-xl border bg-pink-500/10 border-pink-500/50 cursor-pointer"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Music className="w-5 h-5 text-pink-400" />
-                                        <div>
-                                            <p className="text-sm font-semibold text-foreground-primary">High Quality Audio</p>
-                                            <p className="text-[10px] text-foreground-tertiary">MP3 • 320kbps</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold text-pink-400">
-                                            {(() => {
-                                                const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
-                                                const sizeEstimate = lengthMB * 1.5;
-                                                return sizeEstimate < 1024 ? `${sizeEstimate.toFixed(0)} MB` : `${(sizeEstimate / 1024).toFixed(1)} GB`;
-                                            })()}
-                                        </p>
-                                        <p className="text-[10px] text-foreground-tertiary">Size approx.</p>
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: '0', label: 'Best Quality', detail: '320kbps', size: 2.5 },
+                                        { id: '5', label: 'High Quality', detail: '192kbps', size: 1.5 },
+                                        { id: '9', label: 'Standard', detail: '128kbps', size: 1.0 }
+                                    ].map((opt) => {
+                                        const lengthMB = (videoInfo?.lengthSeconds || 0) / 60;
+                                        const sizeEst = lengthMB * opt.size;
+                                        const sizeStr = `${sizeEst.toFixed(1)} MB`;
+
+                                        return (
+                                            <button
+                                                key={opt.id}
+                                                onClick={() => setQuality(opt.id)}
+                                                className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
+                                                    quality === opt.id 
+                                                        ? 'bg-pink-500/10 border-pink-500 text-pink-400 shadow-[0_4px_20px_-12px_var(--pink-500)]' 
+                                                        : 'bg-glass-panel border-transparent hover:bg-background-secondary hover:border-border-glass text-foreground-secondary hover:text-foreground-primary'
+                                                }`}
+                                            >
+                                                {quality === opt.id && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-pink-500 shadow-[0_-2px_8px_var(--pink-500)]" />}
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <span className="font-bold text-sm px-2 py-0.5 rounded-full bg-background/30 border border-white/5">{opt.label}</span>
+                                                    {quality === opt.id && <CheckCircle2 className="w-4 h-4 text-pink-500" />}
+                                                </div>
+                                                <div className="flex justify-between items-end mt-2 px-1">
+                                                    <span className="text-[10px] font-mono opacity-60">MP3 • {opt.detail}</span>
+                                                    <span className="text-[10px] font-mono opacity-50">~{sizeStr}</span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
                     </Card>
 
                     {/* Download Button */}
-                    <div className="flex justify-center gap-3">
-                        <Button
-                            onClick={() => handleDownload(false)}
-                            disabled={!url || downloadStatus.status === 'downloading'}
-                            className="min-w-[200px]"
-                            size="lg"
-                        >
-                            {downloadStatus.status === 'downloading' ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Downloading...
-                                </>
-                            ) : (
-                                <>
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Download Video
-                                </>
-                            )}
-                        </Button>
-                        
-                        {downloadStatus.status === 'error' && (
+                    {/* Download Button - Single Video Only */}
+                    {!isPlaylist && (
+                        <div className="flex justify-center gap-3">
                             <Button
-                                onClick={handleRetry}
-                                variant="outline"
+                                onClick={() => handleDownload(false)}
+                                disabled={!url || downloadStatus.status === 'downloading'}
+                                className="min-w-[200px]"
                                 size="lg"
                             >
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Retry
+                                {downloadStatus.status === 'downloading' ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Downloading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Download Video
+                                    </>
+                                )}
                             </Button>
-                        )}
-                    </div>
+
+                            {downloadStatus.status === 'error' && (
+                                <Button
+                                    onClick={handleRetry}
+                                    variant="outline"
+                                    size="lg"
+                                >
+                                    <RotateCcw className="w-4 h-4 mr-2" />
+                                    Retry
+                                </Button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Status Display */}
                     {downloadStatus.status !== 'idle' && (
@@ -614,6 +754,17 @@ export const YoutubeDownloader: React.FC = () => {
                                     }`}>
                                         {downloadStatus.message}
                                     </p>
+                                    
+                                    {downloadStatus.status === 'downloading' && isPlaylist && (
+                                        <Button 
+                                            onClick={handleCancel}
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="mt-1 h-6 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                        >
+                                            Cancel
+                                        </Button>
+                                    )}
 
                                     {downloadStatus.status === 'error' && downloadStatus.detailedLogs && (
                                         <div className="mt-3 p-3 bg-black/40 rounded-lg border border-red-500/20 font-mono text-[10px] text-red-300">

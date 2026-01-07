@@ -82,10 +82,10 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
 
 ### Phase 4: Advanced Features ⏳
 
-- [ ] **Playlist support**
-  - [ ] Download entire playlist
-  - [ ] Batch download queue
-  - [ ] Progress for multiple videos
+- [x] **Playlist support**
+  - [x] Download entire playlist - ✅ Playlist view with selection
+  - [x] Batch download queue - ✅ Sequential batch processing
+  - [x] Progress for multiple videos - ✅ Batch progress tracking
 
 - [ ] **Quality options**
   - [ ] Auto-detect best quality

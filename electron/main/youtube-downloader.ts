@@ -288,7 +288,7 @@ export class YouTubeDownloader {
                 args.push(
                     '-x', // Extract audio
                     '--audio-format', 'mp3',
-                    '--audio-quality', '0' // Best quality
+                    '--audio-quality', quality || '0' // Use provided quality or default to best
                 );
             } else if (format === 'video') {
                 if (quality && quality !== 'best') {
@@ -310,53 +310,96 @@ export class YouTubeDownloader {
                 // Execute yt-dlp
                 this.currentProcess = this.ytDlp.exec(args);
 
+                // Buffer for handling split lines
+                let outputBuffer = '';
+
                 this.currentProcess.stdout?.on('data', (data: Buffer) => {
-                    const output = data.toString();
-                    console.log('[yt-dlp]', output.trim());
+                    const chunk = data.toString();
+                    outputBuffer += chunk;
+
+                    // Process complete lines
+                    const lines = outputBuffer.split(/\r?\n/);
                     
-                    // Parse progress from yt-dlp output
-                    // Format examples:
-                    // [download]  45.5% of 123.45MiB at 1.23MiB/s ETA 00:12
-                    // [download]  45.5% of ~123.45MiB at 1.23MiB/s ETA 00:12
-                    const progressMatch = output.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)(\w+)/);
-                    if (progressMatch && progressCallback) {
-                        const percent = parseFloat(progressMatch[1]);
-                        const size = parseFloat(progressMatch[2]);
-                        const unit = progressMatch[3];
+                    // Keep the last partial line in the buffer
+                    outputBuffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
                         
-                        // Convert to bytes
-                        let multiplier = 1;
-                        if (unit.includes('KiB') || unit.includes('KB')) multiplier = 1024;
-                        else if (unit.includes('MiB') || unit.includes('MB')) multiplier = 1024 * 1024;
-                        else if (unit.includes('GiB') || unit.includes('GB')) multiplier = 1024 * 1024 * 1024;
+                        // Debug log for troubleshooting
+                        console.log('[yt-dlp output]', line);
+
+                        // Check for completion message
+                        if (line.includes('100%') || line.includes('has already been downloaded')) {
+                            if (progressCallback) {
+                                progressCallback({
+                                    percent: 100,
+                                    downloaded: totalBytes,
+                                    total: totalBytes,
+                                    speed: 0,
+                                    eta: 0,
+                                    state: 'complete'
+                                });
+                            }
+                            continue;
+                        }
+
+                        // Regex to capture: percent, total_size, unit, speed, speed_unit, eta
+                        const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/);
                         
-                        totalBytes = size * multiplier;
-                        downloadedBytes = (percent / 100) * totalBytes;
-                        
-                        const elapsedTime = (Date.now() - startTime) / 1000;
-                        const speed = downloadedBytes / elapsedTime;
-                        const eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
-                        
-                        progressCallback({
-                            percent: Math.round(percent),
-                            downloaded: downloadedBytes,
-                            total: totalBytes,
-                            speed,
-                            eta,
-                            state: 'downloading'
-                        });
-                    }
-                    
-                    // Check for completion message
-                    if (output.includes('[download] 100%') || output.includes('has already been downloaded')) {
-                        if (progressCallback) {
+                        if (progressMatch && progressCallback) {
+                            const percent = parseFloat(progressMatch[1]);
+                            const sizeStr = progressMatch[2];
+                            const unitStr = progressMatch[3];
+                            const speedStr = progressMatch[4];
+                            const speedUnitStr = progressMatch[5];
+                            const etaStr = progressMatch[6];
+                            
+                            // Helper to convert to bytes
+                            const getMultiplier = (unit: string) => {
+                                if (!unit) return 1;
+                                if (unit.includes('KiB') || unit.includes('KB') || unit.includes('K')) return 1024;
+                                if (unit.includes('MiB') || unit.includes('MB') || unit.includes('M')) return 1024 * 1024;
+                                if (unit.includes('GiB') || unit.includes('GB') || unit.includes('G')) return 1024 * 1024 * 1024;
+                                return 1;
+                            };
+                            
+                            // Calculate Total Size
+                            totalBytes = parseFloat(sizeStr) * getMultiplier(unitStr);
+                            downloadedBytes = (percent / 100) * totalBytes;
+                            
+                            // Parse Speed
+                            let speed = 0;
+                            if (speedStr && speedUnitStr) {
+                                speed = parseFloat(speedStr) * getMultiplier(speedUnitStr);
+                            }
+                            
+                            // Parse ETA
+                            let eta = 0;
+                            if (etaStr) {
+                                const parts = etaStr.split(':').map(Number);
+                                if (parts.length === 3) { // HH:MM:SS
+                                    eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                                } else if (parts.length === 2) { // MM:SS
+                                    eta = parts[0] * 60 + parts[1];
+                                } else {
+                                    eta = parts[0]; // SS
+                                }
+                            } else {
+                                // Fallback calculation if ETA missing
+                                const elapsedTime = (Date.now() - startTime) / 1000;
+                                const currentSpeed = downloadedBytes / elapsedTime; 
+                                if (!speed) speed = currentSpeed;
+                                eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
+                            }
+                            
                             progressCallback({
-                                percent: 100,
-                                downloaded: totalBytes,
+                                percent: Math.round(percent),
+                                downloaded: downloadedBytes,
                                 total: totalBytes,
-                                speed: 0,
-                                eta: 0,
-                                state: 'complete'
+                                speed,
+                                eta,
+                                state: 'downloading'
                             });
                         }
                     }
