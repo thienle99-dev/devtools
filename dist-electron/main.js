@@ -2535,47 +2535,86 @@ var YouTubeDownloader = class {
 							});
 							continue;
 						}
-						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/);
-						if (progressMatch && progressCallback) {
-							const percent = parseFloat(progressMatch[1]);
-							const sizeStr = progressMatch[2];
-							const unitStr = progressMatch[3];
-							const speedStr = progressMatch[4];
-							const speedUnitStr = progressMatch[5];
-							const etaStr = progressMatch[6];
-							const getMultiplier = (unit) => {
-								if (!unit) return 1;
-								if (unit.includes("KiB") || unit.includes("K")) return 1024;
-								if (unit.includes("MiB") || unit.includes("M")) return 1024 * 1024;
-								if (unit.includes("GiB") || unit.includes("G")) return 1024 * 1024 * 1024;
-								return 1;
-							};
-							totalBytes = parseFloat(sizeStr) * getMultiplier(unitStr);
-							downloadedBytes = percent / 100 * totalBytes;
-							let speed = 0;
-							if (speedStr && speedUnitStr) speed = parseFloat(speedStr) * getMultiplier(speedUnitStr);
-							let eta = 0;
-							if (etaStr) {
-								const parts = etaStr.split(":").map(Number);
-								if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
-								else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
-								else eta = parts[0];
-							} else {
-								const elapsedTime = (Date.now() - startTime) / 1e3;
-								const currentSpeed = downloadedBytes / elapsedTime;
-								if (!speed) speed = currentSpeed;
-								eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
+						const getMultiplier = (unit) => {
+							if (!unit) return 1;
+							const u = unit.toLowerCase();
+							if (u.includes("k")) return 1024;
+							if (u.includes("m")) return 1024 * 1024;
+							if (u.includes("g")) return 1024 * 1024 * 1024;
+							return 1;
+						};
+						const stdMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/);
+						const aria2Match = line.match(/\[#\w+\s+([0-9.]+[a-zA-Z]+)\/([0-9.]+[a-zA-Z]+)\(([0-9.]+)%\)\s+CN:[0-9]+\s+DL:([0-9.]+[a-zA-Z]+)(?:\s+ETA:([a-zA-Z0-9:msh]+))?/);
+						if (progressCallback) {
+							if (stdMatch) {
+								const percent = parseFloat(stdMatch[1]);
+								const sizeStr = stdMatch[2];
+								const unitStr = stdMatch[3];
+								const speedStr = stdMatch[4];
+								const speedUnitStr = stdMatch[5];
+								const etaStr = stdMatch[6];
+								totalBytes = parseFloat(sizeStr) * getMultiplier(unitStr);
+								downloadedBytes = percent / 100 * totalBytes;
+								let speed = 0;
+								if (speedStr && speedUnitStr) speed = parseFloat(speedStr) * getMultiplier(speedUnitStr);
+								let eta = 0;
+								if (etaStr) {
+									const parts = etaStr.split(":").map(Number);
+									if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
+									else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
+									else eta = parts[0];
+								} else {
+									const elapsedTime = (Date.now() - startTime) / 1e3;
+									const currentSpeed = downloadedBytes / elapsedTime;
+									if (!speed) speed = currentSpeed;
+									eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
+								}
+								progressCallback({
+									id: downloadId,
+									percent: Math.round(percent),
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed,
+									eta,
+									state: "downloading",
+									filename: `${sanitizedTitle}.${extension}`
+								});
+							} else if (aria2Match) {
+								const downloadedStr = aria2Match[1];
+								const totalStr = aria2Match[2];
+								const percent = parseFloat(aria2Match[3]);
+								const speedStr = aria2Match[4];
+								const etaStr = aria2Match[5];
+								const parseValUnit = (str) => {
+									const match = str.match(/([0-9.]+)([a-zA-Z]+)/);
+									if (!match) return 0;
+									return parseFloat(match[1]) * getMultiplier(match[2]);
+								};
+								downloadedBytes = parseValUnit(downloadedStr);
+								totalBytes = parseValUnit(totalStr);
+								const speed = parseValUnit(speedStr);
+								let eta = 0;
+								if (etaStr) {
+									let time = 0;
+									const hours = etaStr.match(/(\d+)h/);
+									const mins = etaStr.match(/(\d+)m/);
+									const secs = etaStr.match(/(\d+)s/);
+									if (hours) time += parseInt(hours[1]) * 3600;
+									if (mins) time += parseInt(mins[1]) * 60;
+									if (secs) time += parseInt(secs[1]);
+									eta = time;
+								}
+								progressCallback({
+									id: downloadId,
+									percent: Math.round(percent),
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed,
+									eta,
+									state: "downloading",
+									filename: `${sanitizedTitle}.${extension}`
+								});
 							}
-							progressCallback({
-								id: downloadId,
-								percent: Math.round(percent),
-								downloaded: downloadedBytes,
-								total: totalBytes,
-								speed,
-								eta,
-								state: "downloading",
-								filename: `${sanitizedTitle}.${extension}`
-							});
 						}
 					}
 				});
