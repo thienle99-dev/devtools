@@ -276,6 +276,7 @@ export class YouTubeDownloader {
                 url,
                 '--skip-download',
                 '--no-playlist',
+                '--no-check-certificate', // Fix SSL certificate verification on macOS
             ]);
             
             // Parse available formats
@@ -349,6 +350,7 @@ export class YouTubeDownloader {
                 url,
                 '--flat-playlist',
                 '--skip-download',
+                '--no-check-certificate', // Fix SSL certificate verification on macOS
             ]);
             
             if (!info.entries || !Array.isArray(info.entries)) {
@@ -405,6 +407,7 @@ export class YouTubeDownloader {
                 '--no-playlist',
                 '--no-warnings',
                 '--newline',
+                '--no-check-certificate', // Fix SSL certificate verification on macOS
                 // Optimizations
                 '--concurrent-fragments', `${options.concurrentFragments || 4}`,
                 '--buffer-size', '1M',
