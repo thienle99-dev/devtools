@@ -60,7 +60,7 @@ export const TabsTrigger: React.FC<TabsTriggerProps> = ({ value, children, class
         <button
             onClick={() => onValueChange(value)}
             className={cn(
-                'px-4 py-2 rounded-lg font-medium transition-colors',
+                'px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 isActive
                     ? 'bg-accent text-accent-foreground'
                     : 'bg-glass-panel text-foreground hover:bg-glass-panel/80 border border-border-glass',

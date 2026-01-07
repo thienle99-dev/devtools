@@ -784,7 +784,7 @@ export const VideoToFrames: React.FC = () => {
                                                         <ChevronRight className="w-6 h-6" />
                                                     </button>
 
-                                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 items-center transition-opacity">
                                                         <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full text-xs text-white/80 font-mono">
                                                             Frame {frames[currentSlideIndex]?.index} ({currentSlideIndex + 1}/{frames.length})
                                                         </div>

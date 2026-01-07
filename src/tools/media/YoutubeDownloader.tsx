@@ -81,16 +81,16 @@ export const YoutubeDownloader: React.FC = () => {
     return (
         <div className="h-full flex flex-col bg-background/50">
             {/* Header */}
-            <div className="p-6 border-b border-border-glass bg-glass-background/30 backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400">
-                        <Youtube className="w-6 h-6" />
+            <div className="px-4 py-3 border-b border-border-glass bg-glass-background/30 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-red-500/20 to-pink-500/20 border border-red-500/30 text-red-400">
+                        <Youtube className="w-4 h-4" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-red-400 via-pink-400 to-rose-400 bg-clip-text text-transparent">
+                        <h1 className="text-lg font-bold bg-gradient-to-r from-red-400 via-pink-400 to-rose-400 bg-clip-text text-transparent">
                             YouTube Video Downloader
                         </h1>
-                        <p className="text-sm text-foreground-secondary">
+                        <p className="text-xs text-foreground-secondary">
                             Download videos and audio from YouTube in various formats and qualities
                         </p>
                     </div>
@@ -98,7 +98,7 @@ export const YoutubeDownloader: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4">
                 <div className="max-w-4xl mx-auto space-y-6">
                     {/* Info Card */}
                     <Card className="p-4 bg-blue-500/5 border-blue-500/20">
@@ -143,6 +143,7 @@ export const YoutubeDownloader: React.FC = () => {
                         <h3 className="text-lg font-semibold text-foreground-primary mb-4">Download Options</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Format Selection */}
+                            {/* Format Selection */}
                             <div>
                                 <label className="block text-sm font-medium text-foreground-primary mb-2">
                                     Format
@@ -151,11 +152,12 @@ export const YoutubeDownloader: React.FC = () => {
                                     value={format}
                                     onChange={(e) => setFormat(e.target.value as 'video' | 'audio' | 'best')}
                                     disabled={downloadStatus.status === 'downloading'}
-                                >
-                                    <option value="video">Video + Audio (MP4)</option>
-                                    <option value="audio">Audio Only (MP3)</option>
-                                    <option value="best">Best Quality Available</option>
-                                </Select>
+                                    options={[
+                                        { value: 'video', label: 'Video + Audio (MP4)' },
+                                        { value: 'audio', label: 'Audio Only (MP3)' },
+                                        { value: 'best', label: 'Best Quality Available' }
+                                    ]}
+                                />
                             </div>
 
                             {/* Quality Selection */}
@@ -168,15 +170,16 @@ export const YoutubeDownloader: React.FC = () => {
                                         value={quality}
                                         onChange={(e) => setQuality(e.target.value)}
                                         disabled={downloadStatus.status === 'downloading'}
-                                    >
-                                        <option value="best">Best Available</option>
-                                        <option value="1080p">1080p (Full HD)</option>
-                                        <option value="720p">720p (HD)</option>
-                                        <option value="480p">480p (SD)</option>
-                                        <option value="360p">360p</option>
-                                        <option value="240p">240p</option>
-                                        <option value="144p">144p</option>
-                                    </Select>
+                                        options={[
+                                            { value: 'best', label: 'Best Available' },
+                                            { value: '1080p', label: '1080p (Full HD)' },
+                                            { value: '720p', label: '720p (HD)' },
+                                            { value: '480p', label: '480p (SD)' },
+                                            { value: '360p', label: '360p' },
+                                            { value: '240p', label: '240p' },
+                                            { value: '144p', label: '144p' }
+                                        ]}
+                                    />
                                 </div>
                             )}
                         </div>

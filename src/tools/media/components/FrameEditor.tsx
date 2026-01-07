@@ -1,8 +1,9 @@
+import { Canvas, FabricImage, filters, IText, Shadow, Point } from 'fabric';
 import React, { useEffect, useRef, useState } from 'react';
-import { Canvas, FabricImage, filters, IText, Shadow } from 'fabric';
 import { Button } from '../../../components/ui/Button';
 import { Slider } from '../../../components/ui/Slider';
-import { RotateCw, Type, X, Check } from 'lucide-react';
+import { RotateCw, Type, X, Check, Search, Maximize, Minus, Plus, Settings2, SlidersHorizontal, ChevronRight, ChevronLeft } from 'lucide-react';
+import { cn } from '../../../utils/cn';
 
 interface FrameEditorProps {
     imageUrl: string;
@@ -11,9 +12,9 @@ interface FrameEditorProps {
 }
 
 export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCancel }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
     const [activeTool, setActiveTool] = useState<'adjust' | 'text' | null>('adjust');
+    const [showSettings, setShowSettings] = useState(true);
     
     // Filter State
     const [brightness, setBrightness] = useState(0);
@@ -22,30 +23,86 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
     
     // Transform State
     const [rotation, setRotation] = useState(0);
+    const [zoom, setZoom] = useState(1);
+
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         if (!canvasRef.current) return;
 
+        // Parent container dimensions
+        const container = canvasRef.current.parentElement;
+        const width = container?.clientWidth || 800;
+        const height = container?.clientHeight || 600;
+
         const canvas = new Canvas(canvasRef.current, {
-            width: 800,
-            height: 450,
-            backgroundColor: '#1a1a1a'
+            width,
+            height,
+            backgroundColor: '#1a1a1a',
+            selection: true
+        });
+
+        // Zoom & Pan logic
+        canvas.on('mouse:wheel', function(opt) {
+            var delta = opt.e.deltaY;
+            var zoom = canvas.getZoom();
+            zoom *= 0.999 ** delta;
+            if (zoom > 20) zoom = 20;
+            if (zoom < 0.01) zoom = 0.01;
+            canvas.zoomToPoint(new Point(opt.e.offsetX, opt.e.offsetY), zoom);
+            opt.e.preventDefault();
+            opt.e.stopPropagation();
+            setZoom(zoom);
+        });
+
+        // Panning with Alt + Drag or Middle Click
+        let isDragging = false;
+        let lastPosX = 0;
+        let lastPosY = 0;
+
+        canvas.on('mouse:down', function(opt) {
+            const evt = opt.e as MouseEvent;
+            if (evt.altKey || evt.button === 1) {
+                isDragging = true;
+                canvas.selection = false;
+                lastPosX = evt.clientX;
+                lastPosY = evt.clientY;
+            }
+        });
+
+        canvas.on('mouse:move', function(opt) {
+            if (isDragging) {
+                const e = opt.e as MouseEvent;
+                const vpt = canvas.viewportTransform!;
+                vpt[4] += e.clientX - lastPosX;
+                vpt[5] += e.clientY - lastPosY;
+                canvas.requestRenderAll();
+                lastPosX = e.clientX;
+                lastPosY = e.clientY;
+            }
+        });
+
+        canvas.on('mouse:up', function(opt) {
+            canvas.setViewportTransform(canvas.viewportTransform!);
+            isDragging = false;
+            canvas.selection = true;
         });
 
         FabricImage.fromURL(imageUrl).then(img => {
-            // Fit image to canvas
+            // Fit image to canvas initially but keep ratio
             const scale = Math.min(
-                (canvas.width! - 40) / img.width!,
-                (canvas.height! - 40) / img.height!
+                (width - 80) / img.width!,
+                (height - 80) / img.height!
             );
             
-            // Fabric 6+ recommended way? img.set({ left: canvas.width / 2, top: canvas.height / 2, originX: 'center', originY: 'center' })
             img.set({
                 originX: 'center',
                 originY: 'center',
-                left: canvas.width / 2,
-                top: canvas.height / 2
+                left: width / 2,
+                top: height / 2
             });
+            img.scale(scale);
+            
             img.set({
                 cornerColor: '#6366f1',
                 cornerStyle: 'circle',
@@ -60,8 +117,18 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         });
 
         setFabricCanvas(canvas);
+        
+        // Handle window resize
+        const handleResize = () => {
+             if (container) {
+                 canvas.setDimensions({ width: container.clientWidth, height: container.clientHeight });
+                 canvas.renderAll();
+             }
+        };
+        window.addEventListener('resize', handleResize);
 
         return () => {
+            window.removeEventListener('resize', handleResize);
             canvas.dispose();
         };
     }, [imageUrl]);
@@ -148,75 +215,163 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             .then(blob => onSave(blob));
     };
 
+    const resetZoom = () => {
+        if (!fabricCanvas) return;
+        fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        setZoom(1);
+        
+        // Recenter image logic could go here
+        const mainImg = fabricCanvas.getObjects().find(obj => obj instanceof FabricImage);
+        if (mainImg) {
+            fabricCanvas.setActiveObject(mainImg);
+            // Center logic if needed
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-glass-panel border-l border-border-glass">
-            <div className="flex-1 p-4 flex items-center justify-center bg-black/40 overflow-hidden relative">
-                <canvas ref={canvasRef} />
+        <div className="relative w-full h-full bg-[#1a1a1a] overflow-hidden group">
+            {/* Full Screen Canvas */}
+            <div className="absolute inset-0">
+                <canvas ref={canvasRef} className="w-full h-full" />
             </div>
 
-            <div className="bg-glass-background/90 p-4 border-t border-border-glass space-y-4">
-                <div className="flex justify-center gap-2 mb-4">
-                    <Button
-                        variant={activeTool === 'adjust' ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() => setActiveTool('adjust')}
-                        icon={Slider}
-                    >
-                        Adjust
-                    </Button>
-                    <Button
-                        variant={activeTool === 'text' ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() => setActiveTool('text')}
-                        icon={Type}
-                    >
-                        Text/Watermark
-                    </Button>
-                </div>
+            {/* Toggle Settings Button (When hidden) */}
+            {!showSettings && (
+                 <button 
+                    onClick={() => setShowSettings(true)}
+                    className="absolute right-4 top-4 p-2 bg-black/60 text-white rounded-lg hover:bg-black/80 transition-all backdrop-blur-md border border-white/10 z-10"
+                >
+                    <Settings2 className="w-5 h-5" />
+                </button>
+            )}
 
-                {activeTool === 'adjust' && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                         <div className="flex items-center gap-2">
-                             <Button size="sm" variant="secondary" onClick={rotateImage} icon={RotateCw}>Rotate</Button>
-                         </div>
-                        <Slider
-                            label="Brightness"
-                            min={-1}
-                            max={1}
-                            step={0.05}
-                            value={brightness}
-                            onChange={setBrightness}
-                        />
-                        <Slider
-                            label="Contrast"
-                            min={-1}
-                            max={1}
-                            step={0.05}
-                            value={contrast}
-                            onChange={setContrast}
-                        />
-                        <Slider
-                            label="Saturation"
-                            min={-1}
-                            max={1}
-                            step={0.05}
-                            value={saturation}
-                            onChange={setSaturation}
-                        />
+            {/* Floating Zoom Controls - Bottom Left */}
+            <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-10">
+                 <div className="flex flex-col bg-black/60 backdrop-blur-md rounded-lg border border-white/10 p-1">
+                     <button onClick={() => {
+                        fabricCanvas?.setZoom(zoom * 1.1);
+                        setZoom(zoom * 1.1);
+                     }} className="p-2 hover:bg-white/10 rounded text-white"><Plus className="w-4 h-4"/></button>
+                     <button onClick={() => {
+                        fabricCanvas?.setZoom(zoom / 1.1);
+                        setZoom(zoom / 1.1);
+                     }} className="p-2 hover:bg-white/10 rounded text-white"><Minus className="w-4 h-4"/></button>
+                     <button onClick={resetZoom} className="p-2 hover:bg-white/10 rounded text-white"><Maximize className="w-4 h-4"/></button>
+                 </div>
+            </div>
+
+            {/* Floating Sidebar Settings */}
+            <div className={cn(
+                "absolute right-4 top-4 bottom-4 w-[300px] flex flex-col transition-all duration-300 ease-in-out z-20",
+                showSettings ? "translate-x-0 opacity-100" : "translate-x-[320px] opacity-0 pointer-events-none"
+            )}>
+                <div className="flex-1 flex flex-col bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-3 border-b border-white/10 bg-white/5">
+                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                            <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                            Editor
+                        </h3>
+                         <button 
+                            onClick={() => setShowSettings(false)}
+                            className="p-1 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
                     </div>
-                )}
 
-                {activeTool === 'text' && (
-                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 text-center">
-                         <Button onClick={addText} className="w-full">Add Text Watermark</Button>
-                         <p className="text-xs text-foreground-secondary">Double click text on canvas to edit</p>
-                     </div>
-                )}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+                         {/* Tools Tabs */}
+                        <div className="flex p-1 bg-black/20 rounded-lg">
+                            <button
+                                onClick={() => setActiveTool('adjust')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all",
+                                    activeTool === 'adjust' ? "bg-indigo-500 text-white shadow-sm" : "text-white/60 hover:text-white hover:bg-white/5"
+                                )}
+                            >
+                                <SlidersHorizontal className="w-3.5 h-3.5" /> Adjust
+                            </button>
+                            <button
+                                onClick={() => setActiveTool('text')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all",
+                                    activeTool === 'text' ? "bg-indigo-500 text-white shadow-sm" : "text-white/60 hover:text-white hover:bg-white/5"
+                                )}
+                            >
+                                <Type className="w-3.5 h-3.5" /> Watermark
+                            </button>
+                        </div>
+                        
+                        {activeTool === 'adjust' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="space-y-3">
+                                    <label className="text-xs font-medium text-white/80">Transform</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                         <Button size="xs" variant="secondary" onClick={rotateImage} icon={RotateCw} className="w-full justify-center">Rotate 90°</Button>
+                                         <Button size="xs" variant="secondary" onClick={resetZoom} icon={Maximize} className="w-full justify-center">Fit View</Button>
+                                    </div>
+                                </div>
 
-                <div className="flex gap-3 pt-2 border-t border-border-glass/50">
-                    <Button variant="ghost" className="flex-1" onClick={onCancel} icon={X}>Cancel</Button>
-                    <Button variant="primary" className="flex-1" onClick={handleSave} icon={Check}>Save Frame</Button>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-white/80">Color Correction</label>
+                                    <div className="space-y-4 pt-2">
+                                        <Slider
+                                            label="Brightness"
+                                            min={-1}
+                                            max={1}
+                                            step={0.05}
+                                            value={brightness}
+                                            onChange={setBrightness}
+                                            className="text-xs"
+                                        />
+                                        <Slider
+                                            label="Contrast"
+                                            min={-1}
+                                            max={1}
+                                            step={0.05}
+                                            value={contrast}
+                                            onChange={setContrast}
+                                            className="text-xs"
+                                        />
+                                        <Slider
+                                            label="Saturation"
+                                            min={-1}
+                                            max={1}
+                                            step={0.05}
+                                            value={saturation}
+                                            onChange={setSaturation}
+                                            className="text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTool === 'text' && (
+                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-4">
+                                 <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-400 border border-indigo-500/30">
+                                     <Type className="w-6 h-6" />
+                                 </div>
+                                 <p className="text-sm text-white/80 px-4">Add a text overlay or watermark to your frame.</p>
+                                 <Button onClick={addText} className="w-full" variant="primary">Add Text Layer</Button>
+                                 <p className="text-[10px] text-white/40">Double click text on canvas to edit content.</p>
+                             </div>
+                        )}
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="p-4 border-t border-white/10 bg-white/5 space-y-2">
+                        <Button variant="primary" className="w-full" onClick={handleSave} icon={Check}>Save Changes</Button>
+                        <Button variant="ghost" className="w-full text-white/60 hover:text-white" onClick={onCancel} icon={X}>Cancel</Button>
+                    </div>
                 </div>
+            </div>
+            
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+            
+            <div className="absolute top-4 left-4 text-white/50 text-xs font-mono pointer-events-none">
+                Scroll to Zoom • Alt + Drag to Pan
             </div>
         </div>
     );
