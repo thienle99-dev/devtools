@@ -109,7 +109,7 @@ export const VideoToFrames: React.FC = () => {
 
         logger.info('Starting frame extraction:', extractionSettings);
         setIsProcessing(true);
-        setProcessingStatus('Initializing video...');
+        setProcessingStatus(`Loading video: ${videoFile.name}...`);
 
         const fileUrl = URL.createObjectURL(videoFile);
         const video = document.createElement('video');
@@ -277,7 +277,12 @@ export const VideoToFrames: React.FC = () => {
             };
 
             video.addEventListener('seeked', onSeeked);
-            video.currentTime = seekTime;
+
+            // Trigger load and start
+            video.onloadeddata = () => {
+                setProcessingStatus(`Video loaded. Starting extraction (${extractionSettings.mode})...`);
+                video.currentTime = seekTime;
+            };
         });
     };
 
