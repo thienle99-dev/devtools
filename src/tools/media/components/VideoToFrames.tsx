@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal, 
-    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors, MonitorPlay, Smartphone } from 'lucide-react';
+    ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X,  CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors, MonitorPlay, Smartphone, Trash2, Filter, MoreHorizontal } from 'lucide-react';
 import { FrameEditor } from './FrameEditor';
 import { TimelineEditor } from './TimelineEditor';
 import JSZip from 'jszip';
@@ -60,6 +60,7 @@ export const VideoToFrames: React.FC = () => {
         includeMetadata: true,
         zipFilename: 'frames_export'
     });
+    const [showSelectionMenu, setShowSelectionMenu] = useState(false);
 
     // Analytics State
     const [analyticsData, setAnalyticsData] = useState<Map<number, FrameAnalysisResult>>(new Map());
@@ -395,6 +396,34 @@ export const VideoToFrames: React.FC = () => {
         } else {
             setSelectedFrames(new Set(frames.map(f => f.index)));
         }
+    };
+
+    const selectEveryNth = (n: number) => {
+        const newSelected = new Set<number>();
+        frames.forEach((f, i) => {
+            if ((i + 1) % n === 0) newSelected.add(f.index);
+        });
+        setSelectedFrames(newSelected);
+        setShowSelectionMenu(false);
+    };
+
+    const invertSelection = () => {
+        const newSelected = new Set<number>();
+        frames.forEach(f => {
+            if (!selectedFrames.has(f.index)) newSelected.add(f.index);
+        });
+        setSelectedFrames(newSelected);
+        setShowSelectionMenu(false);
+    };
+
+    const deleteSelected = () => {
+        const newFrames = frames.filter(f => !selectedFrames.has(f.index));
+        setFrames(newFrames);
+        setSelectedFrames(new Set());
+        // Clean up analytics for deleted frames to save memory
+        const newAnalytics = new Map(analyticsData);
+        selectedFrames.forEach(idx => newAnalytics.delete(idx));
+        setAnalyticsData(newAnalytics);
     };
 
     const formatFilename = (pattern: string, frame: FrameData, videoName: string, ext: string) => {
@@ -907,22 +936,58 @@ export const VideoToFrames: React.FC = () => {
                                                         title="Toggle Selection Mode"
                                                     >
                                                         <CheckSquare className="w-4 h-4" />
-                                                        {isSelectionMode && <span className="text-xs font-medium pr-1">Selecting</span>}
+                                                        {isSelectionMode && <span className="text-xs font-medium pr-1">Done</span>}
                                                     </button>
                                                     
                                                     {isSelectionMode && (
-                                                        <>
+                                                        <div className="flex items-center gap-1 animate-in fade-in slide-in-from-left-2 ml-2">
                                                             <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
                                                             <button 
                                                                 onClick={toggleSelectAll}
-                                                                className="text-xs px-2 py-1 text-foreground-secondary hover:text-foreground"
+                                                                className="text-xs px-2 py-1 text-foreground-secondary hover:text-foreground rounded hover:bg-white/5"
                                                             >
                                                                 {selectedFrames.size === frames.length ? 'None' : 'All'}
                                                             </button>
-                                                            <span className="text-xs text-indigo-400 font-mono px-2">
-                                                                {selectedFrames.size}
-                                                            </span>
-                                                        </>
+                                                            
+                                                            <div className="relative group">
+                                                                <button 
+                                                                    onClick={() => setShowSelectionMenu(!showSelectionMenu)}
+                                                                    className="flex items-center gap-1 text-xs px-2 py-1 text-foreground-secondary hover:text-foreground rounded hover:bg-white/5"
+                                                                >
+                                                                    <Filter className="w-3 h-3" />
+                                                                    Select...
+                                                                </button>
+                                                                
+                                                                {showSelectionMenu && (
+                                                                    <>
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setShowSelectionMenu(false)} />
+                                                                    <div className="absolute top-full left-0 mt-2 w-40 bg-[#18181b] border border-white/10 rounded-lg shadow-xl z-50 py-1 flex flex-col overflow-hidden">
+                                                                        <button onClick={() => selectEveryNth(2)} className="text-left px-3 py-2 text-xs text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors">Every 2nd Frame</button>
+                                                                        <button onClick={() => selectEveryNth(5)} className="text-left px-3 py-2 text-xs text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors">Every 5th Frame</button>
+                                                                        <button onClick={() => selectEveryNth(10)} className="text-left px-3 py-2 text-xs text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors">Every 10th Frame</button>
+                                                                        <div className="h-[1px] bg-white/10 my-1"/>
+                                                                        <button onClick={invertSelection} className="text-left px-3 py-2 text-xs text-gray-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors">Invert Selection</button>
+                                                                    </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+
+                                                            {selectedFrames.size > 0 && (
+                                                                <>
+                                                                    <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+                                                                    <span className="text-xs text-indigo-400 font-mono px-1">
+                                                                        {selectedFrames.size}
+                                                                    </span>
+                                                                    <button 
+                                                                        onClick={deleteSelected}
+                                                                        className="flex items-center gap-1 text-xs px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded ml-1 transition-colors"
+                                                                        title="Delete selected frames from workspace"
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
 

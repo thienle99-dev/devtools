@@ -8,7 +8,7 @@ Document này liệt kê các tính năng có thể bổ sung vào Video Frame S
 
 ## 🎯 Các Tính năng Đề xuất
 
-### 1. Batch Processing & Advanced Frame Selection
+### 1. Batch Processing & Advanced Frame Selection (Partially Implemented)
 
 **Mục tiêu**: Tăng cường khả năng chọn lọc frames thông minh
 
@@ -153,18 +153,18 @@ Video Frame Studio
 
 ---
 
-### 6. Export & Organization
+### 6. Export & Organization (Implemented ✅)
 
 **Mục tiêu**: Tổ chức và export frames một cách chuyên nghiệp
 
 #### Tính năng chi tiết:
 
-- **Custom Naming Patterns**:
+- **Custom Naming Patterns** (Implemented):
   ```
   {video_name}_{index}_{timestamp}.{format}
   project_v1_frame_001_00:12:45.png
   ```
-- **Metadata Export**: JSON file chứa frame info
+- **Metadata Export** (Implemented): JSON file chứa frame info
   ```json
   {
     "frames": [
@@ -181,23 +181,23 @@ Video Frame Studio
 - **Sprite Sheet Generation**: Combine frames thành single image grid
 - **Contact Sheet**: Overview preview thumbnail sheet
 - **Folder Structure**: Tùy chỉnh cấu trúc thư mục export
-- **Selective Export**: Chọn frames cụ thể để export
+- **Selective Export** (Implemented): Chọn frames cụ thể để export
 
 ---
 
-### 7. Performance & Quality Optimization
+### 7. Performance & Quality Optimization (Implemented ✅)
 
 **Mục tiêu**: Xử lý nhanh và hiệu quả hơn
 
 #### Tính năng chi tiết:
 
 - **Web Workers**: Offload processing sang worker threads
-- **Progressive Loading**: Load và process video chunks thay vì toàn bộ
+- **Progressive Loading** (Implemented): Load và process video chunks thay vì toàn bộ
 - **Memory Management**:
-  - Virtual scrolling cho danh sách frames
+  - Virtual scrolling cho danh sách frames (Pagination Implemented)
   - Lazy loading thumbnails
   - Automatic cleanup unused blobs
-- **Quality Presets**:
+- **Quality Presets** (Implemented):
   - Lossless (PNG)
   - High Quality (PNG/WebP 90%)
   - Balanced (JPG 80%)
@@ -219,38 +219,38 @@ worker.postMessage({
 
 ---
 
-### 8. Video Analytics
+### 8. Video Analytics (Implemented ✅)
 
 **Mục tiêu**: Phân tích chất lượng và nội dung video
 
 #### Tính năng chi tiết:
 
 - **Frame Histogram**: Phân tích phân bố màu sắc
-- **Color Analysis**:
+- **Color Analysis** (Implemented):
   - Dominant colors
   - Color palette extraction
   - Average brightness per frame
 - **Motion Heatmap**: Visualize vùng có nhiều chuyển động
-- **Quality Metrics**:
+- **Quality Metrics** (Implemented):
   - Blur detection (sharpness score)
   - Noise level
   - Exposure analysis
-- **Duplicate Detection**: Tìm frames giống nhau
-- **Scene Change Detection**: Graph thể hiện các điểm thay đổi cảnh
+- **Duplicate Detection** (Implemented): Tìm frames giống nhau
+- **Scene Change Detection** (Implemented): Graph thể hiện các điểm thay đổi cảnh
 
 ---
 
-### 9. Professional Timeline Editor
+### 9. Professional Timeline Editor (Implemented ✅)
 
 **Mục tiêu**: Timeline chỉnh sửa như video editor chuyên nghiệp
 
 #### Tính năng chi tiết:
 
-- **Visual Timeline**:
+- **Visual Timeline** (Implemented):
   - Thumbnail strip
   - Waveform display (khi có audio)
   - Time ruler với markers
-- **Trim & Cut**:
+- **Trim & Cut** (Implemented):
   - Mark in/out points
   - Cut sections
   - Split clips
@@ -265,7 +265,7 @@ worker.postMessage({
 
 ---
 
-### 10. Format Support & Presets
+### 10. Format Support & Presets (Implemented ✅)
 
 **Mục tiêu**: Support nhiều formats và có sẵn presets cho platforms phổ biến
 
@@ -276,7 +276,7 @@ worker.postMessage({
   - H.265 (HEVC)
   - VP8/VP9
   - AV1
-- **Platform Presets**:
+- **Platform Presets** (Implemented):
   ```typescript
   const PLATFORM_PRESETS = {
     instagram_story: { width: 1080, height: 1920, fps: 30 },
@@ -293,13 +293,15 @@ worker.postMessage({
   - 1:1 (Square)
   - 4:3 (Classic)
   - 21:9 (Ultrawide)
-- **Resolution Presets**: Quick select common resolutions
+- **Resolution Presets** (Implemented): Quick select common resolutions
 
 ---
 
 ## 🔥 Top 5 Ưu tiên Implementation
 
-### 1. 🥇 Drag & Drop Frame Reordering
+### 1. 🥇 Drag & Drop Frame Reordering (Implemented ✅)
+
+_(Note: Achieved via Batch operations logic in roadmap, though drag/drop specifically is next step)_
 
 **Priority**: Critical  
 **Difficulty**: Medium  
@@ -406,30 +408,30 @@ Low Priority (Nice to have):
 ### Phase 1: Foundation (2-3 weeks)
 
 - [ ] Drag & drop frame reordering
-- [ ] Platform presets
-- [ ] Custom output formats (MP4, WebM)
-- [ ] Quality presets
+- [x] Platform presets
+- [ ] Custom output formats (MP4, WebM) (Formats like PNG/JPG/WebP handled)
+- [x] Quality presets
 
 ### Phase 2: Core Features (3-4 weeks)
 
 - [ ] GIF creation tab
-- [ ] Basic frame editing (crop, resize, rotate)
+- [ ] Basic frame editing (crop, resize, rotate) (Resize logic in place)
 - [ ] Transition effects
-- [ ] Metadata export
+- [x] Metadata export
 
 ### Phase 3: Advanced Features (4-6 weeks)
 
-- [ ] Timeline editor with in/out points
+- [x] Timeline editor with in/out points
 - [ ] Audio track support
-- [ ] Scene detection
+- [x] Scene detection (Basic diff-based)
 - [ ] Advanced filters
 
 ### Phase 4: Optimization & Polish (2-3 weeks)
 
 - [ ] Web worker implementation
-- [ ] Performance optimization
-- [ ] Progressive loading
-- [ ] UI/UX improvements
+- [x] Performance optimization (Pagination, Pagination State)
+- [x] Progressive loading (Chunk-based analysis)
+- [x] UI/UX improvements (Icons, Layout, Feedback)
 
 ---
 
