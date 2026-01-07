@@ -182,6 +182,56 @@ export class YouTubeDownloader {
     }
     
     /**
+     * Get playlist information
+     */
+    async getPlaylistInfo(url: string): Promise<{
+        playlistId: string;
+        title: string;
+        videoCount: number;
+        videos: Array<{
+            id: string;
+            title: string;
+            duration: number;
+            thumbnail: string;
+            url: string;
+        }>;
+    }> {
+        await this.ensureInitialized();
+        
+        try {
+            // Use yt-dlp to get playlist info with --flat-playlist for speed
+            const info: any = await this.ytDlp.getVideoInfo([
+                url,
+                '--flat-playlist',
+                '--skip-download',
+            ]);
+            
+            // Check if it's a playlist
+            if (!info.entries || !Array.isArray(info.entries)) {
+                throw new Error('Not a valid playlist URL');
+            }
+            
+            // Parse playlist videos
+            const videos = info.entries.map((entry: any) => ({
+                id: entry.id || entry.url,
+                title: entry.title || 'Unknown Title',
+                duration: entry.duration || 0,
+                thumbnail: entry.thumbnail || entry.thumbnails?.[0]?.url || '',
+                url: entry.url || `https://www.youtube.com/watch?v=${entry.id}`,
+            }));
+            
+            return {
+                playlistId: info.id || info.playlist_id || 'unknown',
+                title: info.title || info.playlist_title || 'Unknown Playlist',
+                videoCount: videos.length,
+                videos,
+            };
+        } catch (error) {
+            throw new Error(`Failed to get playlist info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    
+    /**
      * Download video using yt-dlp
      */
     async downloadVideo(

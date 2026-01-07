@@ -83,6 +83,10 @@ export const YoutubeDownloader: React.FC = () => {
     const [videoInfo, setVideoInfo] = useState<VideoInfoData | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const [downloadFolder, setDownloadFolder] = useState<string | null>(null);
+    const [playlistInfo, setPlaylistInfo] = useState<any | null>(null);
+    const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+    const [isPlaylist, setIsPlaylist] = useState(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const { toasts, removeToast, success, error, info } = useToast();
 
@@ -93,6 +97,15 @@ export const YoutubeDownloader: React.FC = () => {
             /^(https?:\/\/)?(www\.)?youtu\.be\/[\w-]+/,
         ];
         return patterns.some(pattern => pattern.test(url));
+    };
+
+    const isPlaylistUrl = (url: string): boolean => {
+        // Check for playlist patterns
+        const playlistPatterns = [
+            /[?&]list=([a-zA-Z0-9_-]+)/,  // ?list=PLxxx or &list=PLxxx
+            /youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)/,  // /playlist?list=PLxxx
+        ];
+        return playlistPatterns.some(pattern => pattern.test(url));
     };
 
     const handleDownload = async (isRetry = false) => {
@@ -133,11 +146,18 @@ export const YoutubeDownloader: React.FC = () => {
             });
 
             // Start download
-            const result = await (window as any).youtubeAPI.download({
+            const downloadOptions: any = {
                 url,
                 format,
                 quality: format === 'audio' ? undefined : quality,
-            });
+            };
+            
+            // Use custom folder if selected
+            if (downloadFolder) {
+                downloadOptions.outputPath = downloadFolder;
+            }
+            
+            const result = await (window as any).youtubeAPI.download(downloadOptions);
 
             unsubscribe();
 
@@ -195,6 +215,7 @@ export const YoutubeDownloader: React.FC = () => {
 
         setFetchingInfo(true);
         setVideoInfo(null);
+        setPlaylistInfo(null);
         setDownloadStatus({ status: 'idle' });
 
         try {
@@ -203,22 +224,36 @@ export const YoutubeDownloader: React.FC = () => {
                 throw new Error('YouTube API not available');
             }
 
-            const info = await (window as any).youtubeAPI.getInfo(url);
-            setVideoInfo(info);
-            
-            // Auto-select best available quality
-            if (info.availableQualities && info.availableQualities.length > 0) {
-                setQuality(info.availableQualities[0]); // Select highest quality
+            // Check if it's a playlist URL
+            if (isPlaylistUrl(url)) {
+                setIsPlaylist(true);
+                const playlist = await (window as any).youtubeAPI.getPlaylistInfo(url);
+                setPlaylistInfo(playlist);
+                
+                // Auto-select all videos by default
+                const allVideoIds = new Set<string>(playlist.videos.map((v: any) => v.id as string));
+                setSelectedVideos(allVideoIds);
+                
+                success('Playlist Loaded', `${playlist.title} (${playlist.videoCount} videos)`);
+            } else {
+                setIsPlaylist(false);
+                const info = await (window as any).youtubeAPI.getInfo(url);
+                setVideoInfo(info);
+                
+                // Auto-select best available quality
+                if (info.availableQualities && info.availableQualities.length > 0) {
+                    setQuality(info.availableQualities[0]); // Select highest quality
+                }
+                
+                success('Video Info Loaded', info.title);
             }
-            
-            success('Video Info Loaded', info.title);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to fetch video info';
             setDownloadStatus({
                 status: 'error',
                 message: errorMessage
             });
-            error('Failed to Load Video', errorMessage);
+            error('Failed to Load', errorMessage);
         } finally {
             setFetchingInfo(false);
         }
@@ -257,6 +292,18 @@ export const YoutubeDownloader: React.FC = () => {
         setDownloadStatus({ status: 'idle' });
         setQuality('720p');
         setFormat('video');
+    };
+
+    const handleChooseFolder = async () => {
+        try {
+            const result = await (window as any).youtubeAPI.chooseFolder();
+            if (!result.canceled && result.path) {
+                setDownloadFolder(result.path);
+                success('Folder Selected', `Downloads will be saved to: ${result.path}`);
+            }
+        } catch (err) {
+            error('Failed to Choose Folder', 'Could not open folder picker');
+        }
     };
 
     // Auto-fetch video info when URL changes
@@ -389,6 +436,27 @@ export const YoutubeDownloader: React.FC = () => {
                                     Audio Only
                                 </button>
                             </div>
+                        </div>
+
+                        {/* Download Location */}
+                        <div className="mb-4 p-4 bg-background-secondary/50 rounded-lg border border-border-glass">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-sm font-medium text-foreground-primary flex items-center gap-2">
+                                    <FolderOpen className="w-4 h-4 text-blue-400" />
+                                    Download Location
+                                </label>
+                                <Button
+                                    onClick={handleChooseFolder}
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                >
+                                    Choose Folder
+                                </Button>
+                            </div>
+                            <p className="text-xs text-foreground-secondary font-mono truncate">
+                                {downloadFolder || 'Default: System Downloads folder'}
+                            </p>
                         </div>
 
                         <div className="space-y-2">

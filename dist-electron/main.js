@@ -2348,6 +2348,32 @@ var YouTubeDownloader = class {
 			throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
 	}
+	async getPlaylistInfo(url) {
+		await this.ensureInitialized();
+		try {
+			const info = await this.ytDlp.getVideoInfo([
+				url,
+				"--flat-playlist",
+				"--skip-download"
+			]);
+			if (!info.entries || !Array.isArray(info.entries)) throw new Error("Not a valid playlist URL");
+			const videos = info.entries.map((entry) => ({
+				id: entry.id || entry.url,
+				title: entry.title || "Unknown Title",
+				duration: entry.duration || 0,
+				thumbnail: entry.thumbnail || entry.thumbnails?.[0]?.url || "",
+				url: entry.url || `https://www.youtube.com/watch?v=${entry.id}`
+			}));
+			return {
+				playlistId: info.id || info.playlist_id || "unknown",
+				title: info.title || info.playlist_title || "Unknown Playlist",
+				videoCount: videos.length,
+				videos
+			};
+		} catch (error) {
+			throw new Error(`Failed to get playlist info: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
 	async downloadVideo(options, progressCallback) {
 		await this.ensureInitialized();
 		const { url, format, quality, outputPath } = options;
@@ -3714,6 +3740,13 @@ app.whenReady().then(() => {
 			throw error;
 		}
 	});
+	ipcMain.handle("youtube:getPlaylistInfo", async (_event, url) => {
+		try {
+			return await youtubeDownloader.getPlaylistInfo(url);
+		} catch (error) {
+			throw error;
+		}
+	});
 	ipcMain.handle("youtube:download", async (event, options) => {
 		try {
 			return {
@@ -3741,6 +3774,22 @@ app.whenReady().then(() => {
 		const { shell } = await import("electron");
 		shell.showItemInFolder(filePath);
 		return true;
+	});
+	ipcMain.handle("youtube:chooseFolder", async () => {
+		const { dialog: dialog$1 } = await import("electron");
+		const result = await dialog$1.showOpenDialog({
+			properties: ["openDirectory", "createDirectory"],
+			title: "Choose Download Location",
+			buttonLabel: "Select Folder"
+		});
+		if (result.canceled || result.filePaths.length === 0) return {
+			canceled: true,
+			path: null
+		};
+		return {
+			canceled: false,
+			path: result.filePaths[0]
+		};
 	});
 	async function getDirSize$1(dirPath) {
 		try {

@@ -118,10 +118,12 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
 });
 electron.contextBridge.exposeInMainWorld("youtubeAPI", {
 	getInfo: (url) => electron.ipcRenderer.invoke("youtube:getInfo", url),
+	getPlaylistInfo: (url) => electron.ipcRenderer.invoke("youtube:getPlaylistInfo", url),
 	download: (options) => electron.ipcRenderer.invoke("youtube:download", options),
 	cancel: () => electron.ipcRenderer.invoke("youtube:cancel"),
 	openFile: (filePath) => electron.ipcRenderer.invoke("youtube:openFile", filePath),
 	showInFolder: (filePath) => electron.ipcRenderer.invoke("youtube:showInFolder", filePath),
+	chooseFolder: () => electron.ipcRenderer.invoke("youtube:chooseFolder"),
 	onProgress: (callback) => {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("youtube:progress", listener);

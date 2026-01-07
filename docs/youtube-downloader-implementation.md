@@ -103,7 +103,7 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
   - [ ] Clear history
 
 - [ ] **Settings**
-  - [ ] Default download location
+  - [x] Choose download location - ✅ Native folder picker
   - [ ] Default quality preference
   - [ ] Concurrent downloads limit
   - [ ] Network speed limit

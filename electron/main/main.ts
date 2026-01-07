@@ -1548,6 +1548,14 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('youtube:getPlaylistInfo', async (_event, url: string) => {
+    try {
+      return await youtubeDownloader.getPlaylistInfo(url);
+    } catch (error) {
+      throw error;
+    }
+  });
+
   ipcMain.handle('youtube:download', async (event, options) => {
     try {
       const filepath = await youtubeDownloader.downloadVideo(
@@ -1577,6 +1585,21 @@ app.whenReady().then(() => {
     const { shell } = await import('electron');
     shell.showItemInFolder(filePath);
     return true;
+  });
+
+  ipcMain.handle('youtube:chooseFolder', async () => {
+    const { dialog } = await import('electron');
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Choose Download Location',
+      buttonLabel: 'Select Folder'
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true, path: null };
+    }
+    
+    return { canceled: false, path: result.filePaths[0] };
   });
 
   // Helper functions
