@@ -79,6 +79,8 @@ export const YoutubeDownloader: React.FC = () => {
         maxConcurrentDownloads: 3,
         maxSpeedLimit: ''
     });
+    const [capabilities, setCapabilities] = useState<{ hasAria2c: boolean; hasFFmpeg: boolean } | null>(null);
+    const [isInstallingAria2, setIsInstallingAria2] = useState(false);
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
@@ -380,15 +382,13 @@ export const YoutubeDownloader: React.FC = () => {
             const data = await (window as any).youtubeAPI.getSettings();
             if (data) {
                 setSettings(data);
-                // Apply defaults if not set in state?
-                // Also update individual states if they match defaults?
-                // For now just store in settings object.
                 if (data.downloadPath) setDownloadFolder(data.downloadPath);
-                
-                // Only set default qualities if user hasn't touched them? 
-                // Hard to know. Let's just update settings state.
                 if (data.defaultVideoQuality && !url) setQuality(data.defaultVideoQuality);
             }
+            
+            // Load system capabilities (Aria2c, FFmpeg)
+            const caps = await (window as any).youtubeAPI.getCapabilities();
+            setCapabilities(caps);
         } catch (err) {
             console.error('Failed to load settings', err);
         }
@@ -398,6 +398,23 @@ export const YoutubeDownloader: React.FC = () => {
         setSettings(newSettings);
         await (window as any).youtubeAPI.saveSettings(newSettings);
         success('Settings Saved', 'Preferences updated successfully');
+    };
+
+    const handleInstallAria2 = async () => {
+        try {
+            setIsInstallingAria2(true);
+            const successResult = await (window as any).youtubeAPI.installAria2();
+            if (successResult) {
+                success('Success', 'Aria2c installed successfully!');
+                loadSettings(); // Refresh
+            } else {
+                error('Failed', 'Could not install Aria2c automatically.');
+            }
+        } catch (err) {
+            error('Error', 'Installation failed check logs.');
+        } finally {
+            setIsInstallingAria2(false);
+        }
     };
 
     useEffect(() => {
@@ -501,6 +518,74 @@ export const YoutubeDownloader: React.FC = () => {
 
     const renderSettings = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* System Health / Performance */}
+            <Card className="p-4 bg-glass-panel border-border-glass">
+                <h3 className="text-sm font-medium text-foreground-primary mb-3 flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-emerald-400" />
+                    System Performance
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Aria2c Status */}
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-1.5 rounded bg-blue-500/10 ${capabilities?.hasAria2c ? 'text-blue-400' : 'text-gray-400'}`}>
+                                <Settings className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-medium text-foreground-primary">Aria2c Accelerator</div>
+                                <div className="text-xs text-foreground-tertiary">
+                                    {capabilities?.hasAria2c ? '16x Speed Active' : 'Not installed'}
+                                </div>
+                            </div>
+                        </div>
+                        {capabilities?.hasAria2c ? (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30 font-medium">Active</span>
+                        ) : (
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-7 text-xs bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 text-blue-400"
+                                onClick={handleInstallAria2}
+                                disabled={isInstallingAria2}
+                            >
+                                {isInstallingAria2 ? (
+                                    <>
+                                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                        Installing...
+                                    </>
+                                ) : 'Install Now'}
+                            </Button>
+                        )}
+                    </div>
+                     
+                    {/* FFmpeg Status */}
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                        <div className="flex items-center gap-3">
+                             <div className={`p-1.5 rounded bg-purple-500/10 ${capabilities?.hasFFmpeg ? 'text-purple-400' : 'text-gray-400'}`}>
+                                <Film className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-medium text-foreground-primary">FFmpeg Engine</div>
+                                <div className="text-xs text-foreground-tertiary">
+                                    {capabilities?.hasFFmpeg ? 'High Quality Merge' : 'Post-processing disabled'}
+                                </div>
+                            </div>
+                        </div>
+                        {capabilities?.hasFFmpeg ? (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30 font-medium">Ready</span>
+                        ) : (
+                            <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded border border-yellow-500/30">Missing</span>
+                        )}
+                    </div>
+                </div>
+                {!capabilities?.hasAria2c && (
+                     <div className="mt-3 text-xs text-foreground-tertiary flex items-center gap-2 bg-blue-500/5 p-2 rounded">
+                        <Info className="w-3 h-3 text-blue-400" />
+                        <span>Tip: Install Aria2c via winget or brew for ultra-fast downloads.</span>
+                    </div>
+                )}
+            </Card>
+
             <div className="grid gap-6">
                 <Card className="p-4 bg-glass-panel border-border-glass">
                     <h3 className="text-sm font-medium text-foreground-primary mb-3 flex items-center gap-2">

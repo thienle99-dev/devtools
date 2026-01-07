@@ -4,6 +4,9 @@ import path from 'path';
 import { app } from 'electron';
 import Store from 'electron-store';
 import { randomUUID } from 'crypto';
+import { exec, execSync } from 'child_process';
+import { promisify } from 'util';
+import https from 'https';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
@@ -92,6 +95,8 @@ export class YouTubeDownloader {
     private initPromise: Promise<void>;
     private hasAria2c: boolean = false;
     private hasFFmpeg: boolean = false;
+    private ffmpegPath: string | null = null;
+    private aria2Path: string | null = null;
     private store: Store<StoreSchema>;
     
     constructor() {
@@ -137,6 +142,16 @@ export class YouTubeDownloader {
             
             // Initialize with binary path
             this.ytDlp = new YTDlpWrap(this.binaryPath);
+
+            // Setup FFmpeg Static
+            try {
+                const staticPath = require('ffmpeg-static');
+                if (staticPath) {
+                    this.ffmpegPath = staticPath.replace('app.asar', 'app.asar.unpacked');
+                }
+            } catch (e) {
+                console.warn('FFmpeg static load failed:', e);
+            }
             
             // Check for helpers
             await this.checkHelpers();
@@ -147,26 +162,101 @@ export class YouTubeDownloader {
     }
 
     private async checkHelpers(): Promise<void> {
-        const { execSync } = require('child_process');
-        
         // Check Aria2c
+        this.hasAria2c = false;
+        this.aria2Path = null;
+        
+        // 1. Check local bin (priority)
         try {
-            execSync('aria2c --version', { stdio: 'ignore' });
-            this.hasAria2c = true;
-            console.log('✅ aria2c detected - Ultra-fast download mode enabled');
-        } catch {
-            this.hasAria2c = false;
-            console.log('ℹ️ aria2c not found - Standard download mode');
+            const userData = app.getPath('userData');
+            const localBin = path.join(userData, 'bin', 'aria2c.exe');
+            if (fs.existsSync(localBin)) {
+                this.hasAria2c = true;
+                this.aria2Path = localBin;
+                console.log('✅ Aria2c found locally:', localBin);
+            }
+        } catch {}
+
+        // 2. Check global if not found locally
+        if (!this.hasAria2c) {
+            try {
+                execSync('aria2c --version', { stdio: 'ignore' });
+                this.hasAria2c = true;
+                console.log('✅ Aria2c found globally');
+            } catch {
+                console.log('ℹ️ Aria2c not found');
+            }
         }
 
         // Check FFmpeg
-        try {
-            execSync('ffmpeg -version', { stdio: 'ignore' });
+        if (this.ffmpegPath) {
             this.hasFFmpeg = true;
-            console.log('✅ FFmpeg detected - Merge/Convert enabled');
-        } catch {
-            this.hasFFmpeg = false;
-            console.warn('⚠️ FFmpeg not found - Post-processing may fail for high quality videos');
+            console.log('✅ FFmpeg static detected', this.ffmpegPath);
+        } else {
+            try {
+                execSync('ffmpeg -version', { stdio: 'ignore' });
+                this.hasFFmpeg = true;
+                console.log('✅ FFmpeg found globally');
+            } catch {
+                this.hasFFmpeg = false;
+                console.warn('⚠️ FFmpeg not found');
+            }
+        }
+    }
+
+    async installAria2(): Promise<boolean> {
+        console.log('Starting Aria2 download...');
+        try {
+            const userData = app.getPath('userData');
+            const binDir = path.join(userData, 'bin');
+            if (!fs.existsSync(binDir)) fs.mkdirSync(binDir, { recursive: true });
+            
+            const zipPath = path.join(binDir, 'aria2.zip');
+            // Using a specific mirror or github release
+            const url = 'https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip';
+            
+            await new Promise<void>((resolve, reject) => {
+                const file = fs.createWriteStream(zipPath);
+                https.get(url, (res) => {
+                    if (res.statusCode === 302 || res.statusCode === 301) {
+                         https.get(res.headers.location!, (res2) => {
+                             if (res2.statusCode !== 200) { reject(new Error('DL Fail ' + res2.statusCode)); return; }
+                             res2.pipe(file);
+                             file.on('finish', () => { file.close(); resolve(); });
+                         }).on('error', reject);
+                    } else if (res.statusCode === 200) {
+                        res.pipe(file);
+                        file.on('finish', () => { file.close(); resolve(); });
+                    } else {
+                        reject(new Error(`Failed to download: ${res.statusCode}`));
+                    }
+                }).on('error', reject);
+            });
+            
+            const execAsync = promisify(exec);
+            // Expand using Powershell
+            await execAsync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${binDir}' -Force"`);
+            
+            // Move exe
+            const subDir = path.join(binDir, 'aria2-1.36.0-win-64bit-build1');
+            const exePath = path.join(subDir, 'aria2c.exe');
+            const targetPath = path.join(binDir, 'aria2c.exe');
+            
+            if (fs.existsSync(exePath)) {
+                fs.copyFileSync(exePath, targetPath);
+            }
+            
+            // Cleanup
+            try { 
+                fs.unlinkSync(zipPath);
+                // fs.rmSync(subDir, { recursive: true, force: true });
+            } catch {}
+
+            await this.checkHelpers();
+            return this.hasAria2c;
+        } catch (e) {
+            console.error('Install Aria2 Failed', e);
+            throw e;
         }
     }
 
@@ -332,10 +422,22 @@ export class YouTubeDownloader {
 
             if (this.hasAria2c) {
                 console.log(`[${downloadId}] Using aria2c`);
-                args.push(
-                    '--external-downloader', 'aria2c',
-                    '--external-downloader-args', '-x 16 -s 16 -k 1M'
-                );
+                if (this.aria2Path) {
+                    args.push(
+                        '--downloader', this.aria2Path,
+                        '--downloader-args', 'aria2c:-x 16 -s 16 -k 1M'
+                    );
+                } else {
+                    args.push(
+                        '--downloader', 'aria2c',
+                        '--downloader-args', 'aria2c:-x 16 -s 16 -k 1M'
+                    );
+                }
+            }
+
+            // Using FFmpeg static path if available
+            if (this.ffmpegPath) {
+                args.push('--ffmpeg-location', this.ffmpegPath);
             }
 
             // Format Logic
@@ -553,6 +655,13 @@ export class YouTubeDownloader {
     }
     
     clearHistory(): void { this.store.set('history', []); }
+
+    getCapabilities(): { hasAria2c: boolean; hasFFmpeg: boolean } {
+        return {
+            hasAria2c: this.hasAria2c,
+            hasFFmpeg: this.hasFFmpeg
+        };
+    }
 
     getSettings(): Settings { return this.store.get('settings'); }
 

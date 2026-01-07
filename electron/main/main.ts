@@ -1619,6 +1619,14 @@ app.whenReady().then(() => {
     return youtubeDownloader.saveSettings(settings);
   });
 
+  ipcMain.handle('youtube:getCapabilities', () => {
+    return youtubeDownloader.getCapabilities();
+  });
+
+  ipcMain.handle('youtube:installAria2', async () => {
+    return await youtubeDownloader.installAria2();
+  });
+
   // Helper functions
   async function getDirSize(dirPath: string): Promise<number> {
     try {

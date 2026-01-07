@@ -12,6 +12,9 @@ import fs$1 from "fs";
 import path$1 from "path";
 import Store from "electron-store";
 import { randomUUID as randomUUID$1 } from "crypto";
+import { exec as exec$1, execSync } from "child_process";
+import { promisify as promisify$1 } from "util";
+import https from "https";
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
 	if (typeof require !== "undefined") return require.apply(this, arguments);
 	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
@@ -2261,6 +2264,8 @@ var YouTubeDownloader = class {
 		this.activeProcesses = /* @__PURE__ */ new Map();
 		this.hasAria2c = false;
 		this.hasFFmpeg = false;
+		this.ffmpegPath = null;
+		this.aria2Path = null;
 		this.store = new Store({
 			name: "youtube-download-history",
 			defaults: {
@@ -2292,6 +2297,12 @@ var YouTubeDownloader = class {
 				}
 			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
+			try {
+				const staticPath = require$1("ffmpeg-static");
+				if (staticPath) this.ffmpegPath = staticPath.replace("app.asar", "app.asar.unpacked");
+			} catch (e) {
+				console.warn("FFmpeg static load failed:", e);
+			}
 			await this.checkHelpers();
 		} catch (error) {
 			console.error("Failed to initialize yt-dlp:", error);
@@ -2299,22 +2310,80 @@ var YouTubeDownloader = class {
 		}
 	}
 	async checkHelpers() {
-		const { execSync } = require$1("child_process");
+		this.hasAria2c = false;
+		this.aria2Path = null;
 		try {
+			const userData = app.getPath("userData");
+			const localBin = path$1.join(userData, "bin", "aria2c.exe");
+			if (fs$1.existsSync(localBin)) {
+				this.hasAria2c = true;
+				this.aria2Path = localBin;
+				console.log("✅ Aria2c found locally:", localBin);
+			}
+		} catch {}
+		if (!this.hasAria2c) try {
 			execSync("aria2c --version", { stdio: "ignore" });
 			this.hasAria2c = true;
-			console.log("✅ aria2c detected - Ultra-fast download mode enabled");
+			console.log("✅ Aria2c found globally");
 		} catch {
-			this.hasAria2c = false;
-			console.log("ℹ️ aria2c not found - Standard download mode");
+			console.log("ℹ️ Aria2c not found");
 		}
-		try {
+		if (this.ffmpegPath) {
+			this.hasFFmpeg = true;
+			console.log("✅ FFmpeg static detected", this.ffmpegPath);
+		} else try {
 			execSync("ffmpeg -version", { stdio: "ignore" });
 			this.hasFFmpeg = true;
-			console.log("✅ FFmpeg detected - Merge/Convert enabled");
+			console.log("✅ FFmpeg found globally");
 		} catch {
 			this.hasFFmpeg = false;
-			console.warn("⚠️ FFmpeg not found - Post-processing may fail for high quality videos");
+			console.warn("⚠️ FFmpeg not found");
+		}
+	}
+	async installAria2() {
+		console.log("Starting Aria2 download...");
+		try {
+			const userData = app.getPath("userData");
+			const binDir = path$1.join(userData, "bin");
+			if (!fs$1.existsSync(binDir)) fs$1.mkdirSync(binDir, { recursive: true });
+			const zipPath = path$1.join(binDir, "aria2.zip");
+			const url = "https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip";
+			await new Promise((resolve, reject) => {
+				const file = fs$1.createWriteStream(zipPath);
+				https.get(url, (res) => {
+					if (res.statusCode === 302 || res.statusCode === 301) https.get(res.headers.location, (res2) => {
+						if (res2.statusCode !== 200) {
+							reject(/* @__PURE__ */ new Error("DL Fail " + res2.statusCode));
+							return;
+						}
+						res2.pipe(file);
+						file.on("finish", () => {
+							file.close();
+							resolve();
+						});
+					}).on("error", reject);
+					else if (res.statusCode === 200) {
+						res.pipe(file);
+						file.on("finish", () => {
+							file.close();
+							resolve();
+						});
+					} else reject(/* @__PURE__ */ new Error(`Failed to download: ${res.statusCode}`));
+				}).on("error", reject);
+			});
+			await promisify$1(exec$1)(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${binDir}' -Force"`);
+			const subDir = path$1.join(binDir, "aria2-1.36.0-win-64bit-build1");
+			const exePath = path$1.join(subDir, "aria2c.exe");
+			const targetPath = path$1.join(binDir, "aria2c.exe");
+			if (fs$1.existsSync(exePath)) fs$1.copyFileSync(exePath, targetPath);
+			try {
+				fs$1.unlinkSync(zipPath);
+			} catch {}
+			await this.checkHelpers();
+			return this.hasAria2c;
+		} catch (e) {
+			console.error("Install Aria2 Failed", e);
+			throw e;
 		}
 	}
 	async ensureInitialized() {
@@ -2429,8 +2498,10 @@ var YouTubeDownloader = class {
 			if (maxSpeed) args.push("--limit-rate", maxSpeed);
 			if (this.hasAria2c) {
 				console.log(`[${downloadId}] Using aria2c`);
-				args.push("--external-downloader", "aria2c", "--external-downloader-args", "-x 16 -s 16 -k 1M");
+				if (this.aria2Path) args.push("--downloader", this.aria2Path, "--downloader-args", "aria2c:-x 16 -s 16 -k 1M");
+				else args.push("--downloader", "aria2c", "--downloader-args", "aria2c:-x 16 -s 16 -k 1M");
 			}
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
 			if (format === "audio") args.push("-x", "--audio-format", container || "mp3", "--audio-quality", quality || "0");
 			else if (format === "video") {
 				if (quality && quality !== "best") args.push("-f", `bestvideo[height<=${quality.replace("p", "")}]+bestaudio/best[height<=${quality.replace("p", "")}]`);
@@ -2595,6 +2666,12 @@ var YouTubeDownloader = class {
 	}
 	clearHistory() {
 		this.store.set("history", []);
+	}
+	getCapabilities() {
+		return {
+			hasAria2c: this.hasAria2c,
+			hasFFmpeg: this.hasFFmpeg
+		};
 	}
 	getSettings() {
 		return this.store.get("settings");
@@ -3899,6 +3976,12 @@ app.whenReady().then(() => {
 	ipcMain.handle("youtube:saveSettings", (_event, settings) => {
 		return youtubeDownloader.saveSettings(settings);
 	});
+	ipcMain.handle("youtube:getCapabilities", () => {
+		return youtubeDownloader.getCapabilities();
+	});
+	ipcMain.handle("youtube:installAria2", async () => {
+		return await youtubeDownloader.installAria2();
+	});
 	async function getDirSize$1(dirPath) {
 		try {
 			let totalSize = 0;
@@ -3929,8 +4012,8 @@ app.whenReady().then(() => {
 async function checkBluetoothEnabled() {
 	try {
 		if (process.platform === "darwin") {
-			const { execSync } = __require("child_process");
-			return execSync("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
+			const { execSync: execSync$1 } = __require("child_process");
+			return execSync$1("system_profiler SPBluetoothDataType").toString().includes("Bluetooth: On");
 		}
 		return true;
 	} catch {

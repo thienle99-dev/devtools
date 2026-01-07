@@ -128,6 +128,8 @@ electron.contextBridge.exposeInMainWorld("youtubeAPI", {
 	clearHistory: () => electron.ipcRenderer.invoke("youtube:clearHistory"),
 	getSettings: () => electron.ipcRenderer.invoke("youtube:getSettings"),
 	saveSettings: (settings) => electron.ipcRenderer.invoke("youtube:saveSettings", settings),
+	getCapabilities: () => electron.ipcRenderer.invoke("youtube:getCapabilities"),
+	installAria2: () => electron.ipcRenderer.invoke("youtube:installAria2"),
 	onProgress: (callback) => {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("youtube:progress", listener);

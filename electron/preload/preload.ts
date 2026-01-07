@@ -147,6 +147,8 @@ contextBridge.exposeInMainWorld('youtubeAPI', {
   clearHistory: () => ipcRenderer.invoke('youtube:clearHistory'),
   getSettings: () => ipcRenderer.invoke('youtube:getSettings'),
   saveSettings: (settings: any) => ipcRenderer.invoke('youtube:saveSettings', settings),
+  getCapabilities: () => ipcRenderer.invoke('youtube:getCapabilities'),
+  installAria2: () => ipcRenderer.invoke('youtube:installAria2'),
   onProgress: (callback: (progress: any) => void) => {
     const listener = (_event: any, progress: any) => callback(progress);
     ipcRenderer.on('youtube:progress', listener);
