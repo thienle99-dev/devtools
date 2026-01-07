@@ -38,7 +38,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         const canvas = new Canvas(canvasRef.current, {
             width,
             height,
-            backgroundColor: '#1a1a1a',
+            backgroundColor: undefined,
             selection: true
         });
 
@@ -104,9 +104,9 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             img.scale(scale);
             
             img.set({
-                cornerColor: '#6366f1',
+                cornerColor: '#3b82f6',
                 cornerStyle: 'circle',
-                borderColor: '#6366f1',
+                borderColor: '#3b82f6',
                 transparentCorners: false,
                 erasable: false
             });
@@ -229,7 +229,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
     };
 
     return (
-        <div className="relative w-full h-full bg-[#1a1a1a] overflow-hidden group">
+        <div className="relative w-full h-full bg-zinc-950 overflow-hidden group">
             {/* Full Screen Canvas */}
             <div className="absolute inset-0">
                 <canvas ref={canvasRef} className="w-full h-full" />
@@ -239,7 +239,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             {!showSettings && (
                  <button 
                     onClick={() => setShowSettings(true)}
-                    className="absolute right-4 top-4 p-2 bg-black/60 text-white rounded-lg hover:bg-black/80 transition-all backdrop-blur-md border border-white/10 z-10"
+                    className="absolute right-4 top-4 p-2 glass-button text-white rounded-lg z-10"
                 >
                     <Settings2 className="w-5 h-5" />
                 </button>
@@ -247,16 +247,16 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
 
             {/* Floating Zoom Controls - Bottom Left */}
             <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-10">
-                 <div className="flex flex-col bg-black/60 backdrop-blur-md rounded-lg border border-white/10 p-1">
+                 <div className="flex flex-col glass-panel rounded-lg p-1">
                      <button onClick={() => {
                         fabricCanvas?.setZoom(zoom * 1.1);
                         setZoom(zoom * 1.1);
-                     }} className="p-2 hover:bg-white/10 rounded text-white"><Plus className="w-4 h-4"/></button>
+                     }} className="p-2 hover:bg-white/10 rounded text-white transition-colors"><Plus className="w-4 h-4"/></button>
                      <button onClick={() => {
                         fabricCanvas?.setZoom(zoom / 1.1);
                         setZoom(zoom / 1.1);
-                     }} className="p-2 hover:bg-white/10 rounded text-white"><Minus className="w-4 h-4"/></button>
-                     <button onClick={resetZoom} className="p-2 hover:bg-white/10 rounded text-white"><Maximize className="w-4 h-4"/></button>
+                     }} className="p-2 hover:bg-white/10 rounded text-white transition-colors"><Minus className="w-4 h-4"/></button>
+                     <button onClick={resetZoom} className="p-2 hover:bg-white/10 rounded text-white transition-colors"><Maximize className="w-4 h-4"/></button>
                  </div>
             </div>
 
@@ -265,11 +265,11 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                 "absolute right-4 top-4 bottom-4 w-[300px] flex flex-col transition-all duration-300 ease-in-out z-20",
                 showSettings ? "translate-x-0 opacity-100" : "translate-x-[320px] opacity-0 pointer-events-none"
             )}>
-                <div className="flex-1 flex flex-col bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                <div className="flex-1 flex flex-col glass-panel rounded-2xl shadow-2xl overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between p-3 border-b border-white/10 bg-white/5">
                         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                            <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                            <SlidersHorizontal className="w-4 h-4 text-sky-400" />
                             Editor
                         </h3>
                          <button 
@@ -287,7 +287,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                                 onClick={() => setActiveTool('adjust')}
                                 className={cn(
                                     "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all",
-                                    activeTool === 'adjust' ? "bg-indigo-500 text-white shadow-sm" : "text-white/60 hover:text-white hover:bg-white/5"
+                                    activeTool === 'adjust' ? "bg-gradient-to-r from-[#0EA5E9] via-[#3B82F6] to-[#6366F1] text-white shadow-sm" : "text-white/60 hover:text-white hover:bg-white/5"
                                 )}
                             >
                                 <SlidersHorizontal className="w-3.5 h-3.5" /> Adjust
@@ -296,7 +296,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                                 onClick={() => setActiveTool('text')}
                                 className={cn(
                                     "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all",
-                                    activeTool === 'text' ? "bg-indigo-500 text-white shadow-sm" : "text-white/60 hover:text-white hover:bg-white/5"
+                                    activeTool === 'text' ? "bg-gradient-to-r from-[#0EA5E9] via-[#3B82F6] to-[#6366F1] text-white shadow-sm" : "text-white/60 hover:text-white hover:bg-white/5"
                                 )}
                             >
                                 <Type className="w-3.5 h-3.5" /> Watermark
