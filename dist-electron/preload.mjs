@@ -172,7 +172,9 @@ electron.contextBridge.exposeInMainWorld("universalAPI", {
 		return () => electron.ipcRenderer.removeListener("universal:progress", listener);
 	},
 	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
-	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path),
+	checkDiskSpace: (path) => electron.ipcRenderer.invoke("universal:check-disk-space", path),
+	getQueue: () => electron.ipcRenderer.invoke("universal:get-queue")
 });
 electron.contextBridge.exposeInMainWorld("audioAPI", {
 	getInfo: (filePath) => electron.ipcRenderer.invoke("audio:get-info", filePath),

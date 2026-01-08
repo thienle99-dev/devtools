@@ -638,7 +638,7 @@ function createWindow() {
   });
 
   // ========== Permissions IPC Handlers ==========
-  
+
   // Check all permissions
   ipcMain.handle('permissions:check-all', async () => {
     const platform = process.platform;
@@ -712,7 +712,7 @@ function createWindow() {
       // Try to test by attempting to register a global shortcut
       try {
         const testShortcut = 'CommandOrControl+Shift+TestPermission';
-        const registered = globalShortcut.register(testShortcut, () => {});
+        const registered = globalShortcut.register(testShortcut, () => { });
         if (registered) {
           globalShortcut.unregister(testShortcut);
           return { status: 'granted' };
@@ -815,7 +815,7 @@ function createWindow() {
       const loginItemSettings = app.getLoginItemSettings();
       // This doesn't check permission, just if it's enabled
       // Permission is usually granted automatically, but may fail if not code-signed
-      return { 
+      return {
         status: loginItemSettings.openAtLogin ? 'granted' : 'not-determined',
         message: loginItemSettings.openAtLogin ? 'Launch at login is enabled' : 'Launch at login is not enabled'
       };
@@ -833,7 +833,7 @@ function createWindow() {
       // Test by trying to read/write a temp file
       const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
       const testContent = 'permission test';
-      
+
       await fs.writeFile(testPath, testContent);
       const readContent = await fs.readFile(testPath, 'utf-8');
       await fs.unlink(testPath);
@@ -868,7 +868,7 @@ function createWindow() {
     try {
       const originalText = clipboard.readText();
       const testText = `Permission test ${Date.now()}`;
-      
+
       clipboard.writeText(testText);
       const readText = clipboard.readText();
       clipboard.writeText(originalText); // Restore
@@ -890,10 +890,10 @@ function createWindow() {
 
       // Test write
       await fs.writeFile(testPath, testContent);
-      
+
       // Test read
       const readContent = await fs.readFile(testPath, 'utf-8');
-      
+
       // Test delete
       await fs.unlink(testPath);
 
@@ -913,7 +913,7 @@ function createWindow() {
       if (platform === 'darwin') {
         // macOS - Open System Preferences to specific pane
         let command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy"';
-        
+
         if (permissionType === 'accessibility') {
           command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"';
         } else if (permissionType === 'full-disk-access') {
@@ -1597,11 +1597,11 @@ app.whenReady().then(() => {
       title: 'Choose Download Location',
       buttonLabel: 'Select Folder'
     });
-    
+
     if (result.canceled || result.filePaths.length === 0) {
       return { canceled: true, path: null };
     }
-    
+
     return { canceled: false, path: result.filePaths[0] };
   });
 
@@ -1642,9 +1642,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle('tiktok:download', async (_, options) => {
     return new Promise((resolve, reject) => {
-        tiktokDownloader.downloadVideo(options, (progress) => {
-             win?.webContents.send('tiktok:progress', progress);
-        })
+      tiktokDownloader.downloadVideo(options, (progress) => {
+        win?.webContents.send('tiktok:progress', progress);
+      })
         .then(resolve)
         .catch(reject);
     });
@@ -1677,7 +1677,7 @@ app.whenReady().then(() => {
   ipcMain.handle('tiktok:choose-folder', async () => {
     const { dialog } = await import('electron');
     const result = await dialog.showOpenDialog({
-        properties: ['openDirectory', 'createDirectory']
+      properties: ['openDirectory', 'createDirectory']
     });
     return result.canceled ? null : result.filePaths[0];
   });
@@ -1689,9 +1689,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle('universal:download', async (_, options) => {
     return new Promise((resolve, reject) => {
-        universalDownloader.downloadMedia(options, (progress) => {
-             win?.webContents.send('universal:progress', progress);
-        })
+      universalDownloader.downloadMedia(options, (progress) => {
+        win?.webContents.send('universal:progress', progress);
+      })
         .then(resolve)
         .catch(reject);
     });
@@ -1724,20 +1724,28 @@ app.whenReady().then(() => {
   ipcMain.handle('universal:choose-folder', async () => {
     const { dialog } = await import('electron');
     const result = await dialog.showOpenDialog({
-        properties: ['openDirectory', 'createDirectory']
+      properties: ['openDirectory', 'createDirectory']
     });
     return result.canceled ? null : result.filePaths[0];
+  });
+
+  ipcMain.handle('universal:check-disk-space', async (_, path?: string) => {
+    return await universalDownloader.checkDiskSpace(path);
+  });
+
+  ipcMain.handle('universal:get-queue', async () => {
+    return universalDownloader.getQueue();
   });
 
   ipcMain.handle('universal:open-file', async (_, path: string) => {
     const { shell } = await import('electron');
     // Check if file exists first to avoid cryptic errors
     try {
-        await fs.access(path);
-        shell.openPath(path);
+      await fs.access(path);
+      shell.openPath(path);
     } catch {
-        // If file doesn't exist, try opening folder? No, just fail silently or return error
-        console.error('File not found:', path);
+      // If file doesn't exist, try opening folder? No, just fail silently or return error
+      console.error('File not found:', path);
     }
   });
 
@@ -1756,8 +1764,8 @@ app.whenReady().then(() => {
       audioExtractor.extractAudio(options, (progress) => {
         win?.webContents.send('audio:progress', progress);
       })
-      .then(resolve)
-      .catch(reject);
+        .then(resolve)
+        .catch(reject);
     });
   });
 

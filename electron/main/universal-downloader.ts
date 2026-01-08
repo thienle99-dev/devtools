@@ -5,6 +5,7 @@ import { app } from 'electron';
 import Store from 'electron-store';
 import { randomUUID } from 'crypto';
 import { execSync } from 'child_process';
+import si from 'systeminformation';
 import type {
     UniversalDownloadOptions,
     UniversalMediaInfo,
@@ -39,9 +40,11 @@ export class UniversalDownloader {
 
     // Queue System
     private downloadQueue: Array<{
+        options: UniversalDownloadOptions;
         run: () => Promise<string>;
         resolve: (value: string | PromiseLike<string>) => void;
         reject: (reason?: any) => void;
+        state: 'queued' | 'downloading' | 'paused' | 'error';
     }> = [];
     private activeDownloadsCount = 0;
 
@@ -63,6 +66,9 @@ export class UniversalDownloader {
         const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
         this.binaryPath = path.join(app.getPath('userData'), binaryName);
         this.initPromise = this.init();
+
+        // Initialize queue processing loop
+        setInterval(() => this.processQueue(), 5000);
     }
 
     private async init(): Promise<void> {
@@ -255,24 +261,79 @@ export class UniversalDownloader {
         options: UniversalDownloadOptions,
         progressCallback?: (progress: UniversalDownloadProgress) => void
     ): Promise<string> {
+        const downloadId = options.id || randomUUID();
+
         return new Promise((resolve, reject) => {
             this.downloadQueue.push({
-                run: () => this.executeDownload(options, progressCallback),
+                options: { ...options, id: downloadId },
+                run: () => this.executeDownload({ ...options, id: downloadId }, progressCallback),
                 resolve,
-                reject
+                reject,
+                state: 'queued'
             });
             this.processQueue();
         });
+    }
+
+    async checkDiskSpace(downloadPath?: string): Promise<{ available: number; total: number; warning: boolean }> {
+        try {
+            const targetPath = downloadPath || this.store.get('settings.downloadPath') || app.getPath('downloads');
+            const disks = await si.fsSize();
+
+            // Find the disk that contains the target path
+            // On macOS/Linux, we look for the mount point that is a prefix of the target path
+            // and has the longest length.
+            let disk = disks[0];
+            let maxMatchLen = -1;
+
+            for (const d of disks) {
+                if (targetPath.startsWith(d.mount) && d.mount.length > maxMatchLen) {
+                    maxMatchLen = d.mount.length;
+                    disk = d;
+                }
+            }
+
+            if (!disk) return { available: 0, total: 0, warning: false };
+
+            const available = disk.available;
+            const total = disk.size;
+
+            // Warning if less than 5GB or less than 10%
+            const warning = available < 5 * 1024 * 1024 * 1024 || (available / total) < 0.1;
+
+            return { available, total, warning };
+        } catch (error) {
+            console.error('Failed to check disk space:', error);
+            return { available: 0, total: 0, warning: false };
+        }
+    }
+
+    getQueue() {
+        return this.downloadQueue.map(item => ({
+            id: item.options.id,
+            url: item.options.url,
+            state: item.state,
+            filename: item.options.url // Temporary until metadata is fetched
+        }));
     }
 
     private async processQueue() {
         const settings = this.getSettings();
         const maxConcurrent = settings.maxConcurrentDownloads || 3;
 
+        // Check disk space before starting any new download
+        const space = await this.checkDiskSpace();
+        if (space.available < 500 * 1024 * 1024) { // Less than 500MB
+            // We don't throw error here to avoid killing the app, but we don't start new ones
+            console.warn('Low disk space, skipping queue processing');
+            return;
+        }
+
         while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
             const task = this.downloadQueue.shift();
             if (task) {
                 this.activeDownloadsCount++;
+                task.state = 'downloading';
                 task.run()
                     .then(result => task.resolve(result))
                     .catch(error => task.reject(error))

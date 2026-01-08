@@ -194,6 +194,8 @@ contextBridge.exposeInMainWorld('universalAPI', {
   },
   openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
   showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+  checkDiskSpace: (path?: string) => ipcRenderer.invoke('universal:check-disk-space', path),
+  getQueue: () => ipcRenderer.invoke('universal:get-queue'),
 })
 
 contextBridge.exposeInMainWorld('audioAPI', {

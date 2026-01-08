@@ -52,6 +52,8 @@ interface Window {
         onProgress: (callback: (progress: any) => void) => () => void;
         openFile: (path: string) => Promise<void>;
         showInFolder: (path: string) => Promise<void>;
+        checkDiskSpace: (path?: string) => Promise<{ available: number; total: number; warning: boolean }>;
+        getQueue: () => Promise<any[]>;
     };
     audioAPI: {
         getInfo: (filePath: string) => Promise<any>;

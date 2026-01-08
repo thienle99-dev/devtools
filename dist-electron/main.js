@@ -3164,6 +3164,7 @@ var UniversalDownloader = class {
 		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
 		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
 		this.initPromise = this.init();
+		setInterval(() => this.processQueue(), 5e3);
 	}
 	async init() {
 		try {
@@ -3300,21 +3301,74 @@ var UniversalDownloader = class {
 		}
 	}
 	async downloadMedia(options, progressCallback) {
+		const downloadId = options.id || randomUUID$1();
 		return new Promise((resolve, reject) => {
 			this.downloadQueue.push({
-				run: () => this.executeDownload(options, progressCallback),
+				options: {
+					...options,
+					id: downloadId
+				},
+				run: () => this.executeDownload({
+					...options,
+					id: downloadId
+				}, progressCallback),
 				resolve,
-				reject
+				reject,
+				state: "queued"
 			});
 			this.processQueue();
 		});
 	}
+	async checkDiskSpace(downloadPath) {
+		try {
+			const targetPath = downloadPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
+			const disks = await si.fsSize();
+			let disk = disks[0];
+			let maxMatchLen = -1;
+			for (const d of disks) if (targetPath.startsWith(d.mount) && d.mount.length > maxMatchLen) {
+				maxMatchLen = d.mount.length;
+				disk = d;
+			}
+			if (!disk) return {
+				available: 0,
+				total: 0,
+				warning: false
+			};
+			const available = disk.available;
+			const total = disk.size;
+			return {
+				available,
+				total,
+				warning: available < 5 * 1024 * 1024 * 1024 || available / total < .1
+			};
+		} catch (error) {
+			console.error("Failed to check disk space:", error);
+			return {
+				available: 0,
+				total: 0,
+				warning: false
+			};
+		}
+	}
+	getQueue() {
+		return this.downloadQueue.map((item) => ({
+			id: item.options.id,
+			url: item.options.url,
+			state: item.state,
+			filename: item.options.url
+		}));
+	}
 	async processQueue() {
 		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
+		if ((await this.checkDiskSpace()).available < 500 * 1024 * 1024) {
+			console.warn("Low disk space, skipping queue processing");
+			return;
+		}
 		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
 			const task = this.downloadQueue.shift();
 			if (task) {
 				this.activeDownloadsCount++;
+				task.state = "downloading";
 				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
 					this.activeDownloadsCount--;
 					this.processQueue();
@@ -5039,6 +5093,12 @@ app.whenReady().then(() => {
 		const { dialog: dialog$1 } = await import("electron");
 		const result = await dialog$1.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
 		return result.canceled ? null : result.filePaths[0];
+	});
+	ipcMain.handle("universal:check-disk-space", async (_, path$2) => {
+		return await universalDownloader.checkDiskSpace(path$2);
+	});
+	ipcMain.handle("universal:get-queue", async () => {
+		return universalDownloader.getQueue();
 	});
 	ipcMain.handle("universal:open-file", async (_, path$2) => {
 		const { shell } = await import("electron");

@@ -41,6 +41,8 @@ export default function UniversalDownloader() {
 
     const [embedSubs, setEmbedSubs] = useState(false);
     const [downloadEntirePlaylist, setDownloadEntirePlaylist] = useState(false);
+    const [diskSpace, setDiskSpace] = useState<{ available: number; total: number; warning: boolean } | null>(null);
+    const [queuedDownloads, setQueuedDownloads] = useState<any[]>([]);
 
     const [activeDownloads, setActiveDownloads] = useState<Map<string, UniversalDownloadProgress>>(new Map());
     const [history, setHistory] = useState<UniversalHistoryItem[]>([]);
@@ -50,6 +52,9 @@ export default function UniversalDownloader() {
         defaultFormat: 'video' as 'video' | 'audio',
         defaultQuality: '1080p'
     });
+    const [historySearch, setHistorySearch] = useState('');
+    const [historyFilter, setHistoryFilter] = useState<SupportedPlatform | 'all'>('all');
+    const [historySort, setHistorySort] = useState<'newest' | 'oldest' | 'size' | 'platform'>('newest');
 
     const { toasts, removeToast, success, error, info } = useToast();
 
@@ -77,6 +82,7 @@ export default function UniversalDownloader() {
     useEffect(() => {
         loadHistory();
         loadSettings();
+        checkDiskSpace();
 
         // Listen for progress
         const cleanup = window.universalAPI.onProgress((progress: UniversalDownloadProgress) => {
@@ -94,8 +100,27 @@ export default function UniversalDownloader() {
             }
         });
 
-        return cleanup;
+        // Periodic queue and disk check
+        const interval = setInterval(() => {
+            loadQueue();
+            checkDiskSpace();
+        }, 5000);
+
+        return () => {
+            cleanup();
+            clearInterval(interval);
+        }
     }, []);
+
+    const loadQueue = async () => {
+        const queue = await window.universalAPI.getQueue();
+        setQueuedDownloads(queue);
+    };
+
+    const checkDiskSpace = async () => {
+        const space = await window.universalAPI.checkDiskSpace(downloadPath);
+        setDiskSpace(space);
+    };
 
     const loadHistory = async () => {
         const hist = await window.universalAPI.getHistory();
@@ -158,6 +183,17 @@ export default function UniversalDownloader() {
         if (!url || !url.startsWith('http')) {
             error('Invalid URL', 'Please enter a valid URL');
             return;
+        }
+
+        // Check disk space before starting
+        const space = await window.universalAPI.checkDiskSpace(downloadPath);
+        if (space.available < 500 * 1024 * 1024) { // Less than 500MB
+            error('Low Disk Space', 'You need at least 500MB of free space to start a download.');
+            return;
+        }
+
+        if (space.warning) {
+            info('Low Space Warning', `You have only ${formatBytes(space.available)} left.`);
         }
 
         const downloadId = crypto.randomUUID();
@@ -244,6 +280,52 @@ export default function UniversalDownloader() {
         await window.universalAPI.saveSettings(newSettings);
         success('Settings Saved', 'Preferences updated successfully');
     };
+
+    const exportHistory = (format: 'json' | 'csv') => {
+        if (history.length === 0) return;
+
+        let content = '';
+        let fileName = `download-history.${format}`;
+
+        if (format === 'json') {
+            content = JSON.stringify(history, null, 2);
+        } else {
+            const headers = ['Title', 'URL', 'Platform', 'Size', 'Date', 'Path'];
+            const rows = history.map(item => [
+                `"${item.title.replace(/"/g, '""')}"`,
+                item.url,
+                item.platform,
+                item.size,
+                new Date(item.timestamp).toISOString(),
+                item.path
+            ]);
+            content = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        }
+
+        const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        success('History Exported', `Exported ${history.length} items to ${format.toUpperCase()}`);
+    };
+
+    const filteredHistory = history
+        .filter(item => {
+            const matchesSearch = item.title.toLowerCase().includes(historySearch.toLowerCase()) ||
+                item.url.toLowerCase().includes(historySearch.toLowerCase());
+            const matchesFilter = historyFilter === 'all' || item.platform === historyFilter;
+            return matchesSearch && matchesFilter;
+        })
+        .sort((a, b) => {
+            if (historySort === 'newest') return b.timestamp - a.timestamp;
+            if (historySort === 'oldest') return a.timestamp - b.timestamp;
+            if (historySort === 'size') return (b.size || 0) - (a.size || 0);
+            if (historySort === 'platform') return a.platform.localeCompare(b.platform);
+            return 0;
+        });
 
     // --- Render ---
 
@@ -394,18 +476,41 @@ export default function UniversalDownloader() {
 
     const renderDownloads = () => {
         const activeList = Array.from(activeDownloads.values()).filter(d => d.state === 'downloading' || d.state === 'processing');
+        const queuedList = queuedDownloads.filter(q => q.state === 'queued');
 
         return (
             <div className="max-w-5xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* Active Downloads Section */}
-                {activeList.length > 0 && (
+                {/* Disk Space Info */}
+                {diskSpace && (
+                    <div className={cn(
+                        "p-3 rounded-xl border flex items-center justify-between text-xs",
+                        diskSpace.warning ? "bg-amber-500/10 border-amber-500/30 text-amber-400" : "bg-white/5 border-white/10 text-foreground-secondary"
+                    )}>
+                        <div className="flex items-center gap-2">
+                            <HardDrive className="w-4 h-4" />
+                            <span>
+                                <strong className="text-foreground-primary">{formatBytes(diskSpace.available)}</strong> available of {formatBytes(diskSpace.total)}
+                            </span>
+                        </div>
+                        {diskSpace.warning && (
+                            <span className="font-bold flex items-center gap-1">
+                                <Info className="w-3 h-3" />
+                                Low disk space
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Active & Queued Downloads Section */}
+                {(activeList.length > 0 || queuedList.length > 0) && (
                     <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-foreground-primary flex items-center gap-2">
                             <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                            Active Downloads ({activeList.length})
+                            Queue & Active Downloads ({activeList.length + queuedList.length})
                         </h3>
 
                         <div className="grid gap-3">
+                            {/* Active */}
                             {activeList.map(progress => (
                                 <DownloadProgress
                                     key={progress.id}
@@ -425,34 +530,141 @@ export default function UniversalDownloader() {
                                     isPlaylist={false}
                                 />
                             ))}
+
+                            {/* Queued */}
+                            {queuedList.map(item => (
+                                <div key={item.id} className="bg-glass-panel border border-border-glass rounded-xl p-4 flex items-center justify-between group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                                            <Clock className="w-4 h-4 text-foreground-muted" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-foreground-primary truncate max-w-md">{item.url}</h4>
+                                            <p className="text-[10px] text-foreground-muted uppercase tracking-wider font-bold mt-0.5">In Queue</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                            onClick={() => window.universalAPI.cancel(item.id)}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
 
                 {/* History Section */}
-                <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-sm font-semibold text-foreground-primary">History</h3>
-                        {history.length > 0 && (
-                            <Button
-                                onClick={handleClearHistory}
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-7"
+                <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-foreground-primary">History</h3>
+                            <span className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-foreground-tertiary">
+                                {filteredHistory.length} items
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            {/* Search */}
+                            <div className="relative flex-1 sm:w-48">
+                                <Input
+                                    placeholder="Search history..."
+                                    value={historySearch}
+                                    onChange={(e) => setHistorySearch(e.target.value)}
+                                    className="h-8 text-xs bg-white/5 border-white/10"
+                                />
+                            </div>
+
+                            {/* Filters */}
+                            <select
+                                className="h-8 bg-white/5 border border-white/10 rounded-lg px-2 text-[11px] text-foreground-secondary outline-none"
+                                value={historyFilter}
+                                onChange={(e) => setHistoryFilter(e.target.value as any)}
                             >
-                                Clear All
-                            </Button>
-                        )}
+                                <option value="all">All Platforms</option>
+                                <option value="youtube">YouTube</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="instagram">Instagram</option>
+                                <option value="facebook">Facebook</option>
+                                <option value="twitter">Twitter/X</option>
+                                <option value="reddit">Reddit</option>
+                            </select>
+
+                            {/* Sort */}
+                            <select
+                                className="h-8 bg-white/5 border border-white/10 rounded-lg px-2 text-[11px] text-foreground-secondary outline-none"
+                                value={historySort}
+                                onChange={(e) => setHistorySort(e.target.value as any)}
+                            >
+                                <option value="newest">Newest</option>
+                                <option value="oldest">Oldest</option>
+                                <option value="size">Largest Size</option>
+                                <option value="platform">By Platform</option>
+                            </select>
+
+                            <div className="flex gap-1">
+                                <Button
+                                    onClick={() => exportHistory('csv')}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-[10px] text-foreground-secondary"
+                                    title="Export to CSV"
+                                >
+                                    CSV
+                                </Button>
+                                <Button
+                                    onClick={() => exportHistory('json')}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-[10px] text-foreground-secondary"
+                                    title="Export to JSON"
+                                >
+                                    JSON
+                                </Button>
+                            </div>
+
+                            {history.length > 0 && (
+                                <Button
+                                    onClick={handleClearHistory}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-8"
+                                >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Clear
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        {history.length === 0 ? (
+                        {filteredHistory.length === 0 ? (
                             <div className="text-center py-12 bg-glass-panel rounded-xl border border-border-glass">
                                 <Clock className="w-8 h-8 mx-auto mb-3 text-foreground-muted opacity-50" />
-                                <p className="text-foreground-tertiary">No downloads yet</p>
+                                <p className="text-foreground-tertiary">
+                                    {historySearch || historyFilter !== 'all' ? 'No matching downloads found' : 'No downloads yet'}
+                                </p>
+                                {(historySearch || historyFilter !== 'all') && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="mt-2 text-primary"
+                                        onClick={() => {
+                                            setHistorySearch('');
+                                            setHistoryFilter('all');
+                                        }}
+                                    >
+                                        Clear search & filters
+                                    </Button>
+                                )}
                             </div>
                         ) : (
-                            history.map((item: any) => (
+                            filteredHistory.map((item: any) => (
                                 <div key={item.id} className="bg-glass-panel border border-border-glass rounded-xl p-3 flex gap-4 transition-all hover:bg-white/5 group">
                                     {/* Thumbnail */}
                                     <div className="relative w-32 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-black/50 border border-border-glass">
