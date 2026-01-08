@@ -1611,6 +1611,11 @@ app.whenReady().then(() => {
     return true;
   });
 
+  ipcMain.handle('youtube:removeFromHistory', (_event, id: string) => {
+    youtubeDownloader.removeFromHistory(id);
+    return true;
+  });
+
   ipcMain.handle('youtube:getSettings', () => {
     return youtubeDownloader.getSettings();
   });

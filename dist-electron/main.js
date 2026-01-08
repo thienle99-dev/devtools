@@ -2586,7 +2586,10 @@ var YouTubeDownloader = class {
 			const sanitizedTitle = this.sanitizeFilename(info.title);
 			const downloadsPath = outputPath || app.getPath("downloads");
 			const extension = container || (format === "audio" ? "mp3" : "mp4");
-			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
+			let filenameSuffix = "";
+			if (format === "audio") filenameSuffix = `_audio_${quality || "best"}`;
+			else if (format === "video" && quality) filenameSuffix = `_${quality}`;
+			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.%(ext)s`);
 			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
 			let estimatedSize = 0;
 			if (format === "audio") estimatedSize = info.formats.find((f) => f.hasAudio && !f.hasVideo && (f.quality === quality || f.itag.toString() === "140"))?.filesize || 0;
@@ -2657,7 +2660,7 @@ var YouTubeDownloader = class {
 									speed: progress.speed,
 									eta: progress.eta,
 									state: "downloading",
-									filename: `${sanitizedTitle}.${extension}`
+									filename: `${sanitizedTitle}${filenameSuffix}.${extension}`
 								});
 							}
 						});
@@ -2689,15 +2692,22 @@ var YouTubeDownloader = class {
 				process$1.on("close", (code) => {
 					this.activeProcesses.delete(downloadId);
 					if (code === 0) {
-						const expectedFile = path$1.join(downloadsPath, `${sanitizedTitle}.${extension}`);
+						const expectedFile = path$1.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.${extension}`);
+						let actualFileSize = totalBytes;
+						try {
+							if (fs$1.existsSync(expectedFile)) actualFileSize = fs$1.statSync(expectedFile).size;
+						} catch (e) {
+							console.warn("Failed to get file size:", e);
+						}
 						if (progressCallback) progressCallback({
 							id: downloadId,
 							percent: 100,
-							downloaded: totalBytes,
-							total: totalBytes,
+							downloaded: actualFileSize,
+							total: actualFileSize,
 							speed: 0,
 							eta: 0,
-							state: "complete"
+							state: "complete",
+							filename: `${sanitizedTitle}.${extension}`
 						});
 						this.addToHistory({
 							url,
@@ -2706,7 +2716,7 @@ var YouTubeDownloader = class {
 							format,
 							quality: quality || (format === "audio" ? "best" : "auto"),
 							path: expectedFile,
-							size: totalBytes,
+							size: actualFileSize,
 							duration: info.lengthSeconds,
 							status: "completed"
 						});
@@ -2827,6 +2837,10 @@ var YouTubeDownloader = class {
 			timestamp: Date.now()
 		};
 		this.store.set("history", [newItem, ...history].slice(0, 50));
+	}
+	removeFromHistory(id) {
+		const filtered = this.store.get("history", []).filter((item) => item.id !== id);
+		this.store.set("history", filtered);
 	}
 	clearHistory() {
 		this.store.set("history", []);
@@ -4132,6 +4146,10 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("youtube:clearHistory", () => {
 		youtubeDownloader.clearHistory();
+		return true;
+	});
+	ipcMain.handle("youtube:removeFromHistory", (_event, id) => {
+		youtubeDownloader.removeFromHistory(id);
 		return true;
 	});
 	ipcMain.handle("youtube:getSettings", () => {

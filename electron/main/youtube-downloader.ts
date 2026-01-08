@@ -507,7 +507,16 @@ export class YouTubeDownloader {
             
             const downloadsPath = outputPath || app.getPath('downloads');
             const extension = container || (format === 'audio' ? 'mp3' : 'mp4');
-            const outputTemplate = path.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
+            
+            // Add quality/format suffix to filename to avoid overwriting
+            let filenameSuffix = '';
+            if (format === 'audio') {
+                filenameSuffix = `_audio_${quality || 'best'}`;
+            } else if (format === 'video' && quality) {
+                filenameSuffix = `_${quality}`;
+            }
+            
+            const outputTemplate = path.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.%(ext)s`);
             
             if (!fs.existsSync(downloadsPath)) {
                 fs.mkdirSync(downloadsPath, { recursive: true });
@@ -663,7 +672,7 @@ export class YouTubeDownloader {
                                     speed: progress.speed,
                                     eta: progress.eta,
                                     state: 'downloading',
-                                    filename: `${sanitizedTitle}.${extension}`
+                                    filename: `${sanitizedTitle}${filenameSuffix}.${extension}`
                                 });
                             }
                         });
@@ -701,18 +710,31 @@ export class YouTubeDownloader {
                     this.activeProcesses.delete(downloadId);
                     
                     if (code === 0) {
-                        const expectedFile = path.join(downloadsPath, `${sanitizedTitle}.${extension}`);
+
+                        const expectedFile = path.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.${extension}`);
                         
-                        // Final success callback
+                        // Get actual file size from disk
+                        let actualFileSize = totalBytes;
+                        try {
+                            if (fs.existsSync(expectedFile)) {
+                                const stats = fs.statSync(expectedFile);
+                                actualFileSize = stats.size;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to get file size:', e);
+                        }
+                        
+                        // Final success callback with filename to clear active download
                         if (progressCallback) {
                              progressCallback({
                                 id: downloadId,
                                 percent: 100,
-                                downloaded: totalBytes,
-                                total: totalBytes,
+                                downloaded: actualFileSize,
+                                total: actualFileSize,
                                 speed: 0,
                                 eta: 0,
-                                state: 'complete'
+                                state: 'complete',
+                                filename: `${sanitizedTitle}.${extension}`
                             });
                         }
 
@@ -723,7 +745,7 @@ export class YouTubeDownloader {
                             format,
                             quality: quality || (format === 'audio' ? 'best' : 'auto'),
                             path: expectedFile,
-                            size: totalBytes,
+                            size: actualFileSize,
                             duration: info.lengthSeconds,
                             status: 'completed'
                         });
@@ -890,6 +912,12 @@ export class YouTubeDownloader {
         const history = this.store.get('history', []);
         const newItem: HistoryItem = { ...item, id: randomUUID(), timestamp: Date.now() };
         this.store.set('history', [newItem, ...history].slice(0, 50));
+    }
+    
+    removeFromHistory(id: string): void {
+        const history = this.store.get('history', []);
+        const filtered = history.filter(item => item.id !== id);
+        this.store.set('history', filtered);
     }
     
     clearHistory(): void { this.store.set('history', []); }
