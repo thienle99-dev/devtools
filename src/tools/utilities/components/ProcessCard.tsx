@@ -1,11 +1,11 @@
 import React from 'react';
 import { Activity, Trash2, AlertTriangle, Users, Cpu, MemoryStick } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { cn } from '../../../utils/cn';
-import type { RunningProcess, ProcessGroup } from '../../../types/application-manager';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { cn } from '@utils/cn';
+import type { RunningProcess, ProcessGroup } from '@/types/application-manager';
 import { ProcessMetrics } from './ProcessMetrics';
-import { formatBytes as formatSize } from '../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 
 interface ProcessCardProps {
     process: RunningProcess;

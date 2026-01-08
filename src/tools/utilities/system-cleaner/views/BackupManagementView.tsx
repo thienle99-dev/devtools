@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Database, RefreshCw, Trash2, Download, Clock, FileText, CheckCircle2 } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
-import { formatBytes as formatSize, formatTimeAgo } from '../../../../utils/format';
-import { cn } from '../../../../utils/cn';
+import { formatBytes as formatSize, formatTimeAgo } from '@utils/format';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 interface BackupInfo {

@@ -1,9 +1,9 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import CryptoJS from 'crypto-js';
-import { Button } from '../../components/ui/Button';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
+import { Button } from '@components/ui/Button';
+import { ToolPane } from '@components/layout/ToolPane';
+import { CodeEditor } from '@components/ui/CodeEditor';
+import { useToolState } from '@store/toolStore';
 
 const TOOL_ID = 'base64';
 

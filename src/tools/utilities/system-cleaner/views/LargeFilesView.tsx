@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, RefreshCw, Trash, Search as SearchIcon } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
-import { Checkbox } from '../../../../components/ui/Checkbox';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { Checkbox } from '@components/ui/Checkbox';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import { formatBytes as formatSize } from '../../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 import { retryWithBackoff, isRetryableError } from '../utils/errorRecovery';
 import { fileListCache } from '../utils/cacheUtils';
 import { toast } from 'sonner';

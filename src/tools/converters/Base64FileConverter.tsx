@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { CodeEditor } from '@components/ui/CodeEditor';
+import { useToolState } from '@store/toolStore';
 
 const TOOL_ID = 'base64-file';
 

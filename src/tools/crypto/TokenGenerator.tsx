@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
-import { Button } from '../../components/ui/Button';
-import { Checkbox } from '../../components/ui/Checkbox';
-import { TextArea } from '../../components/ui/TextArea';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { Button } from '@components/ui/Button';
+import { Checkbox } from '@components/ui/Checkbox';
+import { TextArea } from '@components/ui/TextArea';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 import zxcvbn from 'zxcvbn';
 
 const TOOL_ID = 'token-generator';

@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import {type MemoryStats } from '../../../../types/stats';
+import type { MemoryStats } from '@/types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { BrainCircuit, X, Info, Database, HardDrive } from 'lucide-react';
 import { useStatsStore } from '../store/statsStore';
-import { formatBytes } from '../../../../utils/format';
+import { formatBytes } from '@utils/format';
 
 interface MemoryModuleProps {
   data: MemoryStats;

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { AppWindow, RefreshCw, Search } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import { formatBytes as formatSize } from '../../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 import { toast } from 'sonner';
 
 export const UninstallerView: React.FC = () => {

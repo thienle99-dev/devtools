@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Package, Activity } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { InstalledAppsTab } from './components/InstalledAppsTab';
 import { RunningProcessesTab } from './components/RunningProcessesTab';
 import { toast } from 'sonner';
-import type { InstalledApp } from '../../types/application-manager';
+import type { InstalledApp } from '@/types/application-manager';
 
 const ApplicationManager: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'apps' | 'processes'>('apps');

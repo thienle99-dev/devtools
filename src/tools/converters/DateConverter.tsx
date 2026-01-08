@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { format, isValid, parseISO, fromUnixTime } from 'date-fns';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
 
 const TOOL_ID = 'date-time';
 

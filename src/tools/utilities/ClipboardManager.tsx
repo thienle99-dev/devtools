@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useClipboardStore, type ClipboardItem, type FilterOptions } from '../../store/clipboardStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useClipboardStore, type ClipboardItem, type FilterOptions } from '@store/clipboardStore';
 import { useClipboardMonitor } from './hooks/useClipboardMonitor';
 import { QuickCopySection } from './components/QuickCopySection';
 import { SearchAndFilter } from './components/SearchAndFilter';
@@ -9,7 +9,7 @@ import { ViewFullModal } from './components/ViewFullModal';
 import { ClipboardSettings } from './components/ClipboardSettings';
 import { ClipboardStatistics } from './components/ClipboardStatistics';
 import { CategoryManager } from './components/CategoryManager';
-import { useToolStore } from '../../store/toolStore';
+import { useToolStore } from '@store/toolStore';
 import { useClipboard } from './hooks/useClipboard';
 import { Loader2, Sparkles } from 'lucide-react';
 

@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { v1 as uuidv1, v4 as uuidv4 } from 'uuid';
 import { ulid } from 'ulid';
-import { Button } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Select';
-import { Input } from '../../components/ui/Input';
-import { Checkbox } from '../../components/ui/Checkbox';
-import { TextArea } from '../../components/ui/TextArea';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { Button } from '@components/ui/Button';
+import { Select } from '@components/ui/Select';
+import { Input } from '@components/ui/Input';
+import { Checkbox } from '@components/ui/Checkbox';
+import { TextArea } from '@components/ui/TextArea';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 
 const TOOL_ID = 'uuid-generator';
 

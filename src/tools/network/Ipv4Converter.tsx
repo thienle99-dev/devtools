@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
-import { Input } from '../../components/ui/Input';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
+import { Input } from '@components/ui/Input';
 
 const TOOL_ID = 'ipv4-converter';
 

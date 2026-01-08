@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import type { DiskStats } from '../../../../types/stats';
+import type { DiskStats } from '@/types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { HardDrive, X, Info, Database, Activity } from 'lucide-react';
 import { useStatsStore } from '../store/statsStore';
-import { formatBytes, formatSpeed } from '../../../../utils/format';
+import { formatBytes, formatSpeed } from '@utils/format';
 
 interface DiskModuleProps {
   data: DiskStats;

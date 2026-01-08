@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import CryptoJS from 'crypto-js';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
+import { ToolPane } from '@components/layout/ToolPane';
+import { CodeEditor } from '@components/ui/CodeEditor';
+import { useToolState } from '@store/toolStore';
 
 const TOOL_ID = 'aes-encryptor';
 

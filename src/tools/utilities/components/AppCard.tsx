@@ -1,10 +1,10 @@
 import React from 'react';
 import { Package, Trash2, AlertTriangle, HardDrive, Calendar, Building2 } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { cn } from '../../../utils/cn';
-import type { InstalledApp } from '../../../types/application-manager';
-import { formatBytes as formatSize } from '../../../utils/format';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { cn } from '@utils/cn';
+import type { InstalledApp } from '@/types/application-manager';
+import { formatBytes as formatSize } from '@utils/format';
 
 interface AppCardProps {
     app: InstalledApp;

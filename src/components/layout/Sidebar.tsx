@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
-import { useTabStore } from '../../store/tabStore';
-import { useToolStore } from '../../store/toolStore';
+import { useTabStore } from '@store/tabStore';
+import { useToolStore } from '@store/toolStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Settings,
@@ -10,13 +10,13 @@ import {
     ChevronLeft,
     ChevronRight
 } from 'lucide-react';
-import { cn } from '../../utils/cn';
-import { CATEGORIES, getToolsByCategory, type ToolCategory } from '../../tools/registry';
+import { cn } from '@utils/cn';
+import { CATEGORIES, getToolsByCategory, type ToolCategory } from '@tools/registry';
 import { Select } from '../ui/Select';
-import { useSettingsStore } from '../../store/settingsStore';
+import { useSettingsStore } from '@store/settingsStore';
 import { motion } from 'framer-motion';
 import { ShortcutBadge } from '../ui/KeyboardShortcut';
-import { usePlatform } from '../../hooks/usePlatform';
+import { usePlatform } from '@hooks/usePlatform';
 
 export const Sidebar: React.FC = React.memo(() => {
     const openTab = useTabStore(state => state.openTab);

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Select';
+import { ToolPane } from '@components/layout/ToolPane';
+import { CodeEditor } from '@components/ui/CodeEditor';
+import { useToolState } from '@store/toolStore';
+import { Button } from '@components/ui/Button';
+import { Select } from '@components/ui/Select';
 import { format as sqlFormatter } from 'sql-formatter';
 
 const TOOL_ID = 'sql-format';

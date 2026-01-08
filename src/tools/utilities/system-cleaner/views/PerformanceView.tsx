@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Cpu, Zap, RefreshCw, AppWindow, X } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import type { HeavyApp } from '../types';
-import { formatBytes as formatSize } from '../../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 import { toast } from 'sonner';
 
 export const PerformanceView: React.FC = () => {

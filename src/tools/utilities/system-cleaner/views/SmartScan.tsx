@@ -1,12 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, ShieldCheck, Zap, CheckCircle2 } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { useSmartScan } from '../hooks/useSmartScan';
-import { formatBytes as formatSize } from '../../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 
 export const SmartScan: React.FC = () => {
     const { isScanning, scanProgress, scanStatus, results } = useSystemCleanerStore();

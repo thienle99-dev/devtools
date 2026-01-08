@@ -1,9 +1,9 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import yaml from 'js-yaml';
-import { Button } from '../../components/ui/Button';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
+import { Button } from '@components/ui/Button';
+import { ToolPane } from '@components/layout/ToolPane';
+import { CodeEditor } from '@components/ui/CodeEditor';
+import { useToolState } from '@store/toolStore';
 
 const TOOL_ID = 'json-yaml';
 

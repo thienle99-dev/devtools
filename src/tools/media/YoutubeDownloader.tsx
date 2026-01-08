@@ -6,12 +6,12 @@ import { Card } from '../../components/ui/Card';
 import { VideoInfo } from './components/VideoInfo';
 import { FormatsList } from './components/FormatsList';
 import { PlaylistView } from './components/PlaylistView';
-import { ToastContainer, useToast } from '../../components/ui/Toast';
+import { ToastContainer, useToast } from '@components/ui/Toast';
 import { SearchBar } from './components/SearchBar';
 import { FormatSelector } from './components/FormatSelector';
 import { DownloadProgress as DownloadProgressComponent } from './components/DownloadProgress';
-import { formatBytes, formatTime } from '../../utils/format';
-import { isValidYoutubeUrl, isPlaylistUrl } from '../../utils/validation';
+import { formatBytes, formatTime } from '@utils/format';
+import { isValidYoutubeUrl, isPlaylistUrl } from '@utils/validation';
 
 interface DownloadStatus {
     status: 'idle' | 'downloading' | 'success' | 'error';

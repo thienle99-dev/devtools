@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import type { BatteryStats } from '../../../../types/stats';
+import type { BatteryStats } from '@/types/stats';
 import { Battery, BatteryCharging, Plug, Zap, ChevronDown, ChevronUp, X, Info } from 'lucide-react';
 import { LightweightGraph } from './LightweightGraph';
 import { useStatsStore } from '../store/statsStore';
-import { formatPower, formatCapacity } from '../../../../utils/format';
+import { formatPower, formatCapacity } from '@utils/format';
 
 interface BatteryModuleProps {
   data: BatteryStats;

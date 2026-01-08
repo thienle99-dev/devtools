@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileVideo, Music, Info, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { formatBitrate } from '../../../utils/format';
+import { Card } from '@components/ui/Card';
+import { formatBitrate } from '@utils/format';
 
 interface VideoFormat {
     itag: number;

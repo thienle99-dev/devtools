@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo } from 'react';
-import { Input } from '../../components/ui/Input';
-import { TextArea } from '../../components/ui/TextArea';
-import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolStore } from '../../store/toolStore';
+import { Input } from '@components/ui/Input';
+import { TextArea } from '@components/ui/TextArea';
+import { Button } from '@components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolStore } from '@store/toolStore';
 
 const TOOL_ID = 'regex-tester';
 

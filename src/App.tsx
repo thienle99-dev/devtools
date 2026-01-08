@@ -1,17 +1,17 @@
 import { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { useSettingsStore } from './store/settingsStore';
-import { useTabStore } from './store/tabStore';
-import { Sidebar } from './components/layout/Sidebar';
-import { WindowControls } from './components/layout/WindowControls';
-import { TrayController } from './components/layout/TrayController';
-import { TabBar } from './components/layout/TabBar';
-import { TabContent } from './components/layout/TabContent';
-import { Dashboard } from './pages/Dashboard';
-import { GlobalClipboardMonitor } from './components/GlobalClipboardMonitor';
-import { AppErrorBoundary } from './components/layout/AppErrorBoundary';
-import { TOOLS } from './tools/registry';
-import { useClipboardStore } from './store/clipboardStore';
+import { useSettingsStore } from '@store/settingsStore';
+import { useTabStore } from '@store/tabStore';
+import { Sidebar } from '@components/layout/Sidebar';
+import { WindowControls } from '@components/layout/WindowControls';
+import { TrayController } from '@components/layout/TrayController';
+import { TabBar } from '@components/layout/TabBar';
+import { TabContent } from '@components/layout/TabContent';
+import { Dashboard } from '@pages/Dashboard';
+import { GlobalClipboardMonitor } from '@components/GlobalClipboardMonitor';
+import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
+import { TOOLS } from '@tools/registry';
+import { useClipboardStore } from '@store/clipboardStore';
 
 
 // Loading fallback component

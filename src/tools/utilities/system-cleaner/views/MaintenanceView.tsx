@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Server, HardDrive, Wifi, Search as SearchIcon, Mail, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import { formatTimeAgo } from '../../../../utils/format';
-import { cn } from '../../../../utils/cn';
+import { formatTimeAgo } from '@utils/format';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 export const MaintenanceView: React.FC = () => {

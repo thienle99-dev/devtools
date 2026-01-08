@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { LayoutGrid, RefreshCw, ChevronLeft, FileText, FolderOpen, Trash, List, GitBranch, Minimize2, ScanLine, FileSearch, FolderSearch, HardDrive, Sparkles, XCircle, ChevronRight, ChevronDown, Download, Camera, FolderPlus, Check, Square, ChevronRight as ChevronRightIcon, MoreVertical } from 'lucide-react';
-import { Button } from '../../../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import type { SpaceLensNode } from '../types';
-import { formatBytes as formatSize } from '../../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 import { exportSpaceLensToJSON, exportSpaceLensToCSV, createSnapshot, downloadFile } from '../utils/spaceLensExport';
-import { cn } from '../../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 type ViewMode = 'grid' | 'list' | 'tree' | 'detail' | 'compact';

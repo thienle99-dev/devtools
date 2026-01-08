@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import type { NetworkStats } from '../../../../types/stats';
+import type { NetworkStats } from '@/types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { Network, ArrowDown, ArrowUp, X, Info, Wifi, Globe } from 'lucide-react';
 import { useStatsStore } from '../store/statsStore';
-import { formatBytes, formatSpeed } from '../../../../utils/format';
+import { formatBytes, formatSpeed } from '@utils/format';
 
 interface NetworkModuleProps {
   data: NetworkStats;

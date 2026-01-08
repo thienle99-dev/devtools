@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, History, Database, Eye, EyeOff, RefreshCw, Loader2, Trash, Search as SearchIcon, Wifi } from 'lucide-react';
-import { Card } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
-import { Checkbox } from '../../../../components/ui/Checkbox';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { Checkbox } from '@components/ui/Checkbox';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import type { PrivacyItem } from '../store/systemCleanerStore';
-import { formatBytes as formatSize } from '../../../../utils/format';
-import { cn } from '../../../../utils/cn';
+import { formatBytes as formatSize } from '@utils/format';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 export const ProtectionView: React.FC = () => {

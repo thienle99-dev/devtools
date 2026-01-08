@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
+import { ToolPane } from '@components/layout/ToolPane';
+import { CodeEditor } from '@components/ui/CodeEditor';
+import { useToolState } from '@store/toolStore';
+import { Button } from '@components/ui/Button';
 
 const TOOL_ID = 'json-format';
 
