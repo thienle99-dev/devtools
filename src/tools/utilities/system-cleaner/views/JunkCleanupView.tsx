@@ -7,7 +7,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { useSmartScan } from '../hooks/useSmartScan';
-import { formatSize } from '../utils/formatUtils';
+import { formatBytes as formatSize } from '../../../../utils/format';
 import { processBatchWithRecovery } from '../utils/errorRecovery';
 import { toast } from 'sonner';
 

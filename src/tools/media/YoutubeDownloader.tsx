@@ -10,7 +10,8 @@ import { ToastContainer, useToast } from '../../components/ui/Toast';
 import { SearchBar } from './components/SearchBar';
 import { FormatSelector } from './components/FormatSelector';
 import { DownloadProgress as DownloadProgressComponent } from './components/DownloadProgress';
-import { formatFileSize as formatBytes, formatDuration as formatTime } from './utils/youtube-helpers';
+import { formatBytes, formatTime } from '../../utils/format';
+import { isValidYoutubeUrl, isPlaylistUrl } from '../../utils/validation';
 
 interface DownloadStatus {
     status: 'idle' | 'downloading' | 'success' | 'error';
@@ -143,28 +144,6 @@ export const YoutubeDownloader: React.FC = () => {
         }
     }, [activeDownloads]);
 
-    const isValidYoutubeUrl = (url: string): boolean => {
-        const patterns = [
-            /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/,
-            /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[\w-]+/,
-            /^(https?:\/\/)?(www\.)?youtu\.be\/[\w-]+/,
-        ];
-        return patterns.some(pattern => pattern.test(url));
-    };
-
-    const isPlaylistUrl = (url: string): boolean => {
-        // Only treat as playlist if:
-        // 1. It is a /playlist URL
-        // 2. OR it has list= param AND NO video ID (v=)
-        try {
-            const urlObj = new URL(url);
-            if (urlObj.pathname.includes('/playlist')) return true;
-            if (urlObj.searchParams.has('list') && !urlObj.searchParams.has('v')) return true;
-            return false;
-        } catch {
-            return false;
-        }
-    };
 
     /**
      * Clean YouTube URL - Remove unnecessary query parameters

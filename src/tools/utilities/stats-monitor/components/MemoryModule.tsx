@@ -3,6 +3,7 @@ import {type MemoryStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { BrainCircuit, X, Info, Database, HardDrive } from 'lucide-react';
 import { useStatsStore } from '../store/statsStore';
+import { formatBytes } from '../../../../utils/format';
 
 interface MemoryModuleProps {
   data: MemoryStats;
@@ -17,12 +18,6 @@ interface DetailModalProps {
 const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  const formatBytes = (bytes: number) => {
-    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${bytes} B`;
-  };
 
   const usedPercent = (data.active / data.total) * 100;
   const availablePercent = (data.available / data.total) * 100;

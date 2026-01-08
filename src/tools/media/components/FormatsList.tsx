@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileVideo, Music, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
+import { formatBitrate } from '../../../utils/format';
 
 interface VideoFormat {
     itag: number;
@@ -25,12 +26,6 @@ export const FormatsList: React.FC<FormatsListProps> = ({ formats }) => {
     const videoFormats = formats.filter(f => f.hasVideo && f.hasAudio);
     const videoOnlyFormats = formats.filter(f => f.hasVideo && !f.hasAudio);
     const audioOnlyFormats = formats.filter(f => !f.hasVideo && f.hasAudio);
-
-    const formatBitrate = (bitrate?: number) => {
-        if (!bitrate) return 'N/A';
-        if (bitrate > 1000000) return `${(bitrate / 1000000).toFixed(1)} Mbps`;
-        return `${(bitrate / 1000).toFixed(0)} kbps`;
-    };
 
     return (
         <Card className="p-4 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 border-blue-500/20">
@@ -175,4 +170,3 @@ export const FormatsList: React.FC<FormatsListProps> = ({ formats }) => {
         </Card>
     );
 };
-

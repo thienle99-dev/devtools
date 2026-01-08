@@ -7,7 +7,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import type { PrivacyItem } from '../store/systemCleanerStore';
-import { formatSize } from '../utils/formatUtils';
+import { formatBytes as formatSize } from '../../../../utils/format';
 import { cn } from '../../../../utils/cn';
 import { toast } from 'sonner';
 

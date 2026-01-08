@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { GripVertical } from 'lucide-react';
+import { formatTime } from '../../../utils/format';
 
 interface TimelineEditorProps {
     videoFile: File | null;
@@ -94,8 +95,8 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     return (
         <div className={`space-y-2 ${className}`}>
             <div className="flex justify-between text-xs text-foreground-secondary font-mono mb-1">
-                <span>{formatTime(startTime)}</span>
-                <span>{formatTime(endTime)}</span>
+                <span>{formatTime(startTime, { showMs: true })}</span>
+                <span>{formatTime(endTime, { showMs: true })}</span>
             </div>
 
             <div 
@@ -169,10 +170,3 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
     );
 };
 
-const formatTime = (seconds: number) => {
-    if (!isFinite(seconds) || seconds < 0) return "00:00";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 100);
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-};

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Download, Clock, HardDrive, XCircle, ExternalLink, FolderOpen, CheckCircle2, Copy } from 'lucide-react';
-import { formatSpeed, formatFileSize, formatDuration } from '../utils/youtube-helpers';
+import { formatSpeed, formatBytes as formatFileSize, formatDuration } from '../../../utils/format';
 
 interface DownloadStatus {
     status: 'idle' | 'downloading' | 'success' | 'error';

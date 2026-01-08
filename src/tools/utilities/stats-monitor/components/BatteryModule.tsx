@@ -3,6 +3,7 @@ import type { BatteryStats } from '../../../../types/stats';
 import { Battery, BatteryCharging, Plug, Zap, ChevronDown, ChevronUp, X, Info } from 'lucide-react';
 import { LightweightGraph } from './LightweightGraph';
 import { useStatsStore } from '../store/statsStore';
+import { formatPower, formatCapacity } from '../../../../utils/format';
 
 interface BatteryModuleProps {
   data: BatteryStats;
@@ -17,19 +18,6 @@ interface DetailModalProps {
 const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  const formatPower = (mW: number) => {
-    if (mW >= 1000) return `${(mW / 1000).toFixed(2)} W`;
-    return `${mW.toFixed(0)} mW`;
-  };
-
-  const formatCapacity = (mAh: number, unit: string) => {
-    if (unit === 'mWh') {
-      if (mAh >= 1000) return `${(mAh / 1000).toFixed(2)} Wh`;
-      return `${mAh.toFixed(0)} mWh`;
-    }
-    if (mAh >= 1000) return `${(mAh / 1000).toFixed(2)} Ah`;
-    return `${mAh.toFixed(0)} mAh`;
-  };
 
   return (
     <div 
@@ -266,12 +254,6 @@ export const BatteryModule: React.FC<BatteryModuleProps> = React.memo(({ data })
     };
   }, [updateChartHistory]);
 
-  const formatPower = useCallback((mW: number) => {
-    if (mW >= 1000) {
-      return `${(mW / 1000).toFixed(2)} W`;
-    }
-    return `${mW.toFixed(0)} mW`;
-  }, []);
 
   const formatCycles = useCallback((cycles: number) => {
     if (cycles === -1 || cycles === null || cycles === undefined) return 'N/A';

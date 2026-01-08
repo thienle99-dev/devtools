@@ -6,7 +6,7 @@ import { Button } from '../../../../components/ui/Button';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { useSmartScan } from '../hooks/useSmartScan';
-import { formatSize } from '../utils/formatUtils';
+import { formatBytes as formatSize } from '../../../../utils/format';
 
 export const SmartScan: React.FC = () => {
     const { isScanning, scanProgress, scanStatus, results } = useSystemCleanerStore();

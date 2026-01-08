@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import type { DiskStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { HardDrive, X, Info, Database, Activity } from 'lucide-react';
 import { useStatsStore } from '../store/statsStore';
+import { formatBytes, formatSpeed } from '../../../../utils/format';
 
 interface DiskModuleProps {
   data: DiskStats;
@@ -17,18 +18,6 @@ interface DetailModalProps {
 const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  const formatBytes = (bytes: number) => {
-    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${bytes} B`;
-  };
-
-  const formatSpeed = (bytesPerSec: number) => {
-    if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
-    if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-    return `${bytesPerSec.toFixed(0)} B/s`;
-  };
 
   const primaryDisk = data.fsSize && data.fsSize.length > 0 
     ? (data.fsSize.find(d => d.mount === '/' || d.mount === 'C:') || data.fsSize[0])
@@ -236,15 +225,6 @@ export const DiskModule: React.FC<DiskModuleProps> = React.memo(({ data }) => {
     };
   }, [updateChartHistory]);
 
-  const formatSpeed = useCallback((bytesPerSec: number) => {
-    if (bytesPerSec > 1024 * 1024) {
-      return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
-    }
-    if (bytesPerSec > 1024) {
-      return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-    }
-    return `${bytesPerSec.toFixed(0)} B/s`;
-  }, []);
 
   // Primary disk (usually C: or /)
   const primaryDisk = useMemo(() => 

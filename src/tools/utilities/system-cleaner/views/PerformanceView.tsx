@@ -7,7 +7,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import type { HeavyApp } from '../types';
-import { formatSize } from '../utils/formatUtils';
+import { formatBytes as formatSize } from '../../../../utils/format';
 import { toast } from 'sonner';
 
 export const PerformanceView: React.FC = () => {

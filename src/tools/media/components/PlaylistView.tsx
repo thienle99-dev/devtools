@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckSquare, Square, Play, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { formatDuration } from '../../../utils/format';
 
 interface PlaylistViewProps {
     playlistInfo: {
@@ -22,13 +23,6 @@ interface PlaylistViewProps {
     onDeselectAll: () => void;
     onDownloadSelected: () => void;
 }
-
-const formatDuration = (seconds: number): string => {
-    if (!seconds) return '--:--';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
 
 export const PlaylistView: React.FC<PlaylistViewProps> = ({
     playlistInfo,

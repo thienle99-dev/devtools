@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 
-interface NetworkSpeed {
+/**
+ * Interface for network speed information
+ */
+export interface NetworkSpeed {
   downloadSpeed: number; // Mbps
   lastUpdated: number;
   samples: number[];
 }
 
+/**
+ * Hook to track and estimate network speed based on download samples
+ */
 export const useNetworkSpeed = () => {
   const [networkSpeed, setNetworkSpeed] = useState<NetworkSpeed>({
     downloadSpeed: 10, // Default 10 Mbps
@@ -44,6 +50,9 @@ export const useNetworkSpeed = () => {
   return { networkSpeed, updateSpeed };
 };
 
+/**
+ * Get recommended video quality based on download speed in Mbps
+ */
 export const getRecommendedQuality = (downloadSpeedMbps: number): string => {
   // Smart quality selection based on network speed
   if (downloadSpeedMbps >= 25) return '1080p'; // 25+ Mbps → 1080p
@@ -52,7 +61,10 @@ export const getRecommendedQuality = (downloadSpeedMbps: number): string => {
   return '360p';                                // < 5 Mbps → 360p
 };
 
-export const formatSpeed = (mbps: number): string => {
+/**
+ * Format speed in Mbps for display
+ */
+export const formatNetworkSpeed = (mbps: number): string => {
   if (mbps >= 1) return `${mbps.toFixed(1)} Mbps`;
   return `${(mbps * 1024).toFixed(0)} Kbps`;
 };

@@ -5,7 +5,7 @@ import { Button } from '../../../../components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import { formatSize } from '../utils/formatUtils';
+import { formatBytes as formatSize } from '../../../../utils/format';
 import { toast } from 'sonner';
 
 export const UninstallerView: React.FC = () => {

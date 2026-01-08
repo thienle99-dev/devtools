@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import type { NetworkStats } from '../../../../types/stats';
 import { LightweightGraph } from './LightweightGraph';
 import { Network, ArrowDown, ArrowUp, X, Info, Wifi, Globe } from 'lucide-react';
 import { useStatsStore } from '../store/statsStore';
+import { formatBytes, formatSpeed } from '../../../../utils/format';
 
 interface NetworkModuleProps {
   data: NetworkStats;
@@ -17,18 +18,6 @@ interface DetailModalProps {
 const DetailModal: React.FC<DetailModalProps> = ({ data, isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  const formatBytes = (bytes: number) => {
-    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${bytes} B`;
-  };
-
-  const formatSpeed = (bytesPerSec: number) => {
-    if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
-    if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-    return `${bytesPerSec.toFixed(0)} B/s`;
-  };
 
   const activeStats = data.stats.find(s => s.operstate === 'up') || data.stats[0];
   const activeInterface = data.interfaces.find(i => i.iface === activeStats?.iface);
@@ -233,15 +222,6 @@ export const NetworkModule: React.FC<NetworkModuleProps> = React.memo(({ data })
     };
   }, [updateChartHistory]);
 
-  const formatSpeed = useCallback((bytesPerSec: number) => {
-    if (bytesPerSec > 1024 * 1024) {
-      return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
-    }
-    if (bytesPerSec > 1024) {
-      return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-    }
-    return `${bytesPerSec} B/s`;
-  }, []);
 
   const rxSpeed = useMemo(() => activeStats ? formatSpeed(rxSec) : '0 B/s', [activeStats, rxSec, formatSpeed]);
   const txSpeed = useMemo(() => activeStats ? formatSpeed(txSec) : '0 B/s', [activeStats, txSec, formatSpeed]);

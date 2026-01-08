@@ -1,6 +1,7 @@
 import React from 'react';
 import { PlayCircle, User, Clock, Eye, Calendar } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
+import { formatDuration } from '../../../utils/format';
 
 interface VideoInfoProps {
     videoId: string;
@@ -21,16 +22,6 @@ export const VideoInfo: React.FC<VideoInfoProps> = ({
     viewCount,
     uploadDate,
 }) => {
-    const formatDuration = (seconds: number): string => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        
-        if (hours > 0) {
-            return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
-        return `${minutes}:${String(secs).padStart(2, '0')}`;
-    };
 
     const formatViewCount = (count: number): string => {
         if (count >= 1000000000) {

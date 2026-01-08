@@ -5,7 +5,7 @@ import { Card } from '../../../../components/ui/Card';
 import { Button } from '../../../../components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
-import { formatSize } from '../utils/formatUtils';
+import { formatBytes as formatSize } from '../../../../utils/format';
 import { cn } from '../../../../utils/cn';
 import { toast } from 'sonner';
 

@@ -1,89 +1,29 @@
+import { 
+    formatBytes as coreFormatBytes, 
+    formatDuration as coreFormatDuration, 
+    formatSpeed as coreFormatSpeed 
+} from '../../../utils/format';
+import { 
+    isValidYoutubeUrl as coreIsValidYoutubeUrl, 
+    extractVideoId as coreExtractVideoId, 
+    extractPlaylistId as coreExtractPlaylistId, 
+    isPlaylistUrl as coreIsPlaylistUrl,
+    sanitizeFilename as coreSanitizeFilename
+} from '../../../utils/validation';
+
 /**
  * YouTube Helper Utilities
- * Utility functions for YouTube URL validation and parsing
+ * Re-exports from centralized utilities for backward compatibility
  */
 
-/**
- * Validates if a URL is a valid YouTube URL
- */
-export const isValidYoutubeUrl = (url: string): boolean => {
-    const patterns = [
-        // Standard watch URL
-        /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[\w-]+/,
-        // Shortened URL
-        /^(https?:\/\/)?(www\.)?youtu\.be\/[\w-]+/,
-        // Shorts URL
-        /^(https?:\/\/)?(www\.)?youtube\.com\/shorts\/[\w-]+/,
-        // Embed URL
-        /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[\w-]+/,
-    ];
-    
-    return patterns.some(pattern => pattern.test(url));
-};
-
-/**
- * Extracts video ID from YouTube URL
- */
-export const extractVideoId = (url: string): string | null => {
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    ];
-    
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) {
-            return match[1];
-        }
-    }
-    
-    return null;
-};
-
-/**
- * Formats file size from bytes to human readable format
- */
-export const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-};
-
-/**
- * Formats duration from seconds to HH:MM:SS
- */
-export const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-        return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    
-    return `${minutes}:${String(secs).padStart(2, '0')}`;
-};
-
-/**
- * Formats download speed
- */
-export const formatSpeed = (bytesPerSecond: number): string => {
-    return `${formatFileSize(bytesPerSecond)}/s`;
-};
-
-/**
- * Sanitizes filename by removing invalid characters
- */
-export const sanitizeFilename = (filename: string): string => {
-    return filename
-        .replace(/[<>:"/\\|?*]/g, '') // Remove invalid characters
-        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-        .trim()
-        .substring(0, 200); // Limit length
-};
+export const isValidYoutubeUrl = coreIsValidYoutubeUrl;
+export const extractVideoId = coreExtractVideoId;
+export const formatFileSize = coreFormatBytes;
+export const formatDuration = coreFormatDuration;
+export const formatSpeed = coreFormatSpeed;
+export const sanitizeFilename = coreSanitizeFilename;
+export const extractPlaylistId = coreExtractPlaylistId;
+export const isPlaylistUrl = coreIsPlaylistUrl;
 
 /**
  * Gets file extension based on format
@@ -144,20 +84,5 @@ export const estimateDownloadTime = (totalBytes: number, bytesPerSecond: number)
 export const isSupportedQuality = (quality: string): boolean => {
     const supportedQualities = ['144p', '240p', '360p', '480p', '720p', '1080p', '1440p', '2160p', 'best'];
     return supportedQualities.includes(quality);
-};
-
-/**
- * Parses playlist URL and extracts playlist ID
- */
-export const extractPlaylistId = (url: string): string | null => {
-    const match = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-    return match ? match[1] : null;
-};
-
-/**
- * Checks if URL is a playlist
- */
-export const isPlaylistUrl = (url: string): boolean => {
-    return url.includes('list=');
 };
 
