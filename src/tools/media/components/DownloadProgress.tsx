@@ -15,6 +15,7 @@ interface DownloadStatus {
     title?: string;
     url?: string;
     detailedLogs?: string[];
+    platform?: string; // e.g. 'youtube', 'tiktok'
 }
 
 interface DownloadProgressProps {

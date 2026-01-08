@@ -173,6 +173,25 @@ contextBridge.exposeInMainWorld('tiktokAPI', {
     ipcRenderer.on('tiktok:progress', listener);
     return () => ipcRenderer.removeListener('tiktok:progress', listener);
   },
-  openFile: (path: string) => ipcRenderer.invoke('youtube:openFile', path),
-  showInFolder: (path: string) => ipcRenderer.invoke('youtube:showInFolder', path),
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
+
+contextBridge.exposeInMainWorld('universalAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('universal:get-info', url),
+  download: (options: any) => ipcRenderer.invoke('universal:download', options),
+  cancel: (id?: string) => ipcRenderer.invoke('universal:cancel', id),
+  getHistory: () => ipcRenderer.invoke('universal:get-history'),
+  clearHistory: () => ipcRenderer.invoke('universal:clear-history'),
+  removeFromHistory: (id: string) => ipcRenderer.invoke('universal:remove-from-history', id),
+  getSettings: () => ipcRenderer.invoke('universal:get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('universal:save-settings', settings),
+  chooseFolder: () => ipcRenderer.invoke('universal:choose-folder'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('universal:progress', listener);
+    return () => ipcRenderer.removeListener('universal:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
 })

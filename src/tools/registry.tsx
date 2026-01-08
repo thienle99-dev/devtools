@@ -153,6 +153,7 @@ const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
 const VideoFrames = React.lazy(() => import('@tools/media/VideoFrames'));
 const YoutubeDownloader = React.lazy(() => import('@tools/media/YoutubeDownloader'));
 const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
+const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
 const SettingsPage = React.lazy(() => import('@pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -834,6 +835,17 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-pink-500',
         component: TiktokDownloader,
         keywords: ['tiktok', 'download', 'video', 'audio', 'social', 'media'],
+    },
+    {
+        id: 'universal-downloader',
+        name: 'Universal Downloader',
+        path: '/universal-downloader',
+        description: 'Download videos and audio from any supported platform (IG, FB, X, etc.)',
+        category: 'utilities',
+        icon: Globe,
+        color: 'text-indigo-500',
+        component: UniversalDownloader,
+        keywords: ['universal', 'download', 'instagram', 'facebook', 'twitter', 'reddit', 'twitch'],
     },
 
     // Settings (Special tool - not in any category)

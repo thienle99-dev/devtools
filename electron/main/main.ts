@@ -11,6 +11,7 @@ import { setupCleanerHandlers } from './cleaner'
 import { setupScreenshotHandlers } from './screenshot'
 import { youtubeDownloader } from './youtube-downloader'
 import { tiktokDownloader } from './tiktok-downloader'
+import { universalDownloader } from './universal-downloader'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1678,6 +1679,70 @@ app.whenReady().then(() => {
         properties: ['openDirectory', 'createDirectory']
     });
     return result.canceled ? null : result.filePaths[0];
+  });
+
+  // Universal Downloader IPC Handlers
+  ipcMain.handle('universal:get-info', async (_, url: string) => {
+    return await universalDownloader.getMediaInfo(url);
+  });
+
+  ipcMain.handle('universal:download', async (_, options) => {
+    return new Promise((resolve, reject) => {
+        universalDownloader.downloadMedia(options, (progress) => {
+             win?.webContents.send('universal:progress', progress);
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+  });
+
+  ipcMain.handle('universal:cancel', async (_, id?: string) => {
+    universalDownloader.cancelDownload(id);
+  });
+
+  ipcMain.handle('universal:get-history', async () => {
+    return universalDownloader.getHistory();
+  });
+
+  ipcMain.handle('universal:clear-history', async () => {
+    universalDownloader.clearHistory();
+  });
+
+  ipcMain.handle('universal:remove-from-history', async (_, id: string) => {
+    universalDownloader.removeFromHistory(id);
+  });
+
+  ipcMain.handle('universal:get-settings', async () => {
+    return universalDownloader.getSettings();
+  });
+
+  ipcMain.handle('universal:save-settings', async (_, settings) => {
+    return universalDownloader.saveSettings(settings);
+  });
+
+  ipcMain.handle('universal:choose-folder', async () => {
+    const { dialog } = await import('electron');
+    const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory']
+    });
+    return result.canceled ? null : result.filePaths[0];
+  });
+
+  ipcMain.handle('universal:open-file', async (_, path: string) => {
+    const { shell } = await import('electron');
+    // Check if file exists first to avoid cryptic errors
+    try {
+        await fs.access(path);
+        shell.openPath(path);
+    } catch {
+        // If file doesn't exist, try opening folder? No, just fail silently or return error
+        console.error('File not found:', path);
+    }
+  });
+
+  ipcMain.handle('universal:show-in-folder', async (_, path: string) => {
+    const { shell } = await import('electron');
+    shell.showItemInFolder(path);
   });
 
   // Helper functions
