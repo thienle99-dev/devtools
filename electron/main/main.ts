@@ -10,6 +10,7 @@ import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
 import { setupScreenshotHandlers } from './screenshot'
 import { youtubeDownloader } from './youtube-downloader'
+import { tiktokDownloader } from './tiktok-downloader'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1630,6 +1631,53 @@ app.whenReady().then(() => {
 
   ipcMain.handle('youtube:installAria2', async () => {
     return await youtubeDownloader.installAria2();
+  });
+
+  // TikTok Downloader IPC Handlers
+  ipcMain.handle('tiktok:get-info', async (_, url: string) => {
+    return await tiktokDownloader.getVideoInfo(url);
+  });
+
+  ipcMain.handle('tiktok:download', async (_, options) => {
+    return new Promise((resolve, reject) => {
+        tiktokDownloader.downloadVideo(options, (progress) => {
+             win?.webContents.send('tiktok:progress', progress);
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+  });
+
+  ipcMain.handle('tiktok:cancel', async (_, id?: string) => {
+    tiktokDownloader.cancelDownload(id);
+  });
+
+  ipcMain.handle('tiktok:get-history', async () => {
+    return tiktokDownloader.getHistory();
+  });
+
+  ipcMain.handle('tiktok:clear-history', async () => {
+    tiktokDownloader.clearHistory();
+  });
+
+  ipcMain.handle('tiktok:remove-from-history', async (_, id: string) => {
+    tiktokDownloader.removeFromHistory(id);
+  });
+
+  ipcMain.handle('tiktok:get-settings', async () => {
+    return tiktokDownloader.getSettings();
+  });
+
+  ipcMain.handle('tiktok:save-settings', async (_, settings) => {
+    return tiktokDownloader.saveSettings(settings);
+  });
+
+  ipcMain.handle('tiktok:choose-folder', async () => {
+    const { dialog } = await import('electron');
+    const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory']
+    });
+    return result.canceled ? null : result.filePaths[0];
   });
 
   // Helper functions

@@ -158,5 +158,21 @@ contextBridge.exposeInMainWorld('youtubeAPI', {
   }
 })
 
-
-
+contextBridge.exposeInMainWorld('tiktokAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('tiktok:get-info', url),
+  download: (options: any) => ipcRenderer.invoke('tiktok:download', options),
+  cancel: (id?: string) => ipcRenderer.invoke('tiktok:cancel', id),
+  getHistory: () => ipcRenderer.invoke('tiktok:get-history'),
+  clearHistory: () => ipcRenderer.invoke('tiktok:clear-history'),
+  removeFromHistory: (id: string) => ipcRenderer.invoke('tiktok:remove-from-history', id),
+  getSettings: () => ipcRenderer.invoke('tiktok:get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('tiktok:save-settings', settings),
+  chooseFolder: () => ipcRenderer.invoke('tiktok:choose-folder'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('tiktok:progress', listener);
+    return () => ipcRenderer.removeListener('tiktok:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('youtube:openFile', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('youtube:showInFolder', path),
+})

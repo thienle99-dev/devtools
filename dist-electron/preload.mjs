@@ -1,1 +1,158 @@
-let e=require(`electron`);e.contextBridge.exposeInMainWorld(`ipcRenderer`,{on(...t){let[n,r]=t,i=(e,...t)=>r(e,...t);return e.ipcRenderer.on(n,i),()=>{e.ipcRenderer.removeListener(n,i)}},off(...t){let[n,...r]=t;return e.ipcRenderer.off(n,...r)},send(...t){let[n,...r]=t;return e.ipcRenderer.send(n,...r)},invoke(...t){let[n,...r]=t;return e.ipcRenderer.invoke(n,...r)},process:{platform:process.platform},tray:{updateMenu:t=>e.ipcRenderer.send(`tray-update-menu`,t),updateClipboard:t=>e.ipcRenderer.send(`tray-update-clipboard`,t),syncMonitoring:t=>e.ipcRenderer.send(`sync-clipboard-monitoring`,t)},clipboard:{readText:()=>e.ipcRenderer.invoke(`clipboard-read-text`),readImage:()=>e.ipcRenderer.invoke(`clipboard-read-image`)},window:{minimize:()=>e.ipcRenderer.send(`window-minimize`),maximize:()=>e.ipcRenderer.send(`window-maximize`),close:()=>e.ipcRenderer.send(`window-close`)},system:{getHomeDir:()=>e.ipcRenderer.invoke(`get-home-dir`),selectFolder:()=>e.ipcRenderer.invoke(`select-folder`)}}),e.contextBridge.exposeInMainWorld(`statsAPI`,{getCPUStats:()=>e.ipcRenderer.invoke(`get-cpu-stats`),getMemoryStats:()=>e.ipcRenderer.invoke(`get-memory-stats`),getNetworkStats:()=>e.ipcRenderer.invoke(`get-network-stats`),getDiskStats:()=>e.ipcRenderer.invoke(`get-disk-stats`),getGPUStats:()=>e.ipcRenderer.invoke(`get-gpu-stats`),getBatteryStats:()=>e.ipcRenderer.invoke(`get-battery-stats`),getSensorStats:()=>e.ipcRenderer.invoke(`get-sensor-stats`),getBluetoothStats:()=>e.ipcRenderer.invoke(`get-bluetooth-stats`),getTimeZonesStats:()=>e.ipcRenderer.invoke(`get-timezones-stats`)}),e.contextBridge.exposeInMainWorld(`cleanerAPI`,{getPlatform:()=>e.ipcRenderer.invoke(`cleaner:get-platform`),scanJunk:()=>e.ipcRenderer.invoke(`cleaner:scan-junk`),getLargeFiles:t=>e.ipcRenderer.invoke(`cleaner:get-large-files`,t),getDuplicates:t=>e.ipcRenderer.invoke(`cleaner:get-duplicates`,t),getSpaceLens:t=>e.ipcRenderer.invoke(`cleaner:get-space-lens`,t),getFolderSize:t=>e.ipcRenderer.invoke(`cleaner:get-folder-size`,t),clearSizeCache:t=>e.ipcRenderer.invoke(`cleaner:clear-size-cache`,t),getPerformanceData:()=>e.ipcRenderer.invoke(`cleaner:get-performance-data`),getStartupItems:()=>e.ipcRenderer.invoke(`cleaner:get-startup-items`),toggleStartupItem:t=>e.ipcRenderer.invoke(`cleaner:toggle-startup-item`,t),killProcess:t=>e.ipcRenderer.invoke(`cleaner:kill-process`,t),getInstalledApps:()=>e.ipcRenderer.invoke(`cleaner:get-installed-apps`),uninstallApp:t=>e.ipcRenderer.invoke(`cleaner:uninstall-app`,t),runCleanup:t=>e.ipcRenderer.invoke(`cleaner:run-cleanup`,t),freeRam:()=>e.ipcRenderer.invoke(`cleaner:free-ram`),scanPrivacy:()=>e.ipcRenderer.invoke(`cleaner:scan-privacy`),cleanPrivacy:t=>e.ipcRenderer.invoke(`cleaner:clean-privacy`,t),scanBrowserData:()=>e.ipcRenderer.invoke(`cleaner:scan-browser-data`),cleanBrowserData:t=>e.ipcRenderer.invoke(`cleaner:clean-browser-data`,t),getWifiNetworks:()=>e.ipcRenderer.invoke(`cleaner:get-wifi-networks`),removeWifiNetwork:t=>e.ipcRenderer.invoke(`cleaner:remove-wifi-network`,t),onSpaceLensProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`cleaner:space-lens-progress`,n),()=>e.ipcRenderer.removeListener(`cleaner:space-lens-progress`,n)},runMaintenance:t=>e.ipcRenderer.invoke(`cleaner:run-maintenance`,t),getHealthStatus:()=>e.ipcRenderer.invoke(`cleaner:get-health-status`),checkSafety:t=>e.ipcRenderer.invoke(`cleaner:check-safety`,t),createBackup:t=>e.ipcRenderer.invoke(`cleaner:create-backup`,t),listBackups:()=>e.ipcRenderer.invoke(`cleaner:list-backups`),getBackupInfo:t=>e.ipcRenderer.invoke(`cleaner:get-backup-info`,t),restoreBackup:t=>e.ipcRenderer.invoke(`cleaner:restore-backup`,t),deleteBackup:t=>e.ipcRenderer.invoke(`cleaner:delete-backup`,t),startHealthMonitoring:()=>e.ipcRenderer.invoke(`health-start-monitoring`),stopHealthMonitoring:()=>e.ipcRenderer.invoke(`health-stop-monitoring`),updateHealthTray:t=>e.ipcRenderer.send(`health-update-tray`,t)}),e.contextBridge.exposeInMainWorld(`appManagerAPI`,{getInstalledApps:()=>e.ipcRenderer.invoke(`app-manager:get-installed-apps`),getRunningProcesses:()=>e.ipcRenderer.invoke(`app-manager:get-running-processes`),uninstallApp:t=>e.ipcRenderer.invoke(`app-manager:uninstall-app`,t),killProcess:t=>e.ipcRenderer.invoke(`app-manager:kill-process`,t)}),e.contextBridge.exposeInMainWorld(`screenshotAPI`,{getSources:()=>e.ipcRenderer.invoke(`screenshot:get-sources`),captureScreen:()=>e.ipcRenderer.invoke(`screenshot:capture-screen`),captureWindow:t=>e.ipcRenderer.invoke(`screenshot:capture-window`,t),captureArea:()=>e.ipcRenderer.invoke(`screenshot:capture-area`),captureUrl:t=>e.ipcRenderer.invoke(`screenshot:capture-url`,t),saveFile:(t,n)=>e.ipcRenderer.invoke(`screenshot:save-file`,t,n)}),e.contextBridge.exposeInMainWorld(`permissionsAPI`,{checkAll:()=>e.ipcRenderer.invoke(`permissions:check-all`),checkAccessibility:()=>e.ipcRenderer.invoke(`permissions:check-accessibility`),checkFullDiskAccess:()=>e.ipcRenderer.invoke(`permissions:check-full-disk-access`),checkScreenRecording:()=>e.ipcRenderer.invoke(`permissions:check-screen-recording`),testClipboard:()=>e.ipcRenderer.invoke(`permissions:test-clipboard`),testFileAccess:()=>e.ipcRenderer.invoke(`permissions:test-file-access`),openSystemPreferences:t=>e.ipcRenderer.invoke(`permissions:open-system-preferences`,t)}),e.contextBridge.exposeInMainWorld(`electronAPI`,{sendSelection:t=>e.ipcRenderer.invoke(`screenshot:area-selected`,t),cancelSelection:()=>e.ipcRenderer.invoke(`screenshot:area-cancelled`)}),e.contextBridge.exposeInMainWorld(`youtubeAPI`,{getInfo:t=>e.ipcRenderer.invoke(`youtube:getInfo`,t),getPlaylistInfo:t=>e.ipcRenderer.invoke(`youtube:getPlaylistInfo`,t),download:t=>e.ipcRenderer.invoke(`youtube:download`,t),cancel:()=>e.ipcRenderer.invoke(`youtube:cancel`),openFile:t=>e.ipcRenderer.invoke(`youtube:openFile`,t),showInFolder:t=>e.ipcRenderer.invoke(`youtube:showInFolder`,t),chooseFolder:()=>e.ipcRenderer.invoke(`youtube:chooseFolder`),getHistory:()=>e.ipcRenderer.invoke(`youtube:getHistory`),clearHistory:()=>e.ipcRenderer.invoke(`youtube:clearHistory`),removeFromHistory:t=>e.ipcRenderer.invoke(`youtube:removeFromHistory`,t),getSettings:()=>e.ipcRenderer.invoke(`youtube:getSettings`),saveSettings:t=>e.ipcRenderer.invoke(`youtube:saveSettings`,t),getCapabilities:()=>e.ipcRenderer.invoke(`youtube:getCapabilities`),installAria2:()=>e.ipcRenderer.invoke(`youtube:installAria2`),onProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`youtube:progress`,n),()=>e.ipcRenderer.removeListener(`youtube:progress`,n)}});
+let electron = require("electron");
+electron.contextBridge.exposeInMainWorld("ipcRenderer", {
+	on(...args) {
+		const [channel, listener] = args;
+		const wrappedListener = (event, ...args$1) => listener(event, ...args$1);
+		electron.ipcRenderer.on(channel, wrappedListener);
+		return () => {
+			electron.ipcRenderer.removeListener(channel, wrappedListener);
+		};
+	},
+	off(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.off(channel, ...omit);
+	},
+	send(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.send(channel, ...omit);
+	},
+	invoke(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.invoke(channel, ...omit);
+	},
+	process: { platform: process.platform },
+	tray: {
+		updateMenu: (items) => electron.ipcRenderer.send("tray-update-menu", items),
+		updateClipboard: (items) => electron.ipcRenderer.send("tray-update-clipboard", items),
+		syncMonitoring: (enabled) => electron.ipcRenderer.send("sync-clipboard-monitoring", enabled)
+	},
+	clipboard: {
+		readText: () => electron.ipcRenderer.invoke("clipboard-read-text"),
+		readImage: () => electron.ipcRenderer.invoke("clipboard-read-image")
+	},
+	window: {
+		minimize: () => electron.ipcRenderer.send("window-minimize"),
+		maximize: () => electron.ipcRenderer.send("window-maximize"),
+		close: () => electron.ipcRenderer.send("window-close")
+	},
+	system: {
+		getHomeDir: () => electron.ipcRenderer.invoke("get-home-dir"),
+		selectFolder: () => electron.ipcRenderer.invoke("select-folder")
+	}
+});
+electron.contextBridge.exposeInMainWorld("statsAPI", {
+	getCPUStats: () => electron.ipcRenderer.invoke("get-cpu-stats"),
+	getMemoryStats: () => electron.ipcRenderer.invoke("get-memory-stats"),
+	getNetworkStats: () => electron.ipcRenderer.invoke("get-network-stats"),
+	getDiskStats: () => electron.ipcRenderer.invoke("get-disk-stats"),
+	getGPUStats: () => electron.ipcRenderer.invoke("get-gpu-stats"),
+	getBatteryStats: () => electron.ipcRenderer.invoke("get-battery-stats"),
+	getSensorStats: () => electron.ipcRenderer.invoke("get-sensor-stats"),
+	getBluetoothStats: () => electron.ipcRenderer.invoke("get-bluetooth-stats"),
+	getTimeZonesStats: () => electron.ipcRenderer.invoke("get-timezones-stats")
+});
+electron.contextBridge.exposeInMainWorld("cleanerAPI", {
+	getPlatform: () => electron.ipcRenderer.invoke("cleaner:get-platform"),
+	scanJunk: () => electron.ipcRenderer.invoke("cleaner:scan-junk"),
+	getLargeFiles: (options) => electron.ipcRenderer.invoke("cleaner:get-large-files", options),
+	getDuplicates: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-duplicates", scanPath),
+	getSpaceLens: (scanPath) => electron.ipcRenderer.invoke("cleaner:get-space-lens", scanPath),
+	getFolderSize: (folderPath) => electron.ipcRenderer.invoke("cleaner:get-folder-size", folderPath),
+	clearSizeCache: (folderPath) => electron.ipcRenderer.invoke("cleaner:clear-size-cache", folderPath),
+	getPerformanceData: () => electron.ipcRenderer.invoke("cleaner:get-performance-data"),
+	getStartupItems: () => electron.ipcRenderer.invoke("cleaner:get-startup-items"),
+	toggleStartupItem: (item) => electron.ipcRenderer.invoke("cleaner:toggle-startup-item", item),
+	killProcess: (pid) => electron.ipcRenderer.invoke("cleaner:kill-process", pid),
+	getInstalledApps: () => electron.ipcRenderer.invoke("cleaner:get-installed-apps"),
+	uninstallApp: (app) => electron.ipcRenderer.invoke("cleaner:uninstall-app", app),
+	runCleanup: (files) => electron.ipcRenderer.invoke("cleaner:run-cleanup", files),
+	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram"),
+	scanPrivacy: () => electron.ipcRenderer.invoke("cleaner:scan-privacy"),
+	cleanPrivacy: (options) => electron.ipcRenderer.invoke("cleaner:clean-privacy", options),
+	scanBrowserData: () => electron.ipcRenderer.invoke("cleaner:scan-browser-data"),
+	cleanBrowserData: (options) => electron.ipcRenderer.invoke("cleaner:clean-browser-data", options),
+	getWifiNetworks: () => electron.ipcRenderer.invoke("cleaner:get-wifi-networks"),
+	removeWifiNetwork: (networkName) => electron.ipcRenderer.invoke("cleaner:remove-wifi-network", networkName),
+	onSpaceLensProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("cleaner:space-lens-progress", listener);
+		return () => electron.ipcRenderer.removeListener("cleaner:space-lens-progress", listener);
+	},
+	runMaintenance: (task) => electron.ipcRenderer.invoke("cleaner:run-maintenance", task),
+	getHealthStatus: () => electron.ipcRenderer.invoke("cleaner:get-health-status"),
+	checkSafety: (files) => electron.ipcRenderer.invoke("cleaner:check-safety", files),
+	createBackup: (files) => electron.ipcRenderer.invoke("cleaner:create-backup", files),
+	listBackups: () => electron.ipcRenderer.invoke("cleaner:list-backups"),
+	getBackupInfo: (backupId) => electron.ipcRenderer.invoke("cleaner:get-backup-info", backupId),
+	restoreBackup: (backupId) => electron.ipcRenderer.invoke("cleaner:restore-backup", backupId),
+	deleteBackup: (backupId) => electron.ipcRenderer.invoke("cleaner:delete-backup", backupId),
+	startHealthMonitoring: () => electron.ipcRenderer.invoke("health-start-monitoring"),
+	stopHealthMonitoring: () => electron.ipcRenderer.invoke("health-stop-monitoring"),
+	updateHealthTray: (data) => electron.ipcRenderer.send("health-update-tray", data)
+});
+electron.contextBridge.exposeInMainWorld("appManagerAPI", {
+	getInstalledApps: () => electron.ipcRenderer.invoke("app-manager:get-installed-apps"),
+	getRunningProcesses: () => electron.ipcRenderer.invoke("app-manager:get-running-processes"),
+	uninstallApp: (app) => electron.ipcRenderer.invoke("app-manager:uninstall-app", app),
+	killProcess: (pid) => electron.ipcRenderer.invoke("app-manager:kill-process", pid)
+});
+electron.contextBridge.exposeInMainWorld("screenshotAPI", {
+	getSources: () => electron.ipcRenderer.invoke("screenshot:get-sources"),
+	captureScreen: () => electron.ipcRenderer.invoke("screenshot:capture-screen"),
+	captureWindow: (sourceId) => electron.ipcRenderer.invoke("screenshot:capture-window", sourceId),
+	captureArea: () => electron.ipcRenderer.invoke("screenshot:capture-area"),
+	captureUrl: (url) => electron.ipcRenderer.invoke("screenshot:capture-url", url),
+	saveFile: (dataUrl, options) => electron.ipcRenderer.invoke("screenshot:save-file", dataUrl, options)
+});
+electron.contextBridge.exposeInMainWorld("permissionsAPI", {
+	checkAll: () => electron.ipcRenderer.invoke("permissions:check-all"),
+	checkAccessibility: () => electron.ipcRenderer.invoke("permissions:check-accessibility"),
+	checkFullDiskAccess: () => electron.ipcRenderer.invoke("permissions:check-full-disk-access"),
+	checkScreenRecording: () => electron.ipcRenderer.invoke("permissions:check-screen-recording"),
+	testClipboard: () => electron.ipcRenderer.invoke("permissions:test-clipboard"),
+	testFileAccess: () => electron.ipcRenderer.invoke("permissions:test-file-access"),
+	openSystemPreferences: (permissionType) => electron.ipcRenderer.invoke("permissions:open-system-preferences", permissionType)
+});
+electron.contextBridge.exposeInMainWorld("electronAPI", {
+	sendSelection: (bounds) => electron.ipcRenderer.invoke("screenshot:area-selected", bounds),
+	cancelSelection: () => electron.ipcRenderer.invoke("screenshot:area-cancelled")
+});
+electron.contextBridge.exposeInMainWorld("youtubeAPI", {
+	getInfo: (url) => electron.ipcRenderer.invoke("youtube:getInfo", url),
+	getPlaylistInfo: (url) => electron.ipcRenderer.invoke("youtube:getPlaylistInfo", url),
+	download: (options) => electron.ipcRenderer.invoke("youtube:download", options),
+	cancel: () => electron.ipcRenderer.invoke("youtube:cancel"),
+	openFile: (filePath) => electron.ipcRenderer.invoke("youtube:openFile", filePath),
+	showInFolder: (filePath) => electron.ipcRenderer.invoke("youtube:showInFolder", filePath),
+	chooseFolder: () => electron.ipcRenderer.invoke("youtube:chooseFolder"),
+	getHistory: () => electron.ipcRenderer.invoke("youtube:getHistory"),
+	clearHistory: () => electron.ipcRenderer.invoke("youtube:clearHistory"),
+	removeFromHistory: (id) => electron.ipcRenderer.invoke("youtube:removeFromHistory", id),
+	getSettings: () => electron.ipcRenderer.invoke("youtube:getSettings"),
+	saveSettings: (settings) => electron.ipcRenderer.invoke("youtube:saveSettings", settings),
+	getCapabilities: () => electron.ipcRenderer.invoke("youtube:getCapabilities"),
+	installAria2: () => electron.ipcRenderer.invoke("youtube:installAria2"),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("youtube:progress", listener);
+		return () => electron.ipcRenderer.removeListener("youtube:progress", listener);
+	}
+});
+electron.contextBridge.exposeInMainWorld("tiktokAPI", {
+	getInfo: (url) => electron.ipcRenderer.invoke("tiktok:get-info", url),
+	download: (options) => electron.ipcRenderer.invoke("tiktok:download", options),
+	cancel: (id) => electron.ipcRenderer.invoke("tiktok:cancel", id),
+	getHistory: () => electron.ipcRenderer.invoke("tiktok:get-history"),
+	clearHistory: () => electron.ipcRenderer.invoke("tiktok:clear-history"),
+	removeFromHistory: (id) => electron.ipcRenderer.invoke("tiktok:remove-from-history", id),
+	getSettings: () => electron.ipcRenderer.invoke("tiktok:get-settings"),
+	saveSettings: (settings) => electron.ipcRenderer.invoke("tiktok:save-settings", settings),
+	chooseFolder: () => electron.ipcRenderer.invoke("tiktok:choose-folder"),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("tiktok:progress", listener);
+		return () => electron.ipcRenderer.removeListener("tiktok:progress", listener);
+	},
+	openFile: (path) => electron.ipcRenderer.invoke("youtube:openFile", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("youtube:showInFolder", path)
+});

@@ -152,6 +152,7 @@ const SystemCleaner = React.lazy(() => import('@tools/utilities/system-cleaner/S
 const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
 const VideoFrames = React.lazy(() => import('@tools/media/VideoFrames'));
 const YoutubeDownloader = React.lazy(() => import('@tools/media/YoutubeDownloader'));
+const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
 const SettingsPage = React.lazy(() => import('@pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -822,6 +823,17 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-red-500',
         component: YoutubeDownloader,
         keywords: ['youtube', 'download', 'video', 'audio', 'mp4', 'mp3', 'yt'],
+    },
+    {
+        id: 'tiktok-downloader',
+        name: 'TikTok Downloader',
+        path: '/tiktok-downloader',
+        description: 'Download videos from TikTok in various formats',
+        category: 'utilities',
+        icon: Film,
+        color: 'text-pink-500',
+        component: TiktokDownloader,
+        keywords: ['tiktok', 'download', 'video', 'audio', 'social', 'media'],
     },
 
     // Settings (Special tool - not in any category)
