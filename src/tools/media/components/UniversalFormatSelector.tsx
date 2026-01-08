@@ -1,8 +1,9 @@
 import React from 'react';
 import { Button } from '@components/ui/Button';
 import { Card } from '@components/ui/Card';
-import { Download, Music, Video, FolderOpen, MonitorPlay, Smartphone, Tv, Box } from 'lucide-react';
+import { Download, Music, Video, FolderOpen, MonitorPlay, Smartphone, Tv, Box, ListVideo, Languages } from 'lucide-react';
 import { cn } from '@utils/cn';
+import { Switch } from '@components/ui/Switch';
 
 interface UniversalFormatSelectorProps {
     format: 'video' | 'audio';
@@ -12,6 +13,12 @@ interface UniversalFormatSelectorProps {
     onChooseFolder: () => void;
     availableQualities?: string[];
     duration?: number;
+    platform?: string;
+    isPlaylist?: boolean;
+    embedSubs: boolean;
+    setEmbedSubs: (v: boolean) => void;
+    downloadEntirePlaylist: boolean;
+    setDownloadEntirePlaylist: (v: boolean) => void;
 }
 
 export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = ({
@@ -21,7 +28,13 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
     onDownload,
     onChooseFolder,
     availableQualities,
-    duration
+    duration,
+    platform,
+    isPlaylist,
+    embedSubs,
+    setEmbedSubs,
+    downloadEntirePlaylist,
+    setDownloadEntirePlaylist
 }) => {
     // Get recommended quality based on network speed (simplified)
     const getRecommendedQuality = (): string => {
@@ -55,6 +68,10 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                 '9': 1.0  // 128k
             };
             sizeEst = lengthMB * (bitrateMapApi[q] || 1);
+        }
+
+        if (downloadEntirePlaylist && isPlaylist) {
+            sizeEst *= 10; // Simplified playlist multiplier
         }
 
         return sizeEst < 1024
@@ -121,6 +138,36 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                     Audio
                 </button>
             </div>
+
+            {/* Extra Options */}
+            {(isPlaylist || platform === 'youtube') && (
+                <div className="bg-background/30 rounded-xl border border-border-glass p-3 space-y-3">
+                    {isPlaylist && (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <ListVideo className="w-4 h-4 text-indigo-400" />
+                                <span className="text-xs font-medium text-foreground-secondary">Entire Playlist</span>
+                            </div>
+                            <Switch
+                                checked={downloadEntirePlaylist}
+                                onChange={(e) => setDownloadEntirePlaylist(e.target.checked)}
+                            />
+                        </div>
+                    )}
+                    {platform === 'youtube' && format === 'video' && (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Languages className="w-4 h-4 text-purple-400" />
+                                <span className="text-xs font-medium text-foreground-secondary">Embed Subtitles</span>
+                            </div>
+                            <Switch
+                                checked={embedSubs}
+                                onChange={(e) => setEmbedSubs(e.target.checked)}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Quality Selection Card */}
             <Card className="p-1 bg-glass-panel border-border-glass overflow-hidden shadow-sm">

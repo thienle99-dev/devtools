@@ -2,15 +2,17 @@ import type { SupportedPlatform } from '@/types/universal-media';
 
 export const detectPlatform = (url: string): SupportedPlatform => {
     const u = url.toLowerCase();
-    
+
     if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
     if (u.includes('tiktok.com')) return 'tiktok';
     if (u.includes('instagram.com')) return 'instagram';
-    if (u.includes('facebook.com') || u.includes('fb.watch')) return 'facebook';
+    if (u.includes('facebook.com') || u.includes('fb.watch') || u.includes('fb.com')) return 'facebook';
     if (u.includes('twitter.com') || u.includes('x.com')) return 'twitter';
     if (u.includes('twitch.tv')) return 'twitch';
     if (u.includes('reddit.com') || u.includes('redd.it')) return 'reddit';
-    
+    if (u.includes('pinterest.com')) return 'other';
+    if (u.includes('vimeo.com')) return 'other';
+
     return 'other';
 };
 

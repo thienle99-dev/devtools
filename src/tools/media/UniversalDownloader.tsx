@@ -39,6 +39,9 @@ export default function UniversalDownloader() {
     const [fetchingInfo, setFetchingInfo] = useState(false);
     const [detectedPlatform, setDetectedPlatform] = useState<SupportedPlatform>('other');
 
+    const [embedSubs, setEmbedSubs] = useState(false);
+    const [downloadEntirePlaylist, setDownloadEntirePlaylist] = useState(false);
+
     const [activeDownloads, setActiveDownloads] = useState<Map<string, UniversalDownloadProgress>>(new Map());
     const [history, setHistory] = useState<UniversalHistoryItem[]>([]);
     const [downloadPath, setDownloadPath] = useState('');
@@ -117,6 +120,7 @@ export default function UniversalDownloader() {
         const fetchInfo = async () => {
             if (!url) {
                 setMediaInfo(null);
+                setDownloadEntirePlaylist(false);
                 return;
             }
 
@@ -129,6 +133,11 @@ export default function UniversalDownloader() {
                 console.log('📦 MediaInfo received:', infoData);
                 console.log('🎯 Available Qualities:', infoData.availableQualities);
                 setMediaInfo(infoData);
+
+                // If it's a playlist, default TO playlist mode if requested or just keep it false
+                if (infoData.isPlaylist) {
+                    setDownloadEntirePlaylist(true);
+                }
 
                 // Update detected platform from backend info if 'other'
                 if (platform === 'other' && infoData.platform) {
@@ -180,7 +189,9 @@ export default function UniversalDownloader() {
                 format,
                 quality: overrideQuality || quality,
                 outputPath: downloadPath || undefined,
-                id: downloadId
+                id: downloadId,
+                embedSubs: embedSubs,
+                isPlaylist: downloadEntirePlaylist
             };
 
             // Fire and forget
@@ -328,6 +339,12 @@ export default function UniversalDownloader() {
                                     onChooseFolder={handleChooseFolder}
                                     availableQualities={mediaInfo?.availableQualities}
                                     duration={mediaInfo?.duration}
+                                    platform={detectedPlatform}
+                                    isPlaylist={mediaInfo?.isPlaylist}
+                                    embedSubs={embedSubs}
+                                    setEmbedSubs={setEmbedSubs}
+                                    downloadEntirePlaylist={downloadEntirePlaylist}
+                                    setDownloadEntirePlaylist={setDownloadEntirePlaylist}
                                 />
                             </Card>
                         ) : (

@@ -3204,18 +3204,23 @@ var UniversalDownloader = class {
 			if (e.includes("youtube")) return "youtube";
 			if (e.includes("tiktok")) return "tiktok";
 			if (e.includes("instagram")) return "instagram";
-			if (e.includes("facebook")) return "facebook";
-			if (e.includes("twitter") || e.includes("x")) return "twitter";
+			if (e.includes("facebook") || e.includes("fb")) return "facebook";
+			if (e.includes("twitter") || e.includes("x") || e.includes("periscope")) return "twitter";
 			if (e.includes("twitch")) return "twitch";
 			if (e.includes("reddit")) return "reddit";
+			if (e.includes("vimeo")) return "other";
+			if (e.includes("pinterest")) return "other";
+			if (e.includes("soundcloud")) return "other";
 		}
 		if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
 		if (u.includes("tiktok.com")) return "tiktok";
 		if (u.includes("instagram.com")) return "instagram";
-		if (u.includes("facebook.com") || u.includes("fb.watch")) return "facebook";
+		if (u.includes("facebook.com") || u.includes("fb.watch") || u.includes("fb.com")) return "facebook";
 		if (u.includes("twitter.com") || u.includes("x.com")) return "twitter";
 		if (u.includes("twitch.tv")) return "twitch";
-		if (u.includes("reddit.com")) return "reddit";
+		if (u.includes("reddit.com") || u.includes("redd.it")) return "reddit";
+		if (u.includes("pinterest.com")) return "other";
+		if (u.includes("vimeo.com")) return "other";
 		return "other";
 	}
 	async getMediaInfo(url) {
@@ -3224,36 +3229,55 @@ var UniversalDownloader = class {
 			const args = [
 				url,
 				"--dump-json",
-				"--no-playlist",
 				"--no-check-certificate",
 				"--no-call-home"
 			];
+			const hasVideoId = url.includes("v=") || url.includes("youtu.be/");
+			if ((url.includes("list=") || url.includes("/playlist") || url.includes("/sets/")) && !hasVideoId) args.push("--flat-playlist");
+			else args.push("--no-playlist");
 			const settings = this.getSettings();
 			if (settings.useBrowserCookies) args.push("--cookies-from-browser", settings.useBrowserCookies);
 			const stdout = await this.ytDlp.execPromise(args);
 			const info = JSON.parse(stdout);
 			const platform = this.detectPlatform(url, info.extractor);
+			const isPlaylist = info._type === "playlist" || !!info.entries;
+			const hasPlaylistContext = url.includes("list=") || !!info.playlist_id;
 			const availableQualities = [];
-			if (info.formats && Array.isArray(info.formats)) {
+			const formatsSource = isPlaylist && info.entries && info.entries[0] ? info.entries[0].formats : info.formats;
+			if (formatsSource && Array.isArray(formatsSource)) {
 				const qualitySet = /* @__PURE__ */ new Set();
-				info.formats.forEach((fmt) => {
-					if (fmt.vcodec && fmt.vcodec !== "none" && fmt.height) {
-						const quality = `${fmt.height}p`;
-						qualitySet.add(quality);
+				formatsSource.forEach((fmt) => {
+					if (fmt.vcodec && fmt.vcodec !== "none") {
+						if (fmt.height) qualitySet.add(`${fmt.height}p`);
+						else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) qualitySet.add(fmt.format_note);
+						else if (fmt.resolution && /^\d+x\d+$/.test(fmt.resolution)) {
+							const h = fmt.resolution.split("x")[1];
+							qualitySet.add(`${h}p`);
+						}
 					}
 				});
+				if (qualitySet.size === 0 && info.height) qualitySet.add(`${info.height}p`);
 				const sortedQualities = Array.from(qualitySet).sort((a, b) => {
-					const heightA = parseInt(a.replace("p", ""));
-					return parseInt(b.replace("p", "")) - heightA;
+					const hA = parseInt(a);
+					return parseInt(b) - hA;
 				});
 				availableQualities.push(...sortedQualities);
 			}
+			const playlistVideos = isPlaylist && info.entries ? info.entries.map((entry) => ({
+				id: entry.id,
+				title: entry.title,
+				duration: entry.duration,
+				url: entry.url || (platform === "youtube" ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url),
+				thumbnail: entry.thumbnails?.[0]?.url || entry.thumbnail
+			})) : void 0;
+			const title = info.title || info.id || "Untitled Media";
+			const thumbnail = info.thumbnail || info.entries?.[0]?.thumbnail || info.thumbnails?.[0]?.url || "";
 			return {
-				id: info.id,
+				id: info.id || info.entries?.[0]?.id || "unknown",
 				url: info.webpage_url || url,
-				title: info.title || "Unknown Media",
+				title,
 				platform,
-				thumbnailUrl: info.thumbnail || "",
+				thumbnailUrl: thumbnail,
 				author: info.uploader || info.channel || info.uploader_id || "Unknown",
 				authorUrl: info.uploader_url || info.channel_url,
 				duration: info.duration,
@@ -3263,7 +3287,10 @@ var UniversalDownloader = class {
 				likeCount: info.like_count,
 				isLive: info.is_live || false,
 				webpageUrl: info.webpage_url,
-				availableQualities: availableQualities.length > 0 ? availableQualities : void 0
+				availableQualities: availableQualities.length > 0 ? availableQualities : void 0,
+				isPlaylist: isPlaylist || hasPlaylistContext,
+				playlistCount: isPlaylist || hasPlaylistContext ? info.playlist_count || info.entries?.length : void 0,
+				playlistVideos
 			};
 		} catch (error) {
 			let msg = error.message || String(error);
@@ -3297,7 +3324,7 @@ var UniversalDownloader = class {
 	}
 	async executeDownload(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser } = options;
+		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist } = options;
 		const downloadId = id || randomUUID$1();
 		try {
 			const info = await this.getMediaInfo(url);
@@ -3305,9 +3332,19 @@ var UniversalDownloader = class {
 			const author = this.sanitizeFilename(info.author || "unknown");
 			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
 			const extension = format === "audio" ? "mp3" : "mp4";
-			const safeTitle = sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + "..." : sanitizedTitle;
-			const filename = `[${info.platform}] ${author} - ${safeTitle} [${info.id}].${extension}`;
-			const outputTemplate = path$1.join(downloadsPath, filename);
+			let outputTemplate;
+			let displayFilename;
+			const shouldDownloadPlaylist = isPlaylist === true;
+			const platformName = (info.platform || "Other").toUpperCase();
+			if (shouldDownloadPlaylist) {
+				const playlistFolder = path$1.join(downloadsPath, sanitizedTitle);
+				if (!fs$1.existsSync(playlistFolder)) fs$1.mkdirSync(playlistFolder, { recursive: true });
+				outputTemplate = path$1.join(playlistFolder, "%(playlist_index)s - %(title)s.%(ext)s");
+				displayFilename = `[${platformName} PLAYLIST] ${sanitizedTitle}`;
+			} else {
+				displayFilename = `[${platformName}] ${author} - ${sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + "..." : sanitizedTitle} [${info.id}].${extension}`;
+				outputTemplate = path$1.join(downloadsPath, displayFilename);
+			}
 			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
 			const args = [
 				url,
@@ -3321,6 +3358,8 @@ var UniversalDownloader = class {
 				"--retries",
 				"10"
 			];
+			if (!shouldDownloadPlaylist) args.push("--no-playlist");
+			if (embedSubs && info.platform === "youtube") args.push("--all-subs", "--embed-subs", "--write-auto-subs");
 			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
 			if (maxSpeed) args.push("--limit-rate", maxSpeed);
 			const settings = this.getSettings();
@@ -3337,15 +3376,19 @@ var UniversalDownloader = class {
 				} else args.push("-f", "bestvideo+bestaudio/best");
 				args.push("--merge-output-format", "mp4");
 			}
+			if (!isPlaylist && !info.isPlaylist) args.push("--no-playlist");
 			return new Promise((resolve, reject) => {
 				let totalBytes = 0;
 				let downloadedBytes = 0;
 				let percent = 0;
+				let currentItemFilename = displayFilename;
 				const process$1 = this.ytDlp.exec(args);
 				this.activeProcesses.set(downloadId, process$1);
 				if (process$1.ytDlpProcess) process$1.ytDlpProcess.stdout?.on("data", (data) => {
 					data.toString().split(/\r?\n/).forEach((line) => {
 						if (!line.trim()) return;
+						const itemMatch = line.match(/\[download\] Destination: .*[/\\](.*)$/);
+						if (itemMatch) currentItemFilename = itemMatch[1];
 						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
 						if (progressMatch) {
 							percent = parseFloat(progressMatch[1]);
@@ -3375,7 +3418,7 @@ var UniversalDownloader = class {
 								speed,
 								eta,
 								state: "downloading",
-								filename,
+								filename: info.isPlaylist ? `${displayFilename} (${currentItemFilename})` : displayFilename,
 								platform: info.platform
 							});
 						}
@@ -3383,7 +3426,8 @@ var UniversalDownloader = class {
 				});
 				process$1.on("close", (code) => {
 					this.activeProcesses.delete(downloadId);
-					if (code === 0) if (fs$1.existsSync(outputTemplate)) {
+					if (code === 0) {
+						const finalPath = isPlaylist || info.isPlaylist ? path$1.join(downloadsPath, sanitizedTitle) : outputTemplate;
 						if (progressCallback) progressCallback({
 							id: downloadId,
 							percent: 100,
@@ -3392,8 +3436,8 @@ var UniversalDownloader = class {
 							speed: 0,
 							eta: 0,
 							state: "complete",
-							filename,
-							filePath: outputTemplate,
+							filename: displayFilename,
+							filePath: finalPath,
 							platform: info.platform
 						});
 						this.addToHistory({
@@ -3404,15 +3448,14 @@ var UniversalDownloader = class {
 							thumbnailUrl: info.thumbnailUrl,
 							author: info.author,
 							timestamp: Date.now(),
-							path: outputTemplate,
+							path: finalPath,
 							size: totalBytes,
 							duration: info.duration,
 							format,
 							status: "completed"
 						});
-						resolve(outputTemplate);
-					} else reject(/* @__PURE__ */ new Error("Download finished but file not found"));
-					else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
+						resolve(finalPath);
+					} else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
 				});
 				process$1.on("error", (err) => {
 					this.activeProcesses.delete(downloadId);

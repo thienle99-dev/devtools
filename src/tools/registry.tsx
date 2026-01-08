@@ -49,7 +49,7 @@ import {
     Camera,
     Package,
     Film,
-    Youtube,
+    // Youtube,
     Music
 } from 'lucide-react';
 
@@ -152,8 +152,8 @@ const ApplicationManager = React.lazy(() => import('@tools/utilities/Application
 const SystemCleaner = React.lazy(() => import('@tools/utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
 const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
 const VideoFrames = React.lazy(() => import('@tools/media/VideoFrames'));
-const YoutubeDownloader = React.lazy(() => import('@tools/media/YoutubeDownloader'));
-const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
+// const YoutubeDownloader = React.lazy(() => import('@tools/media/YoutubeDownloader'));
+// const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
 const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
 const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
 const SettingsPage = React.lazy(() => import('@pages/Settings'));
@@ -816,38 +816,38 @@ export const TOOLS: ToolDefinition[] = [
         component: VideoFrames,
         keywords: ['video', 'frames', 'extract', 'frames to video', 'animation', 'screen record', 'gif'],
     },
-    {
-        id: 'youtube-downloader',
-        name: 'YouTube Downloader',
-        path: '/youtube-downloader',
-        description: 'Download videos and audio from YouTube in various formats',
-        category: 'utilities',
-        icon: Youtube,
-        color: 'text-red-500',
-        component: YoutubeDownloader,
-        keywords: ['youtube', 'download', 'video', 'audio', 'mp4', 'mp3', 'yt'],
-    },
-    {
-        id: 'tiktok-downloader',
-        name: 'TikTok Downloader',
-        path: '/tiktok-downloader',
-        description: 'Download videos from TikTok in various formats',
-        category: 'utilities',
-        icon: Film,
-        color: 'text-pink-500',
-        component: TiktokDownloader,
-        keywords: ['tiktok', 'download', 'video', 'audio', 'social', 'media'],
-    },
+    // {
+    //     id: 'youtube-downloader',
+    //     name: 'YouTube Downloader',
+    //     path: '/youtube-downloader',
+    //     description: 'Download videos and audio from YouTube in various formats',
+    //     category: 'utilities',
+    //     icon: Youtube,
+    //     color: 'text-red-500',
+    //     component: YoutubeDownloader,
+    //     keywords: ['youtube', 'download', 'video', 'audio', 'mp4', 'mp3', 'yt'],
+    // },
+    // {
+    //     id: 'tiktok-downloader',
+    //     name: 'TikTok Downloader',
+    //     path: '/tiktok-downloader',
+    //     description: 'Download videos from TikTok in various formats',
+    //     category: 'utilities',
+    //     icon: Film,
+    //     color: 'text-pink-500',
+    //     component: TiktokDownloader,
+    //     keywords: ['tiktok', 'download', 'video', 'audio', 'social', 'media'],
+    // },
     {
         id: 'universal-downloader',
         name: 'Universal Downloader',
         path: '/universal-downloader',
-        description: 'Download videos and audio from any supported platform (IG, FB, X, etc.)',
+        description: 'All-in-one downloader for YouTube, TikTok, Instagram, and 1000+ more sites. Supports playlists and subtitles.',
         category: 'utilities',
         icon: Globe,
         color: 'text-indigo-500',
         component: UniversalDownloader,
-        keywords: ['universal', 'download', 'instagram', 'facebook', 'twitter', 'reddit', 'twitch'],
+        keywords: ['universal', 'download', 'instagram', 'facebook', 'twitter', 'reddit', 'twitch', 'youtube', 'tiktok', 'playlist', 'subtitles'],
     },
     {
         id: 'audio-extractor',

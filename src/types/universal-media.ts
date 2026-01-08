@@ -15,20 +15,32 @@ export interface UniversalMediaInfo {
     likeCount?: number;
     isLive?: boolean;
     webpageUrl?: string;
-    availableQualities?: string[]; // e.g., ['2160p', '1440p', '1080p', '720p', '480p', '360p']
+    availableQualities?: string[];
+    isPlaylist?: boolean;
+    playlistCount?: number;
+    playlistVideos?: Array<{
+        id: string;
+        title: string;
+        duration?: number;
+        url: string;
+        thumbnail?: string;
+    }>;
 }
 
 export interface UniversalDownloadOptions {
     url: string;
     format: 'video' | 'audio';
-    quality: 'best' | 'medium' | 'low';
+    quality: string; // Changed from union to string for flexible quality labels
     outputPath?: string;
     maxSpeed?: string;
     id?: string;
     filename?: string;
     proxy?: string;
-    cookies?: string; // Path to cookies file if needed
-    cookiesBrowser?: 'chrome' | 'firefox' | 'edge'; // Use browser cookies
+    cookies?: string;
+    cookiesBrowser?: 'chrome' | 'firefox' | 'edge';
+    embedSubs?: boolean; // New: Support for subtitles
+    isPlaylist?: boolean; // New: Support for playlist mode
+    playlistItems?: string[]; // New: Specific indices or IDs to download from playlist
 }
 
 export interface UniversalDownloadProgress {

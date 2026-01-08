@@ -118,19 +118,24 @@ export class UniversalDownloader {
             if (e.includes('youtube')) return 'youtube';
             if (e.includes('tiktok')) return 'tiktok';
             if (e.includes('instagram')) return 'instagram';
-            if (e.includes('facebook')) return 'facebook';
-            if (e.includes('twitter') || e.includes('x')) return 'twitter';
+            if (e.includes('facebook') || e.includes('fb')) return 'facebook';
+            if (e.includes('twitter') || e.includes('x') || e.includes('periscope')) return 'twitter';
             if (e.includes('twitch')) return 'twitch';
             if (e.includes('reddit')) return 'reddit';
+            if (e.includes('vimeo')) return 'other'; // Could add 'vimeo' to types if needed
+            if (e.includes('pinterest')) return 'other';
+            if (e.includes('soundcloud')) return 'other';
         }
 
         if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
         if (u.includes('tiktok.com')) return 'tiktok';
         if (u.includes('instagram.com')) return 'instagram';
-        if (u.includes('facebook.com') || u.includes('fb.watch')) return 'facebook';
+        if (u.includes('facebook.com') || u.includes('fb.watch') || u.includes('fb.com')) return 'facebook';
         if (u.includes('twitter.com') || u.includes('x.com')) return 'twitter';
         if (u.includes('twitch.tv')) return 'twitch';
-        if (u.includes('reddit.com')) return 'reddit';
+        if (u.includes('reddit.com') || u.includes('redd.it')) return 'reddit';
+        if (u.includes('pinterest.com')) return 'other';
+        if (u.includes('vimeo.com')) return 'other';
 
         return 'other';
     }
@@ -142,12 +147,21 @@ export class UniversalDownloader {
             const args = [
                 url,
                 '--dump-json',
-                '--no-playlist',
                 '--no-check-certificate',
                 '--no-call-home'
             ];
 
-            // Add cookies if configured
+            // Improved detection: If it's a "watch" link with a playlist (RD or PL), we should still
+            // allow fetching single video info first, but if it's ONLY a playlist link, use flat-playlist.
+            const hasVideoId = url.includes('v=') || url.includes('youtu.be/');
+            const isPlaylistOnly = (url.includes('list=') || url.includes('/playlist') || url.includes('/sets/')) && !hasVideoId;
+
+            if (isPlaylistOnly) {
+                args.push('--flat-playlist');
+            } else {
+                args.push('--no-playlist');
+            }
+
             const settings = this.getSettings();
             if (settings.useBrowserCookies) {
                 args.push('--cookies-from-browser', settings.useBrowserCookies);
@@ -157,49 +171,79 @@ export class UniversalDownloader {
             const info = JSON.parse(stdout);
 
             const platform = this.detectPlatform(url, info.extractor);
+            const isPlaylist = info._type === 'playlist' || !!info.entries;
+
+            // If it's not a playlist but the URL has a list ID, it might be a "watch & list" link
+            // We can check info.playlist_id or the URL
+            const hasPlaylistContext = url.includes('list=') || !!info.playlist_id;
 
             // Extract available video qualities
             const availableQualities: string[] = [];
-            if (info.formats && Array.isArray(info.formats)) {
-                const qualitySet = new Set<string>();
 
-                info.formats.forEach((fmt: any) => {
-                    // Only consider formats with video
-                    if (fmt.vcodec && fmt.vcodec !== 'none' && fmt.height) {
-                        const quality = `${fmt.height}p`;
-                        qualitySet.add(quality);
+            // If it's a playlist mode, get formats from first entry. Otherwise from root.
+            const formatsSource = (isPlaylist && info.entries && info.entries[0]) ? info.entries[0].formats : info.formats;
+
+            if (formatsSource && Array.isArray(formatsSource)) {
+                const qualitySet = new Set<string>();
+                formatsSource.forEach((fmt: any) => {
+                    if (fmt.vcodec && fmt.vcodec !== 'none') {
+                        if (fmt.height) {
+                            qualitySet.add(`${fmt.height}p`);
+                        } else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) {
+                            qualitySet.add(fmt.format_note);
+                        } else if (fmt.resolution && /^\d+x\d+$/.test(fmt.resolution)) {
+                            const h = fmt.resolution.split('x')[1];
+                            qualitySet.add(`${h}p`);
+                        }
                     }
                 });
+                // If it's a direct file or no standard qualities found, check if info itself has resolution
+                if (qualitySet.size === 0 && info.height) {
+                    qualitySet.add(`${info.height}p`);
+                }
 
-                // Convert to array and sort from highest to lowest
                 const sortedQualities = Array.from(qualitySet).sort((a, b) => {
-                    const heightA = parseInt(a.replace('p', ''));
-                    const heightB = parseInt(b.replace('p', ''));
-                    return heightB - heightA; // Descending order
+                    const hA = parseInt(a);
+                    const hB = parseInt(b);
+                    return hB - hA;
                 });
-
                 availableQualities.push(...sortedQualities);
             }
 
+            // Playlist videos
+            const playlistVideos = isPlaylist && info.entries ? info.entries.map((entry: any) => ({
+                id: entry.id,
+                title: entry.title,
+                duration: entry.duration,
+                url: entry.url || (platform === 'youtube' ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url),
+                thumbnail: entry.thumbnails?.[0]?.url || entry.thumbnail
+            })) : undefined;
+
+            // Fallback for metadata
+            const title = info.title || info.id || 'Untitled Media';
+            const thumbnail = info.thumbnail || (info.entries?.[0]?.thumbnail) || (info.thumbnails?.[0]?.url) || '';
+
             return {
-                id: info.id,
+                id: info.id || info.entries?.[0]?.id || 'unknown',
                 url: info.webpage_url || url,
-                title: info.title || 'Unknown Media',
+                title,
                 platform,
-                thumbnailUrl: info.thumbnail || '',
+                thumbnailUrl: thumbnail,
                 author: info.uploader || info.channel || info.uploader_id || 'Unknown',
                 authorUrl: info.uploader_url || info.channel_url,
                 duration: info.duration,
-                uploadDate: info.upload_date, // YYYYMMDD
+                uploadDate: info.upload_date,
                 description: info.description,
                 viewCount: info.view_count,
                 likeCount: info.like_count,
                 isLive: info.is_live || false,
                 webpageUrl: info.webpage_url,
-                availableQualities: availableQualities.length > 0 ? availableQualities : undefined
+                availableQualities: availableQualities.length > 0 ? availableQualities : undefined,
+                isPlaylist: isPlaylist || hasPlaylistContext,
+                playlistCount: (isPlaylist || hasPlaylistContext) ? info.playlist_count || info.entries?.length : undefined,
+                playlistVideos
             };
         } catch (error: any) {
-            // Provide a cleaner error message
             let msg = error.message || String(error);
             if (msg.includes('Video unavailable')) msg = 'Video is unavailable or private';
             if (msg.includes('Login required')) msg = 'Login required to access this content';
@@ -246,15 +290,12 @@ export class UniversalDownloader {
     ): Promise<string> {
         await this.ensureInitialized();
 
-        const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser } = options;
+        const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist } = options;
         const downloadId = id || randomUUID();
 
         try {
-            // First get info to determine filename and platform
-            // NOTE: We could skip this to save time and rely on yt-dlp filename, 
-            // but getting metadata first is safer for history/thumbnails.
-            // However, for pure speed, we might want to do it in one go.
-            // Let's get info first as used in other downloaders.
+            // Get info again or use provided info to determine filename
+            // For playlists, we need to be careful with titles
             const info = await this.getMediaInfo(url);
 
             const sanitizedTitle = this.sanitizeFilename(info.title);
@@ -262,11 +303,26 @@ export class UniversalDownloader {
 
             const downloadsPath = outputPath || this.store.get('settings.downloadPath') || app.getPath('downloads');
             const extension = format === 'audio' ? 'mp3' : 'mp4';
-            // Filename: [Platform] Author - Title [ID].ext
-            // Keep it reasonably short
-            const safeTitle = sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + '...' : sanitizedTitle;
-            const filename = `[${info.platform}] ${author} - ${safeTitle} [${info.id}].${extension}`;
-            const outputTemplate = path.join(downloadsPath, filename);
+
+            // Output template and display name
+            let outputTemplate: string;
+            let displayFilename: string;
+
+            const shouldDownloadPlaylist = isPlaylist === true;
+            const platformName = (info.platform || 'Other').toUpperCase();
+
+            if (shouldDownloadPlaylist) {
+                const playlistFolder = path.join(downloadsPath, sanitizedTitle);
+                if (!fs.existsSync(playlistFolder)) {
+                    fs.mkdirSync(playlistFolder, { recursive: true });
+                }
+                outputTemplate = path.join(playlistFolder, '%(playlist_index)s - %(title)s.%(ext)s');
+                displayFilename = `[${platformName} PLAYLIST] ${sanitizedTitle}`;
+            } else {
+                const safeTitle = sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + '...' : sanitizedTitle;
+                displayFilename = `[${platformName}] ${author} - ${safeTitle} [${info.id}].${extension}`;
+                outputTemplate = path.join(downloadsPath, displayFilename);
+            }
 
             if (!fs.existsSync(downloadsPath)) {
                 fs.mkdirSync(downloadsPath, { recursive: true });
@@ -281,6 +337,15 @@ export class UniversalDownloader {
                 '--concurrent-fragments', '4',
                 '--retries', '10',
             ];
+
+            if (!shouldDownloadPlaylist) {
+                args.push('--no-playlist');
+            }
+
+            // Subtitles
+            if (embedSubs && info.platform === 'youtube') {
+                args.push('--all-subs', '--embed-subs', '--write-auto-subs');
+            }
 
             if (this.ffmpegPath) {
                 args.push('--ffmpeg-location', this.ffmpegPath);
@@ -319,10 +384,15 @@ export class UniversalDownloader {
                 args.push('--merge-output-format', 'mp4');
             }
 
+            if (!isPlaylist && !info.isPlaylist) {
+                args.push('--no-playlist');
+            }
+
             return new Promise((resolve, reject) => {
                 let totalBytes = 0;
                 let downloadedBytes = 0;
                 let percent = 0;
+                let currentItemFilename = displayFilename;
 
                 const process = this.ytDlp.exec(args);
                 this.activeProcesses.set(downloadId, process);
@@ -334,6 +404,12 @@ export class UniversalDownloader {
 
                         output.split(/\r?\n/).forEach(line => {
                             if (!line.trim()) return;
+
+                            // Detect currently downloading item in playlist
+                            const itemMatch = line.match(/\[download\] Destination: .*[/\\](.*)$/);
+                            if (itemMatch) {
+                                currentItemFilename = itemMatch[1];
+                            }
 
                             // [download]  25.0% of 10.00MiB at 2.50MiB/s ETA 00:03
                             const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
@@ -366,7 +442,7 @@ export class UniversalDownloader {
                                         speed,
                                         eta,
                                         state: 'downloading',
-                                        filename,
+                                        filename: info.isPlaylist ? `${displayFilename} (${currentItemFilename})` : displayFilename,
                                         platform: info.platform
                                     });
                                 }
@@ -378,44 +454,42 @@ export class UniversalDownloader {
                 process.on('close', (code: number) => {
                     this.activeProcesses.delete(downloadId);
                     if (code === 0) {
-                        // verify file exists
-                        if (fs.existsSync(outputTemplate)) {
-                            // Final callback
-                            if (progressCallback) {
-                                progressCallback({
-                                    id: downloadId,
-                                    percent: 100,
-                                    downloaded: totalBytes,
-                                    total: totalBytes,
-                                    speed: 0,
-                                    eta: 0,
-                                    state: 'complete',
-                                    filename,
-                                    filePath: outputTemplate,
-                                    platform: info.platform
-                                });
-                            }
+                        // verify file exists (if single file)
+                        const finalPath = (isPlaylist || info.isPlaylist) ? path.join(downloadsPath, sanitizedTitle) : outputTemplate;
 
-                            // History
-                            this.addToHistory({
+                        // Final callback
+                        if (progressCallback) {
+                            progressCallback({
                                 id: downloadId,
-                                url,
-                                title: info.title,
-                                platform: info.platform,
-                                thumbnailUrl: info.thumbnailUrl,
-                                author: info.author,
-                                timestamp: Date.now(),
-                                path: outputTemplate,
-                                size: totalBytes,
-                                duration: info.duration,
-                                format: format,
-                                status: 'completed'
+                                percent: 100,
+                                downloaded: totalBytes,
+                                total: totalBytes,
+                                speed: 0,
+                                eta: 0,
+                                state: 'complete',
+                                filename: displayFilename,
+                                filePath: finalPath,
+                                platform: info.platform
                             });
-
-                            resolve(outputTemplate);
-                        } else {
-                            reject(new Error('Download finished but file not found'));
                         }
+
+                        // History
+                        this.addToHistory({
+                            id: downloadId,
+                            url,
+                            title: info.title,
+                            platform: info.platform,
+                            thumbnailUrl: info.thumbnailUrl,
+                            author: info.author,
+                            timestamp: Date.now(),
+                            path: finalPath,
+                            size: totalBytes,
+                            duration: info.duration,
+                            format: format,
+                            status: 'completed'
+                        });
+
+                        resolve(finalPath);
                     } else {
                         reject(new Error(`yt-dlp exited with code ${code}`));
                     }
