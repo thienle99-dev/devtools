@@ -127,6 +127,7 @@ electron.contextBridge.exposeInMainWorld("youtubeAPI", {
 	chooseFolder: () => electron.ipcRenderer.invoke("youtube:chooseFolder"),
 	getHistory: () => electron.ipcRenderer.invoke("youtube:getHistory"),
 	clearHistory: () => electron.ipcRenderer.invoke("youtube:clearHistory"),
+	removeFromHistory: (id) => electron.ipcRenderer.invoke("youtube:removeFromHistory", id),
 	getSettings: () => electron.ipcRenderer.invoke("youtube:getSettings"),
 	saveSettings: (settings) => electron.ipcRenderer.invoke("youtube:saveSettings", settings),
 	getCapabilities: () => electron.ipcRenderer.invoke("youtube:getCapabilities"),

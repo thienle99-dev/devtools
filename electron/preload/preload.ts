@@ -146,6 +146,7 @@ contextBridge.exposeInMainWorld('youtubeAPI', {
   chooseFolder: () => ipcRenderer.invoke('youtube:chooseFolder'),
   getHistory: () => ipcRenderer.invoke('youtube:getHistory'),
   clearHistory: () => ipcRenderer.invoke('youtube:clearHistory'),
+  removeFromHistory: (id: string) => ipcRenderer.invoke('youtube:removeFromHistory', id),
   getSettings: () => ipcRenderer.invoke('youtube:getSettings'),
   saveSettings: (settings: any) => ipcRenderer.invoke('youtube:saveSettings', settings),
   getCapabilities: () => ipcRenderer.invoke('youtube:getCapabilities'),
