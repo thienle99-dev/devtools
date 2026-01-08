@@ -64,13 +64,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         if (e.key === 'Escape') onClear();
                     }}
                     placeholder="https://www.youtube.com/watch?v=... (or drop link here)"
-                    className="flex-1"
+                    className="flex-1 h-12 text-base w-full"
                     disabled={disabled}
+                    fullWidth
                 />
                 <Button
                     onClick={onClear}
                     variant="outline"
                     disabled={!url || disabled}
+                    className="h-12 px-6"
                 >
                     Clear
                 </Button>

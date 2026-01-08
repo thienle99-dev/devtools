@@ -20,6 +20,7 @@ export interface DownloadOptions {
     outputPath?: string;
     maxSpeed?: string;
     concurrentFragments?: number;
+    embedSubs?: boolean;
 }
 
 export interface Settings {
@@ -100,6 +101,14 @@ export class YouTubeDownloader {
     private ffmpegPath: string | null = null;
     private aria2Path: string | null = null;
     private store: Store<StoreSchema>;
+    
+    // Queue System
+    private downloadQueue: Array<{
+        run: () => Promise<string>;
+        resolve: (value: string | PromiseLike<string>) => void;
+        reject: (reason?: any) => void;
+    }> = [];
+    private activeDownloadsCount = 0;
     
     constructor() {
         this.store = new Store<StoreSchema>({
@@ -266,6 +275,25 @@ export class YouTubeDownloader {
         await this.initPromise;
     }
 
+    private async processQueue() {
+        const settings = this.getSettings();
+        const maxConcurrent = settings.maxConcurrentDownloads || 3;
+
+        while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
+            const task = this.downloadQueue.shift();
+            if (task) {
+                this.activeDownloadsCount++;
+                task.run()
+                    .then(result => task.resolve(result))
+                    .catch(error => task.reject(error))
+                    .finally(() => {
+                        this.activeDownloadsCount--;
+                        this.processQueue();
+                    });
+            }
+        }
+    }
+
     /**
      * Get video information
      */
@@ -413,15 +441,32 @@ export class YouTubeDownloader {
     }
     
     /**
-     * Download video using yt-dlp with optimized buffer and concurrency
+     * Queue download task
      */
     async downloadVideo(
         options: DownloadOptions,
         progressCallback?: (progress: DownloadProgress) => void
     ): Promise<string> {
+        return new Promise((resolve, reject) => {
+            this.downloadQueue.push({
+                run: () => this.executeDownload(options, progressCallback),
+                resolve,
+                reject
+            });
+            this.processQueue();
+        });
+    }
+
+    /**
+     * internal Execute download
+     */
+    private async executeDownload(
+        options: DownloadOptions,
+        progressCallback?: (progress: DownloadProgress) => void
+    ): Promise<string> {
         await this.ensureInitialized();
         
-        const { url, format, quality, container, outputPath, maxSpeed } = options;
+        const { url, format, quality, container, outputPath, maxSpeed, embedSubs } = options;
         const downloadId = randomUUID(); // Unique ID for this download (for concurrency)
         
         try {
@@ -480,6 +525,15 @@ export class YouTubeDownloader {
                 '--embed-thumbnail',
                 '--add-metadata',
             ];
+
+            if (embedSubs) {
+                args.push(
+                    '--write-subs',
+                    '--write-auto-subs',
+                    '--sub-lang', 'en.*,vi',
+                    '--embed-subs'
+                );
+            }
 
             if (maxSpeed) {
                 args.push('--limit-rate', maxSpeed);

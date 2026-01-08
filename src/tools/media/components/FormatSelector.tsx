@@ -8,7 +8,8 @@ import {
     MonitorPlay, 
     Smartphone, 
     Tv,
-    Box
+    Box,
+    Captions
 } from 'lucide-react';
 
 interface FormatSelectorProps {
@@ -20,6 +21,8 @@ interface FormatSelectorProps {
     setContainer: (c: string) => void;
     videoInfo?: any;
     disabled?: boolean;
+    embedSubs: boolean;
+    setEmbedSubs: (enabled: boolean) => void;
 }
 
 export const FormatSelector: React.FC<FormatSelectorProps> = ({
@@ -30,7 +33,9 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
     container,
     setContainer,
     videoInfo,
-    disabled
+    disabled,
+    embedSubs,
+    setEmbedSubs
 }) => {
 
     const handleFormatChange = (newFormat: 'video' | 'audio') => {
@@ -127,7 +132,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             {/* Main Selection Card */}
             <Card className="p-1 bg-glass-panel border-border-glass overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-border-glass bg-background-secondary/30">
-                     <div className="flex items-center justify-between">
+                     <div className="flex items-center justify-between mb-4">
                         <label className="text-xs font-bold text-foreground-secondary uppercase tracking-wider flex items-center gap-2">
                             <Box className="w-3.5 h-3.5 text-blue-400" />
                             Container
@@ -150,6 +155,24 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                                 </button>
                              ))}
                         </div>
+                     </div>
+                     
+                     <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-foreground-secondary uppercase tracking-wider flex items-center gap-2">
+                            <Captions className="w-3.5 h-3.5 text-yellow-400" />
+                            Subtitles
+                        </label>
+                        <button
+                            onClick={() => setEmbedSubs(!embedSubs)}
+                            disabled={disabled || format === 'audio'}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all border ${
+                                embedSubs
+                                    ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400'
+                                    : 'border-transparent text-foreground-tertiary hover:text-foreground-secondary hover:bg-white/5'
+                            } ${format === 'audio' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {embedSubs ? 'Enabled (Vi/En)' : 'Disabled'}
+                        </button>
                      </div>
                 </div>
 

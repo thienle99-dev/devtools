@@ -12,6 +12,8 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
 
 ### Phase 1: UI Components ✅
 
+- [x] Subtitles/Captions support - ✅ Implemented
+
 - [x] Tạo component `YoutubeDownloader.tsx`
 - [x] Design giao diện người dùng
   - [x] Header với gradient và icon
@@ -106,7 +108,7 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
 - [x] **Settings**
   - [x] Choose download location - ✅ Native folder picker (Persistent)
   - [x] Default quality preference - ✅ Supported
-  - [x] Concurrent downloads limit - ✅ Implemented (as fragments)
+  - [x] Concurrent downloads limit - ✅ Implemented (Queue system)
   - [x] Network speed limit - ✅ Implemented
 
 ### Phase 5: Testing & Optimization ⏳

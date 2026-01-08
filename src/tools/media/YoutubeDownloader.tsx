@@ -63,6 +63,7 @@ export const YoutubeDownloader: React.FC = () => {
     const [format, setFormat] = useState<'video' | 'audio' | 'best'>('video');
     const [quality, setQuality] = useState<string>('720p');
     const [container, setContainer] = useState<string>('mp4');
+    const [embedSubs, setEmbedSubs] = useState(false);
     const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({ status: 'idle' });
     const [videoInfo, setVideoInfo] = useState<VideoInfoData | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
@@ -97,12 +98,17 @@ export const YoutubeDownloader: React.FC = () => {
     };
 
     const isPlaylistUrl = (url: string): boolean => {
-        // Check for playlist patterns
-        const playlistPatterns = [
-            /[?&]list=([a-zA-Z0-9_-]+)/,  // ?list=PLxxx or &list=PLxxx
-            /youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)/,  // /playlist?list=PLxxx
-        ];
-        return playlistPatterns.some(pattern => pattern.test(url));
+        // Only treat as playlist if:
+        // 1. It is a /playlist URL
+        // 2. OR it has list= param AND NO video ID (v=)
+        try {
+            const urlObj = new URL(url);
+            if (urlObj.pathname.includes('/playlist')) return true;
+            if (urlObj.searchParams.has('list') && !urlObj.searchParams.has('v')) return true;
+            return false;
+        } catch {
+            return false;
+        }
     };
 
     /**
@@ -111,13 +117,13 @@ export const YoutubeDownloader: React.FC = () => {
      */
     const cleanYoutubeUrl = (url: string): string => {
         try {
-            // Check if it's a playlist URL - keep as is
-            if (isPlaylistUrl(url)) {
+            const urlObj = new URL(url);
+            
+            // If it is strictly a playlist (no video ID), keep it
+            if (urlObj.pathname.includes('/playlist')) {
                 return url;
             }
 
-            const urlObj = new URL(url);
-            
             // Handle different YouTube URL formats
             if (urlObj.hostname.includes('youtu.be')) {
                 // Short format: https://youtu.be/VIDEO_ID?params
@@ -127,8 +133,9 @@ export const YoutubeDownloader: React.FC = () => {
             } else if (urlObj.hostname.includes('youtube.com')) {
                 // Standard format: https://www.youtube.com/watch?v=VIDEO_ID&params
                 const videoId = urlObj.searchParams.get('v');
-                if (!videoId) return url; // Not a video URL
+                if (!videoId) return url; // Not a video URL, return as is (maybe channel url etc)
                 
+                // If it has video ID, we treat it as Single Video and STRIP everything else (including list)
                 const timestamp = urlObj.searchParams.get('t');
                 return `https://www.youtube.com/watch?v=${videoId}${timestamp ? `&t=${timestamp}` : ''}`;
             }
@@ -183,6 +190,7 @@ export const YoutubeDownloader: React.FC = () => {
                 format,
                 quality,
                 container,
+                embedSubs,
                 maxSpeed: settings.maxSpeedLimit || undefined
             };
             
@@ -334,6 +342,7 @@ export const YoutubeDownloader: React.FC = () => {
                                 format,
                                 quality,
                                 container,
+                                embedSubs,
                                 maxSpeed: settings.maxSpeedLimit || undefined
                             };
 
@@ -986,6 +995,8 @@ export const YoutubeDownloader: React.FC = () => {
                                     setContainer={setContainer}
                                     videoInfo={videoInfo}
                                     disabled={downloadStatus.status === 'downloading'}
+                                    embedSubs={embedSubs}
+                                    setEmbedSubs={setEmbedSubs}
                                 />
 
                                 {/* Download Button - Single Video Only */}

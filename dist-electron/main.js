@@ -2322,6 +2322,8 @@ var YouTubeDownloader = class {
 		this.hasFFmpeg = false;
 		this.ffmpegPath = null;
 		this.aria2Path = null;
+		this.downloadQueue = [];
+		this.activeDownloadsCount = 0;
 		this.store = new Store({
 			name: "youtube-download-history",
 			defaults: {
@@ -2445,6 +2447,19 @@ var YouTubeDownloader = class {
 	async ensureInitialized() {
 		await this.initPromise;
 	}
+	async processQueue() {
+		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
+		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
+			const task = this.downloadQueue.shift();
+			if (task) {
+				this.activeDownloadsCount++;
+				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
+					this.activeDownloadsCount--;
+					this.processQueue();
+				});
+			}
+		}
+	}
 	async getVideoInfo(url) {
 		await this.ensureInitialized();
 		try {
@@ -2540,8 +2555,18 @@ var YouTubeDownloader = class {
 		}
 	}
 	async downloadVideo(options, progressCallback) {
+		return new Promise((resolve, reject) => {
+			this.downloadQueue.push({
+				run: () => this.executeDownload(options, progressCallback),
+				resolve,
+				reject
+			});
+			this.processQueue();
+		});
+	}
+	async executeDownload(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, container, outputPath, maxSpeed } = options;
+		const { url, format, quality, container, outputPath, maxSpeed, embedSubs } = options;
 		const downloadId = randomUUID$1();
 		try {
 			const info = await this.getVideoInfo(url);
@@ -2581,6 +2606,7 @@ var YouTubeDownloader = class {
 				"--embed-thumbnail",
 				"--add-metadata"
 			];
+			if (embedSubs) args.push("--write-subs", "--write-auto-subs", "--sub-lang", "en.*,vi", "--embed-subs");
 			if (maxSpeed) args.push("--limit-rate", maxSpeed);
 			if (this.hasAria2c) {
 				console.log(`[${downloadId}] Using aria2c`);
