@@ -189,7 +189,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         };
     }, [saveState, handleRedo, handleUndo]);
 
-    const updateCanvasScale = (imgWidth: number, imgHeight: number) => {
+    const updateCanvasScale = useCallback((imgWidth: number, imgHeight: number) => {
         if (!canvasContainerRef.current) return;
         const container = canvasContainerRef.current;
         // Padding for the container
@@ -204,21 +204,43 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         const fitScale = Math.min(scaleX, scaleY, 1);
 
         setCanvasScale(fitScale);
-    };
+    }, []);
 
-    // Keep scale updated on resize
+    // Keep scale updated on resize using ResizeObserver
     useEffect(() => {
-        const handleResize = () => {
+        if (!canvasContainerRef.current) return;
+
+        const updateScale = () => {
             if (fabricCanvasRef.current && fabricCanvasRef.current.backgroundImage) {
                 const img = fabricCanvasRef.current.backgroundImage as fabric.Image;
-                if (img.width && img.height) {
-                    updateCanvasScale(img.width, img.height);
+                if (img.width && img.height && canvasContainerRef.current) {
+                    const width = canvasContainerRef.current.clientWidth;
+                    const height = canvasContainerRef.current.clientHeight;
+                    // Only update if dimensions are meaningful
+                    if (width > 20 && height > 20) {
+                        updateCanvasScale(img.width, img.height);
+                    }
                 }
             }
         };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(updateScale);
+        });
+
+        // Initial checks to allow layout to settle
+        requestAnimationFrame(updateScale);
+        const t1 = setTimeout(updateScale, 100);
+        const t2 = setTimeout(updateScale, 500);
+
+        resizeObserver.observe(canvasContainerRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [updateCanvasScale]);
 
     // Clean up crop rectangle when exiting crop mode
     useEffect(() => {

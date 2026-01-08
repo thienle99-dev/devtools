@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Download, Copy, FileImage } from 'lucide-react';
+import { Download, Copy, FileImage, CloudUpload, Link } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { ExportFormat } from '../../../store/xnapperStore';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
 import { generateFinalImage, SOCIAL_PRESETS, type SocialPreset, type OutputConfig } from '../utils/exportUtils';
+import { uploadToImgur } from '../utils/uploadUtils';
 
 export const ExportPanel: React.FC = () => {
     const {
@@ -25,6 +26,7 @@ export const ExportPanel: React.FC = () => {
         shadowOffsetX,
         shadowOffsetY,
         inset,
+        isUploading,
     } = useXnapperStore();
 
     const [filename, setFilename] = useState('');
@@ -134,6 +136,50 @@ export const ExportPanel: React.FC = () => {
         } catch (error) {
             console.error('Copy failed:', error);
             toast.error('Failed to copy to clipboard');
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!currentScreenshot) return;
+
+        const { setIsUploading, setLastUploadUrl } = useXnapperStore.getState();
+        setIsUploading(true);
+
+        try {
+            // Generate final processed image
+            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                autoBalance,
+                redactionAreas,
+                background,
+                backgroundPadding,
+                annotations: canvasData || undefined,
+                outputConfig: getOutputConfig(),
+                borderRadius,
+                shadowBlur,
+                shadowOpacity,
+                shadowOffsetX,
+                shadowOffsetY,
+                inset,
+            });
+
+            // Upload to Imgur
+            const result = await uploadToImgur(processedDataUrl);
+
+            if (result.success && result.url) {
+                setLastUploadUrl(result.url);
+                await navigator.clipboard.writeText(result.url);
+                toast.success('Uploaded! Link copied to clipboard.', {
+                    icon: <Link className="w-4 h-4" />,
+                    duration: 5000,
+                });
+            } else {
+                toast.error(result.error || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Upload failed:', error);
+            toast.error('Failed to upload screenshot');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -293,6 +339,17 @@ export const ExportPanel: React.FC = () => {
                     Copy to Clipboard
                 </Button>
             </div>
+
+            <Button
+                variant="outline"
+                size="lg"
+                onClick={handleUpload}
+                disabled={isUploading || isSaving}
+                className="w-full"
+            >
+                <CloudUpload className="w-5 h-5 mr-2" />
+                {isUploading ? 'Uploading...' : 'Upload to Cloud & Copy Link'}
+            </Button>
         </div>
     );
 };

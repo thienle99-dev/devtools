@@ -101,6 +101,10 @@ interface XnapperState {
     setShowPreview: (show: boolean) => void;
     isAnalyzing: boolean;
     setIsAnalyzing: (analyzing: boolean) => void;
+    isUploading: boolean;
+    setIsUploading: (uploading: boolean) => void;
+    lastUploadUrl: string | null;
+    setLastUploadUrl: (url: string | null) => void;
 }
 
 export const useXnapperStore = create<XnapperState>()(
@@ -198,6 +202,10 @@ export const useXnapperStore = create<XnapperState>()(
             setShowPreview: (show) => set({ showPreview: show }),
             isAnalyzing: false,
             setIsAnalyzing: (analyzing) => set({ isAnalyzing: analyzing }),
+            isUploading: false,
+            setIsUploading: (uploading) => set({ isUploading: uploading }),
+            lastUploadUrl: null,
+            setLastUploadUrl: (url) => set({ lastUploadUrl: url }),
         }),
         {
             name: 'xnapper-storage',

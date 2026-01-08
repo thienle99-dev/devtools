@@ -344,7 +344,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             cancelCrop(); // Or auto-apply? Let's cancel to be safe/avoid UI confusion
         }
 
-        // const mainImg = fabricCanvas.getObjects().find(obj => obj instanceof FabricImage) as FabricImage;
+        // const mainImg =   fabricCanvas.getObjects().find(obj => obj instanceof FabricImage) as FabricImage;
         const multiplier = 2; // High quality export
 
         const dataURL = fabricCanvas.toDataURL({

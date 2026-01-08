@@ -732,7 +732,8 @@
 - [x] Implement templates system
 - [x] Add preset saving functionality
 - [ ] Implement batch processing (future)
-- [ ] Add cloud upload (Imgur, Cloudinary) - future
+- [x] Add cloud upload (Imgur)
+- [x] Implement scrolling screenshot (Web)
 - [ ] Implement AI background suggestions - future
 - [x] Add keyboard shortcuts
 - [x] Implement drag & drop image loading

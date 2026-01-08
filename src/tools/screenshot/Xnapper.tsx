@@ -36,16 +36,14 @@ export const Xnapper: React.FC = () => {
                     </div>
                 ) : (
                     /* Preview and edit mode - screenshot captured */
-                    <div className="h-full flex flex-col lg:flex-row p-1 gap-1">
-                        {/* Preview */}
-                        <div className="flex-1 overflow-hidden rounded-xl border border-border-glass bg-black/20 relative">
+                    <div className="h-full flex flex-row gap-0">
+                        {/* Preview - Full height on left */}
+                        <div className="flex-1 overflow-hidden bg-black/20 relative">
                             <PreviewSection />
                         </div>
 
-                        {/* Xnapper Style Panel - Always visible on right */}
-                        <div className="w-full lg:w-80 border-l border-border-glass bg-glass-panel/30">
-                            <XnapperStylePanel />
-                        </div>
+                        {/* Xnapper Style Panel - Fixed width on right */}
+                        <XnapperStylePanel />
                     </div>
                 )}
             </div>
