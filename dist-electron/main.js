@@ -2321,7 +2321,6 @@ var YouTubeDownloader = class {
 		this.hasAria2c = false;
 		this.hasFFmpeg = false;
 		this.ffmpegPath = null;
-		this.aria2Path = null;
 		this.downloadQueue = [];
 		this.activeDownloadsCount = 0;
 		this.store = new Store({
@@ -2356,10 +2355,18 @@ var YouTubeDownloader = class {
 			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
 			try {
-				const staticPath = require$1("ffmpeg-static");
-				if (staticPath) this.ffmpegPath = staticPath.replace("app.asar", "app.asar.unpacked");
+				const ffmpegPath = require$1("@ffmpeg-installer/ffmpeg").path;
+				console.log("FFmpeg installer path resolved:", ffmpegPath);
+				if (ffmpegPath && fs$1.existsSync(ffmpegPath)) {
+					this.ffmpegPath = ffmpegPath;
+					this.hasFFmpeg = true;
+					console.log("✅ FFmpeg binary verified at:", this.ffmpegPath);
+					if (process.platform !== "win32" && this.ffmpegPath) try {
+						fs$1.chmodSync(this.ffmpegPath, "755");
+					} catch (e) {}
+				} else console.warn("⚠️ FFmpeg binary not found at:", ffmpegPath);
 			} catch (e) {
-				console.warn("FFmpeg static load failed:", e);
+				console.warn("FFmpeg installer load failed:", e);
 			}
 			await this.checkHelpers();
 		} catch (error) {
@@ -2369,13 +2376,11 @@ var YouTubeDownloader = class {
 	}
 	async checkHelpers() {
 		this.hasAria2c = false;
-		this.aria2Path = null;
 		try {
 			const userData = app.getPath("userData");
 			const localBin = path$1.join(userData, "bin", "aria2c.exe");
 			if (fs$1.existsSync(localBin)) {
 				this.hasAria2c = true;
-				this.aria2Path = localBin;
 				console.log("✅ Aria2c found locally:", localBin);
 			}
 		} catch {}
@@ -2494,6 +2499,13 @@ var YouTubeDownloader = class {
 			});
 			const hasVideo = formats.some((f) => f.hasVideo);
 			const hasAudio = formats.some((f) => f.hasAudio);
+			let uploadDate;
+			if (info.upload_date) try {
+				const dateStr = info.upload_date.toString();
+				if (dateStr.length === 8) uploadDate = `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+			} catch (e) {
+				console.warn("Failed to parse upload date:", info.upload_date);
+			}
 			return {
 				videoId: info.id || "",
 				title: info.title || "Unknown",
@@ -2502,7 +2514,7 @@ var YouTubeDownloader = class {
 				thumbnailUrl: info.thumbnail || "",
 				description: info.description || void 0,
 				viewCount: parseInt(info.view_count) || void 0,
-				uploadDate: info.upload_date || void 0,
+				uploadDate,
 				formats,
 				availableQualities,
 				hasVideo,
@@ -2566,8 +2578,9 @@ var YouTubeDownloader = class {
 	}
 	async executeDownload(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, container, outputPath, maxSpeed, embedSubs } = options;
-		const downloadId = randomUUID$1();
+		console.log("ExecuteDownload - hasFFmpeg:", this.hasFFmpeg, "path:", this.ffmpegPath);
+		const { url, format, quality, container, outputPath, maxSpeed, embedSubs, id } = options;
+		const downloadId = id || randomUUID$1();
 		try {
 			const info = await this.getVideoInfo(url);
 			const sanitizedTitle = this.sanitizeFilename(info.title);
@@ -2607,130 +2620,74 @@ var YouTubeDownloader = class {
 				"--add-metadata"
 			];
 			if (embedSubs) args.push("--write-subs", "--write-auto-subs", "--sub-lang", "en.*,vi", "--embed-subs");
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
 			if (maxSpeed) args.push("--limit-rate", maxSpeed);
-			if (this.hasAria2c) {
-				console.log(`[${downloadId}] Using aria2c`);
-				if (this.aria2Path) args.push("--downloader", this.aria2Path, "--downloader-args", "aria2c:-x 16 -s 16 -k 1M");
-				else args.push("--downloader", "aria2c", "--downloader-args", "aria2c:-x 16 -s 16 -k 1M");
-			}
 			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
 			if (format === "audio") args.push("-x", "--audio-format", container || "mp3", "--audio-quality", quality || "0");
 			else if (format === "video") {
-				if (quality && quality !== "best") args.push("-f", `bestvideo[height<=${quality.replace("p", "")}]+bestaudio/best[height<=${quality.replace("p", "")}]`);
-				else args.push("-f", "bestvideo+bestaudio/best");
-				args.push("--merge-output-format", container || "mp4");
+				if (quality && quality !== "best") {
+					const height = quality.replace("p", "");
+					args.push("-f", `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
+				} else args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best");
+				const outputFormat = container || "mp4";
+				args.push("--merge-output-format", outputFormat);
+				if (outputFormat === "mp4") args.push("--postprocessor-args", "ffmpeg:-c:v copy -c:a aac");
 			} else args.push("-f", "best");
 			return new Promise((resolve, reject) => {
 				let downloadedBytes = 0;
 				let totalBytes = 0;
-				let startTime = Date.now();
+				let percent = 0;
 				const process$1 = this.ytDlp.exec(args);
 				this.activeProcesses.set(downloadId, process$1);
-				let outputBuffer = "";
-				process$1.stdout?.on("data", (data) => {
-					const chunk = data.toString();
-					outputBuffer += chunk;
-					const lines = outputBuffer.split(/\r?\n/);
-					outputBuffer = lines.pop() || "";
-					for (const line of lines) {
-						if (!line.trim()) continue;
-						if (line.includes("100%") || line.includes("has already been downloaded")) {
-							if (progressCallback) progressCallback({
-								id: downloadId,
-								percent: 100,
-								downloaded: totalBytes,
-								total: totalBytes,
-								speed: 0,
-								eta: 0,
-								state: "complete",
-								filename: `${sanitizedTitle}.${extension}`
-							});
-							continue;
-						}
-						const getMultiplier = (unit) => {
-							if (!unit) return 1;
-							const u = unit.toLowerCase();
-							if (u.includes("k")) return 1024;
-							if (u.includes("m")) return 1024 * 1024;
-							if (u.includes("g")) return 1024 * 1024 * 1024;
-							return 1;
-						};
-						const stdMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?([\d.]+)([a-zA-Z]+)(?:\s+at\s+([\d.]+)([a-zA-Z]+\/s))?(?:\s+ETA\s+([\d:]+))?/);
-						const aria2Match = line.match(/\[#\w+\s+([0-9.]+[a-zA-Z]+)\/([0-9.]+[a-zA-Z]+)\(([0-9.]+)%\)\s+CN:[0-9]+\s+DL:([0-9.]+[a-zA-Z]+)(?:\s+ETA:([a-zA-Z0-9:msh]+))?/);
-						if (progressCallback) {
-							if (stdMatch) {
-								const percent = parseFloat(stdMatch[1]);
-								const sizeStr = stdMatch[2];
-								const unitStr = stdMatch[3];
-								const speedStr = stdMatch[4];
-								const speedUnitStr = stdMatch[5];
-								const etaStr = stdMatch[6];
-								totalBytes = parseFloat(sizeStr) * getMultiplier(unitStr);
+				if (process$1.ytDlpProcess) {
+					const ytDlpProc = process$1.ytDlpProcess;
+					ytDlpProc.stdout?.on("data", (data) => {
+						const output = data.toString();
+						console.log(`[${downloadId}] stdout:`, output);
+						output.split(/\r?\n/).forEach((line) => {
+							if (!line.trim()) return;
+							const progress = this.parseProgressLine(line);
+							if (progress && progressCallback) {
+								if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
+								if (progress.percent > 0) percent = progress.percent;
 								downloadedBytes = percent / 100 * totalBytes;
-								let speed = 0;
-								if (speedStr && speedUnitStr) speed = parseFloat(speedStr) * getMultiplier(speedUnitStr);
-								let eta = 0;
-								if (etaStr) {
-									const parts = etaStr.split(":").map(Number);
-									if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
-									else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
-									else eta = parts[0];
-								} else {
-									const elapsedTime = (Date.now() - startTime) / 1e3;
-									const currentSpeed = downloadedBytes / elapsedTime;
-									if (!speed) speed = currentSpeed;
-									eta = speed > 0 ? (totalBytes - downloadedBytes) / speed : 0;
-								}
 								progressCallback({
 									id: downloadId,
 									percent: Math.round(percent),
 									downloaded: downloadedBytes,
 									total: totalBytes,
-									speed,
-									eta,
-									state: "downloading",
-									filename: `${sanitizedTitle}.${extension}`
-								});
-							} else if (aria2Match) {
-								const downloadedStr = aria2Match[1];
-								const totalStr = aria2Match[2];
-								const percent = parseFloat(aria2Match[3]);
-								const speedStr = aria2Match[4];
-								const etaStr = aria2Match[5];
-								const parseValUnit = (str) => {
-									const match = str.match(/([0-9.]+)([a-zA-Z]+)/);
-									if (!match) return 0;
-									return parseFloat(match[1]) * getMultiplier(match[2]);
-								};
-								downloadedBytes = parseValUnit(downloadedStr);
-								totalBytes = parseValUnit(totalStr);
-								const speed = parseValUnit(speedStr);
-								let eta = 0;
-								if (etaStr) {
-									let time = 0;
-									const hours = etaStr.match(/(\d+)h/);
-									const mins = etaStr.match(/(\d+)m/);
-									const secs = etaStr.match(/(\d+)s/);
-									if (hours) time += parseInt(hours[1]) * 3600;
-									if (mins) time += parseInt(mins[1]) * 60;
-									if (secs) time += parseInt(secs[1]);
-									eta = time;
-								}
-								progressCallback({
-									id: downloadId,
-									percent: Math.round(percent),
-									downloaded: downloadedBytes,
-									total: totalBytes,
-									speed,
-									eta,
+									speed: progress.speed,
+									eta: progress.eta,
 									state: "downloading",
 									filename: `${sanitizedTitle}.${extension}`
 								});
 							}
-						}
-					}
-				});
-				process$1.stderr?.on("data", (_) => {});
+						});
+					});
+					ytDlpProc.stderr?.on("data", (data) => {
+						const output = data.toString();
+						console.log(`[${downloadId}] stderr:`, output);
+						output.split(/\r?\n/).forEach((line) => {
+							if (!line.trim()) return;
+							const progress = this.parseProgressLine(line);
+							if (progress && progressCallback) {
+								if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
+								if (progress.percent > 0) percent = progress.percent;
+								downloadedBytes = percent / 100 * totalBytes;
+								progressCallback({
+									id: downloadId,
+									percent: Math.round(percent),
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed: progress.speed,
+									eta: progress.eta,
+									state: "downloading",
+									filename: `${sanitizedTitle}.${extension}`
+								});
+							}
+						});
+					});
+				}
 				process$1.on("close", (code) => {
 					this.activeProcesses.delete(downloadId);
 					if (code === 0) {
@@ -2777,12 +2734,24 @@ var YouTubeDownloader = class {
 			const proc = this.activeProcesses.get(id);
 			if (proc) {
 				console.log(`Cancelling download ${id}`);
-				proc.kill();
+				try {
+					if (proc.ytDlpProcess && typeof proc.ytDlpProcess.kill === "function") proc.ytDlpProcess.kill();
+					else if (typeof proc.kill === "function") proc.kill();
+				} catch (e) {
+					console.error("Failed to kill process:", e);
+				}
 				this.activeProcesses.delete(id);
 			}
 		} else {
 			console.log(`Cancelling all ${this.activeProcesses.size} downloads`);
-			this.activeProcesses.forEach((proc) => proc.kill());
+			this.activeProcesses.forEach((proc) => {
+				try {
+					if (proc.ytDlpProcess && typeof proc.ytDlpProcess.kill === "function") proc.ytDlpProcess.kill();
+					else if (typeof proc.kill === "function") proc.kill();
+				} catch (e) {
+					console.error("Failed to kill process:", e);
+				}
+			});
 			this.activeProcesses.clear();
 		}
 	}
@@ -2802,6 +2771,52 @@ var YouTubeDownloader = class {
 	}
 	sanitizeFilename(filename) {
 		return filename.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);
+	}
+	parseProgressLine(line) {
+		const getMultiplier = (unit) => {
+			if (!unit) return 1;
+			const u = unit.toLowerCase();
+			if (u.includes("k")) return 1024;
+			if (u.includes("m")) return 1024 * 1024;
+			if (u.includes("g")) return 1024 * 1024 * 1024;
+			return 1;
+		};
+		if (line.includes("[download]")) {
+			const percentMatch = line.match(/(\d+(?:\.\d+)?)%/);
+			const sizeMatch = line.match(/of\s+~?([0-9.,]+)([a-zA-Z]+)/);
+			const speedMatch = line.match(/at\s+([0-9.,]+)([a-zA-Z]+\/s)/);
+			const etaMatch = line.match(/ETA\s+([\d:]+)/);
+			console.log("[parseProgressLine] Matches:", {
+				line,
+				percentMatch: percentMatch?.[0],
+				sizeMatch: sizeMatch?.[0],
+				speedMatch: speedMatch?.[0],
+				etaMatch: etaMatch?.[0]
+			});
+			if (percentMatch) {
+				const percent = parseFloat(percentMatch[1]);
+				let totalBytes = 0;
+				let speed = 0;
+				let eta = 0;
+				if (sizeMatch) totalBytes = parseFloat(sizeMatch[1].replace(/,/g, "")) * getMultiplier(sizeMatch[2]);
+				if (speedMatch) speed = parseFloat(speedMatch[1].replace(/,/g, "")) * getMultiplier(speedMatch[2].replace("/s", ""));
+				if (etaMatch) {
+					const parts = etaMatch[1].split(":").map(Number);
+					if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
+					else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
+					else eta = parts[0];
+				}
+				return {
+					percent,
+					totalBytes,
+					downloadedBytes: 0,
+					speed,
+					eta,
+					status: "downloading"
+				};
+			}
+		}
+		return null;
 	}
 	getHistory() {
 		return this.store.get("history", []);

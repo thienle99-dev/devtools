@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Youtube, Video, Music, Film, Loader2, Info, FileVideo, FolderOpen, RotateCcw, Clock, HardDrive, Settings } from 'lucide-react';
+import { Download, Youtube, Video, Music, Film, Loader2, Info, FileVideo, FolderOpen, Clock, HardDrive, Settings } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
@@ -9,7 +9,7 @@ import { PlaylistView } from './components/PlaylistView';
 import { ToastContainer, useToast } from '../../components/ui/Toast';
 import { SearchBar } from './components/SearchBar';
 import { FormatSelector } from './components/FormatSelector';
-import { DownloadProgress } from './components/DownloadProgress';
+import { DownloadProgress as DownloadProgressComponent } from './components/DownloadProgress';
 import { formatFileSize as formatBytes, formatDuration as formatTime } from './utils/youtube-helpers';
 
 interface DownloadStatus {
@@ -18,6 +18,21 @@ interface DownloadStatus {
     progress?: number;
     filename?: string;
     detailedLogs?: string[];
+}
+
+interface ActiveDownload {
+    id: string;
+    percent: number;
+    downloaded: number;
+    total: number;
+    speed: number;
+    eta: number;
+    state: 'downloading' | 'processing' | 'complete' | 'error';
+    filename?: string;
+    title?: string;
+    thumbnail?: string;
+    author?: string;
+    url?: string;
 }
 
 interface AppSettings {
@@ -67,13 +82,16 @@ export const YoutubeDownloader: React.FC = () => {
     const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({ status: 'idle' });
     const [videoInfo, setVideoInfo] = useState<VideoInfoData | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
-    const [retryCount, setRetryCount] = useState(0);
     const [downloadFolder, setDownloadFolder] = useState<string | null>(null);
     const [playlistInfo, setPlaylistInfo] = useState<any | null>(null);
     const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
     const [isPlaylist, setIsPlaylist] = useState(false);
-    const [view, setView] = useState<'download' | 'history' | 'settings'>('download');
+    const [view, setView] = useState<'new' | 'downloads' | 'settings'>('new');
     const [history, setHistory] = useState<any[]>([]);
+    
+    // Active Downloads State
+    const [activeDownloads, setActiveDownloads] = useState<Map<string, ActiveDownload>>(new Map());
+
     const [settings, setSettings] = useState<AppSettings>({
         defaultVideoQuality: '1080p',
         defaultAudioQuality: '0',
@@ -146,102 +164,105 @@ export const YoutubeDownloader: React.FC = () => {
             return url;
         }
     };
+    
+    // Global Progress Listener
+    useEffect(() => {
+        if (!(window as any).youtubeAPI) return;
 
-    const handleDownload = async (isRetry = false) => {
-        if (!url.trim()) {
-            error('Invalid URL', 'Please enter a YouTube URL');
-            setDownloadStatus({ status: 'error', message: 'Please enter a YouTube URL' });
-            return;
-        }
+        const unsubscribe = (window as any).youtubeAPI.onProgress((progress: any) => {
+            if (!progress.id) return;
+            
+            setActiveDownloads(prev => {
+                const newMap = new Map(prev);
+                const existing = newMap.get(progress.id);
+                
+                // Only update if changed significantly or status change
+                // to avoid too many re-renders
+                newMap.set(progress.id, {
+                    ...progress,
+                    title: existing?.title || progress.title || 'Downloading...',
+                    thumbnail: existing?.thumbnail || progress.thumbnail
+                });
 
-        if (!isValidYoutubeUrl(url)) {
+                if (progress.state === 'complete' || progress.state === 'error') {
+                    // Refresh history if complete
+                   if (progress.state === 'complete') loadHistory();
+                }
+
+                return newMap;
+            });
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleDownload = async (overrideQuality?: string) => {
+        if (!url.trim() || !isValidYoutubeUrl(url)) {
             error('Invalid URL', 'Please enter a valid YouTube URL');
-            setDownloadStatus({ status: 'error', message: 'Invalid YouTube URL' });
             return;
         }
 
-        if (isRetry) {
-            info('Retrying download', `Attempt ${retryCount + 1} of 3`);
-        } else {
-            info('Starting download', videoInfo?.title || 'Video');
-            setRetryCount(0);
-        }
-
-        setDownloadStatus({ status: 'downloading', message: 'Preparing download...', progress: 0 });
+        // 1. Initial UI feedback
+        const downloadTitle = videoInfo?.title || 'Video';
+        const downloadId = crypto.randomUUID();
+        
+        info('Added to Queue', 'Download started in background');
+        
+        // Optimistically add to active downloads
+        setActiveDownloads(prev => {
+            const newMap = new Map(prev);
+            newMap.set(downloadId, {
+                id: downloadId,
+                percent: 0,
+                downloaded: 0,
+                total: 0,
+                speed: 0,
+                eta: 0,
+                state: 'processing', // 'processing' or 'queued'
+                filename: 'Waiting for metadata...',
+                title: downloadTitle,
+                author: videoInfo?.author,
+                url: url,
+                thumbnail: videoInfo?.thumbnailUrl
+            });
+            return newMap;
+        });
 
         try {
-            // Check if YouTube API is available
-            if (!(window as any).youtubeAPI) {
-                throw new Error('YouTube API not available');
-            }
-
-            // Set up progress listener
-            const unsubscribe = (window as any).youtubeAPI.onProgress((progress: any) => {
-                setDownloadStatus({
-                    status: 'downloading',
-                    message: `Downloading... ${progress.percent}%`,
-                    progress: progress.percent
-                });
-            });
-
-            // Start download
             const downloadOptions: any = {
                 url,
                 format,
-                quality,
+                quality: overrideQuality || quality,
                 container,
                 embedSubs,
-                maxSpeed: settings.maxSpeedLimit || undefined
+                maxSpeed: settings.maxSpeedLimit || undefined,
+                id: downloadId
             };
             
-            // Use custom folder if selected
             if (downloadFolder) {
                 downloadOptions.outputPath = downloadFolder;
             }
             
-            const result = await (window as any).youtubeAPI.download(downloadOptions);
-
-            unsubscribe();
-
-            if (result.success) {
-                setDownloadStatus({
-                    status: 'success',
-                    message: 'Download completed successfully!',
-                    filename: result.filepath
+            // Fire and forget (don't await result here to block UI)
+            (window as any).youtubeAPI.download(downloadOptions)
+                .then((result: any) => {
+                    if (result.success) {
+                        success('Download Complete', `${downloadTitle} has been downloaded.`);
+                        loadHistory();
+                    } else {
+                        error('Download Failed', result.error || 'Unknown error');
+                    }
+                })
+                .catch((err: any) => {
+                    error('Download Error', err.message);
                 });
-                success('Download Complete!', videoInfo?.title || 'Video downloaded successfully');
-                setRetryCount(0);
-            } else {
-                throw new Error(result.error || 'Download failed');
-            }
-        } catch (err: any) {
-            const errorMessage = err instanceof Error ? err.message : 'Download failed';
-            const logs = [
-                `Time: ${new Date().toLocaleTimeString()}`,
-                `Error: ${errorMessage}`,
-                `Quality: ${quality}`,
-                `Format: ${format}`,
-                err.stack ? `Stack: ${err.stack.split('\n')[0]}` : '',
-                err.statusCode ? `HTTP Status: ${err.statusCode}` : ''
-            ].filter(Boolean);
 
-            setDownloadStatus({
-                status: 'error',
-                message: errorMessage,
-                detailedLogs: logs
-            });
-            
-            // Auto-retry logic (max 3 attempts)
-            if (!isRetry && retryCount < 2) {
-                setRetryCount(retryCount + 1);
-                error('Download Failed', `Will retry in 3 seconds... (Attempt ${retryCount + 1}/3)`);
-                setTimeout(() => handleDownload(true), 3000);
-            } else {
-                error('Download Failed', errorMessage);
-                if (retryCount >= 2) {
-                    error('Max Retries Reached', 'Please try again later or check your internet connection');
-                }
-            }
+            // Reset UI for next download
+            setDownloadStatus({ status: 'idle' }); 
+            // setUrl(''); // Optional: clear URL? Maybe keep it.
+
+        } catch (err: any) {
+            error('Failed to start', err.message);
         }
     };
 
@@ -475,31 +496,69 @@ export const YoutubeDownloader: React.FC = () => {
 
 
     useEffect(() => {
-        if (view === 'history') {
+        if (view === 'downloads') {
             loadHistory();
         }
     }, [view]);
 
-    const renderHistory = () => (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-foreground-primary">Download History</h3>
-                <Button 
-                    onClick={async () => {
-                        if (confirm('Clear all history?')) {
-                            await (window as any).youtubeAPI.clearHistory();
-                            loadHistory();
-                        }
-                    }} 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                >
-                    Clear All
-                </Button>
-            </div>
-            
-            <div className="space-y-2">
+    const renderDownloads = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Active Downloads Section */}
+            {activeDownloads.size > 0 && (
+                <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground-primary flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                        Active Downloads ({activeDownloads.size})
+                    </h3>
+                    
+                    <div className="grid gap-3">
+                        {Array.from(activeDownloads.values()).map(progress => (
+                            progress.state !== 'complete' && progress.state !== 'error' && (
+                                <DownloadProgressComponent
+                                    key={progress.id}
+                                    status={{
+                                        status: 'downloading',
+                                        message: progress.state === 'processing' ? 'Processing...' : `Downloading... ${progress.percent?.toFixed(1) || 0}%`,
+                                        progress: progress.percent,
+                                        speed: progress.speed,
+                                        eta: progress.eta,
+                                        total: progress.total,
+                                        downloaded: progress.downloaded,
+                                        title: progress.title,
+                                        filename: progress.filename,
+                                        url: progress.url
+                                    }}
+                                    onCancel={() => {
+                                        handleCancel(); 
+                                    }}
+                                    isPlaylist={false}
+                                />
+                            )
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* History Section */}
+            <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-semibold text-foreground-primary">History</h3>
+                    <Button 
+                        onClick={async () => {
+                            if (confirm('Clear all history?')) {
+                                await (window as any).youtubeAPI.clearHistory();
+                                loadHistory();
+                            }
+                        }} 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-7"
+                    >
+                        Clear All
+                    </Button>
+                </div>
+                
+                <div className="space-y-2">
                 {history.length === 0 ? (
                     <div className="text-center py-10 text-foreground-tertiary">
                         <p>No downloads yet.</p>
@@ -558,7 +617,8 @@ export const YoutubeDownloader: React.FC = () => {
                 )}
             </div>
         </div>
-    );
+    </div>
+);
 
     const renderSettings = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -792,10 +852,7 @@ export const YoutubeDownloader: React.FC = () => {
         }
     };
 
-    const handleRetry = () => {
-        setRetryCount(0);
-        handleDownload(false);
-    };
+
 
     const handleClear = () => {
         setUrl('');
@@ -874,22 +931,25 @@ export const YoutubeDownloader: React.FC = () => {
                 {/* View Toggle */}
                 <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
                     <button
-                        onClick={() => setView('download')}
+                        onClick={() => setView('new')}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
-                            view === 'download' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
+                            view === 'new' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
                         }`}
                     >
                         <Download className="w-3.5 h-3.5" />
-                        Download
+                        New Download
                     </button>
                     <button
-                        onClick={() => setView('history')}
+                        onClick={() => setView('downloads')}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${
-                            view === 'history' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
+                            view === 'downloads' ? 'bg-background-secondary text-foreground shadow-sm' : 'text-foreground-secondary hover:text-foreground'
                         }`}
                     >
                         <Clock className="w-3.5 h-3.5" />
-                        History
+                        Downloads
+                        {activeDownloads.size > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">{activeDownloads.size}</span>
+                        )}
                     </button>
                     <button
                         onClick={() => setView('settings')}
@@ -907,8 +967,8 @@ export const YoutubeDownloader: React.FC = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="w-full mx-auto space-y-6">
-                    {view === 'history' ? (
-                        renderHistory()
+                    {view === 'downloads' ? (
+                        renderDownloads()
                     ) : view === 'settings' ? (
                         renderSettings()
                     ) : (
@@ -997,52 +1057,20 @@ export const YoutubeDownloader: React.FC = () => {
                                     disabled={downloadStatus.status === 'downloading'}
                                     embedSubs={embedSubs}
                                     setEmbedSubs={setEmbedSubs}
+                                    onDownload={(q) => handleDownload(q)}
                                 />
 
-                                {/* Download Button - Single Video Only */}
-                                {!isPlaylist && (
-                                    <div className="flex justify-center gap-3 pt-2">
-                                        <Button
-                                            onClick={() => handleDownload(false)}
-                                            disabled={!url || downloadStatus.status === 'downloading'}
-                                            className="min-w-[200px] shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all"
-                                            size="lg"
-                                        >
-                                            {downloadStatus.status === 'downloading' ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                    Downloading...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Download Video
-                                                </>
-                                            )}
-                                        </Button>
 
-                                        {downloadStatus.status === 'error' && (
-                                            <Button
-                                                onClick={handleRetry}
-                                                variant="outline"
-                                                size="lg"
-                                            >
-                                                <RotateCcw className="w-4 h-4 mr-2" />
-                                                Retry
-                                            </Button>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}
 
-                    {/* Status Display */}
-                    {/* Status Display */}
-                    {downloadStatus.status !== 'idle' && (
-                        <DownloadProgress
+                    {/* Status Display - ONLY for legacy/global status, irrelevant now as we use activeDownloads */}
+                    {/* But we keep it if playlist download uses old mechanism or generic errors */}
+                    {downloadStatus.status === 'error' && (
+                        <DownloadProgressComponent
                             status={downloadStatus}
-                            onCancel={handleCancel}
+                            onCancel={() => handleCancel()}
                             isPlaylist={isPlaylist}
                             onOpenFile={handleOpenFile}
                             onShowFolder={handleShowInFolder}

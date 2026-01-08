@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card } from '../../../components/ui/Card';
 import { 
-    CheckCircle2, 
     Settings, 
     Music, 
     Video, 
@@ -9,7 +8,8 @@ import {
     Smartphone, 
     Tv,
     Box,
-    Captions
+    Captions,
+    Download
 } from 'lucide-react';
 
 interface FormatSelectorProps {
@@ -23,19 +23,20 @@ interface FormatSelectorProps {
     disabled?: boolean;
     embedSubs: boolean;
     setEmbedSubs: (enabled: boolean) => void;
+    onDownload?: (quality: string) => void;
 }
 
 export const FormatSelector: React.FC<FormatSelectorProps> = ({
     format,
     setFormat,
-    quality,
     setQuality,
     container,
     setContainer,
     videoInfo,
     disabled,
     embedSubs,
-    setEmbedSubs
+    setEmbedSubs,
+    onDownload
 }) => {
 
     const handleFormatChange = (newFormat: 'video' | 'audio') => {
@@ -183,47 +184,36 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                      </div>
                      
                      {format === 'video' ? (
-                        /* Video List */
-                        (videoInfo?.availableQualities || ['1080p', '720p', '480p']).map((q: string) => (
-                             <button
-                                key={q}
-                                onClick={() => setQuality(q)}
-                                disabled={disabled}
-                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group ${
-                                    quality === q
-                                        ? 'bg-red-500/5 border-red-500/30 shadow-inner'
-                                        : 'border-transparent hover:bg-white/5 hover:border-white/5'
-                                }`}
-                             >
-                                <div className="flex items-center gap-4">
-                                     <div className={`p-2 rounded-lg ${
-                                         quality === q ? 'bg-red-500/10 text-red-400' : 'bg-background-tertiary text-foreground-tertiary group-hover:bg-background-secondary group-hover:text-foreground-secondary'
-                                     }`}>
-                                         {getQualityIcon(q)}
-                                     </div>
-                                     <div className="text-left">
-                                         <div className={`text-sm font-bold ${
-                                             quality === q ? 'text-red-400' : 'text-foreground-primary'
-                                         }`}>
-                                            {q}
+                            (videoInfo?.availableQualities || ['1080p', '720p', '480p']).map((q: string) => (
+                                 <div
+                                    key={q}
+                                    onClick={() => onDownload?.(q)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer border-transparent hover:bg-white/5 hover:border-white/5 bg-background-tertiary/20`}
+                                 >
+                                    <div className="flex items-center gap-4">
+                                         <div className={`p-2 rounded-lg bg-background-tertiary text-foreground-tertiary group-hover:bg-red-500/10 group-hover:text-red-400 transition-colors`}>
+                                             {getQualityIcon(q)}
                                          </div>
-                                         <div className="text-xs text-foreground-secondary opacity-80">
-                                            {getQualityLabel(q)}
+                                         <div className="text-left">
+                                             <div className={`text-sm font-bold text-foreground-primary group-hover:text-red-400 transition-colors`}>
+                                                {q}
+                                             </div>
+                                             <div className="text-xs text-foreground-secondary opacity-80">
+                                                {getQualityLabel(q)}
+                                             </div>
                                          </div>
-                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-xs font-mono font-medium text-foreground-secondary">
-                                        ~{estimateSize(q)}
                                     </div>
-                                    {quality === q && (
-                                        <div className="flex justify-end mt-1">
-                                            <CheckCircle2 className="w-4 h-4 text-red-500" />
+                                    <div className="text-right flex items-center gap-3">
+                                        <div className="text-xs font-mono font-medium text-foreground-secondary">
+                                            ~{estimateSize(q)}
                                         </div>
-                                    )}
-                                </div>
-                             </button>
-                        ))
+                                        
+                                        <div className="p-2 rounded-lg bg-white/5 text-foreground-tertiary group-hover:bg-red-500 group-hover:text-white transition-all shadow-sm">
+                                            <Download className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                 </div>
+                            ))
                      ) : (
                         /* Audio List */
                         [
@@ -231,26 +221,17 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                             { id: '5', label: 'High Quality', detail: '192kbps' },
                             { id: '9', label: 'Standard', detail: '128kbps' }
                         ].map((opt) => (
-                             <button
+                             <div
                                 key={opt.id}
-                                onClick={() => setQuality(opt.id)}
-                                disabled={disabled}
-                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group ${
-                                    quality === opt.id
-                                        ? 'bg-pink-500/5 border-pink-500/30 shadow-inner'
-                                        : 'border-transparent hover:bg-white/5 hover:border-white/5'
-                                }`}
+                                onClick={() => onDownload?.(opt.id)}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer border-transparent hover:bg-white/5 hover:border-white/5 bg-background-tertiary/20`}
                              >
                                 <div className="flex items-center gap-4">
-                                     <div className={`p-2 rounded-lg ${
-                                         quality === opt.id ? 'bg-pink-500/10 text-pink-400' : 'bg-background-tertiary text-foreground-tertiary group-hover:bg-background-secondary group-hover:text-foreground-secondary'
-                                     }`}>
+                                     <div className={`p-2 rounded-lg bg-background-tertiary text-foreground-tertiary group-hover:bg-pink-500/10 group-hover:text-pink-400 transition-colors`}>
                                          <Music className="w-5 h-5" />
                                      </div>
                                      <div className="text-left">
-                                         <div className={`text-sm font-bold ${
-                                             quality === opt.id ? 'text-pink-400' : 'text-foreground-primary'
-                                         }`}>
+                                         <div className={`text-sm font-bold text-foreground-primary group-hover:text-pink-400 transition-colors`}>
                                             {opt.label}
                                          </div>
                                          <div className="text-xs text-foreground-secondary opacity-80">
@@ -258,17 +239,16 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                                          </div>
                                      </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right flex items-center gap-3">
                                     <div className="text-xs font-mono font-medium text-foreground-secondary">
                                         ~{estimateSize(opt.id)}
                                     </div>
-                                    {quality === opt.id && (
-                                        <div className="flex justify-end mt-1">
-                                            <CheckCircle2 className="w-4 h-4 text-pink-500" />
-                                        </div>
-                                    )}
+                                    
+                                    <div className="p-2 rounded-lg bg-white/5 text-foreground-tertiary group-hover:bg-pink-500 group-hover:text-white transition-all shadow-sm">
+                                        <Download className="w-4 h-4" />
+                                    </div>
                                 </div>
-                             </button>
+                             </div>
                         ))
                      )}
                 </div>
