@@ -727,8 +727,11 @@
 - [x] Create HistoryPanel component
 - [x] Implement screenshot history storage
 
-### 8.5 Phase 5: Advanced Features
+### 8.5 Phase 5: Advanced Features & Polish
 
+- [ ] Quick Actions: Double-click to Copy (with visual flash feedback)
+- [ ] Quick Actions: Drag-and-Drop Export (create temp file for Finder/Desktop)
+- [ ] Aspect Ratio Presets (16:9, 1:1, 4:5, 9:16)
 - [x] Implement templates system
 - [x] Add preset saving functionality
 - [ ] Implement batch processing (future)
@@ -828,7 +831,7 @@
 
 ---
 
-## Phase 11: Clipboard Manager Enhancements (clipboard-manager.md)
+## Phase 11: Clipboard Manager Enhancements (clipboard-advanced-features.md)
 
 ### 11.1 Advanced Features
 
@@ -839,6 +842,99 @@
 - [ ] Clipboard monitoring service
 - [ ] Auto-paste shortcuts
 - [ ] Clipboard statistics and analytics
+- [ ] Better scroll performance for large history (clipboard-scroll-debug.md)
+- [ ] Tray icon quick access (clipboard-manager-tray.md)
+
+---
+
+## Phase 12: Universal Media Downloader Implementation (UNIVERSAL_DOWNLOADER_PLAN.md)
+
+### 12.1 Backend Service
+- [ ] Create `electron/main/universal-downloader.ts`
+- [ ] Implement `UniversalDownloader` class with generic `getVideoInfo` and `downloadMedia`
+- [ ] Implement platform-specific arguments system (cookies, user-agent)
+- [ ] Register IPC handlers: `universal:get-info`, `universal:download`, `universal:cancel`, `universal:get-history`
+- [ ] Expose `window.universalAPI` in preload script
+
+### 12.2 React Components
+- [ ] Create `utils/platform-detector.ts` for URL type identification
+- [ ] Create `UniversalDownloader.tsx` main container
+- [ ] Implement `PlatformDetector.tsx` for visual feedback
+- [ ] Implement `UniversalVideoInfo.tsx` for unified metadata display
+- [ ] Implement `UniversalFormatSelector.tsx` for simplified audio/video selection
+- [ ] Implement `PlatformBadge.tsx` for platform indication
+
+### 12.3 Advanced Media Features
+- [ ] Batch URL Download capability (paste multiple links) (Phase 3.1)
+- [ ] Import URLs from file/clipboard
+- [ ] Instagram Stories/Reels/Posts specialized support
+- [ ] Twitter/X Video/GIF/Spaces support
+- [ ] Reddit Video (with audio) support
+- [ ] Facebook/Watch video support
+- [ ] Cloud Storage auto-sync after download
+- [ ] Audio Extractor tool enhancements (AUDIO_EXTRACTOR_PLAN.md)
+
+---
+
+## Phase 13: Refactoring & Code Quality (REFACTORING_PLAN.md)
+
+### 13.1 Centralized Utilities
+- [ ] Create `src/utils/format/` (bytes, time, speed, index)
+- [ ] Create `src/utils/validation/` (url, file, index)
+- [ ] Implement `formatBytes`, `formatDuration`, `formatETA`, `formatSpeed`
+- [ ] Implement `isValidYoutubeUrl`, `extractVideoId`, `sanitizeFilename`
+
+### 13.2 Type Centralization
+- [ ] Create `src/types/clipboard.ts` (extract from store)
+- [ ] Create `src/types/screenshot.ts` (move from tool folder)
+- [ ] Create `src/types/system-cleaner.ts` (move from tool folder)
+- [ ] Create `src/types/common/ui.ts` (shared UI types)
+
+### 13.3 Component Refactoring
+- [ ] Refactor `YoutubeDownloader.tsx` to use centralized utils
+- [ ] Refactor Stats Monitor components (`DiskModule`, `MemoryModule`, etc.)
+- [ ] Refactor `VideoToFrames.tsx` and `FramesToVideo.tsx`
+- [ ] Update all imports across the codebase
+
+---
+
+## Phase 14: Video Frame Tools Enhancements (VIDEOFRAMES_COMPLETION.md)
+
+### 14.1 Phase 2: Advanced Processing
+- [ ] FFmpeg.wasm integration for client-side processing
+- [ ] MP4 and H.265 export support
+- [ ] GIF creation tool
+- [ ] Manual frame selection and trimming
+- [ ] Batch processing for multiple videos
+
+### 14.2 Phase 3: Effects & Optimization
+- [ ] Video effects and filters
+- [ ] Watermarking capabilities
+- [ ] Advanced compression settings
+- [ ] Concurrent processing/Worker support
+
+---
+
+## Phase 15: Stats Monitor Additional Modules (stats-monitor-additional-modules-plan.md)
+
+### 15.1 New Monitoring Modules
+- [ ] Bluetooth Module (connected devices, battery, icons)
+- [ ] Time Zones Module (multiple clocks, date, offset)
+- [ ] Performance Metrics Export (JSON/CSV)
+
+### 15.2 Menu Bar (Tray) Integration
+- [ ] Create `statsTray` with dynamic icon (CPU usage based)
+- [ ] Implement Tray Context Menu with quick stats
+- [ ] Frontend integration for real-time tray updates
+
+---
+
+## Phase 16: Browser Extension Support
+
+- [ ] Create Chrome/Edge/Firefox Extension
+- [ ] Implement Native Messaging with DevTools App
+- [ ] Add "Download with DevTools" right-click menu
+- [ ] Floating download button on video players
 
 ---
 
@@ -852,6 +948,7 @@
 - Keep bundle size optimized
 - Document all tools with examples
 - System Cleaner: Most features completed, focus on testing and platform-specific features
-- Xnapper: Not started, high priority for developers/marketers
-- Stats Monitor: Core modules implemented, need additional modules and menu bar integration
-- Application Manager: Not started, useful for system management
+- Xnapper: Core implementation complete, need AI background and batch processing in the future
+- Stats Monitor: Core modules implemented, expansion planned for Bluetooth and Timezones
+- Application Manager: Planned for system management
+- Universal Downloader: Highest priority for next media feature
