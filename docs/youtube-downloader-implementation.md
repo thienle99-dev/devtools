@@ -56,7 +56,7 @@ Tính năng download video từ YouTube link với nhiều định dạng và ch
   - [x] Invalid URL - ✅ Validation
   - [x] Video not available - ✅ Error message
   - [x] HTTP 416 errors - ✅ Auto cleanup + --no-continue
-  - [x] Disk space - ⚠️ TODO (low priority)
+  - [x] Disk space - ✅ Implemented (checks before download)
   - [x] Age restricted - ⚠️ Requires auth (future)
   - [x] Private videos - ✅ Error message
 

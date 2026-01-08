@@ -2463,7 +2463,8 @@ var YouTubeDownloader = class {
 				container: format.ext || "unknown",
 				codecs: format.vcodec || format.acodec,
 				bitrate: format.tbr ? format.tbr * 1e3 : void 0,
-				audioBitrate: format.abr
+				audioBitrate: format.abr,
+				filesize: format.filesize || format.filesize_approx
 			}));
 			const qualityLabels = /* @__PURE__ */ new Set();
 			formats.forEach((format) => {
@@ -2523,6 +2524,21 @@ var YouTubeDownloader = class {
 			throw new Error(`Failed to get playlist info: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
 	}
+	async checkDiskSpace(directory, requiredBytes) {
+		try {
+			const filesystems = await si.fsSize();
+			const root = path$1.parse(path$1.resolve(directory)).root.toLowerCase();
+			const fs$2 = filesystems.find((d) => {
+				const mount = d.mount.toLowerCase();
+				return root.startsWith(mount) || mount.startsWith(root.replace(/\\/g, ""));
+			});
+			if (fs$2) {
+				if (fs$2.available < requiredBytes + 100 * 1024 * 1024) throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs$2.available / 1024 / 1024).toFixed(2)} MB`);
+			}
+		} catch (error) {
+			console.warn("Disk space check failed:", error);
+		}
+	}
 	async downloadVideo(options, progressCallback) {
 		await this.ensureInitialized();
 		const { url, format, quality, container, outputPath, maxSpeed } = options;
@@ -2534,6 +2550,17 @@ var YouTubeDownloader = class {
 			const extension = container || (format === "audio" ? "mp3" : "mp4");
 			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}.%(ext)s`);
 			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			let estimatedSize = 0;
+			if (format === "audio") estimatedSize = info.formats.find((f) => f.hasAudio && !f.hasVideo && (f.quality === quality || f.itag.toString() === "140"))?.filesize || 0;
+			else {
+				let videoFormat;
+				if (quality && quality !== "best") videoFormat = info.formats.find((f) => f.qualityLabel?.startsWith(quality) && f.hasVideo);
+				else videoFormat = info.formats.find((f) => f.hasVideo);
+				const audioFormat = info.formats.find((f) => f.hasAudio && !f.hasVideo);
+				if (videoFormat) estimatedSize += videoFormat.filesize || 0;
+				if (audioFormat) estimatedSize += audioFormat.filesize || 0;
+			}
+			if (estimatedSize > 1024 * 1024) await this.checkDiskSpace(downloadsPath, estimatedSize);
 			const args = [
 				url,
 				"-o",

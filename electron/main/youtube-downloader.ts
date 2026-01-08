@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import https from 'https';
+import si from 'systeminformation';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
@@ -60,6 +61,7 @@ export interface VideoFormat {
     codecs?: string;
     bitrate?: number;
     audioBitrate?: number;
+    filesize?: number;
 }
 
 export interface VideoInfo {
@@ -290,6 +292,7 @@ export class YouTubeDownloader {
                 codecs: format.vcodec || format.acodec,
                 bitrate: format.tbr ? format.tbr * 1000 : undefined,
                 audioBitrate: format.abr,
+                filesize: format.filesize || format.filesize_approx,
             }));
 
             // Extract unique quality labels
@@ -376,6 +379,39 @@ export class YouTubeDownloader {
         }
     }
     
+
+
+    /**
+     * Check if there is enough free space on the disk
+     */
+    async checkDiskSpace(directory: string, requiredBytes: number): Promise<void> {
+        try {
+            // Get all filesystems
+            const filesystems = await si.fsSize();
+            
+            // Find the drive that contains the directory
+            const root = path.parse(path.resolve(directory)).root.toLowerCase();
+            
+            // Normalize mount points for comparison (e.g. "C:" -> "c:")
+            const fs = filesystems.find(d => {
+                const mount = d.mount.toLowerCase();
+                // Check if root starts with mount (handles C:\ vs C:)
+                return root.startsWith(mount) || mount.startsWith(root.replace(/\\/g, ''));
+            });
+
+            if (fs) {
+                // Add 100MB buffer
+                const buffer = 100 * 1024 * 1024;
+                if (fs.available < requiredBytes + buffer) {
+                     throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs.available / 1024 / 1024).toFixed(2)} MB`);
+                }
+            }
+        } catch (error) {
+            console.warn('Disk space check failed:', error);
+            // Don't block download if check fails, just warn
+        }
+    }
+    
     /**
      * Download video using yt-dlp with optimized buffer and concurrency
      */
@@ -398,6 +434,32 @@ export class YouTubeDownloader {
             
             if (!fs.existsSync(downloadsPath)) {
                 fs.mkdirSync(downloadsPath, { recursive: true });
+            }
+
+            // Calculate estimated size
+            let estimatedSize = 0;
+            if (format === 'audio') {
+                // Estimate based on audio quality or take best audio
+                const audioFormat = info.formats.find(f => f.hasAudio && !f.hasVideo && (f.quality === quality || f.itag.toString() === '140')); // 140 is m4a 128k usually
+                estimatedSize = audioFormat?.filesize || 0;
+            } else {
+                // Estimate video + audio
+                let videoFormat;
+                if (quality && quality !== 'best') {
+                     videoFormat = info.formats.find(f => f.qualityLabel?.startsWith(quality) && f.hasVideo);
+                } else {
+                     videoFormat = info.formats.find(f => f.hasVideo); // Best usually first or use logic
+                }
+                
+                const audioFormat = info.formats.find(f => f.hasAudio && !f.hasVideo); // Best audio
+                
+                if (videoFormat) estimatedSize += (videoFormat.filesize || 0);
+                if (audioFormat) estimatedSize += (audioFormat.filesize || 0);
+            }
+
+            // Check disk space if size is known (and > 1MB to be worth checking)
+            if (estimatedSize > 1024 * 1024) {
+                await this.checkDiskSpace(downloadsPath, estimatedSize);
             }
 
             // Build yt-dlp arguments
