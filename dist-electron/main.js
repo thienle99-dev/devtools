@@ -2615,9 +2615,7 @@ var YouTubeDownloader = class {
 				"10",
 				"--fragment-retries",
 				"10",
-				"--no-overwrites",
-				"--embed-thumbnail",
-				"--add-metadata"
+				"--no-overwrites"
 			];
 			if (embedSubs) args.push("--write-subs", "--write-auto-subs", "--sub-lang", "en.*,vi", "--embed-subs");
 			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);

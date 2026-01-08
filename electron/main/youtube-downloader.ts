@@ -553,9 +553,9 @@ export class YouTubeDownloader {
                 '--retries', '10',
                 '--fragment-retries', '10', 
                 '--no-overwrites',
-                // Metadata (New)
-                '--embed-thumbnail',
-                '--add-metadata',
+                // Metadata embedding disabled due to ffprobe dependency
+                // '--embed-thumbnail',
+                // '--add-metadata',
             ];
 
             if (embedSubs) {
