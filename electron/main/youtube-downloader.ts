@@ -307,19 +307,30 @@ export class YouTubeDownloader {
         }
     }
 
+    private videoInfoCache: Map<string, { info: VideoInfo, timestamp: number }> = new Map();
+    private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
     /**
      * Get video information
      */
     async getVideoInfo(url: string): Promise<VideoInfo> {
         await this.ensureInitialized();
         
+        // Check cache
+        const cached = this.videoInfoCache.get(url);
+        if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+            console.log('Returning cached video info for:', url);
+            return cached.info;
+        }
+
         try {
             // Use yt-dlp to get video info with optimizations
             const info: any = await this.ytDlp.getVideoInfo([
                 url,
                 '--skip-download',
                 '--no-playlist',
-                '--no-check-certificate', // Fix SSL certificate verification on macOS
+                '--no-check-certificate',
+                '--no-call-home', // Optimization: Don't contact yt-dlp server for updates
             ]);
             
             // Parse available formats
@@ -356,11 +367,10 @@ export class YouTubeDownloader {
             const hasVideo = formats.some(f => f.hasVideo);
             const hasAudio = formats.some(f => f.hasAudio);
             
-            // Parse upload date from YYYYMMDD format to ISO string
+            // Parse upload date
             let uploadDate: string | undefined;
             if (info.upload_date) {
                 try {
-                    // Format: YYYYMMDD -> YYYY-MM-DD
                     const dateStr = info.upload_date.toString();
                     if (dateStr.length === 8) {
                         const year = dateStr.substring(0, 4);
@@ -373,7 +383,7 @@ export class YouTubeDownloader {
                 }
             }
             
-            return {
+            const videoInfo: VideoInfo = {
                 videoId: info.id || '',
                 title: info.title || 'Unknown',
                 author: info.uploader || info.channel || 'Unknown',
@@ -387,6 +397,11 @@ export class YouTubeDownloader {
                 hasVideo,
                 hasAudio,
             };
+
+            // Cache the result
+            this.videoInfoCache.set(url, { info: videoInfo, timestamp: Date.now() });
+
+            return videoInfo;
         } catch (error) {
             throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -561,7 +576,7 @@ export class YouTubeDownloader {
                 '--buffer-size', '1M',
                 '--retries', '10',
                 '--fragment-retries', '10', 
-                '--no-overwrites',
+                '-c', // Resume interrupted downloads
                 // Metadata embedding disabled due to ffprobe dependency
                 // '--embed-thumbnail',
                 // '--add-metadata',

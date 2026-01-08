@@ -2323,6 +2323,8 @@ var YouTubeDownloader = class {
 		this.ffmpegPath = null;
 		this.downloadQueue = [];
 		this.activeDownloadsCount = 0;
+		this.videoInfoCache = /* @__PURE__ */ new Map();
+		this.CACHE_TTL = 1800 * 1e3;
 		this.store = new Store({
 			name: "youtube-download-history",
 			defaults: {
@@ -2467,12 +2469,18 @@ var YouTubeDownloader = class {
 	}
 	async getVideoInfo(url) {
 		await this.ensureInitialized();
+		const cached = this.videoInfoCache.get(url);
+		if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+			console.log("Returning cached video info for:", url);
+			return cached.info;
+		}
 		try {
 			const info = await this.ytDlp.getVideoInfo([
 				url,
 				"--skip-download",
 				"--no-playlist",
-				"--no-check-certificate"
+				"--no-check-certificate",
+				"--no-call-home"
 			]);
 			const formats = (info.formats || []).map((format) => ({
 				itag: format.format_id ? parseInt(format.format_id) : 0,
@@ -2506,7 +2514,7 @@ var YouTubeDownloader = class {
 			} catch (e) {
 				console.warn("Failed to parse upload date:", info.upload_date);
 			}
-			return {
+			const videoInfo = {
 				videoId: info.id || "",
 				title: info.title || "Unknown",
 				author: info.uploader || info.channel || "Unknown",
@@ -2520,6 +2528,11 @@ var YouTubeDownloader = class {
 				hasVideo,
 				hasAudio
 			};
+			this.videoInfoCache.set(url, {
+				info: videoInfo,
+				timestamp: Date.now()
+			});
+			return videoInfo;
 		} catch (error) {
 			throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : "Unknown error"}`);
 		}
@@ -2618,7 +2631,7 @@ var YouTubeDownloader = class {
 				"10",
 				"--fragment-retries",
 				"10",
-				"--no-overwrites"
+				"-c"
 			];
 			if (embedSubs) args.push("--write-subs", "--write-auto-subs", "--sub-lang", "en.*,vi", "--embed-subs");
 			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
