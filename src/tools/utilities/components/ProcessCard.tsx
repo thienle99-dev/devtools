@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { cn } from '../../../utils/cn';
 import type { RunningProcess, ProcessGroup } from '../../../types/application-manager';
 import { ProcessMetrics } from './ProcessMetrics';
-import { formatSize } from '../system-cleaner/utils/formatUtils';
+import { formatBytes as formatSize } from '../../../utils/format';
 
 interface ProcessCardProps {
     process: RunningProcess;

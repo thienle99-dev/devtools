@@ -4,7 +4,7 @@ import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { cn } from '../../../utils/cn';
 import type { InstalledApp } from '../../../types/application-manager';
-import { formatSize } from '../system-cleaner/utils/formatUtils';
+import { formatBytes as formatSize } from '../../../utils/format';
 
 interface AppCardProps {
     app: InstalledApp;
