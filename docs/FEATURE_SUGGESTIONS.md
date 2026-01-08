@@ -24,11 +24,12 @@
 
 ## 1. Nền Tảng Mới
 
-### 1.1 Universal Media Downloader ⭐⭐⭐⭐⭐
+### 1.1 Universal Media Downloader ⭐⭐⭐⭐⭐ (Done ✅)
 
 **Mô tả:** Downloader tổng hợp hỗ trợ nhiều platform trong một interface duy nhất
 
 **Platforms được yt-dlp hỗ trợ:**
+
 - ✅ Instagram (Reels, Videos, Stories, IGTV)
 - ✅ Facebook (Videos, Watch)
 - ✅ Twitter/X (Videos, GIFs)
@@ -43,6 +44,7 @@
 - ✅ Spotify (audio với premium)
 
 **Cấu trúc kỹ thuật:**
+
 ```
 src/tools/media/
 ├── UniversalDownloader.tsx          # Main component
@@ -56,6 +58,7 @@ src/tools/media/
 ```
 
 **Features:**
+
 - Auto-detect platform từ URL
 - Unified UI cho tất cả platforms
 - Platform-specific options (quality, format, etc.)
@@ -75,6 +78,7 @@ src/tools/media/
 **Mô tả:** Downloader chuyên biệt cho Instagram với tất cả content types
 
 **Features:**
+
 - **Reels Download**
   - High quality (với hoặc không watermark)
   - Audio extraction
@@ -97,18 +101,19 @@ src/tools/media/
   - User feed archiver
 
 **UI Components:**
+
 ```typescript
 interface InstagramVideoInfo {
-    id: string;
-    type: 'reel' | 'story' | 'post' | 'igtv';
-    username: string;
-    caption: string;
-    likeCount: number;
-    commentCount: number;
-    timestamp: Date;
-    thumbnailUrl: string;
-    isCarousel: boolean;
-    mediaCount?: number;
+  id: string;
+  type: "reel" | "story" | "post" | "igtv";
+  username: string;
+  caption: string;
+  likeCount: number;
+  commentCount: number;
+  timestamp: Date;
+  thumbnailUrl: string;
+  isCarousel: boolean;
+  mediaCount?: number;
 }
 ```
 
@@ -124,6 +129,7 @@ interface InstagramVideoInfo {
 **Mô tả:** Download videos từ Facebook và Facebook Watch
 
 **Features:**
+
 - Public video download
 - Facebook Watch videos
 - Live video recording
@@ -133,6 +139,7 @@ interface InstagramVideoInfo {
 - Marketplace videos
 
 **Challenges:**
+
 - Facebook có authentication requirements
 - May need cookies/session
 - Rate limiting
@@ -148,6 +155,7 @@ interface InstagramVideoInfo {
 **Mô tả:** Download media từ Twitter/X posts
 
 **Features:**
+
 - Tweet videos (all qualities)
 - GIFs
 - Image galleries
@@ -166,6 +174,7 @@ interface InstagramVideoInfo {
 **Mô tả:** Download videos từ Reddit với audio
 
 **Features:**
+
 - V.redd.it videos
 - Imgur links
 - Gfycat integration
@@ -188,6 +197,7 @@ interface InstagramVideoInfo {
 **Features:**
 
 #### Basic Editing
+
 - **Trim/Cut:** Cắt video theo timeline
 - **Merge:** Ghép nhiều videos
 - **Split:** Tách video thành nhiều parts
@@ -196,6 +206,7 @@ interface InstagramVideoInfo {
 - **Speed Control:** Slow-motion, time-lapse (0.25x - 4x)
 
 #### Advanced Editing
+
 - **Transitions:** Fade, dissolve, wipe
 - **Filters:** Color grading, vintage, B&W
 - **Text Overlay:** Thêm chữ, captions
@@ -204,12 +215,14 @@ interface InstagramVideoInfo {
 - **Background Music:** Add music tracks
 
 #### Output Options
+
 - **Quality Presets:** Web, HD, 4K
 - **Format Selection:** MP4, MKV, WebM
 - **Codec Options:** H.264, H.265, VP9
 - **Compression:** Smart size reduction
 
 **Tech Stack:**
+
 - FFmpeg (backend processing)
 - Timeline UI component
 - Video preview player
@@ -221,6 +234,7 @@ interface InstagramVideoInfo {
 **Dependencies:** FFmpeg
 
 **Architecture:**
+
 ```
 src/tools/media/video-editor/
 ├── VideoEditor.tsx              # Main component
@@ -244,12 +258,14 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Download
+
 - Auto-download subtitles từ video
 - Multi-language support
 - Auto-generated vs Manual subs
 - Extract embedded subtitles
 
 #### Edit
+
 - Visual subtitle editor
 - Timeline sync
 - Timing adjustment (offset, stretch)
@@ -258,11 +274,13 @@ src/tools/media/video-editor/
 - Formatting (bold, italic, color)
 
 #### Convert
+
 - Format conversion (SRT ↔ VTT ↔ ASS ↔ SUB)
 - Encoding conversion (UTF-8, etc.)
 - Batch conversion
 
 #### Advanced
+
 - Auto-translate subtitles (Google Translate API)
 - Embed subtitles vào video (hard-coded)
 - Soft subtitle track (MKV container)
@@ -279,6 +297,7 @@ src/tools/media/video-editor/
 **Mô tả:** Extract và customize video thumbnails
 
 **Features:**
+
 - Extract thumbnails from any timestamp
 - Batch extraction (every N seconds)
 - Smart frame selection (best quality frame)
@@ -301,6 +320,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Video Conversion
+
 - Container: MP4 ↔ MKV ↔ WebM ↔ AVI ↔ MOV
 - Codec: H.264 ↔ H.265 ↔ VP9 ↔ AV1
 - Quality presets
@@ -308,18 +328,21 @@ src/tools/media/video-editor/
 - Bitrate control
 
 #### Audio Conversion
+
 - Format: MP3 ↔ AAC ↔ FLAC ↔ WAV ↔ OGG ↔ M4A
 - Bitrate: 64k - 320k
 - Sample rate: 44.1k, 48k
 - Channel: Stereo ↔ Mono
 
 #### Batch Processing
+
 - Multiple files
 - Queue management
 - Progress tracking
 - Resume capability
 
 #### Advanced
+
 - Custom FFmpeg commands
 - Preset templates
 - Metadata preservation
@@ -331,11 +354,12 @@ src/tools/media/video-editor/
 
 ---
 
-### 2.5 Audio Extractor 🎵⭐⭐⭐
+### 2.5 Audio Extractor 🎵⭐⭐⭐ (Done ✅)
 
 **Mô tả:** Extract và process audio từ video
 
 **Features:**
+
 - Extract audio track
 - Format selection
 - Quality/bitrate options
@@ -360,6 +384,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Input Methods
+
 - Paste multiple URLs (multiline textarea)
 - Import từ file (TXT, CSV)
 - Drag & drop file
@@ -367,6 +392,7 @@ src/tools/media/video-editor/
 - Browser import (from history/bookmarks)
 
 #### Processing
+
 - Auto-detect duplicates
 - Platform categorization
 - Invalid URL filtering
@@ -374,6 +400,7 @@ src/tools/media/video-editor/
 - Metadata prefetch
 
 #### Queue Management
+
 - Visual queue list
 - Drag to reorder
 - Priority levels (High, Normal, Low)
@@ -382,6 +409,7 @@ src/tools/media/video-editor/
 - Edit download options per URL
 
 #### Batch Operations
+
 - Start all
 - Pause all
 - Resume all
@@ -390,6 +418,7 @@ src/tools/media/video-editor/
 - Export queue state
 
 #### Smart Features
+
 - Auto-split by platform
 - Concurrent download limits
 - Bandwidth allocation
@@ -397,6 +426,7 @@ src/tools/media/video-editor/
 - Conflict resolution (duplicate files)
 
 **UI Design:**
+
 ```
 ┌─────────────────────────────────────────┐
 │ Import URLs                              │
@@ -425,18 +455,21 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Schedule Options
+
 - Specific time (e.g., 2 AM tonight)
 - Recurring (daily, weekly, monthly)
 - Conditional (when WiFi available)
 - Bandwidth-aware (off-peak hours)
 
 #### Management
+
 - Schedule queue
 - Edit scheduled downloads
 - Skip/Delete schedule
 - Notification trước khi start
 
 #### Auto Actions
+
 - Auto-start queue
 - Auto-shutdown after complete
 - Auto-organize files
@@ -455,6 +488,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Extension Features
+
 - Right-click "Download with DevTools"
 - Floating download button on videos
 - Send to queue (background)
@@ -463,11 +497,13 @@ src/tools/media/video-editor/
 - Popup interface
 
 #### Communication
+
 - Native Messaging API
 - WebSocket connection
 - Local REST API
 
 #### Platforms
+
 - Chrome/Edge (Chromium)
 - Firefox
 - Safari (optional)
@@ -483,6 +519,7 @@ src/tools/media/video-editor/
 **Mô tả:** Auto-detect URLs trong clipboard
 
 **Features:**
+
 - Background monitoring
 - Pattern detection (video URLs)
 - Popup notification
@@ -505,12 +542,14 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Library Views
+
 - Grid view với thumbnails
 - List view với details
 - Timeline view (chronological)
 - Platform view (group by source)
 
 #### Organization
+
 - Smart folders
 - Tags & categories
 - Color labels
@@ -519,6 +558,7 @@ src/tools/media/video-editor/
 - Auto-organize rules
 
 #### Search & Filter
+
 - Full-text search
 - Metadata search (title, author, date)
 - Advanced filters
@@ -526,6 +566,7 @@ src/tools/media/video-editor/
 - Quick filters (platform, format, quality)
 
 #### Metadata Management
+
 - View/Edit metadata
 - Batch metadata edit
 - Auto-fetch missing metadata
@@ -533,6 +574,7 @@ src/tools/media/video-editor/
 - Ratings & notes
 
 #### Advanced Features
+
 - Duplicate detector (visual & hash-based)
 - Similar video finder
 - Broken file scanner
@@ -541,12 +583,14 @@ src/tools/media/video-editor/
 - Export/Import library
 
 #### Integration
+
 - File system watcher
 - Auto-import downloads
 - Cloud sync status
 - Backup management
 
 **UI Concept:**
+
 ```
 ┌────────┬─────────────────────────────────────┐
 │ Tags   │ [Search...]            [Grid][List] │
@@ -575,6 +619,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Statistics
+
 - Total downloads by platform
 - Total size downloaded
 - Average download speed
@@ -583,6 +628,7 @@ src/tools/media/video-editor/
 - Time saved (vs streaming)
 
 #### Charts & Graphs
+
 - Downloads over time (line chart)
 - Platform distribution (pie chart)
 - Quality preferences (bar chart)
@@ -591,6 +637,7 @@ src/tools/media/video-editor/
 - Peak hours heatmap
 
 #### Reports
+
 - Daily/Weekly/Monthly reports
 - Platform comparison
 - Speed benchmarks
@@ -598,6 +645,7 @@ src/tools/media/video-editor/
 - Export to PDF/CSV
 
 #### Insights
+
 - Most downloaded platform
 - Favorite quality
 - Busiest download time
@@ -617,6 +665,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Supported Services
+
 - Google Drive
 - Dropbox
 - OneDrive
@@ -627,6 +676,7 @@ src/tools/media/video-editor/
 - Mega.nz
 
 #### Sync Options
+
 - Auto-upload after download
 - Selective sync (by platform/size)
 - Background upload
@@ -635,6 +685,7 @@ src/tools/media/video-editor/
 - Bandwidth throttling
 
 #### Management
+
 - Cloud storage dashboard
 - Usage statistics
 - File browser
@@ -653,6 +704,7 @@ src/tools/media/video-editor/
 **Mô tả:** Backup settings, history, và library
 
 **Features:**
+
 - Full backup (settings + history + metadata)
 - Incremental backup
 - Auto-backup schedule
@@ -674,6 +726,7 @@ src/tools/media/video-editor/
 **Mô tả:** Edit video/audio metadata
 
 **Features:**
+
 - Edit ID3 tags (audio)
 - Edit video metadata (title, artist, album, year)
 - Embed thumbnail/cover art
@@ -694,6 +747,7 @@ src/tools/media/video-editor/
 **Mô tả:** Share downloads qua QR code
 
 **Features:**
+
 - Generate QR for download URL
 - Scan QR từ camera
 - Scan QR từ image
@@ -711,6 +765,7 @@ src/tools/media/video-editor/
 **Mô tả:** Shorten long URLs
 
 **Features:**
+
 - Built-in URL shortener
 - Custom alias
 - Analytics (click tracking)
@@ -732,6 +787,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Content Analysis
+
 - Auto-generate descriptions
 - Content categorization
 - NSFW content detection
@@ -740,12 +796,14 @@ src/tools/media/video-editor/
 - Object recognition
 
 #### Audio Processing
+
 - Speech-to-text (transcription)
 - Audio enhancement (noise reduction)
 - Music genre detection
 - Voice cloning
 
 #### Video Processing
+
 - Auto-thumbnail selection (best frame)
 - Video summarization
 - Smart cropping (face-aware)
@@ -753,11 +811,13 @@ src/tools/media/video-editor/
 - Upscaling (AI super-resolution)
 
 #### Smart Recommendations
+
 - Similar content finder
 - Auto-tagging
 - Content discovery
 
 **Tech Stack:**
+
 - TensorFlow.js (local processing)
 - OpenAI API (optional)
 - Whisper (transcription)
@@ -776,6 +836,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Recording
+
 - YouTube Live
 - Twitch
 - Facebook Live
@@ -784,12 +845,14 @@ src/tools/media/video-editor/
 - Twitter Spaces
 
 #### Auto-Detection
+
 - Monitor channel for livestream start
 - Auto-record when live
 - Stop when stream ends
 - Notification system
 
 #### Management
+
 - Split recording by duration
 - Multiple simultaneous recordings
 - Quality selection
@@ -797,6 +860,7 @@ src/tools/media/video-editor/
 - Thumbnail capture
 
 #### Post-Processing
+
 - Auto-convert to MP4
 - Auto-upload to cloud
 - Generate highlights
@@ -813,6 +877,7 @@ src/tools/media/video-editor/
 **Mô tả:** Compare videos side-by-side
 
 **Features:**
+
 - Side-by-side player
 - Synchronized playback
 - Quality comparison
@@ -835,6 +900,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Video Compression
+
 - Smart compression (minimal quality loss)
 - Target file size
 - Target bitrate
@@ -843,16 +909,19 @@ src/tools/media/video-editor/
 - Codec optimization (H.265)
 
 #### Audio Compression
+
 - Bitrate reduction
 - Sample rate adjustment
 - Channel reduction (stereo→mono)
 
 #### Batch Processing
+
 - Compress multiple files
 - Folder compression
 - Recursive processing
 
 #### Presets
+
 - Web optimized
 - Mobile optimized
 - Email attachment (< 25MB)
@@ -860,6 +929,7 @@ src/tools/media/video-editor/
 - Custom presets
 
 #### Analysis
+
 - Before/after comparison
 - Space saved report
 - Quality metrics (SSIM, PSNR)
@@ -875,6 +945,7 @@ src/tools/media/video-editor/
 ### 7.1 YouTube Advanced Features 📺⭐⭐⭐⭐
 
 **Features:**
+
 - Channel archiver (download all videos)
 - Playlist sync (auto-download new videos)
 - Comment scraper
@@ -893,6 +964,7 @@ src/tools/media/video-editor/
 ### 7.2 TikTok Advanced Features 🎵⭐⭐⭐⭐
 
 **Features:**
+
 - No watermark download
 - Sound/Music download
 - User profile download (all videos)
@@ -910,6 +982,7 @@ src/tools/media/video-editor/
 ### 7.3 Instagram Advanced Features 📷⭐⭐⭐⭐
 
 **Features:**
+
 - Story archiver (auto-save before expiry)
 - Highlight downloader
 - Profile analyzer
@@ -931,6 +1004,7 @@ src/tools/media/video-editor/
 **Features:**
 
 #### Theming
+
 - Dark mode (current)
 - Light mode
 - Auto mode (system preference)
@@ -939,6 +1013,7 @@ src/tools/media/video-editor/
 - Accent color picker
 
 #### Layout Options
+
 - Compact mode
 - Comfortable mode
 - Wide mode
@@ -946,6 +1021,7 @@ src/tools/media/video-editor/
 - Collapsible panels
 
 #### Customization
+
 - Customizable hotkeys
 - Toolbar customization
 - Quick actions menu
@@ -953,6 +1029,7 @@ src/tools/media/video-editor/
 - Gestures support (touchpad)
 
 #### Accessibility
+
 - Font size adjustment
 - High contrast mode
 - Screen reader support
@@ -968,6 +1045,7 @@ src/tools/media/video-editor/
 ### 8.2 Multi-Window Support 🪟⭐⭐⭐
 
 **Features:**
+
 - Open tools in new windows
 - Floating panels
 - Picture-in-picture mode
@@ -984,6 +1062,7 @@ src/tools/media/video-editor/
 ### 8.3 Command Palette ⌘⭐⭐⭐⭐
 
 **Features:**
+
 - Quick command launcher (Ctrl+K)
 - Fuzzy search
 - Recent actions
@@ -1001,13 +1080,13 @@ src/tools/media/video-editor/
 
 ### 🔥 Tier S - PHẢI LÀM (Critical)
 
-| Feature | Impact | Effort | ROI | Time |
-|---------|--------|--------|-----|------|
-| Universal Downloader | ⭐⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥🔥 | 3-4 ngày |
-| Instagram Downloader | ⭐⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥🔥 | 2-3 ngày |
-| Batch URL Downloader | ⭐⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥 | 2-3 ngày |
-| Media Library | ⭐⭐⭐⭐⭐ | Hard | 🔥🔥🔥🔥🔥 | 7-10 ngày |
-| Browser Extension | ⭐⭐⭐⭐⭐ | Hard | 🔥🔥🔥🔥🔥 | 5-7 ngày |
+| Feature              | Impact     | Effort | ROI        | Time      |
+| -------------------- | ---------- | ------ | ---------- | --------- |
+| Universal Downloader | ⭐⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥🔥 | 3-4 ngày  |
+| Instagram Downloader | ⭐⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥🔥 | 2-3 ngày  |
+| Batch URL Downloader | ⭐⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥   | 2-3 ngày  |
+| Media Library        | ⭐⭐⭐⭐⭐ | Hard   | 🔥🔥🔥🔥🔥 | 7-10 ngày |
+| Browser Extension    | ⭐⭐⭐⭐⭐ | Hard   | 🔥🔥🔥🔥🔥 | 5-7 ngày  |
 
 **Total Time: ~19-27 ngày**
 
@@ -1015,16 +1094,16 @@ src/tools/media/video-editor/
 
 ### ⭐ Tier A - NÊN LÀM (High Priority)
 
-| Feature | Impact | Effort | ROI | Time |
-|---------|--------|--------|-----|------|
-| Video Editor (Basic) | ⭐⭐⭐⭐ | Hard | 🔥🔥🔥🔥 | 5-7 ngày |
-| Subtitle Editor | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥 | 3-4 ngày |
-| Format Converter | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥 | 3 ngày |
-| Download Scheduler | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 2 ngày |
-| Download Analytics | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 3-4 ngày |
-| Cloud Integration | ⭐⭐⭐⭐ | Hard | 🔥🔥🔥🔥 | 5-7 ngày |
-| Twitter Downloader | ⭐⭐⭐⭐ | Easy | 🔥🔥🔥 | 1-2 ngày |
-| Livestream Recorder | ⭐⭐⭐⭐ | Hard | 🔥🔥🔥🔥 | 5-7 ngày |
+| Feature              | Impact   | Effort | ROI      | Time     |
+| -------------------- | -------- | ------ | -------- | -------- |
+| Video Editor (Basic) | ⭐⭐⭐⭐ | Hard   | 🔥🔥🔥🔥 | 5-7 ngày |
+| Subtitle Editor      | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥 | 3-4 ngày |
+| Format Converter     | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥🔥 | 3 ngày   |
+| Download Scheduler   | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥   | 2 ngày   |
+| Download Analytics   | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥   | 3-4 ngày |
+| Cloud Integration    | ⭐⭐⭐⭐ | Hard   | 🔥🔥🔥🔥 | 5-7 ngày |
+| Twitter Downloader   | ⭐⭐⭐⭐ | Easy   | 🔥🔥🔥   | 1-2 ngày |
+| Livestream Recorder  | ⭐⭐⭐⭐ | Hard   | 🔥🔥🔥🔥 | 5-7 ngày |
 
 **Total Time: ~27-38 ngày**
 
@@ -1032,16 +1111,16 @@ src/tools/media/video-editor/
 
 ### 📦 Tier B - CÓ THỂ LÀM (Medium Priority)
 
-| Feature | Impact | Effort | ROI | Time |
-|---------|--------|--------|-----|------|
-| Thumbnail Generator | ⭐⭐⭐ | Easy | 🔥🔥 | 2 ngày |
-| Metadata Editor | ⭐⭐⭐ | Medium | 🔥🔥 | 2-3 ngày |
-| Facebook Downloader | ⭐⭐⭐ | Medium | 🔥🔥 | 2-3 ngày |
-| Reddit Downloader | ⭐⭐⭐ | Easy | 🔥🔥 | 1 ngày |
-| Clipboard Monitor | ⭐⭐⭐ | Easy | 🔥🔥 | 1 ngày |
-| Media Compressor | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 3-4 ngày |
-| Video Comparison | ⭐⭐⭐ | Medium | 🔥🔥 | 3 ngày |
-| UI Enhancements | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 4-5 ngày |
+| Feature             | Impact   | Effort | ROI    | Time     |
+| ------------------- | -------- | ------ | ------ | -------- |
+| Thumbnail Generator | ⭐⭐⭐   | Easy   | 🔥🔥   | 2 ngày   |
+| Metadata Editor     | ⭐⭐⭐   | Medium | 🔥🔥   | 2-3 ngày |
+| Facebook Downloader | ⭐⭐⭐   | Medium | 🔥🔥   | 2-3 ngày |
+| Reddit Downloader   | ⭐⭐⭐   | Easy   | 🔥🔥   | 1 ngày   |
+| Clipboard Monitor   | ⭐⭐⭐   | Easy   | 🔥🔥   | 1 ngày   |
+| Media Compressor    | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 3-4 ngày |
+| Video Comparison    | ⭐⭐⭐   | Medium | 🔥🔥   | 3 ngày   |
+| UI Enhancements     | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 4-5 ngày |
 
 **Total Time: ~18-24 ngày**
 
@@ -1049,13 +1128,13 @@ src/tools/media/video-editor/
 
 ### 🎯 Tier C - BONUS (Low Priority)
 
-| Feature | Impact | Effort | ROI | Time |
-|---------|--------|--------|-----|------|
-| AI Features | ⭐⭐⭐⭐⭐ | Very Hard | 🔥🔥🔥 | 10-15 ngày |
-| QR Code Tools | ⭐⭐ | Easy | 🔥 | 1 ngày |
-| URL Shortener | ⭐⭐ | Easy | 🔥 | 1 ngày |
-| Multi-Window | ⭐⭐⭐ | Medium | 🔥🔥 | 2-3 ngày |
-| Command Palette | ⭐⭐⭐⭐ | Medium | 🔥🔥🔥 | 2 ngày |
+| Feature         | Impact     | Effort    | ROI    | Time       |
+| --------------- | ---------- | --------- | ------ | ---------- |
+| AI Features     | ⭐⭐⭐⭐⭐ | Very Hard | 🔥🔥🔥 | 10-15 ngày |
+| QR Code Tools   | ⭐⭐       | Easy      | 🔥     | 1 ngày     |
+| URL Shortener   | ⭐⭐       | Easy      | 🔥     | 1 ngày     |
+| Multi-Window    | ⭐⭐⭐     | Medium    | 🔥🔥   | 2-3 ngày   |
+| Command Palette | ⭐⭐⭐⭐   | Medium    | 🔥🔥🔥 | 2 ngày     |
 
 **Total Time: ~16-22 ngày**
 
@@ -1064,6 +1143,7 @@ src/tools/media/video-editor/
 ## 📅 Roadmap Đề Xuất
 
 ### Phase 1: Essential Features (1-2 tháng)
+
 **Mục tiêu:** Xây dựng foundation vững chắc
 
 1. **Week 1-2:** Universal Downloader + Instagram
@@ -1076,6 +1156,7 @@ src/tools/media/video-editor/
 ---
 
 ### Phase 2: Core Enhancement (1-2 tháng)
+
 **Mục tiêu:** Thêm processing capabilities
 
 1. **Week 9-10:** Video Editor (basic trim/merge)
@@ -1090,6 +1171,7 @@ src/tools/media/video-editor/
 ---
 
 ### Phase 3: Advanced Features (1-2 tháng)
+
 **Mục tiêu:** Differentiation và advanced capabilities
 
 1. **Week 17-18:** Livestream Recorder
@@ -1103,6 +1185,7 @@ src/tools/media/video-editor/
 ---
 
 ### Phase 4: AI & Polish (1+ tháng)
+
 **Mục tiêu:** Cutting-edge features
 
 1. **Week 25-28:** AI Features implementation
@@ -1117,6 +1200,7 @@ src/tools/media/video-editor/
 ## 💡 Implementation Tips
 
 ### Code Organization
+
 ```
 src/tools/
 ├── media/
@@ -1140,20 +1224,22 @@ src/tools/
 ```
 
 ### Shared Backend Service
+
 ```typescript
 // electron/main/universal-downloader.ts
 class UniversalDownloader {
-    private platformHandlers: Map<Platform, PlatformHandler>;
-    
-    async download(url: string, options: DownloadOptions) {
-        const platform = detectPlatform(url);
-        const handler = this.platformHandlers.get(platform);
-        return handler.download(url, options);
-    }
+  private platformHandlers: Map<Platform, PlatformHandler>;
+
+  async download(url: string, options: DownloadOptions) {
+    const platform = detectPlatform(url);
+    const handler = this.platformHandlers.get(platform);
+    return handler.download(url, options);
+  }
 }
 ```
 
 ### Reusable Components
+
 - Progress bar
 - Video info card
 - Quality selector
@@ -1166,6 +1252,7 @@ class UniversalDownloader {
 ## 🎯 Success Metrics
 
 ### User Engagement
+
 - Daily Active Users (DAU)
 - Downloads per user
 - Feature usage statistics
@@ -1173,12 +1260,14 @@ class UniversalDownloader {
 - Return rate
 
 ### Performance
+
 - Download success rate > 95%
 - Average download speed
 - Error rate < 5%
 - Crash-free sessions > 99%
 
 ### Quality
+
 - User satisfaction rating > 4.5/5
 - Bug report rate
 - Feature request implementation rate
@@ -1188,6 +1277,7 @@ class UniversalDownloader {
 ## 🚀 Next Steps
 
 ### Immediate Actions
+
 1. ✅ Review và approve feature list
 2. ⏳ Prioritize features based on user feedback
 3. ⏳ Set up development milestones
@@ -1195,6 +1285,7 @@ class UniversalDownloader {
 5. ⏳ Begin implementation of Universal Downloader
 
 ### Questions to Answer
+
 - Có cần focus vào một platform cụ thể không?
 - Business model: Free vs Premium features?
 - Target audience: Power users vs Casual users?

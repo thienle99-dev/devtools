@@ -12,7 +12,7 @@ import fs$1 from "fs";
 import path$1 from "path";
 import Store from "electron-store";
 import { randomUUID as randomUUID$1 } from "crypto";
-import { exec as exec$1, execSync } from "child_process";
+import { exec as exec$1, execSync, spawn } from "child_process";
 import { promisify as promisify$1 } from "util";
 import https from "https";
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
@@ -2314,7 +2314,7 @@ function setupScreenshotHandlers(win$1) {
 		}
 	});
 }
-var require$2 = createRequire(import.meta.url);
+var require$4 = createRequire(import.meta.url);
 var YouTubeDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -2343,7 +2343,7 @@ var YouTubeDownloader = class {
 	}
 	async initYtDlp() {
 		try {
-			const ytDlpModule = require$2("yt-dlp-wrap");
+			const ytDlpModule = require$4("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary to:", this.binaryPath);
@@ -2357,7 +2357,7 @@ var YouTubeDownloader = class {
 			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
 			try {
-				const ffmpegPath = require$2("@ffmpeg-installer/ffmpeg").path;
+				const ffmpegPath = require$4("@ffmpeg-installer/ffmpeg").path;
 				console.log("FFmpeg installer path resolved:", ffmpegPath);
 				if (ffmpegPath && fs$1.existsSync(ffmpegPath)) {
 					this.ffmpegPath = ffmpegPath;
@@ -2877,7 +2877,7 @@ var YouTubeDownloader = class {
 	}
 };
 const youtubeDownloader = new YouTubeDownloader();
-var require$1 = createRequire(import.meta.url);
+var require$3 = createRequire(import.meta.url);
 var TikTokDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -2903,7 +2903,7 @@ var TikTokDownloader = class {
 	}
 	async init() {
 		try {
-			const ytDlpModule = require$1("yt-dlp-wrap");
+			const ytDlpModule = require$3("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary (TikTok)...");
@@ -2911,7 +2911,7 @@ var TikTokDownloader = class {
 			}
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
 			try {
-				const ffmpegInstaller = require$1("@ffmpeg-installer/ffmpeg");
+				const ffmpegInstaller = require$3("@ffmpeg-installer/ffmpeg");
 				if (ffmpegInstaller.path && fs$1.existsSync(ffmpegInstaller.path)) {
 					this.ffmpegPath = ffmpegInstaller.path;
 					if (process.platform !== "win32") try {
@@ -3141,6 +3141,476 @@ var TikTokDownloader = class {
 	}
 };
 const tiktokDownloader = new TikTokDownloader();
+var require$2 = createRequire(import.meta.url);
+var UniversalDownloader = class {
+	constructor() {
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.ffmpegPath = null;
+		this.downloadQueue = [];
+		this.activeDownloadsCount = 0;
+		this.store = new Store({
+			name: "universal-download-history",
+			defaults: {
+				history: [],
+				settings: {
+					defaultFormat: "video",
+					defaultQuality: "best",
+					maxConcurrentDownloads: 3,
+					maxSpeedLimit: "",
+					useBrowserCookies: null
+				}
+			}
+		});
+		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
+		this.initPromise = this.init();
+	}
+	async init() {
+		try {
+			const ytDlpModule = require$2("yt-dlp-wrap");
+			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
+			if (!fs$1.existsSync(this.binaryPath)) {
+				console.log("Downloading yt-dlp binary (Universal)...");
+				await YTDlpWrap.downloadFromGithub(this.binaryPath);
+			}
+			this.ytDlp = new YTDlpWrap(this.binaryPath);
+			try {
+				const ffmpegInstaller = require$2("@ffmpeg-installer/ffmpeg");
+				if (ffmpegInstaller.path && fs$1.existsSync(ffmpegInstaller.path)) {
+					this.ffmpegPath = ffmpegInstaller.path;
+					if (process.platform !== "win32") try {
+						fs$1.chmodSync(this.ffmpegPath, "755");
+					} catch {}
+				} else try {
+					execSync("ffmpeg -version", { stdio: "ignore" });
+				} catch {
+					console.warn("FFmpeg not found for Universal downloader");
+				}
+			} catch (e) {
+				console.warn("FFmpeg setup failed:", e);
+			}
+		} catch (error) {
+			console.error("Failed to init Universal downloader:", error);
+			throw error;
+		}
+	}
+	async ensureInitialized() {
+		await this.initPromise;
+	}
+	detectPlatform(url, extractor) {
+		const u = url.toLowerCase();
+		if (extractor) {
+			const e = extractor.toLowerCase();
+			if (e.includes("youtube")) return "youtube";
+			if (e.includes("tiktok")) return "tiktok";
+			if (e.includes("instagram")) return "instagram";
+			if (e.includes("facebook")) return "facebook";
+			if (e.includes("twitter") || e.includes("x")) return "twitter";
+			if (e.includes("twitch")) return "twitch";
+			if (e.includes("reddit")) return "reddit";
+		}
+		if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
+		if (u.includes("tiktok.com")) return "tiktok";
+		if (u.includes("instagram.com")) return "instagram";
+		if (u.includes("facebook.com") || u.includes("fb.watch")) return "facebook";
+		if (u.includes("twitter.com") || u.includes("x.com")) return "twitter";
+		if (u.includes("twitch.tv")) return "twitch";
+		if (u.includes("reddit.com")) return "reddit";
+		return "other";
+	}
+	async getMediaInfo(url) {
+		await this.ensureInitialized();
+		try {
+			const args = [
+				url,
+				"--dump-json",
+				"--no-playlist",
+				"--no-check-certificate",
+				"--no-call-home"
+			];
+			const settings = this.getSettings();
+			if (settings.useBrowserCookies) args.push("--cookies-from-browser", settings.useBrowserCookies);
+			const stdout = await this.ytDlp.execPromise(args);
+			const info = JSON.parse(stdout);
+			const platform = this.detectPlatform(url, info.extractor);
+			return {
+				id: info.id,
+				url: info.webpage_url || url,
+				title: info.title || "Unknown Media",
+				platform,
+				thumbnailUrl: info.thumbnail || "",
+				author: info.uploader || info.channel || info.uploader_id || "Unknown",
+				authorUrl: info.uploader_url || info.channel_url,
+				duration: info.duration,
+				uploadDate: info.upload_date,
+				description: info.description,
+				viewCount: info.view_count,
+				likeCount: info.like_count,
+				isLive: info.is_live || false,
+				webpageUrl: info.webpage_url
+			};
+		} catch (error) {
+			let msg = error.message || String(error);
+			if (msg.includes("Video unavailable")) msg = "Video is unavailable or private";
+			if (msg.includes("Login required")) msg = "Login required to access this content";
+			throw new Error(`Failed to get media info: ${msg}`);
+		}
+	}
+	async downloadMedia(options, progressCallback) {
+		return new Promise((resolve, reject) => {
+			this.downloadQueue.push({
+				run: () => this.executeDownload(options, progressCallback),
+				resolve,
+				reject
+			});
+			this.processQueue();
+		});
+	}
+	async processQueue() {
+		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
+		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
+			const task = this.downloadQueue.shift();
+			if (task) {
+				this.activeDownloadsCount++;
+				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
+					this.activeDownloadsCount--;
+					this.processQueue();
+				});
+			}
+		}
+	}
+	async executeDownload(options, progressCallback) {
+		await this.ensureInitialized();
+		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser } = options;
+		const downloadId = id || randomUUID$1();
+		try {
+			const info = await this.getMediaInfo(url);
+			const sanitizedTitle = this.sanitizeFilename(info.title);
+			const author = this.sanitizeFilename(info.author || "unknown");
+			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
+			const extension = format === "audio" ? "mp3" : "mp4";
+			const safeTitle = sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + "..." : sanitizedTitle;
+			const filename = `[${info.platform}] ${author} - ${safeTitle} [${info.id}].${extension}`;
+			const outputTemplate = path$1.join(downloadsPath, filename);
+			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			const args = [
+				url,
+				"-o",
+				outputTemplate,
+				"--newline",
+				"--no-warnings",
+				"--no-check-certificate",
+				"--concurrent-fragments",
+				"4",
+				"--retries",
+				"10"
+			];
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
+			if (maxSpeed) args.push("--limit-rate", maxSpeed);
+			const settings = this.getSettings();
+			const browserForCookies = cookiesBrowser || settings.useBrowserCookies;
+			if (browserForCookies) args.push("--cookies-from-browser", browserForCookies);
+			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+			else {
+				if (quality === "low") args.push("-f", "worst");
+				else if (quality === "medium") args.push("-f", "best[height<=720]");
+				else args.push("-f", "bestvideo+bestaudio/best");
+				args.push("--merge-output-format", "mp4");
+			}
+			return new Promise((resolve, reject) => {
+				let totalBytes = 0;
+				let downloadedBytes = 0;
+				let percent = 0;
+				const process$1 = this.ytDlp.exec(args);
+				this.activeProcesses.set(downloadId, process$1);
+				if (process$1.ytDlpProcess) process$1.ytDlpProcess.stdout?.on("data", (data) => {
+					data.toString().split(/\r?\n/).forEach((line) => {
+						if (!line.trim()) return;
+						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
+						if (progressMatch) {
+							percent = parseFloat(progressMatch[1]);
+							const sizeVal = parseFloat(progressMatch[2]);
+							const sizeUnit = progressMatch[3];
+							const speedVal = parseFloat(progressMatch[4]);
+							const speedUnit = progressMatch[5];
+							const etaStr = progressMatch[6];
+							const unitMultipliers = {
+								"B": 1,
+								"KiB": 1024,
+								"MiB": 1024 * 1024,
+								"GiB": 1024 * 1024 * 1024
+							};
+							totalBytes = sizeVal * (unitMultipliers[sizeUnit] || 1);
+							downloadedBytes = percent / 100 * totalBytes;
+							const speed = speedVal * (unitMultipliers[speedUnit] || 1);
+							const etaParts = etaStr.split(":");
+							let eta = 0;
+							if (etaParts.length === 2) eta = parseInt(etaParts[0]) * 60 + parseInt(etaParts[1]);
+							if (etaParts.length === 3) eta = parseInt(etaParts[0]) * 3600 + parseInt(etaParts[1]) * 60 + parseInt(etaParts[2]);
+							if (progressCallback) progressCallback({
+								id: downloadId,
+								percent,
+								downloaded: downloadedBytes,
+								total: totalBytes,
+								speed,
+								eta,
+								state: "downloading",
+								filename,
+								platform: info.platform
+							});
+						}
+					});
+				});
+				process$1.on("close", (code) => {
+					this.activeProcesses.delete(downloadId);
+					if (code === 0) if (fs$1.existsSync(outputTemplate)) {
+						if (progressCallback) progressCallback({
+							id: downloadId,
+							percent: 100,
+							downloaded: totalBytes,
+							total: totalBytes,
+							speed: 0,
+							eta: 0,
+							state: "complete",
+							filename,
+							filePath: outputTemplate,
+							platform: info.platform
+						});
+						this.addToHistory({
+							id: downloadId,
+							url,
+							title: info.title,
+							platform: info.platform,
+							thumbnailUrl: info.thumbnailUrl,
+							author: info.author,
+							timestamp: Date.now(),
+							path: outputTemplate,
+							size: totalBytes,
+							duration: info.duration,
+							format,
+							status: "completed"
+						});
+						resolve(outputTemplate);
+					} else reject(/* @__PURE__ */ new Error("Download finished but file not found"));
+					else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
+				});
+				process$1.on("error", (err) => {
+					this.activeProcesses.delete(downloadId);
+					reject(err);
+				});
+			});
+		} catch (error) {
+			this.activeProcesses.delete(downloadId);
+			throw error;
+		}
+	}
+	cancelDownload(id) {
+		if (id) {
+			const proc = this.activeProcesses.get(id);
+			if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill();
+		} else this.activeProcesses.forEach((proc) => {
+			if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
+		});
+	}
+	getHistory() {
+		return this.store.get("history", []);
+	}
+	clearHistory() {
+		this.store.set("history", []);
+	}
+	removeFromHistory(id) {
+		const history = this.getHistory();
+		this.store.set("history", history.filter((h) => h.id !== id));
+	}
+	addToHistory(item) {
+		const history = this.getHistory();
+		history.unshift(item);
+		this.store.set("history", history.slice(0, 200));
+	}
+	getSettings() {
+		return this.store.get("settings");
+	}
+	saveSettings(settings) {
+		const current = this.getSettings();
+		this.store.set("settings", {
+			...current,
+			...settings
+		});
+	}
+	sanitizeFilename(name) {
+		return name.replace(/[<>:"/\\|?*]/g, "").trim();
+	}
+};
+const universalDownloader = new UniversalDownloader();
+var require$1 = createRequire(import.meta.url);
+var AudioExtractor = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg();
+	}
+	initFFmpeg() {
+		try {
+			const ffmpegInstaller = require$1("@ffmpeg-installer/ffmpeg");
+			if (ffmpegInstaller.path && fs$1.existsSync(ffmpegInstaller.path)) {
+				this.ffmpegPath = ffmpegInstaller.path;
+				if (process.platform !== "win32") try {
+					fs$1.chmodSync(this.ffmpegPath, "755");
+				} catch {}
+			} else try {
+				execSync("ffmpeg -version", { stdio: "ignore" });
+				this.ffmpegPath = "ffmpeg";
+			} catch {
+				console.warn("FFmpeg not found for Audio Extractor");
+			}
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async getAudioInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => {
+				output += data.toString();
+			});
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const audioMatch = output.match(/Stream #\d+:\d+.*?: Audio: (\w+).*?, (\d+) Hz.*?, (\w+).*?, (\d+) kb\/s/);
+					const hasAudio = !!audioMatch;
+					const hasVideo = output.includes("Video:");
+					resolve({
+						duration,
+						bitrate: audioMatch ? parseInt(audioMatch[4]) : 0,
+						sampleRate: audioMatch ? parseInt(audioMatch[2]) : 0,
+						channels: audioMatch && audioMatch[3].includes("stereo") ? 2 : 1,
+						codec: audioMatch ? audioMatch[1] : "unknown",
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0,
+						hasAudio,
+						hasVideo
+					});
+				} catch (error) {
+					reject(/* @__PURE__ */ new Error("Failed to parse audio info"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async extractAudio(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPath, outputPath, format, bitrate, sampleRate, channels, trim, normalize, fadeIn, fadeOut } = options;
+		if (!fs$1.existsSync(inputPath)) throw new Error("Input file not found");
+		const audioInfo = await this.getAudioInfo(inputPath);
+		if (!audioInfo.hasAudio) throw new Error("No audio stream found in input file");
+		const inputFilename = path$1.basename(inputPath, path$1.extname(inputPath));
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `${inputFilename}_extracted.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = ["-i", inputPath];
+		if (trim?.start !== void 0) args.push("-ss", trim.start.toString());
+		if (trim?.end !== void 0) args.push("-to", trim.end.toString());
+		args.push("-vn");
+		const filters = [];
+		if (normalize) filters.push("loudnorm");
+		if (fadeIn && fadeIn > 0) filters.push(`afade=t=in:d=${fadeIn}`);
+		if (fadeOut && fadeOut > 0) {
+			const startTime = (trim?.end || audioInfo.duration) - fadeOut;
+			filters.push(`afade=t=out:st=${startTime}:d=${fadeOut}`);
+		}
+		if (filters.length > 0) args.push("-af", filters.join(","));
+		switch (format) {
+			case "mp3":
+				args.push("-acodec", "libmp3lame");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+			case "aac":
+				args.push("-acodec", "aac");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+			case "flac":
+				args.push("-acodec", "flac");
+				break;
+			case "wav":
+				args.push("-acodec", "pcm_s16le");
+				break;
+			case "ogg":
+				args.push("-acodec", "libvorbis");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+			case "m4a":
+				args.push("-acodec", "aac");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+		}
+		if (sampleRate) args.push("-ar", sampleRate.toString());
+		if (channels) args.push("-ac", channels.toString());
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			let duration = audioInfo.duration;
+			if (trim?.start && trim?.end) duration = trim.end - trim.start;
+			else if (trim?.end) duration = trim.end;
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / duration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						filename: outputFilename,
+						inputPath,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						filename: outputFilename,
+						inputPath,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`FFmpeg exited with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancelExtraction(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+	cancelAll() {
+		this.activeProcesses.forEach((process$1) => process$1.kill());
+		this.activeProcesses.clear();
+	}
+};
+const audioExtractor = new AudioExtractor();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -4472,6 +4942,146 @@ app.whenReady().then(() => {
 	ipcMain.handle("tiktok:choose-folder", async () => {
 		const { dialog: dialog$1 } = await import("electron");
 		const result = await dialog$1.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
+		return result.canceled ? null : result.filePaths[0];
+	});
+	ipcMain.handle("universal:get-info", async (_, url) => {
+		return await universalDownloader.getMediaInfo(url);
+	});
+	ipcMain.handle("universal:download", async (_, options) => {
+		return new Promise((resolve, reject) => {
+			universalDownloader.downloadMedia(options, (progress) => {
+				win?.webContents.send("universal:progress", progress);
+			}).then(resolve).catch(reject);
+		});
+	});
+	ipcMain.handle("universal:cancel", async (_, id) => {
+		universalDownloader.cancelDownload(id);
+	});
+	ipcMain.handle("universal:get-history", async () => {
+		return universalDownloader.getHistory();
+	});
+	ipcMain.handle("universal:clear-history", async () => {
+		universalDownloader.clearHistory();
+	});
+	ipcMain.handle("universal:remove-from-history", async (_, id) => {
+		universalDownloader.removeFromHistory(id);
+	});
+	ipcMain.handle("universal:get-settings", async () => {
+		return universalDownloader.getSettings();
+	});
+	ipcMain.handle("universal:save-settings", async (_, settings) => {
+		return universalDownloader.saveSettings(settings);
+	});
+	ipcMain.handle("universal:choose-folder", async () => {
+		const { dialog: dialog$1 } = await import("electron");
+		const result = await dialog$1.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
+		return result.canceled ? null : result.filePaths[0];
+	});
+	ipcMain.handle("universal:open-file", async (_, path$2) => {
+		const { shell } = await import("electron");
+		try {
+			await fs.access(path$2);
+			shell.openPath(path$2);
+		} catch {
+			console.error("File not found:", path$2);
+		}
+	});
+	ipcMain.handle("universal:show-in-folder", async (_, path$2) => {
+		const { shell } = await import("electron");
+		shell.showItemInFolder(path$2);
+	});
+	ipcMain.handle("audio:get-info", async (_, filePath) => {
+		return await audioExtractor.getAudioInfo(filePath);
+	});
+	ipcMain.handle("audio:extract", async (_, options) => {
+		return new Promise((resolve, reject) => {
+			audioExtractor.extractAudio(options, (progress) => {
+				win?.webContents.send("audio:progress", progress);
+			}).then(resolve).catch(reject);
+		});
+	});
+	ipcMain.handle("audio:cancel", async (_, id) => {
+		audioExtractor.cancelExtraction(id);
+	});
+	ipcMain.handle("audio:cancel-all", async () => {
+		audioExtractor.cancelAll();
+	});
+	ipcMain.handle("audio:choose-input-file", async () => {
+		const result = await dialog.showOpenDialog({
+			properties: ["openFile"],
+			filters: [
+				{
+					name: "Video Files",
+					extensions: [
+						"mp4",
+						"mkv",
+						"avi",
+						"mov",
+						"webm",
+						"flv",
+						"m4v",
+						"wmv"
+					]
+				},
+				{
+					name: "Audio Files",
+					extensions: [
+						"mp3",
+						"aac",
+						"flac",
+						"wav",
+						"ogg",
+						"m4a",
+						"wma"
+					]
+				},
+				{
+					name: "All Files",
+					extensions: ["*"]
+				}
+			]
+		});
+		return result.canceled ? null : result.filePaths[0];
+	});
+	ipcMain.handle("audio:choose-input-files", async () => {
+		const result = await dialog.showOpenDialog({
+			properties: ["openFile", "multiSelections"],
+			filters: [
+				{
+					name: "Video Files",
+					extensions: [
+						"mp4",
+						"mkv",
+						"avi",
+						"mov",
+						"webm",
+						"flv",
+						"m4v",
+						"wmv"
+					]
+				},
+				{
+					name: "Audio Files",
+					extensions: [
+						"mp3",
+						"aac",
+						"flac",
+						"wav",
+						"ogg",
+						"m4a",
+						"wma"
+					]
+				},
+				{
+					name: "All Files",
+					extensions: ["*"]
+				}
+			]
+		});
+		return result.canceled ? [] : result.filePaths;
+	});
+	ipcMain.handle("audio:choose-output-folder", async () => {
+		const result = await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
 		return result.canceled ? null : result.filePaths[0];
 	});
 	async function getDirSize$1(dirPath) {

@@ -12,6 +12,7 @@ import { setupScreenshotHandlers } from './screenshot'
 import { youtubeDownloader } from './youtube-downloader'
 import { tiktokDownloader } from './tiktok-downloader'
 import { universalDownloader } from './universal-downloader'
+import { audioExtractor } from './audio-extractor'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1743,6 +1744,60 @@ app.whenReady().then(() => {
   ipcMain.handle('universal:show-in-folder', async (_, path: string) => {
     const { shell } = await import('electron');
     shell.showItemInFolder(path);
+  });
+
+  // Audio Extractor IPC Handlers
+  ipcMain.handle('audio:get-info', async (_, filePath: string) => {
+    return await audioExtractor.getAudioInfo(filePath);
+  });
+
+  ipcMain.handle('audio:extract', async (_, options) => {
+    return new Promise((resolve, reject) => {
+      audioExtractor.extractAudio(options, (progress) => {
+        win?.webContents.send('audio:progress', progress);
+      })
+      .then(resolve)
+      .catch(reject);
+    });
+  });
+
+  ipcMain.handle('audio:cancel', async (_, id: string) => {
+    audioExtractor.cancelExtraction(id);
+  });
+
+  ipcMain.handle('audio:cancel-all', async () => {
+    audioExtractor.cancelAll();
+  });
+
+  ipcMain.handle('audio:choose-input-file', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Video Files', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v', 'wmv'] },
+        { name: 'Audio Files', extensions: ['mp3', 'aac', 'flac', 'wav', 'ogg', 'm4a', 'wma'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    return result.canceled ? null : result.filePaths[0];
+  });
+
+  ipcMain.handle('audio:choose-input-files', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Video Files', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v', 'wmv'] },
+        { name: 'Audio Files', extensions: ['mp3', 'aac', 'flac', 'wav', 'ogg', 'm4a', 'wma'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    return result.canceled ? [] : result.filePaths;
+  });
+
+  ipcMain.handle('audio:choose-output-folder', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory']
+    });
+    return result.canceled ? null : result.filePaths[0];
   });
 
   // Helper functions

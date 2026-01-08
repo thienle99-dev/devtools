@@ -53,4 +53,16 @@ interface Window {
         openFile: (path: string) => Promise<void>;
         showInFolder: (path: string) => Promise<void>;
     };
+    audioAPI: {
+        getInfo: (filePath: string) => Promise<any>;
+        extract: (options: any) => Promise<string>;
+        cancel: (id: string) => Promise<void>;
+        cancelAll: () => Promise<void>;
+        chooseInputFile: () => Promise<string | null>;
+        chooseInputFiles: () => Promise<string[]>;
+        chooseOutputFolder: () => Promise<string | null>;
+        onProgress: (callback: (progress: any) => void) => () => void;
+        openFile: (path: string) => Promise<void>;
+        showInFolder: (path: string) => Promise<void>;
+    };
 }

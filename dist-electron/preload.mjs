@@ -153,6 +153,40 @@ electron.contextBridge.exposeInMainWorld("tiktokAPI", {
 		electron.ipcRenderer.on("tiktok:progress", listener);
 		return () => electron.ipcRenderer.removeListener("tiktok:progress", listener);
 	},
-	openFile: (path) => electron.ipcRenderer.invoke("youtube:openFile", path),
-	showInFolder: (path) => electron.ipcRenderer.invoke("youtube:showInFolder", path)
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});
+electron.contextBridge.exposeInMainWorld("universalAPI", {
+	getInfo: (url) => electron.ipcRenderer.invoke("universal:get-info", url),
+	download: (options) => electron.ipcRenderer.invoke("universal:download", options),
+	cancel: (id) => electron.ipcRenderer.invoke("universal:cancel", id),
+	getHistory: () => electron.ipcRenderer.invoke("universal:get-history"),
+	clearHistory: () => electron.ipcRenderer.invoke("universal:clear-history"),
+	removeFromHistory: (id) => electron.ipcRenderer.invoke("universal:remove-from-history", id),
+	getSettings: () => electron.ipcRenderer.invoke("universal:get-settings"),
+	saveSettings: (settings) => electron.ipcRenderer.invoke("universal:save-settings", settings),
+	chooseFolder: () => electron.ipcRenderer.invoke("universal:choose-folder"),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("universal:progress", listener);
+		return () => electron.ipcRenderer.removeListener("universal:progress", listener);
+	},
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});
+electron.contextBridge.exposeInMainWorld("audioAPI", {
+	getInfo: (filePath) => electron.ipcRenderer.invoke("audio:get-info", filePath),
+	extract: (options) => electron.ipcRenderer.invoke("audio:extract", options),
+	cancel: (id) => electron.ipcRenderer.invoke("audio:cancel", id),
+	cancelAll: () => electron.ipcRenderer.invoke("audio:cancel-all"),
+	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
+	chooseInputFiles: () => electron.ipcRenderer.invoke("audio:choose-input-files"),
+	chooseOutputFolder: () => electron.ipcRenderer.invoke("audio:choose-output-folder"),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("audio:progress", listener);
+		return () => electron.ipcRenderer.removeListener("audio:progress", listener);
+	},
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
 });

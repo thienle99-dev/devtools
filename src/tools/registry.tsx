@@ -49,7 +49,8 @@ import {
     Camera,
     Package,
     Film,
-    Youtube
+    Youtube,
+    Music
 } from 'lucide-react';
 
 
@@ -154,6 +155,7 @@ const VideoFrames = React.lazy(() => import('@tools/media/VideoFrames'));
 const YoutubeDownloader = React.lazy(() => import('@tools/media/YoutubeDownloader'));
 const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
 const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
+const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
 const SettingsPage = React.lazy(() => import('@pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
@@ -846,6 +848,17 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-indigo-500',
         component: UniversalDownloader,
         keywords: ['universal', 'download', 'instagram', 'facebook', 'twitter', 'reddit', 'twitch'],
+    },
+    {
+        id: 'audio-extractor',
+        name: 'Audio Extractor',
+        path: '/audio-extractor',
+        description: 'Extract and process audio from video files with advanced options',
+        category: 'utilities',
+        icon: Music,
+        color: 'text-purple-500',
+        component: AudioExtractor,
+        keywords: ['audio', 'extract', 'mp3', 'convert', 'music', 'sound', 'trim', 'normalize'],
     },
 
     // Settings (Special tool - not in any category)

@@ -195,3 +195,20 @@ contextBridge.exposeInMainWorld('universalAPI', {
   openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
   showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
 })
+
+contextBridge.exposeInMainWorld('audioAPI', {
+  getInfo: (filePath: string) => ipcRenderer.invoke('audio:get-info', filePath),
+  extract: (options: any) => ipcRenderer.invoke('audio:extract', options),
+  cancel: (id: string) => ipcRenderer.invoke('audio:cancel', id),
+  cancelAll: () => ipcRenderer.invoke('audio:cancel-all'),
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  chooseInputFiles: () => ipcRenderer.invoke('audio:choose-input-files'),
+  chooseOutputFolder: () => ipcRenderer.invoke('audio:choose-output-folder'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('audio:progress', listener);
+    return () => ipcRenderer.removeListener('audio:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
