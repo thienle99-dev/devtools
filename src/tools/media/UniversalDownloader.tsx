@@ -3,16 +3,22 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { useToast, ToastContainer } from '@components/ui/Toast';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
-import { 
-    Download, 
-    Settings, 
-    Link, 
-    RotateCcw, 
-    Trash2, 
+import { Card } from '@components/ui/Card';
+import {
+    Download,
+    Settings,
+    Link,
+    Trash2,
     Globe,
     FolderOpen,
-    Play,
-    Globe2
+    Globe2,
+    Loader2,
+    Clock,
+    HardDrive,
+    Info,
+    Music,
+    Video,
+    Film
 } from 'lucide-react';
 import { UniversalVideoInfo } from './components/UniversalVideoInfo';
 import { UniversalFormatSelector } from './components/UniversalFormatSelector';
@@ -20,35 +26,49 @@ import { DownloadProgress } from './components/DownloadProgress';
 import { detectPlatform, getPlatformName, getPlatformColor } from './utils/platform-detector';
 import { cn } from '@utils/cn';
 import type { UniversalMediaInfo, UniversalDownloadProgress, UniversalHistoryItem, SupportedPlatform } from '@/types/universal-media';
-import { formatBytes } from '@utils/format';
-
-// Helper for duration (move to utils if used widely)
-const formatDuration = (seconds?: number) => {
-    if (!seconds) return '--:--';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-};
+import { formatBytes, formatTime } from '@utils/format';
 
 export default function UniversalDownloader() {
     // State
     const [view, setView] = useState<'new' | 'downloads' | 'settings'>('new');
     const [url, setUrl] = useState('');
     const [format, setFormat] = useState<'video' | 'audio'>('video');
-    const [quality, setQuality] = useState<'best' | 'medium' | 'low'>('best');
-    
+    const [quality, setQuality] = useState<string>('1080p');
+
     const [mediaInfo, setMediaInfo] = useState<UniversalMediaInfo | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [detectedPlatform, setDetectedPlatform] = useState<SupportedPlatform>('other');
-    
+
     const [activeDownloads, setActiveDownloads] = useState<Map<string, UniversalDownloadProgress>>(new Map());
     const [history, setHistory] = useState<UniversalHistoryItem[]>([]);
     const [downloadPath, setDownloadPath] = useState('');
+    const [settings, setSettings] = useState({
+        downloadPath: '',
+        defaultFormat: 'video' as 'video' | 'audio',
+        defaultQuality: '1080p'
+    });
 
-    const { toasts, removeToast, success, error } = useToast();
+    const { toasts, removeToast, success, error, info } = useToast();
+
+    // Keyboard shortcut: Ctrl+V to paste URL
+    useEffect(() => {
+        const handleKeyDown = async (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v' && document.activeElement?.tagName !== 'INPUT') {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.startsWith('http')) {
+                        setUrl(text);
+                        info('URL Pasted', 'Press Enter to fetch media info');
+                    }
+                } catch (err) {
+                    // Clipboard permission denied
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Initialize
     useEffect(() => {
@@ -62,14 +82,12 @@ export default function UniversalDownloader() {
                 newMap.set(progress.id || 'unknown', progress);
                 return newMap;
             });
-            
+
             if (progress.state === 'complete') {
-                loadHistory(); 
-                setLoading(false);
-                success('Download completed!', progress.filename);
+                loadHistory();
+                success('Download Complete', progress.filename || 'File downloaded successfully');
             } else if (progress.state === 'error') {
-                setLoading(false);
-                error('Download failed', 'Check URL or connection');
+                error('Download Failed', 'Check URL or connection');
             }
         });
 
@@ -82,11 +100,12 @@ export default function UniversalDownloader() {
     };
 
     const loadSettings = async () => {
-        const settings = await window.universalAPI.getSettings();
-        if (settings) {
-            setDownloadPath(settings.downloadPath || '');
-            setFormat(settings.defaultFormat || 'video');
-            setQuality(settings.defaultQuality || 'best');
+        const settingsData = await window.universalAPI.getSettings();
+        if (settingsData) {
+            setSettings(settingsData);
+            setDownloadPath(settingsData.downloadPath || '');
+            setFormat(settingsData.defaultFormat || 'video');
+            setQuality(settingsData.defaultQuality || 'best');
         }
     };
 
@@ -106,16 +125,17 @@ export default function UniversalDownloader() {
 
             setFetchingInfo(true);
             try {
-                const info = await window.universalAPI.getInfo(url);
-                setMediaInfo(info);
-                
+                const infoData = await window.universalAPI.getInfo(url);
+                console.log('📦 MediaInfo received:', infoData);
+                console.log('🎯 Available Qualities:', infoData.availableQualities);
+                setMediaInfo(infoData);
+
                 // Update detected platform from backend info if 'other'
-                if (platform === 'other' && info.platform) {
-                    setDetectedPlatform(info.platform);
+                if (platform === 'other' && infoData.platform) {
+                    setDetectedPlatform(infoData.platform);
                 }
             } catch (err) {
                 console.error(err);
-                // Don't toast error on strict type effect, wait for user action or just show incomplete state
             } finally {
                 setFetchingInfo(false);
             }
@@ -125,51 +145,71 @@ export default function UniversalDownloader() {
         return () => clearTimeout(timeout);
     }, [url]);
 
-    const handleDownload = async () => {
+    const handleDownload = async (overrideQuality?: string) => {
         if (!url || !url.startsWith('http')) {
-            error('Please enter a valid URL');
+            error('Invalid URL', 'Please enter a valid URL');
             return;
         }
 
-        setLoading(true);
-        try {
-            const id = crypto.randomUUID();
-            setActiveDownloads(prev => {
-                const newMap = new Map(prev);
-                newMap.set(id, {
-                    id,
-                    percent: 0,
-                    downloaded: 0,
-                    total: 0,
-                    speed: 0,
-                    eta: 0,
-                    state: 'downloading',
-                    filename: 'Starting...'
-                });
-                return newMap;
+        const downloadId = crypto.randomUUID();
+
+        info('Added to Queue', 'Download started in background');
+
+        // Optimistically add to active downloads
+        setActiveDownloads(prev => {
+            const newMap = new Map(prev);
+            newMap.set(downloadId, {
+                id: downloadId,
+                percent: 0,
+                downloaded: 0,
+                total: 0,
+                speed: 0,
+                eta: 0,
+                state: 'processing',
+                filename: 'Waiting for metadata...',
+                platform: detectedPlatform
             });
+            return newMap;
+        });
 
-            setView('downloads');
+        setView('downloads');
 
-            await window.universalAPI.download({
-                id,
+        try {
+            const downloadOptions: any = {
                 url,
                 format,
-                quality,
-                outputPath: downloadPath || undefined
-            });
-        } catch (err) {
-            console.error(err);
-            error('Failed to start download');
-            setLoading(false);
+                quality: overrideQuality || quality,
+                outputPath: downloadPath || undefined,
+                id: downloadId
+            };
+
+            // Fire and forget
+            window.universalAPI.download(downloadOptions)
+                .then((result: any) => {
+                    if (result.success) {
+                        success('Download Complete', `Download has been completed.`);
+                        loadHistory();
+                    } else {
+                        error('Download Failed', result.error || 'Unknown error');
+                    }
+                })
+                .catch((err: any) => {
+                    error('Download Error', err.message);
+                });
+
+        } catch (err: any) {
+            error('Download Failed', err.message);
         }
     };
 
     const handleChooseFolder = async () => {
-        const path = await window.universalAPI.chooseFolder();
-        if (path) {
-            setDownloadPath(path);
-            window.universalAPI.saveSettings({ downloadPath: path });
+        const result = await window.universalAPI.chooseFolder();
+        if (result) {
+            setDownloadPath(result);
+            const newSettings = { ...settings, downloadPath: result };
+            setSettings(newSettings);
+            window.universalAPI.saveSettings(newSettings);
+            success('Folder Updated', 'Download location changed');
         }
     };
 
@@ -177,111 +217,157 @@ export default function UniversalDownloader() {
         if (confirm('Are you sure you want to clear all history?')) {
             await window.universalAPI.clearHistory();
             loadHistory();
-            success('History cleared');
+            success('History Cleared', 'All download history has been removed');
         }
     };
 
-    const handleRemoveFromHistory = async (id: string) => {
-        await window.universalAPI.removeFromHistory(id);
-        loadHistory();
+    const handleRemoveFromHistory = async (id: string, title: string) => {
+        if (confirm(`Remove "${title}" from history?`)) {
+            await window.universalAPI.removeFromHistory(id);
+            loadHistory();
+        }
     };
 
-    const handleOpenFile = async (path: string) => {
-        await window.universalAPI.openFile(path);
-    };
-
-    const handleShowInFolder = async (path: string) => {
-        await window.universalAPI.showInFolder(path);
+    const handleSaveSettings = async (newSettings: typeof settings) => {
+        setSettings(newSettings);
+        await window.universalAPI.saveSettings(newSettings);
+        success('Settings Saved', 'Preferences updated successfully');
     };
 
     // --- Render ---
 
     const renderNewDownload = () => (
-        <div className="max-w-4xl mx-auto w-full space-y-8 animate-fade-in pb-10">
-            {/* Input Section */}
-            <div className="bg-bg-glass p-6 rounded-xl border border-border-glass shadow-lg">
-                 <div className="flex flex-col gap-4">
+        <div className="mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* URL Input Card */}
+            <Card className="p-6 bg-glass-panel border-border-glass">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+                            <Globe2 className="w-5 h-5 text-indigo-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-foreground-primary">Universal Media Downloader</h3>
+                            <p className="text-xs text-foreground-secondary">Supports 1000+ websites including YouTube, Instagram, TikTok, Facebook, and more</p>
+                        </div>
+                    </div>
+
                     <Input
-                        placeholder="Paste URL from YouTube, Instagram, Facebook, TikTok, etc..."
+                        placeholder="Paste any video or audio URL here..."
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
-                        icon={Globe}
+                        icon={Link}
                         fullWidth
-                        className="h-14 text-lg font-medium"
+                        className="h-12 text-base bg-background/50 border-input"
                         autoFocus
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && url) {
+                                handleDownload();
+                            }
+                        }}
                     />
-                    
+
                     <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2 text-xs">
-                             {detectedPlatform !== 'other' && (
-                                <span className={cn("font-bold uppercase tracking-wide flex items-center gap-1.5", getPlatformColor(detectedPlatform))}>
-                                    <Globe2 className="w-3 h-3" />
-                                    {getPlatformName(detectedPlatform)} Detected
+                            {detectedPlatform !== 'other' && (
+                                <span className={cn("font-bold uppercase tracking-wide flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/10", getPlatformColor(detectedPlatform))}>
+                                    <Globe className="w-3 h-3" />
+                                    {getPlatformName(detectedPlatform)}
                                 </span>
-                             )}
+                            )}
                         </div>
-                        {fetchingInfo && <span className="text-primary text-xs animate-pulse flex items-center gap-1">Fetching metadata...</span>}
+                        {fetchingInfo && (
+                            <span className="text-primary text-xs animate-pulse flex items-center gap-2">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Analyzing...
+                            </span>
+                        )}
                     </div>
                 </div>
-            </div>
+            </Card>
 
             {/* Content Grid */}
             {(mediaInfo || url) && (
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                    {/* Left: Info */}
-                    <div className="md:col-span-3 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left: Media Info (2 columns) */}
+                    <div className="lg:col-span-2 space-y-6">
                         {mediaInfo ? (
-                             <UniversalVideoInfo info={mediaInfo} />
+                            <UniversalVideoInfo info={mediaInfo} />
                         ) : (
-                            // Placeholder
-                            <div className="h-64 rounded-xl bg-bg-glass border border-border-glass flex flex-col items-center justify-center text-foreground-muted gap-4">
+                            <Card className="p-8 bg-glass-panel border-border-glass min-h-[300px] flex flex-col items-center justify-center">
                                 {fetchingInfo ? (
                                     <>
-                                        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                                        <p className="text-sm">Analyzing Link...</p>
+                                        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                                        <p className="text-sm text-foreground-secondary">Fetching media information...</p>
                                     </>
                                 ) : (
                                     <>
-                                        <Link className="w-12 h-12 opacity-20" />
-                                        <p className="text-sm opacity-50">Preview will appear here</p>
+                                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-4">
+                                            <Film className="w-8 h-8 text-indigo-400" />
+                                        </div>
+                                        <p className="text-sm text-foreground-muted">Preview will appear here</p>
                                     </>
                                 )}
-                            </div>
+                            </Card>
                         )}
                     </div>
 
-                    {/* Right: Options */}
-                    <div className="md:col-span-2 space-y-6">
-                        <div className="bg-bg-glass p-6 rounded-xl border border-border-glass h-full">
-                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                <Settings className="w-4 h-4" />
-                                Options
-                            </h3>
-                            
-                            <UniversalFormatSelector
-                                format={format}
-                                onFormatChange={setFormat}
-                                quality={quality}
-                                onQualityChange={setQuality}
-                                downloadPath={downloadPath}
-                                onDownload={handleDownload}
-                                onChooseFolder={handleChooseFolder}
-                                loading={loading}
-                            />
-                        </div>
+                    {/* Right: Download Options (1 column) */}
+                    <div className="space-y-6">
+                        {mediaInfo ? (
+                            <Card className="p-5 bg-glass-panel border-border-glass">
+                                <h3 className="font-bold text-base mb-4 flex items-center gap-2 text-foreground-primary">
+                                    <Settings className="w-4 h-4 text-purple-400" />
+                                    Download Options
+                                </h3>
+
+                                <UniversalFormatSelector
+                                    format={format}
+                                    onFormatChange={setFormat}
+                                    downloadPath={downloadPath}
+                                    onDownload={handleDownload}
+                                    onChooseFolder={handleChooseFolder}
+                                    availableQualities={mediaInfo?.availableQualities}
+                                    duration={mediaInfo?.duration}
+                                />
+                            </Card>
+                        ) : (
+                            <Card className="p-8 bg-glass-panel border-border-glass min-h-[300px] flex flex-col items-center justify-center">
+                                {fetchingInfo ? (
+                                    <>
+                                        <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
+                                        <p className="text-sm text-foreground-secondary">Analyzing URL...</p>
+                                        <p className="text-xs text-foreground-tertiary mt-2">Fetching available formats</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-4">
+                                            <Settings className="w-8 h-8 text-purple-400" />
+                                        </div>
+                                        <p className="text-sm text-foreground-muted">Options will appear here</p>
+                                        <p className="text-xs text-foreground-tertiary mt-2">Enter a URL to see available formats</p>
+                                    </>
+                                )}
+                            </Card>
+                        )}
                     </div>
                 </div>
             )}
 
+            {/* Empty State */}
             {!url && !mediaInfo && (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-70">
-                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20">
-                        <Globe2 className="w-10 h-10 text-white" />
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-2xl shadow-indigo-500/30">
+                        <Globe2 className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">Universal Media Downloader</h2>
-                    <div className="flex flex-wrap justify-center gap-2 max-w-lg mt-4 text-xs text-foreground-secondary opacity-80">
-                         {['YouTube', 'TikTok', 'Instagram', 'Facebook', 'Twitter', 'Twitch', 'Reddit', 'Vimeo', 'Pinterest'].map(p => (
-                            <span key={p} className="bg-white/5 px-2 py-1 rounded border border-white/5">{p}</span>
+                    <h2 className="text-2xl font-bold mb-3 text-foreground-primary">Download from Anywhere</h2>
+                    <p className="text-foreground-secondary mb-6 max-w-md">
+                        Paste a URL from any supported platform and download videos or audio in high quality
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2 max-w-2xl text-xs">
+                        {['YouTube', 'TikTok', 'Instagram', 'Facebook', 'Twitter', 'Twitch', 'Reddit', 'Vimeo', 'Pinterest', 'Dailymotion', 'Soundcloud'].map(p => (
+                            <span key={p} className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-foreground-secondary hover:bg-white/10 transition-colors">
+                                {p}
+                            </span>
                         ))}
                     </div>
                 </div>
@@ -291,157 +377,289 @@ export default function UniversalDownloader() {
 
     const renderDownloads = () => {
         const activeList = Array.from(activeDownloads.values()).filter(d => d.state === 'downloading' || d.state === 'processing');
-        
-        return (
-            <div className="max-w-4xl mx-auto w-full space-y-8 animate-fade-in pb-10">
-                 {/* Header */}
-                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Download className="w-5 h-5 text-primary" />
-                        Downloads
-                    </h2>
-                    <div className="flex gap-2">
-                         {history.length > 0 && (
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleClearHistory}
-                                className="text-red-400 hover:text-red-300 border-red-500/20 hover:border-red-500/40"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Clear History
-                            </Button>
-                        )}
-                    </div>
-                </div>
 
-                {/* Active Downloads */}
+        return (
+            <div className="max-w-5xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Active Downloads Section */}
                 {activeList.length > 0 && (
-                    <div className="space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-foreground-muted">Active</h3>
-                        {activeList.map(progress => (
-                            <DownloadProgress 
-                                key={progress.id} 
-                                status={{
-                                    status: progress.state === 'complete' ? 'success' : progress.state === 'error' ? 'error' : 'downloading',
-                                    progress: progress.percent,
-                                    downloaded: progress.downloaded,
-                                    total: progress.total,
-                                    speed: progress.speed,
-                                    eta: progress.eta,
-                                    filename: progress.filename || 'Downloading...',
-                                    title: progress.filename,
-                                    platform: progress.platform
-                                }}
-                                onCancel={() => window.universalAPI.cancel(progress.id)}
-                            />
-                        ))}
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-foreground-primary flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                            Active Downloads ({activeList.length})
+                        </h3>
+
+                        <div className="grid gap-3">
+                            {activeList.map(progress => (
+                                <DownloadProgress
+                                    key={progress.id}
+                                    status={{
+                                        status: 'downloading',
+                                        message: progress.state === 'processing' ? 'Processing...' : `Downloading... ${progress.percent?.toFixed(1) || 0}%`,
+                                        progress: progress.percent,
+                                        speed: progress.speed,
+                                        eta: progress.eta,
+                                        total: progress.total,
+                                        downloaded: progress.downloaded,
+                                        title: progress.filename,
+                                        filename: progress.filename,
+                                        platform: progress.platform
+                                    }}
+                                    onCancel={() => window.universalAPI.cancel(progress.id)}
+                                    isPlaylist={false}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                {/* History */}
-                <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-foreground-muted">History</h3>
-                    
-                    {history.length === 0 ? (
-                        <div className="text-center py-12 bg-bg-glass rounded-xl border border-border-glass text-foreground-muted">
-                            <RotateCcw className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p>No download history yet</p>
-                        </div>
-                    ) : (
-                        <div className="grid gap-3">
-                            {history.map(item => (
-                                <div key={item.id} className="group bg-bg-glass hover:bg-white/5 border border-border-glass rounded-lg p-3 flex gap-4 transition-all overflow-hidden relative">
-                                    {/* Platform Indicator Strip */}
-                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${getPlatformColor(item.platform).replace('text-', 'bg-')}`} />
+                {/* History Section */}
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-sm font-semibold text-foreground-primary">History</h3>
+                        {history.length > 0 && (
+                            <Button
+                                onClick={handleClearHistory}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-7"
+                            >
+                                Clear All
+                            </Button>
+                        )}
+                    </div>
 
-                                    {/* Thumb */}
-                                    <div className="relative w-28 h-16 bg-black/50 rounded flex-shrink-0 overflow-hidden ml-2">
-                                        <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
-                                        {item.duration && (
-                                            <div className="absolute bottom-1 right-1 bg-black/80 px-1 rounded text-[9px] font-mono text-white">
-                                                {formatDuration(item.duration)}
+                    <div className="space-y-2">
+                        {history.length === 0 ? (
+                            <div className="text-center py-12 bg-glass-panel rounded-xl border border-border-glass">
+                                <Clock className="w-8 h-8 mx-auto mb-3 text-foreground-muted opacity-50" />
+                                <p className="text-foreground-tertiary">No downloads yet</p>
+                            </div>
+                        ) : (
+                            history.map((item: any) => (
+                                <div key={item.id} className="bg-glass-panel border border-border-glass rounded-xl p-3 flex gap-4 transition-all hover:bg-white/5 group">
+                                    {/* Thumbnail */}
+                                    <div className="relative w-32 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-black/50 border border-border-glass">
+                                        {item.thumbnailUrl ? (
+                                            <>
+                                                <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover opacity-80" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                            </>
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                {item.format === 'audio' ? (
+                                                    <Music className="w-8 h-8 text-foreground-muted opacity-30" />
+                                                ) : (
+                                                    <Video className="w-8 h-8 text-foreground-muted opacity-30" />
+                                                )}
                                             </div>
                                         )}
+                                        {item.duration && (
+                                            <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1 rounded font-mono">
+                                                {formatTime(item.duration)}
+                                            </span>
+                                        )}
+                                        {/* Platform Badge */}
+                                        <span className={cn(
+                                            "absolute top-1 left-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded backdrop-blur-sm",
+                                            getPlatformColor(item.platform),
+                                            "bg-black/60 border border-white/20"
+                                        )}>
+                                            {getPlatformName(item.platform)}
+                                        </span>
                                     </div>
 
                                     {/* Info */}
-                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h4 className="font-medium text-sm truncate pr-4 text-foreground-primary mb-1">{item.title}</h4>
-                                        <div className="flex items-center gap-2 text-xs text-foreground-muted">
-                                            <span className={cn("uppercase font-bold text-[10px]", getPlatformColor(item.platform))}>
-                                                {getPlatformName(item.platform)}
-                                            </span>
-                                            <span>•</span>
-                                            <span className="uppercase">{item.format}</span>
-                                            <span>•</span>
-                                            <span>{formatBytes(item.size)}</span>
+                                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                                        <div>
+                                            <h4 className="font-medium text-sm text-foreground-primary truncate pr-4" title={item.title}>
+                                                {item.title}
+                                            </h4>
+                                            <div className="flex items-center gap-2 mt-1.5 text-xs text-foreground-tertiary font-mono">
+                                                <span className="uppercase bg-white/5 px-1.5 py-0.5 rounded border border-white/5 text-[10px]">
+                                                    {item.format}
+                                                </span>
+                                                <span className="opacity-50">|</span>
+                                                <span>{formatBytes(item.size)}</span>
+                                                <span className="opacity-50">|</span>
+                                                <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-7 text-xs bg-white/5 border-white/10 hover:bg-white/10"
+                                                onClick={() => window.universalAPI.openFile(item.path)}
+                                            >
+                                                Open
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 text-xs text-foreground-secondary hover:text-foreground"
+                                                onClick={() => window.universalAPI.showInFolder(item.path)}
+                                            >
+                                                <HardDrive className="w-3 h-3 mr-1" />
+                                                Folder
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                onClick={() => handleRemoveFromHistory(item.id, item.title)}
+                                                title="Remove from history"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
                                         </div>
                                     </div>
-
-                                    {/* Actions */}
-                                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-2" onClick={() => handleShowInFolder(item.path)} title="Show in Folder">
-                                            <FolderOpen className="w-4 h-4" />
-                                        </Button>
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-2" onClick={() => handleOpenFile(item.path)} title="Play">
-                                            <Play className="w-4 h-4" />
-                                        </Button>
-                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleRemoveFromHistory(item.id)} title="Remove">
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         );
     };
 
+    const renderSettings = () => (
+        <div className="max-w-4xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Card className="p-5 bg-glass-panel border-border-glass">
+                <h3 className="text-base font-semibold text-foreground-primary mb-4 flex items-center gap-2">
+                    <FolderOpen className="w-5 h-5 text-blue-400" />
+                    Download Location
+                </h3>
+                <div className="flex gap-3">
+                    <Input
+                        value={downloadPath || 'Default Downloads Folder'}
+                        readOnly
+                        className="bg-background/50 border-input font-mono text-sm flex-1"
+                    />
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleChooseFolder}
+                        className="px-4"
+                    >
+                        <FolderOpen className="w-4 h-4 mr-2" />
+                        Change
+                    </Button>
+                </div>
+            </Card>
+
+            <Card className="p-5 bg-glass-panel border-border-glass">
+                <h3 className="text-base font-semibold text-foreground-primary mb-4 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-purple-400" />
+                    Default Preferences
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-foreground-secondary">Default Format</label>
+                        <select
+                            className="w-full bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                            value={settings.defaultFormat}
+                            onChange={(e) => handleSaveSettings({ ...settings, defaultFormat: e.target.value as 'video' | 'audio' })}
+                        >
+                            <option value="video">Video</option>
+                            <option value="audio">Audio Only</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-foreground-secondary">Default Quality</label>
+                        <select
+                            className="w-full bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                            value={settings.defaultQuality}
+                            onChange={(e) => handleSaveSettings({ ...settings, defaultQuality: e.target.value as 'best' | 'medium' | 'low' })}
+                        >
+                            <option value="best">Best Quality</option>
+                            <option value="medium">Medium Quality</option>
+                            <option value="low">Low Quality</option>
+                        </select>
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="p-5 bg-glass-panel border-border-glass">
+                <h3 className="text-base font-semibold text-foreground-primary mb-3 flex items-center gap-2">
+                    <Info className="w-5 h-5 text-emerald-400" />
+                    About
+                </h3>
+                <div className="space-y-2 text-sm text-foreground-secondary">
+                    <p>Universal Downloader supports downloading from 1000+ websites including:</p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        {['YouTube', 'Instagram', 'Facebook', 'TikTok', 'Twitter', 'Twitch', 'Reddit', 'Vimeo', 'Dailymotion', 'Soundcloud'].map(platform => (
+                            <span key={platform} className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-xs">
+                                {platform}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+
     return (
         <ToolPane
             title="Universal Downloader"
-            description="One tool to download from everywhere - YouTube, Instagram, Facebook, and more."
+            description="Download videos and audio from 1000+ websites with ease"
         >
             <div className="h-full flex flex-col">
                 <ToastContainer toasts={toasts} onClose={removeToast} />
-                {/* Navbar */}
-                <div className="px-6 border-b border-border-glass bg-bg-glass/50 backdrop-blur-sm sticky top-0 z-10">
-                    <div className="max-w-4xl mx-auto flex items-center gap-1">
+
+                {/* Navigation Tabs */}
+                <div className="px-6 border-b border-border-glass bg-glass-panel/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div className="max-w-5xl mx-auto flex items-center gap-1">
                         <button
                             onClick={() => setView('new')}
                             className={cn(
-                                "py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                                view === 'new' ? "border-primary text-primary" : "border-transparent text-foreground-muted hover:text-foreground"
+                                "py-3.5 px-5 text-sm font-medium border-b-2 transition-all flex items-center gap-2",
+                                view === 'new'
+                                    ? "border-primary text-primary bg-primary/5"
+                                    : "border-transparent text-foreground-muted hover:text-foreground hover:bg-white/5"
                             )}
                         >
-                            <Globe className="w-4 h-4" />
+                            <Download className="w-4 h-4" />
                             Download
                         </button>
                         <button
                             onClick={() => setView('downloads')}
                             className={cn(
-                                "py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2",
-                                view === 'downloads' ? "border-primary text-primary" : "border-transparent text-foreground-muted hover:text-foreground"
+                                "py-3.5 px-5 text-sm font-medium border-b-2 transition-all flex items-center gap-2",
+                                view === 'downloads'
+                                    ? "border-primary text-primary bg-primary/5"
+                                    : "border-transparent text-foreground-muted hover:text-foreground hover:bg-white/5"
                             )}
                         >
-                            <Download className="w-4 h-4" />
+                            <Clock className="w-4 h-4" />
                             History
                             {activeDownloads.size > 0 && (
-                                <span className="bg-primary text-primary-foreground text-[10px] px-1.5 rounded-full font-bold ml-1">
+                                <span className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                                     {Array.from(activeDownloads.values()).filter(d => d.state === 'downloading').length}
                                 </span>
                             )}
+                        </button>
+                        <button
+                            onClick={() => setView('settings')}
+                            className={cn(
+                                "py-3.5 px-5 text-sm font-medium border-b-2 transition-all flex items-center gap-2",
+                                view === 'settings'
+                                    ? "border-primary text-primary bg-primary/5"
+                                    : "border-transparent text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            )}
+                        >
+                            <Settings className="w-4 h-4" />
+                            Settings
                         </button>
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-auto p-4 md:p-8">
+                <div className="flex-1 overflow-auto p-6">
                     {view === 'new' && renderNewDownload()}
                     {view === 'downloads' && renderDownloads()}
+                    {view === 'settings' && renderSettings()}
                 </div>
             </div>
         </ToolPane>

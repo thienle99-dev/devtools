@@ -15,6 +15,7 @@ export interface UniversalMediaInfo {
     likeCount?: number;
     isLive?: boolean;
     webpageUrl?: string;
+    availableQualities?: string[]; // e.g., ['2160p', '1440p', '1080p', '720p', '480p', '360p']
 }
 
 export interface UniversalDownloadOptions {

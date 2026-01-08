@@ -3233,6 +3233,21 @@ var UniversalDownloader = class {
 			const stdout = await this.ytDlp.execPromise(args);
 			const info = JSON.parse(stdout);
 			const platform = this.detectPlatform(url, info.extractor);
+			const availableQualities = [];
+			if (info.formats && Array.isArray(info.formats)) {
+				const qualitySet = /* @__PURE__ */ new Set();
+				info.formats.forEach((fmt) => {
+					if (fmt.vcodec && fmt.vcodec !== "none" && fmt.height) {
+						const quality = `${fmt.height}p`;
+						qualitySet.add(quality);
+					}
+				});
+				const sortedQualities = Array.from(qualitySet).sort((a, b) => {
+					const heightA = parseInt(a.replace("p", ""));
+					return parseInt(b.replace("p", "")) - heightA;
+				});
+				availableQualities.push(...sortedQualities);
+			}
 			return {
 				id: info.id,
 				url: info.webpage_url || url,
@@ -3247,7 +3262,8 @@ var UniversalDownloader = class {
 				viewCount: info.view_count,
 				likeCount: info.like_count,
 				isLive: info.is_live || false,
-				webpageUrl: info.webpage_url
+				webpageUrl: info.webpage_url,
+				availableQualities: availableQualities.length > 0 ? availableQualities : void 0
 			};
 		} catch (error) {
 			let msg = error.message || String(error);
@@ -3310,11 +3326,15 @@ var UniversalDownloader = class {
 			const settings = this.getSettings();
 			const browserForCookies = cookiesBrowser || settings.useBrowserCookies;
 			if (browserForCookies) args.push("--cookies-from-browser", browserForCookies);
-			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
-			else {
-				if (quality === "low") args.push("-f", "worst");
-				else if (quality === "medium") args.push("-f", "best[height<=720]");
-				else args.push("-f", "bestvideo+bestaudio/best");
+			if (format === "audio") {
+				args.push("-x", "--audio-format", "mp3");
+				const audioQuality = quality || "0";
+				args.push("--audio-quality", audioQuality);
+			} else {
+				if (quality && quality.endsWith("p")) {
+					const height = quality.replace("p", "");
+					args.push("-f", `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
+				} else args.push("-f", "bestvideo+bestaudio/best");
 				args.push("--merge-output-format", "mp4");
 			}
 			return new Promise((resolve, reject) => {

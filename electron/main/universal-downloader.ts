@@ -5,10 +5,10 @@ import { app } from 'electron';
 import Store from 'electron-store';
 import { randomUUID } from 'crypto';
 import { execSync } from 'child_process';
-import type { 
-    UniversalDownloadOptions, 
-    UniversalMediaInfo, 
-    UniversalHistoryItem, 
+import type {
+    UniversalDownloadOptions,
+    UniversalMediaInfo,
+    UniversalHistoryItem,
     UniversalDownloadProgress,
     SupportedPlatform
 } from '../../src/types/universal-media';
@@ -36,7 +36,7 @@ export class UniversalDownloader {
     private initPromise: Promise<void>;
     private store: Store<StoreSchema>;
     private ffmpegPath: string | null = null;
-    
+
     // Queue System
     private downloadQueue: Array<{
         run: () => Promise<string>;
@@ -86,7 +86,7 @@ export class UniversalDownloader {
                 if (ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path as string)) {
                     this.ffmpegPath = ffmpegInstaller.path;
                     if (process.platform !== 'win32') {
-                         try { fs.chmodSync(this.ffmpegPath as string, '755'); } catch {}
+                        try { fs.chmodSync(this.ffmpegPath as string, '755'); } catch { }
                     }
                 } else {
                     // Fallback to global
@@ -114,16 +114,16 @@ export class UniversalDownloader {
     private detectPlatform(url: string, extractor?: string): SupportedPlatform {
         const u = url.toLowerCase();
         if (extractor) {
-             const e = extractor.toLowerCase();
-             if (e.includes('youtube')) return 'youtube';
-             if (e.includes('tiktok')) return 'tiktok';
-             if (e.includes('instagram')) return 'instagram';
-             if (e.includes('facebook')) return 'facebook';
-             if (e.includes('twitter') || e.includes('x')) return 'twitter';
-             if (e.includes('twitch')) return 'twitch';
-             if (e.includes('reddit')) return 'reddit';
+            const e = extractor.toLowerCase();
+            if (e.includes('youtube')) return 'youtube';
+            if (e.includes('tiktok')) return 'tiktok';
+            if (e.includes('instagram')) return 'instagram';
+            if (e.includes('facebook')) return 'facebook';
+            if (e.includes('twitter') || e.includes('x')) return 'twitter';
+            if (e.includes('twitch')) return 'twitch';
+            if (e.includes('reddit')) return 'reddit';
         }
-        
+
         if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
         if (u.includes('tiktok.com')) return 'tiktok';
         if (u.includes('instagram.com')) return 'instagram';
@@ -131,7 +131,7 @@ export class UniversalDownloader {
         if (u.includes('twitter.com') || u.includes('x.com')) return 'twitter';
         if (u.includes('twitch.tv')) return 'twitch';
         if (u.includes('reddit.com')) return 'reddit';
-        
+
         return 'other';
     }
 
@@ -158,6 +158,29 @@ export class UniversalDownloader {
 
             const platform = this.detectPlatform(url, info.extractor);
 
+            // Extract available video qualities
+            const availableQualities: string[] = [];
+            if (info.formats && Array.isArray(info.formats)) {
+                const qualitySet = new Set<string>();
+
+                info.formats.forEach((fmt: any) => {
+                    // Only consider formats with video
+                    if (fmt.vcodec && fmt.vcodec !== 'none' && fmt.height) {
+                        const quality = `${fmt.height}p`;
+                        qualitySet.add(quality);
+                    }
+                });
+
+                // Convert to array and sort from highest to lowest
+                const sortedQualities = Array.from(qualitySet).sort((a, b) => {
+                    const heightA = parseInt(a.replace('p', ''));
+                    const heightB = parseInt(b.replace('p', ''));
+                    return heightB - heightA; // Descending order
+                });
+
+                availableQualities.push(...sortedQualities);
+            }
+
             return {
                 id: info.id,
                 url: info.webpage_url || url,
@@ -172,7 +195,8 @@ export class UniversalDownloader {
                 viewCount: info.view_count,
                 likeCount: info.like_count,
                 isLive: info.is_live || false,
-                webpageUrl: info.webpage_url
+                webpageUrl: info.webpage_url,
+                availableQualities: availableQualities.length > 0 ? availableQualities : undefined
             };
         } catch (error: any) {
             // Provide a cleaner error message
@@ -232,10 +256,10 @@ export class UniversalDownloader {
             // However, for pure speed, we might want to do it in one go.
             // Let's get info first as used in other downloaders.
             const info = await this.getMediaInfo(url);
-            
+
             const sanitizedTitle = this.sanitizeFilename(info.title);
             const author = this.sanitizeFilename(info.author || 'unknown');
-            
+
             const downloadsPath = outputPath || this.store.get('settings.downloadPath') || app.getPath('downloads');
             const extension = format === 'audio' ? 'mp3' : 'mp4';
             // Filename: [Platform] Author - Title [ID].ext
@@ -269,24 +293,27 @@ export class UniversalDownloader {
             const settings = this.getSettings();
             const browserForCookies = cookiesBrowser || settings.useBrowserCookies;
             if (browserForCookies) {
-                 args.push('--cookies-from-browser', browserForCookies);
+                args.push('--cookies-from-browser', browserForCookies);
             }
 
             // Quality / Format Logic
             if (format === 'audio') {
                 args.push(
                     '-x',
-                    '--audio-format', 'mp3',
-                    '--audio-quality', '0' // best
+                    '--audio-format', 'mp3'
                 );
+
+                // Audio quality: 0 (best), 5 (192kbps), 9 (128kbps)
+                const audioQuality = quality || '0';
+                args.push('--audio-quality', audioQuality);
             } else {
-                // Video
-                if (quality === 'low') {
-                    args.push('-f', 'worst');
-                } else if (quality === 'medium') {
-                    args.push('-f', 'best[height<=720]'); 
+                // Video - support specific quality strings like "1080p", "720p", etc.
+                if (quality && quality.endsWith('p')) {
+                    // Specific quality requested (e.g., "1080p", "720p")
+                    const height = quality.replace('p', '');
+                    args.push('-f', `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
                 } else {
-                    // Best
+                    // Fallback to best quality
                     args.push('-f', 'bestvideo+bestaudio/best');
                 }
                 args.push('--merge-output-format', 'mp4');
@@ -304,13 +331,13 @@ export class UniversalDownloader {
                 if (process.ytDlpProcess) {
                     process.ytDlpProcess.stdout?.on('data', (data: Buffer) => {
                         const output = data.toString();
-                        
+
                         output.split(/\r?\n/).forEach(line => {
                             if (!line.trim()) return;
-                            
+
                             // [download]  25.0% of 10.00MiB at 2.50MiB/s ETA 00:03
                             const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
-                            
+
                             if (progressMatch) {
                                 percent = parseFloat(progressMatch[1]);
                                 const sizeVal = parseFloat(progressMatch[2]);
@@ -319,7 +346,7 @@ export class UniversalDownloader {
                                 const speedUnit = progressMatch[5];
                                 const etaStr = progressMatch[6]; // MM:SS
 
-                                const unitMultipliers: any = { 'B': 1, 'KiB': 1024, 'MiB': 1024*1024, 'GiB': 1024*1024*1024 };
+                                const unitMultipliers: any = { 'B': 1, 'KiB': 1024, 'MiB': 1024 * 1024, 'GiB': 1024 * 1024 * 1024 };
                                 totalBytes = sizeVal * (unitMultipliers[sizeUnit] || 1);
                                 downloadedBytes = (percent / 100) * totalBytes;
                                 const speed = speedVal * (unitMultipliers[speedUnit] || 1);
@@ -353,8 +380,8 @@ export class UniversalDownloader {
                     if (code === 0) {
                         // verify file exists
                         if (fs.existsSync(outputTemplate)) {
-                             // Final callback
-                             if (progressCallback) {
+                            // Final callback
+                            if (progressCallback) {
                                 progressCallback({
                                     id: downloadId,
                                     percent: 100,
@@ -368,7 +395,7 @@ export class UniversalDownloader {
                                     platform: info.platform
                                 });
                             }
-                            
+
                             // History
                             this.addToHistory({
                                 id: downloadId,
@@ -395,8 +422,8 @@ export class UniversalDownloader {
                 });
 
                 process.on('error', (err: Error) => {
-                     this.activeProcesses.delete(downloadId);
-                     reject(err);
+                    this.activeProcesses.delete(downloadId);
+                    reject(err);
                 });
             });
         } catch (error) {
