@@ -24,6 +24,7 @@ interface FormatSelectorProps {
     embedSubs: boolean;
     setEmbedSubs: (enabled: boolean) => void;
     onDownload?: (quality: string) => void;
+    networkSpeed?: number; // Mbps
 }
 
 export const FormatSelector: React.FC<FormatSelectorProps> = ({
@@ -36,8 +37,16 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
     disabled,
     embedSubs,
     setEmbedSubs,
-    onDownload
+    onDownload,
+    networkSpeed = 10
 }) => {
+
+    const getRecommendedQuality = (): string => {
+        if (networkSpeed >= 25) return '1080p';
+        if (networkSpeed >= 10) return '720p';
+        if (networkSpeed >= 5) return '480p';
+        return '360p';
+    };
 
     const handleFormatChange = (newFormat: 'video' | 'audio') => {
         if (format === newFormat) return;
@@ -184,19 +193,36 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                      </div>
                      
                      {format === 'video' ? (
-                            (videoInfo?.availableQualities || ['1080p', '720p', '480p']).map((q: string) => (
+                            (videoInfo?.availableQualities || ['1080p', '720p', '480p']).map((q: string) => {
+                                const isRecommended = q === getRecommendedQuality();
+                                return (
                                  <div
                                     key={q}
                                     onClick={() => onDownload?.(q)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer border-transparent hover:bg-white/5 hover:border-white/5 bg-background-tertiary/20`}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer ${
+                                        isRecommended 
+                                            ? 'border-green-500/30 bg-green-500/5' 
+                                            : 'border-transparent hover:bg-white/5 hover:border-white/5 bg-background-tertiary/20'
+                                    }`}
                                  >
                                     <div className="flex items-center gap-4">
-                                         <div className={`p-2 rounded-lg bg-background-tertiary text-foreground-tertiary group-hover:bg-red-500/10 group-hover:text-red-400 transition-colors`}>
+                                         <div className={`p-2 rounded-lg ${
+                                             isRecommended 
+                                                 ? 'bg-green-500/10 text-green-400' 
+                                                 : 'bg-background-tertiary text-foreground-tertiary group-hover:bg-red-500/10 group-hover:text-red-400'
+                                         } transition-colors`}>
                                              {getQualityIcon(q)}
                                          </div>
                                          <div className="text-left">
-                                             <div className={`text-sm font-bold text-foreground-primary group-hover:text-red-400 transition-colors`}>
+                                             <div className={`text-sm font-bold flex items-center gap-2 ${
+                                                 isRecommended ? 'text-green-400' : 'text-foreground-primary group-hover:text-red-400'
+                                             } transition-colors`}>
                                                 {q}
+                                                {isRecommended && (
+                                                    <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[9px] font-bold uppercase rounded border border-green-500/30">
+                                                        Recommended
+                                                    </span>
+                                                )}
                                              </div>
                                              <div className="text-xs text-foreground-secondary opacity-80">
                                                 {getQualityLabel(q)}
@@ -208,12 +234,17 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                                             ~{estimateSize(q)}
                                         </div>
                                         
-                                        <div className="p-2 rounded-lg bg-white/5 text-foreground-tertiary group-hover:bg-red-500 group-hover:text-white transition-all shadow-sm">
+                                        <div className={`p-2 rounded-lg transition-all shadow-sm ${
+                                            isRecommended 
+                                                ? 'bg-green-500 text-white' 
+                                                : 'bg-white/5 text-foreground-tertiary group-hover:bg-red-500 group-hover:text-white'
+                                        }`}>
                                             <Download className="w-4 h-4" />
                                         </div>
                                     </div>
                                  </div>
-                            ))
+                                );
+                            })
                      ) : (
                         /* Audio List */
                         [

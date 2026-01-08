@@ -100,11 +100,48 @@ export const YoutubeDownloader: React.FC = () => {
     });
     const [capabilities, setCapabilities] = useState<{ hasAria2c: boolean; hasFFmpeg: boolean } | null>(null);
     const [isInstallingAria2, setIsInstallingAria2] = useState(false);
+    const [networkSpeed, setNetworkSpeed] = useState(10); // Mbps
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const isCancelledRef = useRef(false);
     const progressMapRef = useRef<Map<string, any>>(new Map());
     const { toasts, removeToast, success, error, info } = useToast();
+
+    // Keyboard shortcut: Ctrl+V to paste URL
+    useEffect(() => {
+        const handleKeyDown = async (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v' && document.activeElement?.tagName !== 'INPUT') {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && isValidYoutubeUrl(text)) {
+                        setUrl(text);
+                        info('URL Pasted', 'Press Enter to fetch video info');
+                    }
+                } catch (err) {
+                    // Clipboard permission denied
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Track network speed from active downloads
+    useEffect(() => {
+        const speeds: number[] = [];
+        activeDownloads.forEach(download => {
+            if (download.speed > 0) {
+                const mbps = (download.speed * 8) / (1024 * 1024);
+                speeds.push(mbps);
+            }
+        });
+        
+        if (speeds.length > 0) {
+            const avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+            setNetworkSpeed(avgSpeed);
+        }
+    }, [activeDownloads]);
 
     const isValidYoutubeUrl = (url: string): boolean => {
         const patterns = [
@@ -1074,6 +1111,7 @@ export const YoutubeDownloader: React.FC = () => {
                                     embedSubs={embedSubs}
                                     setEmbedSubs={setEmbedSubs}
                                     onDownload={(q) => handleDownload(q)}
+                                    networkSpeed={networkSpeed}
                                 />
 
 
