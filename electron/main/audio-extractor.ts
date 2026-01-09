@@ -17,26 +17,20 @@ export class AudioExtractor {
     private activeProcesses: Map<string, any> = new Map();
 
     constructor() {
-        this.initFFmpeg();
+        // Initialize FFmpeg asynchronously
+        this.initFFmpeg().catch(e => console.error('FFmpeg init error:', e));
     }
 
-    private initFFmpeg() {
+    private async initFFmpeg() {
         try {
-            // Try to get FFmpeg from installer
-            const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-            if (ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path as string)) {
-                this.ffmpegPath = ffmpegInstaller.path;
-                if (process.platform !== 'win32') {
-                    try { fs.chmodSync(this.ffmpegPath as string, '755'); } catch {}
-                }
+            const { FFmpegHelper } = await import('./ffmpeg-helper');
+            const ffmpegPath = FFmpegHelper.getFFmpegPath();
+            
+            if (ffmpegPath) {
+                this.ffmpegPath = ffmpegPath;
+                console.log('✅ Audio Extractor: FFmpeg ready');
             } else {
-                // Fallback to global FFmpeg
-                try {
-                    execSync('ffmpeg -version', { stdio: 'ignore' });
-                    this.ffmpegPath = 'ffmpeg';
-                } catch {
-                    console.warn('FFmpeg not found for Audio Extractor');
-                }
+                console.warn('⚠️ Audio Extractor: FFmpeg not available');
             }
         } catch (e) {
             console.warn('FFmpeg setup failed:', e);

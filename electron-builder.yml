@@ -8,6 +8,7 @@ asar: true
 asarUnpack:
   - "**/*.node"
   - "**/ffmpeg*"
+  - "resources/bin/**/*"
 
 directories:
   output: dist-electron/pack
@@ -16,6 +17,7 @@ directories:
 files:
   - "dist/**/*"
   - "dist-electron/**/*"
+  - "resources/**/*"
   - "package.json"
   # Comprehensive exclusions for smaller build
   - "!**/*.{ts,tsx,jsx,map,md}"

@@ -85,25 +85,15 @@ export class UniversalDownloader {
 
             this.ytDlp = new YTDlpWrap(this.binaryPath);
 
-            // Check FFmpeg
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-                if (ffmpegInstaller.path && fs.existsSync(ffmpegInstaller.path as string)) {
-                    this.ffmpegPath = ffmpegInstaller.path;
-                    if (process.platform !== 'win32') {
-                        try { fs.chmodSync(this.ffmpegPath as string, '755'); } catch { }
-                    }
-                } else {
-                    // Fallback to global
-                    try {
-                        execSync('ffmpeg -version', { stdio: 'ignore' });
-                    } catch {
-                        console.warn('FFmpeg not found for Universal downloader');
-                    }
-                }
-            } catch (e) {
-                console.warn('FFmpeg setup failed:', e);
+            // Check FFmpeg using smart helper
+            const { FFmpegHelper } = await import('./ffmpeg-helper');
+            const ffmpegPath = FFmpegHelper.getFFmpegPath();
+            
+            if (ffmpegPath) {
+                this.ffmpegPath = ffmpegPath;
+                console.log('✅ Universal Downloader: FFmpeg ready');
+            } else {
+                console.warn('⚠️ Universal Downloader: FFmpeg not available');
             }
         } catch (error) {
             console.error('Failed to init Universal downloader:', error);

@@ -154,28 +154,17 @@ export class YouTubeDownloader {
             // Initialize with binary path
             this.ytDlp = new YTDlpWrap(this.binaryPath);
 
-            // Setup FFmpeg using @ffmpeg-installer/ffmpeg
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-                const ffmpegPath = ffmpegInstaller.path;
-                
-                console.log('FFmpeg installer path resolved:', ffmpegPath);
-                
-                if (ffmpegPath && fs.existsSync(ffmpegPath)) {
-                    this.ffmpegPath = ffmpegPath;
-                    this.hasFFmpeg = true;
-                    console.log('✅ FFmpeg binary verified at:', this.ffmpegPath);
-                    
-                    // Set executable permissions on Unix-like systems
-                    if (process.platform !== 'win32' && this.ffmpegPath) {
-                        try { fs.chmodSync(this.ffmpegPath, '755'); } catch (e) { /* ignore */ }
-                    }
-                } else {
-                    console.warn('⚠️ FFmpeg binary not found at:', ffmpegPath);
-                }
-            } catch (e) {
-                console.warn('FFmpeg installer load failed:', e);
+            // Setup FFmpeg using smart helper (handles multiple fallbacks)
+            const { FFmpegHelper } = await import('./ffmpeg-helper');
+            const ffmpegPath = FFmpegHelper.getFFmpegPath();
+            
+            if (ffmpegPath) {
+                this.ffmpegPath = ffmpegPath;
+                this.hasFFmpeg = true;
+                const version = FFmpegHelper.getFFmpegVersion();
+                console.log(`✅ FFmpeg ready: ${version || 'version unknown'}`);
+            } else {
+                console.warn('⚠️ FFmpeg not available - video features may be limited');
             }
             
             // Check for helpers

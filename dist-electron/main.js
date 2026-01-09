@@ -1,3 +1,4 @@
+import { i as __require } from "./chunk-B2qFFjWa.js";
 import { BrowserWindow, Menu, Notification, Tray, app, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, screen } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,10 +16,6 @@ import { randomUUID as randomUUID$1 } from "crypto";
 import { exec as exec$1, execSync, spawn } from "child_process";
 import { promisify as promisify$1 } from "util";
 import https from "https";
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
-	if (typeof require !== "undefined") return require.apply(this, arguments);
-	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
-});
 var execAsync$1 = promisify(exec);
 var dirSizeCache = /* @__PURE__ */ new Map();
 var CACHE_TTL = 300 * 1e3;
@@ -2314,7 +2311,7 @@ function setupScreenshotHandlers(win$1) {
 		}
 	});
 }
-var require$4 = createRequire(import.meta.url);
+var require$3 = createRequire(import.meta.url);
 var YouTubeDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -2343,7 +2340,7 @@ var YouTubeDownloader = class {
 	}
 	async initYtDlp() {
 		try {
-			const ytDlpModule = require$4("yt-dlp-wrap");
+			const ytDlpModule = require$3("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary to:", this.binaryPath);
@@ -2356,20 +2353,14 @@ var YouTubeDownloader = class {
 				}
 			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			try {
-				const ffmpegPath = require$4("@ffmpeg-installer/ffmpeg").path;
-				console.log("FFmpeg installer path resolved:", ffmpegPath);
-				if (ffmpegPath && fs$1.existsSync(ffmpegPath)) {
-					this.ffmpegPath = ffmpegPath;
-					this.hasFFmpeg = true;
-					console.log("✅ FFmpeg binary verified at:", this.ffmpegPath);
-					if (process.platform !== "win32" && this.ffmpegPath) try {
-						fs$1.chmodSync(this.ffmpegPath, "755");
-					} catch (e) {}
-				} else console.warn("⚠️ FFmpeg binary not found at:", ffmpegPath);
-			} catch (e) {
-				console.warn("FFmpeg installer load failed:", e);
-			}
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				this.hasFFmpeg = true;
+				const version = FFmpegHelper.getFFmpegVersion();
+				console.log(`✅ FFmpeg ready: ${version || "version unknown"}`);
+			} else console.warn("⚠️ FFmpeg not available - video features may be limited");
 			await this.checkHelpers();
 		} catch (error) {
 			console.error("Failed to initialize yt-dlp:", error);
@@ -2877,7 +2868,7 @@ var YouTubeDownloader = class {
 	}
 };
 const youtubeDownloader = new YouTubeDownloader();
-var require$3 = createRequire(import.meta.url);
+var require$2 = createRequire(import.meta.url);
 var TikTokDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -2903,28 +2894,19 @@ var TikTokDownloader = class {
 	}
 	async init() {
 		try {
-			const ytDlpModule = require$3("yt-dlp-wrap");
+			const ytDlpModule = require$2("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary (TikTok)...");
 				await YTDlpWrap.downloadFromGithub(this.binaryPath);
 			}
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			try {
-				const ffmpegInstaller = require$3("@ffmpeg-installer/ffmpeg");
-				if (ffmpegInstaller.path && fs$1.existsSync(ffmpegInstaller.path)) {
-					this.ffmpegPath = ffmpegInstaller.path;
-					if (process.platform !== "win32") try {
-						fs$1.chmodSync(this.ffmpegPath, "755");
-					} catch {}
-				} else try {
-					execSync("ffmpeg -version", { stdio: "ignore" });
-				} catch {
-					console.warn("FFmpeg not found for TikTok downloader");
-				}
-			} catch (e) {
-				console.warn("FFmpeg setup failed:", e);
-			}
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ TikTok Downloader: FFmpeg ready");
+			} else console.warn("⚠️ TikTok Downloader: FFmpeg not available");
 		} catch (error) {
 			console.error("Failed to init TikTok downloader:", error);
 			throw error;
@@ -3141,7 +3123,7 @@ var TikTokDownloader = class {
 	}
 };
 const tiktokDownloader = new TikTokDownloader();
-var require$2 = createRequire(import.meta.url);
+var require$1 = createRequire(import.meta.url);
 var UniversalDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -3168,28 +3150,19 @@ var UniversalDownloader = class {
 	}
 	async init() {
 		try {
-			const ytDlpModule = require$2("yt-dlp-wrap");
+			const ytDlpModule = require$1("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary (Universal)...");
 				await YTDlpWrap.downloadFromGithub(this.binaryPath);
 			}
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			try {
-				const ffmpegInstaller = require$2("@ffmpeg-installer/ffmpeg");
-				if (ffmpegInstaller.path && fs$1.existsSync(ffmpegInstaller.path)) {
-					this.ffmpegPath = ffmpegInstaller.path;
-					if (process.platform !== "win32") try {
-						fs$1.chmodSync(this.ffmpegPath, "755");
-					} catch {}
-				} else try {
-					execSync("ffmpeg -version", { stdio: "ignore" });
-				} catch {
-					console.warn("FFmpeg not found for Universal downloader");
-				}
-			} catch (e) {
-				console.warn("FFmpeg setup failed:", e);
-			}
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Universal Downloader: FFmpeg ready");
+			} else console.warn("⚠️ Universal Downloader: FFmpeg not available");
 		} catch (error) {
 			console.error("Failed to init Universal downloader:", error);
 			throw error;
@@ -3559,27 +3532,21 @@ var UniversalDownloader = class {
 	}
 };
 const universalDownloader = new UniversalDownloader();
-var require$1 = createRequire(import.meta.url);
+createRequire(import.meta.url);
 var AudioExtractor = class {
 	constructor() {
 		this.ffmpegPath = null;
 		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
 	}
-	initFFmpeg() {
+	async initFFmpeg() {
 		try {
-			const ffmpegInstaller = require$1("@ffmpeg-installer/ffmpeg");
-			if (ffmpegInstaller.path && fs$1.existsSync(ffmpegInstaller.path)) {
-				this.ffmpegPath = ffmpegInstaller.path;
-				if (process.platform !== "win32") try {
-					fs$1.chmodSync(this.ffmpegPath, "755");
-				} catch {}
-			} else try {
-				execSync("ffmpeg -version", { stdio: "ignore" });
-				this.ffmpegPath = "ffmpeg";
-			} catch {
-				console.warn("FFmpeg not found for Audio Extractor");
-			}
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Audio Extractor: FFmpeg ready");
+			} else console.warn("⚠️ Audio Extractor: FFmpeg not available");
 		} catch (e) {
 			console.warn("FFmpeg setup failed:", e);
 		}
