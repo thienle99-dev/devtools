@@ -101,3 +101,9 @@ coverage
 # Yarn Integrity file
 .yarn-integrity
 /video
+
+# Download cache (ffmpeg, yt-dlp, etc.)
+.download-cache/
+*.zip
+*.tar.gz
+*.7z
