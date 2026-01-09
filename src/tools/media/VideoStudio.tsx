@@ -4,6 +4,7 @@ import { FramesToVideo } from './components/FramesToVideo';
 import { GifCreator } from './components/GifCreator';
 import { ScreenRecorder } from './components/ScreenRecorder';
 import { VideoMerger } from './VideoMerger';
+import { AudioManager } from './components/AudioManager';
 import { cn } from '@utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -16,16 +17,18 @@ import {
     Settings,
     Layers,
     Scissors,
-    Download
+    Download,
+    Music
 } from 'lucide-react';
 
-type TabType = 'extract' | 'create' | 'merge' | 'gif' | 'record';
+type TabType = 'extract' | 'create' | 'merge' | 'gif' | 'record' | 'audio';
 
 export const VideoStudio: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('merge');
 
     const MENU_ITEMS = [
         { id: 'merge', icon: Combine, label: 'Merger', description: 'Combine multiple videos' },
+        { id: 'audio', icon: Music, label: 'Audio', description: 'Add and mix music' },
         { id: 'extract', icon: Video, label: 'To Frames', description: 'Extract video frames' },
         { id: 'create', icon: ImagesIcon, label: 'To Video', description: 'Create video from images' },
         { id: 'gif', icon: Aperture, label: 'GIF Maker', description: 'Create animated GIFs' },
@@ -111,11 +114,12 @@ export const VideoStudio: React.FC = () => {
                         >
                             <div className="flex-1 bg-glass-background border border-border-glass rounded-3xl shadow-2xl relative overflow-hidden">
                                 <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-6">
-                                    {activeTab === 'extract' && <VideoToFrames />}
-                                    {activeTab === 'create' && <FramesToVideo />}
                                     {activeTab === 'merge' && <VideoMerger />}
-                                    {activeTab === 'gif' && <GifCreator />}
-                                    {activeTab === 'record' && <ScreenRecorder />}
+                        {activeTab === 'extract' && <VideoToFrames />}
+                        {activeTab === 'create' && <FramesToVideo />}
+                        {activeTab === 'gif' && <GifCreator />}
+                        {activeTab === 'record' && <ScreenRecorder />}
+                        {activeTab === 'audio' && <AudioManager />}
                                 </div>
                             </div>
                         </motion.div>

@@ -209,3 +209,15 @@ electron.contextBridge.exposeInMainWorld("videoMergerAPI", {
 	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
 	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
 });
+electron.contextBridge.exposeInMainWorld("audioManagerAPI", {
+	getAudioInfo: (filePath) => electron.ipcRenderer.invoke("audio-manager:get-info", filePath),
+	apply: (options) => electron.ipcRenderer.invoke("audio-manager:apply", options),
+	cancel: (id) => electron.ipcRenderer.invoke("audio-manager:cancel", id),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("audio-manager:progress", listener);
+		return () => electron.ipcRenderer.removeListener("audio-manager:progress", listener);
+	},
+	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
+	chooseInputFiles: () => electron.ipcRenderer.invoke("audio:choose-input-files")
+});

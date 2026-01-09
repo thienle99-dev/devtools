@@ -3836,6 +3836,139 @@ var VideoMerger = class {
 	}
 };
 const videoMerger = new VideoMerger();
+var AudioManager = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("Audio Manager FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
+		} catch (e) {
+			console.warn("FFmpeg setup failed for Audio Manager:", e);
+		}
+	}
+	async getAudioInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => output += data.toString());
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const sampleRateMatch = output.match(/(\d+) Hz/);
+					const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1]) : 0;
+					resolve({
+						path: filePath,
+						duration,
+						format: path$1.extname(filePath).slice(1),
+						sampleRate,
+						channels: output.includes("stereo") ? 2 : 1,
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0
+					});
+				} catch (e) {
+					reject(/* @__PURE__ */ new Error("Failed to parse audio info"));
+				}
+			});
+		});
+	}
+	async applyAudioChanges(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = randomUUID$1();
+		const { videoPath, audioLayers, outputPath, outputFormat, keepOriginalAudio, originalAudioVolume } = options;
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const videoInfoArgs = [
+			"-i",
+			videoPath,
+			"-hide_banner"
+		];
+		const infoProcess = spawn(this.ffmpegPath, videoInfoArgs);
+		let infoOutput = "";
+		await new Promise((resolve) => {
+			infoProcess.stderr.on("data", (d) => infoOutput += d.toString());
+			infoProcess.on("close", resolve);
+		});
+		const durationMatch = infoOutput.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+		const totalDuration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const finalOutputPath = outputPath || path$1.join(outputDir, `audio_mixed_${Date.now()}.${outputFormat}`);
+		const args = ["-i", videoPath];
+		audioLayers.forEach((layer) => {
+			if (layer.clipStart > 0) args.push("-ss", layer.clipStart.toString());
+			if (layer.clipEnd > 0) args.push("-to", layer.clipEnd.toString());
+			args.push("-i", layer.path);
+		});
+		let filterStr = "";
+		let inputCount = 0;
+		if (keepOriginalAudio) {
+			filterStr += `[0:a]volume=${originalAudioVolume}[a0];`;
+			inputCount++;
+		}
+		audioLayers.forEach((layer, i) => {
+			const inputIdx = i + 1;
+			filterStr += `[${inputIdx}:a]volume=${layer.volume},adelay=${layer.startTime * 1e3}|${layer.startTime * 1e3}[a${inputIdx}];`;
+			inputCount++;
+		});
+		for (let i = 0; i < inputCount; i++) filterStr += `[a${i}]`;
+		filterStr += `amix=inputs=${inputCount}:duration=first:dropout_transition=2[aout]`;
+		args.push("-filter_complex", filterStr);
+		args.push("-map", "0:v", "-map", "[aout]");
+		args.push("-c:v", "copy");
+		args.push("-c:a", "aac", "-b:a", "192k", "-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					progressCallback({
+						id,
+						percent: Math.min(currentTime / totalDuration * 100, 100),
+						state: "processing"
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Exit code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancel(id) {
+		const p = this.activeProcesses.get(id);
+		if (p) {
+			p.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const audioManager = new AudioManager();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -5331,6 +5464,17 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("video-merger:cancel", async (_, id) => {
 		videoMerger.cancelMerge(id);
+	});
+	ipcMain.handle("audio-manager:get-info", async (_, filePath) => {
+		return await audioManager.getAudioInfo(filePath);
+	});
+	ipcMain.handle("audio-manager:apply", async (event, options) => {
+		return await audioManager.applyAudioChanges(options, (progress) => {
+			event.sender.send("audio-manager:progress", progress);
+		});
+	});
+	ipcMain.handle("audio-manager:cancel", async (_, id) => {
+		audioManager.cancel(id);
 	});
 	ipcMain.handle("video-merger:choose-files", async () => {
 		const result = await dialog.showOpenDialog({

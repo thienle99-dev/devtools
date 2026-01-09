@@ -14,6 +14,7 @@ import { tiktokDownloader } from './tiktok-downloader'
 import { universalDownloader } from './universal-downloader'
 import { audioExtractor } from './audio-extractor'
 import { videoMerger } from './video-merger'
+import { audioManager } from './audio-manager'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1830,6 +1831,21 @@ app.whenReady().then(() => {
 
   ipcMain.handle('video-merger:cancel', async (_, id: string) => {
     videoMerger.cancelMerge(id);
+  });
+
+  // Audio Manager IPC Handlers
+  ipcMain.handle('audio-manager:get-info', async (_, filePath: string) => {
+    return await audioManager.getAudioInfo(filePath);
+  });
+
+  ipcMain.handle('audio-manager:apply', async (event, options: any) => {
+    return await audioManager.applyAudioChanges(options, (progress) => {
+      event.sender.send('audio-manager:progress', progress);
+    });
+  });
+
+  ipcMain.handle('audio-manager:cancel', async (_, id: string) => {
+    audioManager.cancel(id);
   });
 
   ipcMain.handle('video-merger:choose-files', async () => {
