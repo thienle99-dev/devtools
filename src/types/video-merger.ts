@@ -1,6 +1,12 @@
+export interface VideoClip {
+    path: string;
+    startTime?: number;
+    endTime?: number;
+}
+
 export interface VideoMergeOptions {
     id?: string;
-    inputPaths: string[];
+    clips: VideoClip[];
     outputPath?: string;
     format: 'mp4' | 'mkv' | 'avi' | 'mov' | 'webm';
     resolution?: {

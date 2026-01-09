@@ -432,90 +432,90 @@ export const Footer = () => {
     }, []);
     
     return (
-        <footer className="h-9 px-3 sm:px-6 grid grid-cols-3 items-center text-[10px] sm:text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-40 backdrop-blur-xl shrink-0">
+        <footer className="h-7 px-2 sm:px-4 grid grid-cols-3 items-center text-[9px] sm:text-[10px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-40 backdrop-blur-xl">
             {/* Left Section: Status & Essential Tool Info */}
-            <div className="flex items-center space-x-3 min-w-0 h-full">
-                <div className="flex items-center space-x-2 shrink-0">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    <span className="font-bold hidden sm:inline text-emerald-600 dark:text-emerald-500/80 tracking-wide uppercase text-[9px]">Ready</span>
+            <div className="flex items-center space-x-2 min-w-0 h-full">
+                <div className="flex items-center space-x-1.5 shrink-0">
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                    <span className="font-bold hidden sm:inline text-emerald-600 dark:text-emerald-500/80 tracking-wide uppercase text-[8px]">Ready</span>
                 </div>
                 
-                <div className="w-px h-3 bg-border-glass shrink-0" />
+                <div className="w-px h-2.5 bg-border-glass shrink-0 hidden sm:block" />
                 
-                <div className="flex items-center space-x-2 overflow-hidden shrink-0">
+                <div className="flex items-center space-x-1.5 overflow-hidden shrink-0">
                     {activeTool ? (
-                        <div className={`flex items-center space-x-1.5 ${activeTool.color || 'text-foreground'}`}>
-                            <activeTool.icon size={11} className="shrink-0" />
-                            <span className="font-semibold truncate max-w-[80px] sm:max-w-[150px]">
+                        <div className={`flex items-center space-x-1 ${activeTool.color || 'text-foreground'}`}>
+                            <activeTool.icon size={10} className="shrink-0" />
+                            <span className="font-semibold truncate max-w-[60px] sm:max-w-[120px] text-[9px]">
                                 {activeTool.name}
                             </span>
                         </div>
                     ) : (
-                        <span className="opacity-50 italic">Dashboard</span>
+                        <span className="opacity-50 italic text-[9px]">Dashboard</span>
                     )}
                 </div>
             </div>
 
             {/* Center Section: Quick Actions Bar (The Core UI) */}
             <div className="flex items-center justify-center h-full">
-                <div className="flex items-center bg-foreground/[0.05] dark:bg-white/5 rounded-full px-2 py-1 border border-border-glass shadow-sm dark:shadow-inner scale-90 sm:scale-100 backdrop-blur-md">
+                <div className="flex items-center bg-foreground/[0.05] dark:bg-white/5 rounded-full px-1.5 py-0.5 border border-border-glass shadow-sm dark:shadow-inner scale-90 sm:scale-100 backdrop-blur-md">
                     <button 
                         onClick={toggleTheme}
-                        className={`p-1.5 hover:scale-110 transition-all rounded-full ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/20' : 'text-indigo-600 hover:bg-indigo-500/10'}`}
+                        className={`p-1 hover:scale-110 transition-all rounded-full ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/20' : 'text-indigo-600 hover:bg-indigo-500/10'}`}
                         title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
                     >
-                        {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+                        {theme === 'dark' ? <Sun size={11} /> : <Moon size={11} />}
                     </button>
                     
-                    <div className="w-px h-3 bg-border-glass mx-1" />
+                    <div className="w-px h-2.5 bg-border-glass mx-0.5" />
                     
                     <button 
                         onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                        className={`p-1.5 transition-all rounded-full hover:scale-110 ${notificationsEnabled ? 'text-emerald-500 hover:bg-emerald-500/20' : 'text-rose-500 hover:bg-rose-500/20'}`}
+                        className={`p-1 transition-all rounded-full hover:scale-110 ${notificationsEnabled ? 'text-emerald-500 hover:bg-emerald-500/20' : 'text-rose-500 hover:bg-rose-500/20'}`}
                     >
-                        {notificationsEnabled ? <Bell size={13} /> : <BellOff size={13} />}
+                        {notificationsEnabled ? <Bell size={11} /> : <BellOff size={11} />}
                     </button>
                     
-                    <div className="w-px h-3 bg-border-glass mx-1" />
+                    <div className="w-px h-2.5 bg-border-glass mx-0.5" />
                     
                     <button 
                         onClick={handleFullscreen}
-                        className="p-1.5 text-violet-500 dark:text-violet-400 hover:scale-110 rounded-full hover:bg-violet-500/20 transition-all"
+                        className="p-1 text-violet-500 dark:text-violet-400 hover:scale-110 rounded-full hover:bg-violet-500/20 transition-all"
                     >
-                        {isFullscreen ? <Minimize size={13} /> : <Maximize size={13} />}
+                        {isFullscreen ? <Minimize size={11} /> : <Maximize size={11} />}
                     </button>
                     
-                    <div className="w-px h-3 bg-border-glass mx-1" />
+                    <div className="w-px h-2.5 bg-border-glass mx-0.5 hidden sm:block" />
                     
                     <button 
-                        className="p-1.5 text-sky-500 dark:text-sky-400 hover:scale-110 rounded-full hover:bg-sky-500/20 transition-all flex items-center space-x-1"
+                        className="p-1 text-sky-500 dark:text-sky-400 hover:scale-110 rounded-full hover:bg-sky-500/20 transition-all hidden sm:flex items-center space-x-0.5"
                     >
-                        <Command size={12} />
-                        <span className="text-[10px] font-bold">K</span>
+                        <Command size={10} />
+                        <span className="text-[9px] font-bold">K</span>
                     </button>
 
-                    <div className="w-px h-3 bg-border-glass mx-1" />
+                    <div className="w-px h-2.5 bg-border-glass mx-0.5" />
 
                     <button 
                         onClick={openSettings}
-                        className="p-1.5 text-foreground-muted hover:text-foreground hover:scale-110 rounded-full hover:bg-foreground/10 transition-all"
+                        className="p-1 text-foreground-muted hover:text-foreground hover:scale-110 rounded-full hover:bg-foreground/10 transition-all"
                         title="Settings"
                     >
-                        <Settings size={13} />
+                        <Settings size={11} />
                     </button>
                 </div>
             </div>
 
             {/* Right Section: Compact Info & More Menu */}
-            <div className="flex items-center space-x-4 justify-end h-full">
+            <div className="flex items-center space-x-2 justify-end h-full">
                 {/* Task Activity Indicator */}
                 <div className="hidden sm:block">
                     <TaskMonitor />
                 </div>
 
-                <div className="flex items-center space-x-1.5 opacity-40">
-                    <div className="w-1 h-1 rounded-full bg-indigo-500" />
-                    <span className="font-mono text-[9px]">v0.2.0-beta</span>
+                <div className="flex items-center space-x-1 opacity-40">
+                    <div className="w-0.5 h-0.5 rounded-full bg-indigo-500" />
+                    <span className="font-mono text-[8px]">v0.2.0</span>
                 </div>
 
                 {/* The "Everything Else" Menu Hub */}
@@ -526,16 +526,16 @@ export const Footer = () => {
                             setShowMoreMenu(!showMoreMenu);
                         }}
                         className={cn(
-                            "p-2 rounded-xl transition-all relative",
+                            "p-1.5 rounded-lg transition-all relative",
                             showMoreMenu 
                                 ? "bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
                                 : "hover:bg-foreground/10 text-foreground-muted hover:text-foreground"
                         )}
                     >
-                        {showMoreMenu ? <ChevronUp size={16} /> : <MoreHorizontal size={16} />}
+                        {showMoreMenu ? <ChevronUp size={14} /> : <MoreHorizontal size={14} />}
                         
                         {(updateAvailable || unreadCount > 0) && !showMoreMenu && (
-                            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-bg-glass-panel animate-pulse" />
+                            <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-bg-glass-panel animate-pulse" />
                         )}
                     </button>
 

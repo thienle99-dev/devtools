@@ -3755,28 +3755,37 @@ var VideoMerger = class {
 	async mergeVideos(options, progressCallback) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
 		const id = options.id || randomUUID$1();
-		const { inputPaths, outputPath, format } = options;
-		if (!inputPaths || inputPaths.length === 0) throw new Error("No input files provided");
-		for (const p of inputPaths) if (!fs$1.existsSync(p)) throw new Error(`File not found: ${p}`);
+		const { clips, outputPath, format } = options;
+		if (!clips || clips.length === 0) throw new Error("No input clips provided");
+		for (const clip of clips) if (!fs$1.existsSync(clip.path)) throw new Error(`File not found: ${clip.path}`);
 		if (progressCallback) progressCallback({
 			id,
 			percent: 0,
 			state: "analyzing"
 		});
-		const totalDuration = (await Promise.all(inputPaths.map((p) => this.getVideoInfo(p)))).reduce((acc, curr) => acc + curr.duration, 0);
+		const videoInfos = await Promise.all(clips.map((c) => this.getVideoInfo(c.path)));
+		let totalDuration = 0;
+		clips.forEach((clip, i) => {
+			const fullDuration = videoInfos[i].duration;
+			const start = clip.startTime || 0;
+			const end = clip.endTime || fullDuration;
+			totalDuration += end - start;
+		});
 		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
 		const outputFilename = outputPath ? path$1.basename(outputPath) : `merged_video_${Date.now()}.${format}`;
 		const finalOutputPath = path$1.join(outputDir, outputFilename);
 		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
 		const args = [];
-		inputPaths.forEach((p) => {
-			args.push("-i", p);
+		clips.forEach((clip) => {
+			if (clip.startTime !== void 0) args.push("-ss", clip.startTime.toString());
+			if (clip.endTime !== void 0) args.push("-to", clip.endTime.toString());
+			args.push("-i", clip.path);
 		});
 		let filterStr = "";
-		inputPaths.forEach((_, i) => {
+		clips.forEach((_, i) => {
 			filterStr += `[${i}:v][${i}:a]`;
 		});
-		filterStr += `concat=n=${inputPaths.length}:v=1:a=1[v][a]`;
+		filterStr += `concat=n=${clips.length}:v=1:a=1[v][a]`;
 		args.push("-filter_complex", filterStr);
 		args.push("-map", "[v]", "-map", "[a]");
 		args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");

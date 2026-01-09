@@ -102,16 +102,16 @@ export class VideoMerger {
         }
 
         const id = options.id || randomUUID();
-        const { inputPaths, outputPath, format } = options;
+        const { clips, outputPath, format } = options;
 
-        if (!inputPaths || inputPaths.length === 0) {
-            throw new Error('No input files provided');
+        if (!clips || clips.length === 0) {
+            throw new Error('No input clips provided');
         }
 
         // Validate all files exist
-        for (const p of inputPaths) {
-            if (!fs.existsSync(p)) {
-                throw new Error(`File not found: ${p}`);
+        for (const clip of clips) {
+            if (!fs.existsSync(clip.path)) {
+                throw new Error(`File not found: ${clip.path}`);
             }
         }
 
@@ -120,8 +120,16 @@ export class VideoMerger {
             progressCallback({ id, percent: 0, state: 'analyzing' });
         }
 
-        const videoInfos = await Promise.all(inputPaths.map(p => this.getVideoInfo(p)));
-        const totalDuration = videoInfos.reduce((acc, curr) => acc + curr.duration, 0);
+        const videoInfos = await Promise.all(clips.map(c => this.getVideoInfo(c.path)));
+        
+        // Calculate total duration considering trims
+        let totalDuration = 0;
+        clips.forEach((clip, i) => {
+            const fullDuration = videoInfos[i].duration;
+            const start = clip.startTime || 0;
+            const end = clip.endTime || fullDuration;
+            totalDuration += (end - start);
+        });
 
         // Determine output path
         const outputDir = outputPath ? path.dirname(outputPath) : app.getPath('downloads');
@@ -134,27 +142,25 @@ export class VideoMerger {
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        /**
-         * We'll use the concat filter method as it's more flexible for different file formats/codecs
-         * although more CPU intensive than concat demuxer.
-         */
-        
-        // Temporarily using a list file for FFmpeg concat demuxer if all streams are same
-        // But for dev-tools, we want something more robust (concat filter)
-        
         const args: string[] = [];
         
-        // Input files
-        inputPaths.forEach(p => {
-            args.push('-i', p);
+        // Input files with trimming
+        clips.forEach(clip => {
+            if (clip.startTime !== undefined) {
+                args.push('-ss', clip.startTime.toString());
+            }
+            if (clip.endTime !== undefined) {
+                args.push('-to', clip.endTime.toString());
+            }
+            args.push('-i', clip.path);
         });
 
         // Concat filter string: [0:v][0:a][1:v][1:a]...concat=n=3:v=1:a=1[v][a]
         let filterStr = '';
-        inputPaths.forEach((_, i) => {
+        clips.forEach((_, i) => {
             filterStr += `[${i}:v][${i}:a]`;
         });
-        filterStr += `concat=n=${inputPaths.length}:v=1:a=1[v][a]`;
+        filterStr += `concat=n=${clips.length}:v=1:a=1[v][a]`;
 
         args.push('-filter_complex', filterStr);
         args.push('-map', '[v]', '-map', '[a]');

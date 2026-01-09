@@ -155,26 +155,26 @@ export const TabBar: React.FC = React.memo(() => {
     if (sortedTabs.length === 0) return null;
 
     return (
-        <div className="tab-bar-container h-11 flex items-center w-full z-20 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm">
+        <div className="tab-bar-container h-8 flex items-center w-full z-20 shrink-0 select-none relative bg-[var(--color-glass-panel)]/30 backdrop-blur-sm">
             {/* Left scroll button */}
             {canScrollLeft && (
                 <button
                     onClick={scrollLeft}
-                    className="tab-scroll-button tab-scroll-button-left absolute left-0 z-30 h-full w-8 flex items-center justify-center backdrop-blur-sm bg-gradient-to-r from-[var(--color-glass-panel)]/90 to-transparent hover:from-[var(--color-glass-button-hover)] transition-all duration-200 group"
+                    className="tab-scroll-button tab-scroll-button-left absolute left-0 z-30 h-full w-7 flex items-center justify-center backdrop-blur-sm bg-gradient-to-r from-[var(--color-glass-panel)]/90 to-transparent hover:from-[var(--color-glass-button-hover)] transition-all duration-200 group"
                     aria-label="Scroll left"
                 >
-                    <ChevronLeft className="w-3.5 h-3.5 text-foreground-muted/60 group-hover:text-foreground/80 transition-all duration-200" strokeWidth={2.5} />
+                    <ChevronLeft className="w-3 h-3 text-foreground-muted/60 group-hover:text-foreground/80 transition-all duration-200" strokeWidth={2.5} />
                 </button>
             )}
 
             {/* Tabs container */}
             <div
                 ref={scrollContainerRef}
-                className="tab-bar-scroll flex items-end h-full overflow-x-auto overflow-y-hidden custom-scrollbar max-w-full px-1"
+                className="tab-bar-scroll flex items-end h-full overflow-x-auto overflow-y-hidden custom-scrollbar max-w-full px-0.5"
                 onWheel={handleWheel}
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-                <div className="flex items-end h-full gap-1">
+                <div className="flex items-end h-full gap-0.5">
                     {sortedTabs.map((tab, index) => {
                         const isActive = tab.id === activeTabId;
                         const Icon = getToolIcon(tab.toolId);
@@ -194,8 +194,8 @@ export const TabBar: React.FC = React.memo(() => {
                                     }
                                 }}
                                 className={cn(
-                                    "tab-item-chrome group flex items-center gap-2 h-9 px-4 cursor-pointer transition-all duration-200 rounded-t-lg",
-                                    "min-w-[140px] max-w-[240px] relative",
+                                    "tab-item-chrome group flex items-center gap-1.5 h-7 px-3 cursor-pointer transition-all duration-200 rounded-t-lg",
+                                    "min-w-[120px] max-w-[200px] relative",
                                     isActive 
                                         ? "tab-item-chrome-active bg-[var(--color-glass-panel)]" 
                                         : "tab-item-chrome-inactive hover:bg-[var(--color-glass-button)]",
@@ -207,14 +207,14 @@ export const TabBar: React.FC = React.memo(() => {
                                 {/* Tool Icon */}
                                 {Icon && (
                                     <Icon className={cn(
-                                        "w-4 h-4 shrink-0 transition-opacity",
+                                        "w-3.5 h-3.5 shrink-0 transition-opacity",
                                         isActive ? "opacity-100 text-indigo-400" : "opacity-50 group-hover:opacity-70"
                                     )} />
                                 )}
 
                                 {/* Tab Title */}
                                 <span className={cn(
-                                    "text-sm truncate flex-1 font-medium transition-colors",
+                                    "text-[11px] truncate flex-1 font-medium transition-colors",
                                     isActive ? "text-foreground" : "text-foreground-secondary group-hover:text-foreground"
                                 )}>
                                     {tab.title}
@@ -232,7 +232,7 @@ export const TabBar: React.FC = React.memo(() => {
                                         e.stopPropagation();
                                     }}
                                     className={cn(
-                                        "tab-close-button-chrome shrink-0 rounded-md p-1 transition-all duration-150 relative z-10",
+                                        "tab-close-button-chrome shrink-0 rounded-md p-0.5 transition-all duration-150 relative z-10",
                                         sortedTabs.length > 1 ? "opacity-0 group-hover:opacity-100" : "opacity-60",
                                         "hover:bg-red-500/20 hover:text-red-400",
                                         "cursor-pointer"
@@ -241,7 +241,7 @@ export const TabBar: React.FC = React.memo(() => {
                                     title={sortedTabs.length === 1 ? "Close tab (last tab)" : "Close tab"}
                                     type="button"
                                 >
-                                    <X className="w-3.5 h-3.5 pointer-events-none" />
+                                    <X className="w-3 h-3 pointer-events-none" />
                                 </button>
                             </div>
                         );
@@ -253,10 +253,10 @@ export const TabBar: React.FC = React.memo(() => {
             {canScrollRight && (
                 <button
                     onClick={scrollRight}
-                    className="tab-scroll-button tab-scroll-button-right absolute right-0 z-30 h-full w-8 flex items-center justify-center backdrop-blur-sm bg-gradient-to-l from-[var(--color-glass-panel)]/90 to-transparent hover:from-[var(--color-glass-button-hover)] transition-all duration-200 group"
+                    className="tab-scroll-button tab-scroll-button-right absolute right-0 z-30 h-full w-7 flex items-center justify-center backdrop-blur-sm bg-gradient-to-l from-[var(--color-glass-panel)]/90 to-transparent hover:from-[var(--color-glass-button-hover)] transition-all duration-200 group"
                     aria-label="Scroll right"
                 >
-                    <ChevronRight className="w-3.5 h-3.5 text-foreground-muted/60 group-hover:text-foreground/80 transition-all duration-200" strokeWidth={2.5} />
+                    <ChevronRight className="w-3 h-3 text-foreground-muted/60 group-hover:text-foreground/80 transition-all duration-200" strokeWidth={2.5} />
                 </button>
             )}
 

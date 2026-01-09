@@ -77,29 +77,29 @@ export const Sidebar: React.FC = React.memo(() => {
                 sidebarCollapsed ? "w-20" : "w-72"
             )}
         >
-            {/* Header: Logo & Controls */}
+            {/* Header: Logo & Controls - COMPACT */}
             <div className={cn(
-                "pt-6 pb-2 transition-all duration-500",
-                sidebarCollapsed ? "px-3" : "px-6"
+                "pt-3 pb-1.5 transition-all duration-500",
+                sidebarCollapsed ? "px-2" : "px-4"
             )}>
                 <div className={cn(
-                    "flex items-center gap-3",
+                    "flex items-center gap-2",
                     sidebarCollapsed ? "flex-col" : "justify-between"
                 )}>
                     <div 
                         onClick={() => navigate('/dashboard')}
                         className={cn(
-                            "flex items-center gap-2.5 transition-all cursor-pointer hover:opacity-80 active:scale-95",
+                            "flex items-center gap-2 transition-all cursor-pointer hover:opacity-80 active:scale-95",
                             sidebarCollapsed && "flex-col"
                         )}
                     >
-                        <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                            <LayoutGrid className="w-5 h-5 text-white" />
+                        <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                            <LayoutGrid className="w-4 h-4 text-white" />
                         </div>
                         {!sidebarCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="font-bold text-sm tracking-tight text-foreground truncate">DevTools</span>
-                                <span className="text-[10px] text-foreground-muted font-bold tracking-[0.1em] uppercase -mt-0.5">Control Panel</span>
+                                <span className="font-bold text-xs tracking-tight text-foreground truncate">DevTools</span>
+                                <span className="text-[9px] text-foreground-muted font-bold tracking-[0.1em] uppercase -mt-0.5">Panel</span>
                             </div>
                         )}
                     </div>
@@ -108,35 +108,35 @@ export const Sidebar: React.FC = React.memo(() => {
                         type="button"
                         onClick={toggleSidebar}
                         className={cn(
-                            "group p-2.5 rounded-xl text-foreground-muted hover:text-foreground bg-foreground/[0.03] dark:bg-white/[0.03] hover:bg-foreground/[0.08] dark:hover:bg-white/10 border border-border-glass transition-all duration-300",
-                            sidebarCollapsed ? "w-full flex justify-center mt-2" : "shrink-0"
+                            "group p-1.5 rounded-lg text-foreground-muted hover:text-foreground bg-foreground/[0.03] dark:bg-white/[0.03] hover:bg-foreground/[0.08] dark:hover:bg-white/10 border border-border-glass transition-all duration-300",
+                            sidebarCollapsed ? "w-full flex justify-center mt-1.5" : "shrink-0"
                         )}
                     >
                         {sidebarCollapsed ? (
-                            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                            <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                         ) : (
-                            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+                            <ChevronLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* Search Section */}
+            {/* Search Section - COMPACT */}
             {!sidebarCollapsed && (
-                <div className="px-6 pt-3 pb-5">
+                <div className="px-4 pt-2 pb-3">
                     <div className="relative group">
-                        <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none z-10">
-                            <Search className="w-4 h-4 text-foreground-muted/50 group-focus-within:text-indigo-500 transition-colors duration-300" />
+                        <div className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none z-10">
+                            <Search className="w-3.5 h-3.5 text-foreground-muted/50 group-focus-within:text-indigo-500 transition-colors duration-300" />
                         </div>
                         <input
                             type="text"
                             placeholder={`Quick Search...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="sidebar-search-input w-full pl-10 pr-4 py-3 text-xs bg-foreground/[0.03] dark:bg-white/[0.03] backdrop-blur-3xl border border-border-glass focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-foreground-muted/40 rounded-2xl shadow-sm"
+                            className="sidebar-search-input w-full pl-8 pr-3 py-2 text-[11px] bg-foreground/[0.03] dark:bg-white/[0.03] backdrop-blur-3xl border border-border-glass focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:text-foreground-muted/40 rounded-xl shadow-sm"
                         />
-                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border-glass bg-background/50 px-1.5 font-mono text-[10px] font-bold text-foreground-muted opacity-40">
+                        <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                             <kbd className="hidden sm:inline-flex h-4 select-none items-center gap-0.5 rounded border border-border-glass bg-background/50 px-1 font-mono text-[9px] font-bold text-foreground-muted opacity-40">
                                 {isMac ? '⌘' : 'Ctrl'} K
                             </kbd>
                         </div>
@@ -144,24 +144,24 @@ export const Sidebar: React.FC = React.memo(() => {
                 </div>
             )}
 
-            {/* Navigation */}
+            {/* Navigation - COMPACT */}
             <nav className={cn(
-                "flex-1 overflow-y-auto space-y-4 custom-scrollbar pb-4 transition-all duration-300",
-                sidebarCollapsed ? "px-3" : "px-4"
+                "flex-1 overflow-y-auto space-y-2 custom-scrollbar pb-3 transition-all duration-300",
+                sidebarCollapsed ? "px-2" : "px-3"
             )}>
                 {/* Fixed Dashboard Entry */}
                 {!searchQuery && (
                     <div className={cn(
-                        "space-y-0.5 mb-4",
-                        sidebarCollapsed ? "" : "px-2 pt-2"
+                        "space-y-0.5 mb-2",
+                        sidebarCollapsed ? "" : "px-1.5 pt-1"
                     )}>
                         <div
                             onClick={() => navigate('/dashboard')}
                             className={cn(
                                 "group relative flex items-center transition-all duration-300 cursor-pointer overflow-hidden",
                                 sidebarCollapsed 
-                                    ? "w-full aspect-square justify-center rounded-2xl" 
-                                    : "px-3.5 py-3 gap-3.5 rounded-2xl",
+                                    ? "w-full aspect-square justify-center rounded-xl" 
+                                    : "px-2.5 py-2 gap-2.5 rounded-xl",
                                 location.pathname === '/dashboard'
                                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
                                     : "hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] text-foreground-secondary hover:text-foreground border border-transparent hover:border-border-glass"
@@ -169,12 +169,12 @@ export const Sidebar: React.FC = React.memo(() => {
                         >
                             <LayoutGrid className={cn(
                                 "shrink-0 transition-transform duration-300 group-hover:scale-110",
-                                sidebarCollapsed ? "w-6 h-6" : "w-5 h-5"
+                                sidebarCollapsed ? "w-5 h-5" : "w-4 h-4"
                             )} />
                             {!sidebarCollapsed && (
                                 <div className="flex flex-col min-w-0">
-                                    <span className="font-bold text-[14px] tracking-tight">Dashboard</span>
-                                    <span className="text-[9px] opacity-40 uppercase font-black tracking-widest leading-none">Home Overview</span>
+                                    <span className="font-bold text-[12px] tracking-tight">Dashboard</span>
+                                    <span className="text-[8px] opacity-40 uppercase font-black tracking-widest leading-none">Home</span>
                                 </div>
                             )}
                         </div>
@@ -206,24 +206,24 @@ export const Sidebar: React.FC = React.memo(() => {
                                         navigate(tool.path);
                                     }}
                                     className={cn(
-                                        "relative group flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[13px] transition-all duration-300 cursor-pointer mb-1",
+                                        "relative group flex items-center gap-2 px-2.5 py-2 rounded-xl text-[12px] transition-all duration-300 cursor-pointer mb-0.5",
                                         isActive 
                                             ? "bg-indigo-500/10 border border-indigo-500/20 text-foreground shadow-[0_4px_15px_-3px_rgba(99,102,241,0.1)]" 
                                             : "hover:bg-foreground/[0.04] dark:hover:bg-white/[0.04] border border-transparent text-foreground-secondary hover:text-foreground hover:translate-x-1"
                                     )}
                                 >
-                                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-indigo-500 rounded-r-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />}
+                                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-2/3 bg-indigo-500 rounded-r-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />}
                                     
                                     <div className={cn(
-                                        "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
+                                        "w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300",
                                         isActive ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/40" : cn("bg-foreground/[0.03] dark:bg-white/[0.03]", colorClass)
                                     )}>
-                                        {Icon && <Icon className="w-4 h-4 shrink-0" />}
+                                        {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
                                     </div>
                                     
                                     <div className="flex flex-col min-w-0 flex-1">
-                                        <span className="truncate font-bold tracking-tight">{tool.name}</span>
-                                        <span className="text-[10px] text-foreground-muted/60 truncate font-medium">{tool.description}</span>
+                                        <span className="truncate font-bold tracking-tight text-[11px]">{tool.name}</span>
+                                        <span className="text-[9px] text-foreground-muted/60 truncate font-medium">{tool.description}</span>
                                     </div>
 
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
