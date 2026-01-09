@@ -13,6 +13,7 @@ import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
 import { TOOLS } from '@tools/registry';
 import { useClipboardStore } from '@store/clipboardStore';
 import { useResponsive } from '@hooks/useResponsive';
+import { Footer } from '@components/layout/Footer';
 import { preloadHeavyModules } from '@utils/lazyLoad'; // Phase 2: Preload on idle
 
 
@@ -289,23 +290,7 @@ function App() {
           </div>
 
           {/* Enhanced Footer/Status Bar - Responsive */}
-          <footer className="h-9 px-3 sm:px-6 flex items-center justify-between text-[10px] sm:text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30 backdrop-blur-xl">
-            <div className="flex items-center space-x-2 sm:space-x-5">
-              <div className="flex items-center space-x-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
-                <span className="font-medium hidden sm:inline">Ready</span>
-                <span className="font-medium sm:hidden">●</span>
-              </div>
-              <div className="w-px h-4 bg-border-glass hidden sm:block" />
-              <span className="opacity-70 hidden md:inline">UTF-8</span>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-5">
-              <span className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity font-medium">
-                <span className="hidden sm:inline">v0.2.0-beta</span>
-                <span className="sm:hidden">v0.2.0</span>
-              </span>
-            </div>
-          </footer>
+          <Footer />
         </div>
       </AppErrorBoundary>
     </Router>
