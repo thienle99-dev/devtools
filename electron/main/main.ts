@@ -13,6 +13,7 @@ import { youtubeDownloader } from './youtube-downloader'
 import { tiktokDownloader } from './tiktok-downloader'
 import { universalDownloader } from './universal-downloader'
 import { audioExtractor } from './audio-extractor'
+import { videoMerger } from './video-merger'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1810,6 +1811,36 @@ app.whenReady().then(() => {
       properties: ['openDirectory', 'createDirectory']
     });
     return result.canceled ? null : result.filePaths[0];
+  });
+
+  // Video Merger IPC Handlers
+  ipcMain.handle('video-merger:get-info', async (_, filePath: string) => {
+    return await videoMerger.getVideoInfo(filePath);
+  });
+
+  ipcMain.handle('video-merger:merge', async (_, options) => {
+    return new Promise((resolve, reject) => {
+      videoMerger.mergeVideos(options, (progress) => {
+        win?.webContents.send('video-merger:progress', progress);
+      })
+        .then(resolve)
+        .catch(reject);
+    });
+  });
+
+  ipcMain.handle('video-merger:cancel', async (_, id: string) => {
+    videoMerger.cancelMerge(id);
+  });
+
+  ipcMain.handle('video-merger:choose-files', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Video Files', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    return result.canceled ? [] : result.filePaths;
   });
 
   // Helper functions

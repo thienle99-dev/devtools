@@ -196,3 +196,16 @@ electron.contextBridge.exposeInMainWorld("audioAPI", {
 	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
 	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
 });
+electron.contextBridge.exposeInMainWorld("videoMergerAPI", {
+	getVideoInfo: (filePath) => electron.ipcRenderer.invoke("video-merger:get-info", filePath),
+	merge: (options) => electron.ipcRenderer.invoke("video-merger:merge", options),
+	cancel: (id) => electron.ipcRenderer.invoke("video-merger:cancel", id),
+	chooseInputFiles: () => electron.ipcRenderer.invoke("video-merger:choose-files"),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("video-merger:progress", listener);
+		return () => electron.ipcRenderer.removeListener("video-merger:progress", listener);
+	},
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});

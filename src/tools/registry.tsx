@@ -151,7 +151,7 @@ const StatsMonitor = React.lazy(() => import('@tools/utilities/stats-monitor/Sta
 const ApplicationManager = React.lazy(() => import('@tools/utilities/ApplicationManager').then(m => ({ default: m.default })));
 const SystemCleaner = React.lazy(() => import('@tools/utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
 const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
-const VideoFrames = React.lazy(() => import('@tools/media/VideoFrames'));
+const VideoStudio = React.lazy(() => import('@tools/media/VideoStudio'));
 // const YoutubeDownloader = React.lazy(() => import('@tools/media/YoutubeDownloader'));
 // const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
 const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
@@ -806,15 +806,15 @@ export const TOOLS: ToolDefinition[] = [
         shortcut: 'Ctrl+Shift+S'
     },
     {
-        id: 'video-frames',
-        name: 'Video Frame Tools',
-        path: '/video-frames',
-        description: 'Extract frames from videos or create videos from images',
+        id: 'video-studio',
+        name: 'Video Studio Pro',
+        path: '/video-studio',
+        description: 'Complete video processing suite: Merge, Frame Extraction, GIF Creator, and Screen Recording.',
         category: 'utilities',
         icon: Film,
-        color: 'text-pink-500',
-        component: VideoFrames,
-        keywords: ['video', 'frames', 'extract', 'frames to video', 'animation', 'screen record', 'gif'],
+        color: 'text-indigo-500',
+        component: VideoStudio,
+        keywords: ['video', 'merger', 'frames', 'extract', 'gif', 'recorder', 'studio', 'editing'],
     },
     // {
     //     id: 'youtube-downloader',

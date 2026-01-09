@@ -216,3 +216,17 @@ contextBridge.exposeInMainWorld('audioAPI', {
   openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
   showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
 })
+
+contextBridge.exposeInMainWorld('videoMergerAPI', {
+  getVideoInfo: (filePath: string) => ipcRenderer.invoke('video-merger:get-info', filePath),
+  merge: (options: any) => ipcRenderer.invoke('video-merger:merge', options),
+  cancel: (id: string) => ipcRenderer.invoke('video-merger:cancel', id),
+  chooseInputFiles: () => ipcRenderer.invoke('video-merger:choose-files'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-merger:progress', listener);
+    return () => ipcRenderer.removeListener('video-merger:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})

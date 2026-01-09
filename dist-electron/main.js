@@ -3695,6 +3695,138 @@ var AudioExtractor = class {
 	}
 };
 const audioExtractor = new AudioExtractor();
+var VideoMerger = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Video Merger: FFmpeg ready");
+			} else console.warn("⚠️ Video Merger: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async getVideoInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => {
+				output += data.toString();
+			});
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const resMatch = output.match(/Video:.*?, (\d{3,5})x(\d{3,5})/);
+					const width = resMatch ? parseInt(resMatch[1]) : 0;
+					const height = resMatch ? parseInt(resMatch[2]) : 0;
+					const fpsMatch = output.match(/(\d+\.?\d*) fps/);
+					const fps = fpsMatch ? parseFloat(fpsMatch[1]) : 0;
+					const codecMatch = output.match(/Video: (\w+)/);
+					resolve({
+						path: filePath,
+						duration,
+						width,
+						height,
+						codec: codecMatch ? codecMatch[1] : "unknown",
+						fps,
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0
+					});
+				} catch (error) {
+					reject(/* @__PURE__ */ new Error("Failed to parse video info"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async mergeVideos(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPaths, outputPath, format } = options;
+		if (!inputPaths || inputPaths.length === 0) throw new Error("No input files provided");
+		for (const p of inputPaths) if (!fs$1.existsSync(p)) throw new Error(`File not found: ${p}`);
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const totalDuration = (await Promise.all(inputPaths.map((p) => this.getVideoInfo(p)))).reduce((acc, curr) => acc + curr.duration, 0);
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `merged_video_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = [];
+		inputPaths.forEach((p) => {
+			args.push("-i", p);
+		});
+		let filterStr = "";
+		inputPaths.forEach((_, i) => {
+			filterStr += `[${i}:v][${i}:a]`;
+		});
+		filterStr += `concat=n=${inputPaths.length}:v=1:a=1[v][a]`;
+		args.push("-filter_complex", filterStr);
+		args.push("-map", "[v]", "-map", "[a]");
+		args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");
+		args.push("-c:a", "aac", "-b:a", "128k");
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / totalDuration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Merge failed with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancelMerge(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoMerger = new VideoMerger();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -5177,6 +5309,38 @@ app.whenReady().then(() => {
 	ipcMain.handle("audio:choose-output-folder", async () => {
 		const result = await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
 		return result.canceled ? null : result.filePaths[0];
+	});
+	ipcMain.handle("video-merger:get-info", async (_, filePath) => {
+		return await videoMerger.getVideoInfo(filePath);
+	});
+	ipcMain.handle("video-merger:merge", async (_, options) => {
+		return new Promise((resolve, reject) => {
+			videoMerger.mergeVideos(options, (progress) => {
+				win?.webContents.send("video-merger:progress", progress);
+			}).then(resolve).catch(reject);
+		});
+	});
+	ipcMain.handle("video-merger:cancel", async (_, id) => {
+		videoMerger.cancelMerge(id);
+	});
+	ipcMain.handle("video-merger:choose-files", async () => {
+		const result = await dialog.showOpenDialog({
+			properties: ["openFile", "multiSelections"],
+			filters: [{
+				name: "Video Files",
+				extensions: [
+					"mp4",
+					"mkv",
+					"avi",
+					"mov",
+					"webm"
+				]
+			}, {
+				name: "All Files",
+				extensions: ["*"]
+			}]
+		});
+		return result.canceled ? [] : result.filePaths;
 	});
 	async function getDirSize$1(dirPath) {
 		try {
