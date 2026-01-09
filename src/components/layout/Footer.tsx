@@ -174,14 +174,17 @@ export const Footer = () => {
                 </button>
             </div>
 
-            {/* Right Section: Version & Meta */}
-            <div className="flex items-center space-x-2 sm:space-x-5 justify-end">
-                <div className="hidden lg:flex items-center space-x-1.5 opacity-50 px-2 py-0.5 rounded border border-transparent hover:border-border-glass transition-all cursor-default">
+            {/* Right Section: Shortcuts Hint, Version & Meta */}
+            <div className="flex items-center space-x-2 sm:space-x-5 justify-end flex-1 min-w-0">
+                {/* Rotating Shortcuts Hint */}
+                <ShortcutHint activeTool={activeTool} />
+
+                <div className="hidden lg:flex items-center space-x-1.5 opacity-50 px-2 py-0.5 rounded border border-transparent hover:border-border-glass transition-all cursor-default shrink-0">
                     <Terminal size={10} />
                     <span className="uppercase tracking-widest font-mono">UTF-8</span>
                 </div>
 
-                <div className="flex items-center space-x-1.5 opacity-60 hover:opacity-100 cursor-pointer transition-opacity group">
+                <div className="flex items-center space-x-1.5 opacity-60 hover:opacity-100 cursor-pointer transition-opacity group shrink-0">
                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/40 group-hover:bg-indigo-500 transition-colors" />
                     <span className="font-medium whitespace-nowrap">
                         <span className="hidden sm:inline text-foreground-extra-muted">v0.2.0-beta</span>
@@ -190,5 +193,50 @@ export const Footer = () => {
                 </div>
             </div>
         </footer>
+    );
+};
+
+const ShortcutHint = ({ activeTool }: { activeTool: any }) => {
+    const [hintIndex, setHintIndex] = useState(0);
+    const [isVisible, setIsVisible] = useState(true);
+
+    const globalShortcuts = [
+        { key: 'Ctrl + K', label: 'Command Palette' },
+        { key: 'Ctrl + B', label: 'Toggle Sidebar' },
+        { key: 'Ctrl + W', label: 'Close Tab' },
+        { key: 'Ctrl + Tab', label: 'Next Tab' },
+        { key: 'Ctrl + 1-9', label: 'Switch Tab' },
+    ];
+
+    const currentShortcuts = [...globalShortcuts];
+    if (activeTool?.shortcut) {
+        currentShortcuts.unshift({ key: activeTool.shortcut, label: `Open ${activeTool.name}` });
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIsVisible(false);
+            setTimeout(() => {
+                setHintIndex((prev) => (prev + 1) % currentShortcuts.length);
+                setIsVisible(true);
+            }, 500);
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [currentShortcuts.length]);
+
+    const current = currentShortcuts[hintIndex];
+
+    return (
+        <div className="hidden xl:flex items-center space-x-2 px-3 py-0.5 bg-white/5 rounded-md border border-border-glass overflow-hidden min-w-[160px] max-w-[220px]">
+            <div className={`flex items-center space-x-2 transition-all duration-500 flex-1 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                <span className="text-[9px] font-bold bg-foreground/10 px-1.5 py-0.5 rounded text-sky-400 whitespace-nowrap tracking-tighter">
+                    {current.key}
+                </span>
+                <span className="text-[10px] opacity-60 truncate font-medium">
+                    {current.label}
+                </span>
+            </div>
+        </div>
     );
 };
