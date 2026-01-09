@@ -86,7 +86,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                         <span>Timeline</span>
                     </div>
                     <div className="h-4 w-[1px] bg-[#2a2a2a]" />
-                    <button 
+                    <button
                         onClick={onAddFiles}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
                     >
@@ -94,7 +94,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                         Add Media
                     </button>
                     <div className="h-4 w-[1px] bg-[#2a2a2a]" />
-                    <button 
+                    <button
                         onClick={onShowShortcuts}
                         className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                         title="Shortcuts (?)"
@@ -102,43 +102,43 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                         <span className="text-xs font-bold">?</span>
                     </button>
                     <div className="h-4 w-[1px] bg-[#2a2a2a]" />
-                    <button 
+                    <button
                         onClick={onToggleSnap}
                         className={cn(
                             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all",
-                            snapToGrid 
-                                ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" 
+                            snapToGrid
+                                ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                         )}
                         title="Snap to Grid (G)"
                     >
                         <span className="text-xs">⊞</span>
                     </button>
-                    <button 
+                    <button
                         onClick={onToggleMagnetic}
                         className={cn(
                             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all",
-                            magneticSnap 
-                                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" 
+                            magneticSnap
+                                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                         )}
                         title="Magnetic Snap"
                     >
                         <span className="text-xs">U</span>
                     </button>
-                    <button 
+                    <button
                         onClick={onToggleRazor}
                         className={cn(
                             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all",
-                            isRazorMode 
-                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" 
+                            isRazorMode
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                         )}
                         title="Razor (R)"
                     >
                         <Scissors size={12} />
                     </button>
-                    <button 
+                    <button
                         onClick={onSplitAtPlayhead}
                         disabled={files.length === 0}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
@@ -175,51 +175,60 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                             { Icon: Type, label: 'Text', color: 'text-green-400' },
                             { Icon: Volume2, label: 'Audio', color: 'text-orange-400' }
                         ].map((track, i) => (
-                            <div key={i} className="h-14 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex flex-col items-center justify-center hover:border-indigo-500/30 transition-colors group cursor-pointer">
-                                <track.Icon className={cn("mb-0.5 group-hover:scale-110 transition-transform", track.color)} size={16} strokeWidth={2.5} />
-                                <div className="text-[7px] font-bold text-gray-500 group-hover:text-gray-300 transition-colors uppercase tracking-wide">{track.label}</div>
+                            <div key={i} className="h-10 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex flex-col items-center justify-center hover:border-indigo-500/30 transition-colors group cursor-pointer">
+                                <track.Icon className={cn("mb-0.5 group-hover:scale-110 transition-transform", track.color)} size={14} strokeWidth={2.5} />
+                                <div className="text-[6px] font-bold text-gray-500 group-hover:text-gray-300 transition-colors uppercase tracking-wide">{track.label}</div>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Timeline Canvas */}
-                <div 
+                <div
                     ref={timelineRef}
                     className={cn(
                         "flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative",
                         isRazorMode ? "cursor-crosshair" : "cursor-default"
                     )}
                     onClick={(e) => {
-                         onClearSelection();
-                         onTimelineClick(e);
+                        onClearSelection();
+                        onTimelineClick(e);
                     }}
                     onMouseMove={onTimelineMouseMove}
                     onMouseLeave={onMouseLeave}
                 >
-                    {/* Time Ruler */}
+                    {/* Time Ruler - Optimized Rendering */}
                     <div className="h-8 bg-[#141414] border-b border-[#2a2a2a] sticky top-0 z-20 flex min-w-max">
-                        {Array.from({ length: Math.ceil(totalDuration) + 20 }).map((_, i) => (
-                            <div 
-                                key={i} 
-                                className="border-l border-[#2a2a2a] h-full shrink-0 relative group hover:bg-white/[0.02] transition-colors"
-                                style={{ width: `${80 * zoomLevel}px` }}
-                            >
-                                <span className="absolute left-1 top-1 text-[8px] font-mono font-bold text-gray-500 group-hover:text-gray-300 transition-colors">
-                                    {i}s
-                                </span>
-                                <div className={cn(
-                                    "absolute left-0 bottom-0 border-l",
-                                    i % 5 === 0 ? "h-3 border-gray-500" : "h-1.5 border-[#2a2a2a]"
-                                )} />
-                            </div>
-                        ))}
+                        {Array.from({ length: Math.ceil(totalDuration / 5) + 5 }).map((_, i) => {
+                            const time = i * 5;
+                            const pxPerSec = 40 * zoomLevel;
+                            return (
+                                <div
+                                    key={i}
+                                    className="border-l border-[#2a2a2a] h-full shrink-0 relative group hover:bg-white/[0.02] transition-colors"
+                                    style={{ width: `${5 * pxPerSec}px` }}
+                                >
+                                    <span className="absolute left-1 top-1 text-[8px] font-mono font-bold text-gray-500 group-hover:text-gray-300 transition-colors">
+                                        {time}s
+                                    </span>
+                                    {/* Minor ticks (every 1s) */}
+                                    {Array.from({ length: 4 }).map((_, j) => (
+                                        <div
+                                            key={j}
+                                            className="absolute bottom-0 border-l border-[#2a2a2a] h-1.5"
+                                            style={{ left: `${(j + 1) * pxPerSec}px` }}
+                                        />
+                                    ))}
+                                    <div className="absolute left-0 bottom-0 border-l border-gray-500 h-3" />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* Playhead */}
-                    <motion.div 
+                    <motion.div
                         className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-50 pointer-events-none shadow-lg shadow-red-500/50"
-                        style={{ left: `${currentTime * (80 * zoomLevel)}px` }}
+                        style={{ left: `${currentTime * (40 * zoomLevel)}px` }}
                         transition={{ type: 'spring', bounce: 0, duration: 0.15 }}
                     >
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-sm shadow-lg shadow-red-500/50" />
@@ -228,9 +237,9 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
 
                     {/* Razor Guide */}
                     {mouseTimelineTime !== null && (
-                        <div 
+                        <div
                             className="absolute top-0 bottom-0 w-[1px] bg-indigo-400/40 z-40 pointer-events-none"
-                            style={{ left: `${mouseTimelineTime * (80 * zoomLevel)}px` }}
+                            style={{ left: `${mouseTimelineTime * (40 * zoomLevel)}px` }}
                         >
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50" />
                             <div className="absolute top-2 left-0 w-[1px] h-full border-l border-dashed border-indigo-400/40" />
@@ -239,9 +248,9 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
 
                     {/* Snap Guide */}
                     {snapLineCtx && (
-                        <div 
+                        <div
                             className="absolute top-0 bottom-0 w-[1px] bg-yellow-400 z-50 pointer-events-none shadow-[0_0_10px_rgba(250,204,21,0.5)]"
-                            style={{ left: `${snapLineCtx.x * (80 * zoomLevel)}px` }}
+                            style={{ left: `${snapLineCtx.x * (40 * zoomLevel)}px` }}
                         >
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform" />
                             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform" />
@@ -252,10 +261,10 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                     <div className="relative min-w-max pt-2" style={{ height: 'calc(100% - 32px)' }}>
                         {/* Track Grid */}
                         {Array.from({ length: 6 }).map((_, i) => (
-                            <div 
-                                key={i} 
-                                className="absolute left-0 right-0 h-14 border-b border-[#1a1a1a] hover:bg-white/[0.01] transition-colors" 
-                                style={{ top: `${i * 60}px` }}
+                            <div
+                                key={i}
+                                className="absolute left-0 right-0 h-10 border-b border-[#1a1a1a] hover:bg-white/[0.01] transition-colors"
+                                style={{ top: `${i * 44}px` }}
                             />
                         ))}
 
@@ -265,7 +274,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                                 key={`${file.path}-${idx}`}
                                 file={file}
                                 idx={idx}
-                                pxPerSecond={80 * zoomLevel}
+                                pxPerSecond={40 * zoomLevel}
                                 previewIndex={previewIndex}
                                 isSelected={selectedClips.includes(idx)}
                                 isRazorMode={isRazorMode}

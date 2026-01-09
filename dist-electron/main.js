@@ -3834,11 +3834,7 @@ var VideoMerger = class {
 	constructor() {
 		this.ffmpegPath = null;
 		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.mainWindow = null;
 		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
-	}
-	setMainWindow(window) {
-		this.mainWindow = window;
 	}
 	async initFFmpeg() {
 		try {
@@ -3903,15 +3899,18 @@ var VideoMerger = class {
 				time.toString(),
 				"-i",
 				filePath,
-				"-vframes",
+				"-frames:v",
 				"1",
-				"-s",
-				"160x90",
+				"-q:v",
+				"2",
+				"-vf",
+				"scale=480:-1,unsharp=3:3:1.5:3:3:0.5",
 				"-f",
 				"image2",
 				"-y",
 				outputPath
 			];
+			console.log(`[VideoMerger] Generating thumbnail: ${args.join(" ")}`);
 			const process$1 = spawn(this.ffmpegPath, args);
 			process$1.on("close", (code) => {
 				if (code === 0) {
@@ -3925,7 +3924,7 @@ var VideoMerger = class {
 	}
 	async generateFilmstrip(filePath, duration, count = 10) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const actualCount = Math.min(20, Math.max(5, Math.min(count, Math.floor(duration))));
+		const actualCount = Math.min(200, Math.max(5, Math.min(count, Math.floor(duration))));
 		const tempId = randomUUID$1();
 		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", tempId);
 		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
@@ -3938,31 +3937,31 @@ var VideoMerger = class {
 				"-i",
 				filePath,
 				"-vf",
-				`fps=${fps},scale=240:135`,
+				`fps=${fps},scale=320:-1,unsharp=3:3:1:3:3:0.5`,
+				"-an",
+				"-sn",
 				"-q:v",
-				"2",
+				"4",
 				"-f",
 				"image2",
+				"-y",
 				outputPattern
 			];
+			console.log(`[VideoMerger] Running FFmpeg for filmstrip: ${args.join(" ")}`);
 			const process$1 = spawn(this.ffmpegPath, args);
 			let stderr = "";
 			process$1.stderr.on("data", (data) => {
-				const text = data.toString();
-				stderr += text;
-				const match = text.match(/frame=\s*(\d+)/);
-				if (match) {
-					const currentFrame = parseInt(match[1]);
-					if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.webContents.send("filmstrip-progress", {
-						current: Math.min(currentFrame, actualCount),
-						total: actualCount,
-						timestamp: "Processing..."
-					});
-				}
+				stderr += data.toString();
 			});
 			process$1.on("close", (code) => {
 				if (code === 0) try {
-					const finalFrames = fs$1.readdirSync(outputDir).filter((f) => f.startsWith("thumb_") && f.endsWith(".jpg")).sort().map((f) => {
+					const files = fs$1.readdirSync(outputDir).filter((f) => f.startsWith("thumb_") && f.endsWith(".jpg")).sort();
+					if (files.length === 0) {
+						console.error("Filmstrip generation failed: No frames produced. FFmpeg output:", stderr);
+						reject(/* @__PURE__ */ new Error("No frames produced"));
+						return;
+					}
+					const finalFrames = files.map((f) => {
 						const p = path$1.join(outputDir, f);
 						return `data:image/jpeg;base64,${fs$1.readFileSync(p, { encoding: "base64" })}`;
 					}).slice(0, actualCount);
@@ -3974,13 +3973,12 @@ var VideoMerger = class {
 					} catch (cleanupErr) {
 						console.warn("Filmstrip cleanup failed:", cleanupErr);
 					}
-					console.log(`Filmstrip generated: ${finalFrames.length} frames`);
 					resolve(finalFrames);
 				} catch (e) {
 					reject(e);
 				}
 				else {
-					console.error("Filmstrip generation failed:", stderr);
+					console.error("Filmstrip generation failed with code:", code, stderr);
 					reject(/* @__PURE__ */ new Error("Filmstrip generation failed"));
 				}
 			});
@@ -4968,7 +4966,6 @@ function createWindow() {
 			y: 15
 		}
 	});
-	videoMerger.setMainWindow(win);
 	const saveBounds = () => {
 		store.set("windowBounds", win?.getBounds());
 	};
@@ -6104,14 +6101,14 @@ app.whenReady().then(() => {
 	protocol.handle("local-media", async (request) => {
 		try {
 			console.log("[LocalMedia] Request:", request.url);
-			let urlPath = request.url.replace(/^local-media:\/*/, "");
+			let urlPath = request.url.substring(14);
 			let decodedPath = decodeURIComponent(urlPath);
 			console.log("[LocalMedia] Decoded:", decodedPath);
 			if (process.platform === "win32") {
 				if (/^\/[a-zA-Z]:/.test(decodedPath)) decodedPath = decodedPath.slice(1);
-				if (/^[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(0) + ":" + decodedPath.slice(1);
-				if (/^\/[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(1) + ":" + decodedPath.slice(2);
-			}
+				else if (/^[a-zA-Z]:/.test(decodedPath)) {} else if (/^[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(0) + ":" + decodedPath.slice(1);
+				else if (/^\/[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(1) + ":" + decodedPath.slice(2);
+			} else decodedPath = decodedPath.replace(/^\/+/, "/");
 			console.log("[LocalMedia] Final Path:", decodedPath);
 			const fileSize = (await fs.stat(decodedPath)).size;
 			const ext = path.extname(decodedPath).toLowerCase();

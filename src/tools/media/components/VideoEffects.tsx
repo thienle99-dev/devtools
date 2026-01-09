@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Sparkles, 
-    Upload, 
+import {
+    Sparkles,
+    Upload,
     Play,
     Pause,
-    Download, 
-    RotateCcw, 
-    RotateCw, 
-    FlipHorizontal, 
-    FlipVertical, 
-    Zap, 
-    Sliders, 
-    Palette, 
-    Wind, 
+    Download,
+    RotateCcw,
+    RotateCw,
+    FlipHorizontal,
+    FlipVertical,
+    Zap,
+    Sliders,
+    Palette,
+    Wind,
     Trash2,
     Loader2,
     CheckCircle2,
@@ -40,13 +40,13 @@ export const VideoEffects: React.FC = () => {
     const [reverse, setReverse] = useState(false);
     const [flip, setFlip] = useState<'horizontal' | 'vertical' | 'both' | 'none'>('none');
     const [rotate, setRotate] = useState<0 | 90 | 180 | 270>(0);
-    
+
     // Color Grading
     const [brightness, setBrightness] = useState(0);
     const [contrast, setContrast] = useState(1);
     const [saturation, setSaturation] = useState(1);
     const [gamma, setGamma] = useState(1);
-    
+
     // Filters
     const [blur, setBlur] = useState(0);
     const [sharpen, setSharpen] = useState(false);
@@ -152,7 +152,7 @@ export const VideoEffects: React.FC = () => {
                     <h2 className="text-xs font-black uppercase tracking-widest">Video Effects Studio</h2>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button 
+                    <button
                         onClick={resetOptions}
                         className="text-[10px] font-bold text-foreground-secondary hover:text-foreground transition-colors"
                     >
@@ -185,14 +185,14 @@ export const VideoEffects: React.FC = () => {
                                     <span className="text-foreground-secondary">Playback Speed</span>
                                     <span className="text-indigo-400 font-mono">{speed}x</span>
                                 </div>
-                                <input 
+                                <input
                                     type="range" min={0.1} max={4} step={0.1}
                                     value={speed} onChange={(e) => setSpeed(Number(e.target.value))}
                                     className="w-full h-1.5 bg-foreground/[0.05] rounded-full appearance-none cursor-pointer accent-indigo-500"
                                 />
                                 <div className="flex gap-2">
                                     {[0.5, 1, 1.5, 2].map(s => (
-                                        <button 
+                                        <button
                                             key={s} onClick={() => setSpeed(s)}
                                             className={cn(
                                                 "flex-1 py-1 rounded-md text-[9px] font-black border transition-all",
@@ -214,14 +214,14 @@ export const VideoEffects: React.FC = () => {
                                         <p className="text-[8px] text-foreground-secondary">Play clip backwards</p>
                                     </div>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => setReverse(!reverse)}
                                     className={cn(
                                         "w-10 h-5 rounded-full relative transition-colors duration-300",
                                         reverse ? "bg-indigo-600" : "bg-foreground/[0.1]"
                                     )}
                                 >
-                                    <motion.div 
+                                    <motion.div
                                         animate={{ x: reverse ? 22 : 4 }}
                                         className="absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm"
                                     />
@@ -239,13 +239,13 @@ export const VideoEffects: React.FC = () => {
                             <div className="space-y-2">
                                 <p className="text-[9px] font-black text-foreground-secondary uppercase">Rotate</p>
                                 <div className="flex gap-1">
-                                    <button 
+                                    <button
                                         onClick={() => setRotate(((rotate - 90 + 360) % 360) as any)}
                                         className="flex-1 py-2 bg-foreground/[0.03] border border-border-glass rounded-lg flex items-center justify-center hover:bg-foreground/[0.05] transition-all"
                                     >
                                         <RotateCcw size={14} />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setRotate(((rotate + 90) % 360) as any)}
                                         className="flex-1 py-2 bg-foreground/[0.03] border border-border-glass rounded-lg flex items-center justify-center hover:bg-foreground/[0.05] transition-all"
                                     >
@@ -257,7 +257,7 @@ export const VideoEffects: React.FC = () => {
                             <div className="space-y-2">
                                 <p className="text-[9px] font-black text-foreground-secondary uppercase">Mirror/Flip</p>
                                 <div className="flex gap-1">
-                                    <button 
+                                    <button
                                         onClick={() => setFlip(flip === 'horizontal' ? 'none' : 'horizontal')}
                                         className={cn(
                                             "flex-1 py-2 border rounded-lg flex items-center justify-center transition-all",
@@ -266,7 +266,7 @@ export const VideoEffects: React.FC = () => {
                                     >
                                         <FlipHorizontal size={14} />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setFlip(flip === 'vertical' ? 'none' : 'vertical')}
                                         className={cn(
                                             "flex-1 py-2 border rounded-lg flex items-center justify-center transition-all",
@@ -297,7 +297,7 @@ export const VideoEffects: React.FC = () => {
                                         <span className="text-foreground-secondary">{grade.label}</span>
                                         <span className="text-indigo-400 font-mono">{grade.val}</span>
                                     </div>
-                                    <input 
+                                    <input
                                         type="range" min={grade.min} max={grade.max} step={grade.step}
                                         value={grade.val} onChange={(e) => grade.set(Number(e.target.value))}
                                         className="w-full h-1 bg-foreground/[0.05] rounded-full appearance-none cursor-pointer accent-indigo-500"
@@ -320,7 +320,7 @@ export const VideoEffects: React.FC = () => {
                                 { label: 'Vintage', active: vintage, set: setVintage },
                                 { label: 'Glitch', active: glitch, set: setGlitch }
                             ].map(filter => (
-                                <button 
+                                <button
                                     key={filter.label}
                                     onClick={() => filter.set(!filter.active)}
                                     className={cn(
@@ -345,7 +345,7 @@ export const VideoEffects: React.FC = () => {
                                     <span className="text-foreground-secondary">Blur Strength</span>
                                     <span className="text-indigo-400 font-mono">{blur}px</span>
                                 </div>
-                                <input 
+                                <input
                                     type="range" min={0} max={20} step={1}
                                     value={blur} onChange={(e) => setBlur(Number(e.target.value))}
                                     className="w-full h-1 bg-foreground/[0.05] rounded-full appearance-none cursor-pointer accent-indigo-500"
@@ -356,7 +356,7 @@ export const VideoEffects: React.FC = () => {
                                     <span className="text-foreground-secondary">Film Grain / Noise</span>
                                     <span className="text-indigo-400 font-mono">{noise}%</span>
                                 </div>
-                                <input 
+                                <input
                                     type="range" min={0} max={100} step={5}
                                     value={noise} onChange={(e) => setNoise(Number(e.target.value))}
                                     className="w-full h-1 bg-foreground/[0.05] rounded-full appearance-none cursor-pointer accent-indigo-500"
@@ -378,7 +378,7 @@ export const VideoEffects: React.FC = () => {
                                     <h3 className="text-lg font-black tracking-tight">Drop your video here</h3>
                                     <p className="text-xs text-foreground-secondary max-w-[240px] mx-auto">Select a video to start applying cinematic effects and manipulations.</p>
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleSelectFile}
                                     className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/20 active:scale-95"
                                 >
@@ -388,9 +388,9 @@ export const VideoEffects: React.FC = () => {
                         ) : (
                             <div className="w-full h-full p-8 flex flex-col gap-6">
                                 <div className="flex-1 bg-black rounded-3xl shadow-2xl overflow-hidden border border-border-glass relative flex items-center justify-center">
-                                    <video 
+                                    <video
                                         ref={videoRef}
-                                        src={inputPath ? `local-media:///${inputPath.replace(/\\/g, '/')}` : undefined}
+                                        src={inputPath ? `local-media://${inputPath.replace(/\\/g, '/')}` : undefined}
                                         className="w-full h-full object-contain transition-all duration-300 will-change-transform"
                                         style={{
                                             filter: `
@@ -421,11 +421,11 @@ export const VideoEffects: React.FC = () => {
 
                                     {/* Noise/Grain Overlay */}
                                     {noise > 0 && (
-                                        <div 
+                                        <div
                                             className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay"
-                                            style={{ 
+                                            style={{
                                                 backgroundImage: `url('https://grainy-gradients.vercel.app/noise.svg')`,
-                                                filter: `contrast(${1 + noise/100}) brightness(${1 + noise/100})`
+                                                filter: `contrast(${1 + noise / 100}) brightness(${1 + noise / 100})`
                                             }}
                                         />
                                     )}
@@ -439,7 +439,7 @@ export const VideoEffects: React.FC = () => {
                                         "absolute inset-0 flex items-center justify-center transition-all bg-black/20",
                                         isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
                                     )}>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 if (videoRef.current?.paused) videoRef.current.play();
                                                 else videoRef.current?.pause();
@@ -455,7 +455,7 @@ export const VideoEffects: React.FC = () => {
                                         {reverse && <span className="px-2 py-1 bg-amber-500/20 backdrop-blur-md rounded text-[8px] font-black text-amber-500 uppercase">Reverse</span>}
                                         {speed !== 1 && <span className="px-2 py-1 bg-indigo-500/20 backdrop-blur-md rounded text-[8px] font-black text-indigo-400 uppercase">{speed}x Speed</span>}
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => setInputPath(null)}
                                         className="absolute top-4 right-4 p-2 bg-rose-500/20 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
                                     >
@@ -475,7 +475,7 @@ export const VideoEffects: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="flex bg-foreground/[0.05] p-1 rounded-xl border border-border-glass">
                                             {(['low', 'medium', 'high'] as const).map(q => (
-                                                <button 
+                                                <button
                                                     key={q} onClick={() => setQuality(q)}
                                                     className={cn(
                                                         "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all",
@@ -486,7 +486,7 @@ export const VideoEffects: React.FC = () => {
                                                 </button>
                                             ))}
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={handleApply}
                                             disabled={isProcessing}
                                             className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/20 flex items-center gap-2"

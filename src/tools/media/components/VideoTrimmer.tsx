@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Scissors, 
-    Plus, 
-    Trash2, 
-    Play, 
-    Pause, 
-    Download, 
-    Loader2, 
-    CheckCircle2, 
+import {
+    Scissors,
+    Plus,
+    Trash2,
+    Play,
+    Pause,
+    Download,
+    Loader2,
+    CheckCircle2,
     AlertCircle,
     Video as VideoIcon,
     Clock
@@ -43,19 +43,19 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
 
     const handleMouseMove = (e: MouseEvent) => {
         if (!isDragging.type || !isDragging.rangeId || !timelineRef.current) return;
-        
+
         // Use requestAnimationFrame for smooth 60fps updates
         requestAnimationFrame(() => {
             if (!timelineRef.current) return;
-            
+
             const rect = timelineRef.current.getBoundingClientRect();
             const x = e.clientX - rect.left - 24;
             const percent = Math.max(0, Math.min(x / (rect.width - 48), 1));
             const time = percent * totalDuration;
-            
+
             const range = ranges.find(r => r.id === isDragging.rangeId);
             if (!range) return;
-            
+
             if (isDragging.type === 'start') {
                 const newStart = Math.max(0, Math.min(time, range.end - 0.5));
                 onRangeChange(range.id, newStart, range.end);
@@ -95,20 +95,20 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
     };
 
     return (
-        <div 
+        <div
             ref={timelineRef}
             className={cn(
                 "flex-1 relative overflow-hidden px-6 pt-6 transition-all",
                 isDragging.type ? "cursor-ew-resize select-none" : "cursor-pointer"
             )}
             onClick={handleTimelineClick}
-            style={{ 
+            style={{
                 userSelect: isDragging.type ? 'none' : 'auto',
                 WebkitUserSelect: isDragging.type ? 'none' : 'auto'
             }}
         >
             {/* Full Timeline Background with Frames */}
-            <motion.div 
+            <motion.div
                 className="h-20 w-full bg-zinc-900 rounded-xl border-2 border-zinc-800 absolute left-6 right-6 overflow-hidden shadow-2xl"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -116,8 +116,8 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
             >
                 <div className="flex h-full">
                     {Array.from({ length: 40 }).map((_, i) => (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
                             className="flex-1 bg-gradient-to-b from-zinc-800 to-zinc-900 border-r border-zinc-800/50 transition-colors hover:from-zinc-750 hover:to-zinc-850"
                         />
                     ))}
@@ -129,7 +129,7 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
                 <>
                     {/* Left trimmed region */}
                     {ranges[0].start > 0 && (
-                        <div 
+                        <div
                             className="absolute h-20 bg-black/70 backdrop-blur-sm z-10 border-r-2 border-amber-400/30 rounded-l-xl"
                             style={{
                                 left: '24px',
@@ -140,10 +140,10 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
                             <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.3)_10px,rgba(0,0,0,0.3)_20px)] rounded-l-xl" />
                         </div>
                     )}
-                    
+
                     {/* Right trimmed region */}
                     {ranges[0].end < totalDuration && (
-                        <div 
+                        <div
                             className="absolute h-20 bg-black/70 backdrop-blur-sm z-10 border-l-2 border-amber-400/30 rounded-r-xl"
                             style={{
                                 left: `${(ranges[0].end / totalDuration) * 100}%`,
@@ -172,9 +172,9 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
                 >
                     {/* Selection highlight */}
                     <div className="absolute inset-0 bg-amber-400/5 pointer-events-none" />
-                    
+
                     {/* Left Handle - Golden macOS Style */}
-                    <motion.div 
+                    <motion.div
                         className={cn(
                             "absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-amber-400 to-amber-500 cursor-ew-resize z-30 pointer-events-auto shadow-lg",
                             (hoverHandle.type === 'start' && hoverHandle.rangeId === range.id) || (isDragging.type === 'start' && isDragging.rangeId === range.id)
@@ -200,13 +200,13 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
                                 <div className="w-[2px] h-2 bg-zinc-900 rounded-full" />
                             </div>
                         </div>
-                        
+
                         {/* Triangle pointer */}
                         <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-3 bg-amber-400" style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }} />
                     </motion.div>
 
                     {/* Right Handle - Golden macOS Style */}
-                    <motion.div 
+                    <motion.div
                         className={cn(
                             "absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-amber-400 to-amber-500 cursor-ew-resize z-30 pointer-events-auto shadow-lg",
                             (hoverHandle.type === 'end' && hoverHandle.rangeId === range.id) || (isDragging.type === 'end' && isDragging.rangeId === range.id)
@@ -232,13 +232,13 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
                                 <div className="w-[2px] h-2 bg-zinc-900 rounded-full" />
                             </div>
                         </div>
-                        
+
                         {/* Triangle pointer */}
                         <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-3 bg-amber-400" style={{ clipPath: 'polygon(100% 0, 0 50%, 100% 100%)' }} />
                     </motion.div>
 
                     {/* Duration Label */}
-                    <motion.div 
+                    <motion.div
                         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1 bg-amber-400/90 backdrop-blur-sm rounded-full text-[10px] font-black text-zinc-900 shadow-lg pointer-events-none"
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
@@ -251,9 +251,9 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
 
             {/* Playhead - Red like macOS */}
             {totalDuration > 0 && (
-                <motion.div 
+                <motion.div
                     className="absolute top-[20px] w-[2px] h-24 bg-red-500 z-40 pointer-events-none shadow-lg shadow-red-500/50"
-                    style={{ 
+                    style={{
                         left: `${(currentTime / totalDuration) * 100}%`,
                         marginLeft: '24px'
                     }}
@@ -331,7 +331,7 @@ export const VideoTrimmer: React.FC = () => {
                 if (videoRef.current) {
                     const newTime = videoRef.current.currentTime;
                     setCurrentTime(newTime);
-                    
+
                     // Stop at end of active range if in trim mode
                     if (ranges.length > 0 && newTime >= ranges[0].end) {
                         setIsPlaying(false);
@@ -351,7 +351,7 @@ export const VideoTrimmer: React.FC = () => {
                 cancelAnimationFrame(playbackRef.current);
             }
         }
-        
+
         return () => {
             if (playbackRef.current) {
                 cancelAnimationFrame(playbackRef.current);
@@ -414,10 +414,10 @@ export const VideoTrimmer: React.FC = () => {
             setVideoInfo(info);
             // Default range: full video
             setRanges([{ id: Math.random().toString(36).substr(2, 9), start: 0, end: info.duration }]);
-            
+
             // Set video source for preview
             const normalizedPath = path.replace(/\\/g, '/');
-            setVideoSrc(`local-media:///${normalizedPath}`);
+            setVideoSrc(`local-media://${normalizedPath}`);
             setCurrentTime(0);
         }
     };
@@ -426,11 +426,11 @@ export const VideoTrimmer: React.FC = () => {
         if (!videoInfo) return;
         const lastEnd = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
         if (lastEnd >= videoInfo.duration) return;
-        
-        setRanges(prev => [...prev, { 
-            id: Math.random().toString(36).substr(2, 9), 
-            start: lastEnd, 
-            end: Math.min(lastEnd + 30, videoInfo.duration) 
+
+        setRanges(prev => [...prev, {
+            id: Math.random().toString(36).substr(2, 9),
+            start: lastEnd,
+            end: Math.min(lastEnd + 30, videoInfo.duration)
         }]);
     };
 
@@ -493,13 +493,13 @@ export const VideoTrimmer: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button 
+                    <button
                         onClick={handleProcess}
                         disabled={!videoPath || isProcessing}
                         className={cn(
                             "flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all shadow-lg",
-                            videoPath && !isProcessing 
-                                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20" 
+                            videoPath && !isProcessing
+                                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20"
                                 : "bg-white/5 text-gray-500 cursor-not-allowed"
                         )}
                     >
@@ -514,7 +514,7 @@ export const VideoTrimmer: React.FC = () => {
                 {/* Left Panel - Ranges */}
                 <div className="w-80 border-r border-border-glass bg-foreground/[0.01] flex flex-col">
                     <div className="p-4 space-y-4">
-                        <button 
+                        <button
                             onClick={handleSelectVideo}
                             className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-foreground/[0.05] hover:bg-foreground/[0.08] border border-dashed border-border-glass rounded-2xl text-xs font-bold transition-all"
                         >
@@ -522,7 +522,7 @@ export const VideoTrimmer: React.FC = () => {
                             <span>{videoPath ? 'Change Video' : 'Select Source Video'}</span>
                         </button>
 
-                        <button 
+                        <button
                             onClick={addRange}
                             disabled={!videoPath}
                             className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-2xl text-xs font-black transition-all disabled:opacity-30"
@@ -542,11 +542,11 @@ export const VideoTrimmer: React.FC = () => {
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
                                         <p className="text-[8px] font-black uppercase text-foreground-secondary">Start</p>
-                                        <input 
+                                        <input
                                             type="number" step="0.1" value={range.start}
                                             onChange={(e) => updateRange(range.id, Number(e.target.value), range.end)}
                                             className="w-full bg-background border border-border-glass rounded-lg px-2 py-1 text-[10px] font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -554,7 +554,7 @@ export const VideoTrimmer: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-[8px] font-black uppercase text-foreground-secondary">End</p>
-                                        <input 
+                                        <input
                                             type="number" step="0.1" value={range.end}
                                             onChange={(e) => updateRange(range.id, range.start, Number(e.target.value))}
                                             className="w-full bg-background border border-border-glass rounded-lg px-2 py-1 text-[10px] font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -576,7 +576,7 @@ export const VideoTrimmer: React.FC = () => {
                         <div className="aspect-video w-full max-w-3xl bg-black rounded-[2rem] border-8 border-white/5 shadow-2xl flex items-center justify-center relative overflow-hidden group">
                             {videoSrc ? (
                                 <>
-                                    <video 
+                                    <video
                                         ref={videoRef}
                                         src={videoSrc}
                                         className="w-full h-full object-contain bg-black"
@@ -592,7 +592,7 @@ export const VideoTrimmer: React.FC = () => {
                                         }}
                                     />
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             onClick={() => setIsPlaying(!isPlaying)}
                                             className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-transform active:scale-95"
                                         >
@@ -611,7 +611,7 @@ export const VideoTrimmer: React.FC = () => {
                             <div className="absolute bottom-10 left-10 px-6 py-2 bg-black/80 backdrop-blur-xl rounded-2xl border border-white/20 font-mono text-xl font-black text-white shadow-2xl">
                                 {formatTime(currentTime)}
                             </div>
-                            
+
                             {/* Video Info Overlay */}
                             {videoInfo && (
                                 <div className="absolute top-6 right-6 px-4 py-2 bg-black/80 backdrop-blur-xl rounded-xl border border-white/20 text-xs font-bold text-white/80 space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">

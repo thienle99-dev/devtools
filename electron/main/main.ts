@@ -568,8 +568,6 @@ function createWindow() {
     trafficLightPosition: { x: 15, y: 15 }, // macOS specific
   })
 
-  // Set main window for video merger to enable IPC callbacks
-  videoMerger.setMainWindow(win);
 
   // Save window bounds on change
   const saveBounds = () => {
@@ -1948,37 +1946,43 @@ app.whenReady().then(() => {
   }
 
   setupCleanerHandlers();
-  
+
   // Handle local-media protocol
   protocol.handle('local-media', async (request) => {
     try {
       console.log('[LocalMedia] Request:', request.url);
-      
+
       // Strip scheme. Handle local-media:// and local-media:///
-      // If 3 slashes, we usually get /path
-      let urlPath = request.url.replace(/^local-media:\/*/, '');
-      
+      // We want to preserve any absolute path starting with /
+      let urlPath = request.url.substring('local-media://'.length);
+
       // Decode the path
       let decodedPath = decodeURIComponent(urlPath);
       console.log('[LocalMedia] Decoded:', decodedPath);
 
       // Fix Windows path issues
       if (process.platform === 'win32') {
-        // If it starts with /C:/..., remove leading slash
+        // Handle /C:/style paths (3+ slashes)
         if (/^\/[a-zA-Z]:/.test(decodedPath)) {
           decodedPath = decodedPath.slice(1);
         }
-        // If it looks like C/Users... (missing colon), inject it
-        // This handles cases where browser/electron path parsing swallowed the colon from the host
-        if (/^[a-zA-Z]\//.test(decodedPath)) {
-             decodedPath = decodedPath.charAt(0) + ':' + decodedPath.slice(1);
+        // Handle C:/style paths (2 slashes)
+        else if (/^[a-zA-Z]:/.test(decodedPath)) {
+          // Already correct
         }
-        // If it starts with /C/Users... (missing colon)
-        if (/^\/[a-zA-Z]\//.test(decodedPath)) {
-             decodedPath = decodedPath.charAt(1) + ':' + decodedPath.slice(2);
+        // Handle C/ style paths (missing colon)
+        else if (/^[a-zA-Z]\//.test(decodedPath)) {
+          decodedPath = decodedPath.charAt(0) + ':' + decodedPath.slice(1);
         }
+        // Handle /C/ style paths (leading slash, missing colon)
+        else if (/^\/[a-zA-Z]\//.test(decodedPath)) {
+          decodedPath = decodedPath.charAt(1) + ':' + decodedPath.slice(2);
+        }
+      } else {
+        // Unix systems: Ensure it starts with exactly one /
+        decodedPath = decodedPath.replace(/^\/+/, '/');
       }
-      
+
       console.log('[LocalMedia] Final Path:', decodedPath);
 
       // Verify file exists and get stats
@@ -2036,7 +2040,7 @@ app.whenReady().then(() => {
       console.error('[LocalMedia] Error:', e);
       // Basic erro handling
       if ((e as any).code === 'ENOENT') {
-          return new Response('File not found', { status: 404 });
+        return new Response('File not found', { status: 404 });
       }
       return new Response('Error loading media: ' + (e as any).message, { status: 500 });
     }

@@ -1,33 +1,29 @@
 import fs from 'fs';
 import path from 'path';
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
-import type { 
-    VideoMergeOptions, 
-    VideoMergeProgress, 
-    VideoInfo 
+import type {
+    VideoMergeOptions,
+    VideoMergeProgress,
+    VideoInfo
 } from '../../src/types/video-merger';
 
 
 export class VideoMerger {
     private ffmpegPath: string | null = null;
     private activeProcesses: Map<string, any> = new Map();
-    private mainWindow: BrowserWindow | null = null;
 
     constructor() {
         this.initFFmpeg().catch(e => console.error('FFmpeg init error:', e));
     }
 
-    setMainWindow(window: BrowserWindow) {
-        this.mainWindow = window;
-    }
 
     private async initFFmpeg() {
         try {
             const { FFmpegHelper } = await import('./ffmpeg-helper');
             const ffmpegPath = FFmpegHelper.getFFmpegPath();
-            
+
             if (ffmpegPath) {
                 this.ffmpegPath = ffmpegPath;
                 console.log('✅ Video Merger: FFmpeg ready');
@@ -61,7 +57,7 @@ export class VideoMerger {
                 try {
                     // Parse duration
                     const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-                    const duration = durationMatch 
+                    const duration = durationMatch
                         ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3])
                         : 0;
 
@@ -102,7 +98,7 @@ export class VideoMerger {
         if (!this.ffmpegPath) throw new Error('FFmpeg not available');
         const outputDir = path.join(app.getPath('temp'), 'devtools-app-thumbs');
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-        
+
         const thumbName = `thumb_${randomUUID()}.jpg`;
         const outputPath = path.join(outputDir, thumbName);
 
@@ -110,12 +106,14 @@ export class VideoMerger {
             const args = [
                 '-ss', time.toString(),
                 '-i', filePath,
-                '-vframes', '1',
-                '-s', '160x90',
+                '-frames:v', '1',
+                '-q:v', '2',
+                '-vf', 'scale=480:-1,unsharp=3:3:1.5:3:3:0.5', // High quality scale + unsharp
                 '-f', 'image2',
                 '-y', outputPath
             ];
 
+            console.log(`[VideoMerger] Generating thumbnail: ${args.join(' ')}`);
             const process = spawn(this.ffmpegPath!, args);
             process.on('close', (code) => {
                 if (code === 0) {
@@ -133,9 +131,9 @@ export class VideoMerger {
 
     async generateFilmstrip(filePath: string, duration: number, count: number = 10): Promise<string[]> {
         if (!this.ffmpegPath) throw new Error('FFmpeg not available');
-        
-        // Limit count to reasonable number (at least 5, max 20)
-        const actualCount = Math.min(20, Math.max(5, Math.min(count, Math.floor(duration))));
+
+        // Limit count to reasonable number (at least 5, max 100)
+        const actualCount = Math.min(200, Math.max(5, Math.min(count, Math.floor(duration))));
         const tempId = randomUUID();
         const outputDir = path.join(app.getPath('temp'), 'devtools-app-filmstrips', tempId);
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
@@ -153,66 +151,60 @@ export class VideoMerger {
         return new Promise((resolve, reject) => {
             const args = [
                 '-i', filePath,
-                '-vf', `fps=${fps},scale=240:135`,
-                '-q:v', '2',
+                '-vf', `fps=${fps},scale=320:-1,unsharp=3:3:1:3:3:0.5`, // Better resolution + sharpening
+                '-an', '-sn',
+                '-q:v', '4',
                 '-f', 'image2',
+                '-y',
                 outputPattern
             ];
-            
+
+            console.log(`[VideoMerger] Running FFmpeg for filmstrip: ${args.join(' ')}`);
+
             const process = spawn(this.ffmpegPath!, args);
-            
+
             let stderr = '';
             process.stderr.on('data', (data) => {
-                const text = data.toString();
-                stderr += text;
-                
-                // Best effort progress parsing
-                const match = text.match(/frame=\s*(\d+)/);
-                if (match) {
-                     const currentFrame = parseInt(match[1]);
-                     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                        this.mainWindow.webContents.send('filmstrip-progress', {
-                            current: Math.min(currentFrame, actualCount),
-                            total: actualCount,
-                            timestamp: 'Processing...'
-                        });
-                    }
-                }
+                stderr += data.toString();
             });
 
             process.on('close', (code) => {
-                 if (code === 0) {
-                     try {
-                         // Read all generated files
-                         const files = fs.readdirSync(outputDir)
-                             .filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'))
-                             .sort(); // thumb_001.jpg, thumb_002.jpg...
+                if (code === 0) {
+                    try {
+                        // Read all generated files
+                        const files = fs.readdirSync(outputDir)
+                            .filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'))
+                            .sort();
 
-                         const frames = files.map(f => {
-                             const p = path.join(outputDir, f);
-                             const data = fs.readFileSync(p, { encoding: 'base64' });
-                             return `data:image/jpeg;base64,${data}`;
-                         });
-                         
-                         // Limit to requested count if we got extra
-                         const finalFrames = frames.slice(0, actualCount);
+                        if (files.length === 0) {
+                            console.error('Filmstrip generation failed: No frames produced. FFmpeg output:', stderr);
+                            reject(new Error('No frames produced'));
+                            return;
+                        }
 
-                         // Cleanup
-                         try {
+                        const frames = files.map(f => {
+                            const p = path.join(outputDir, f);
+                            const data = fs.readFileSync(p, { encoding: 'base64' });
+                            return `data:image/jpeg;base64,${data}`;
+                        });
+
+                        const finalFrames = frames.slice(0, actualCount);
+
+                        // Cleanup
+                        try {
                             fs.rmSync(outputDir, { recursive: true, force: true });
-                         } catch (cleanupErr) {
-                             console.warn('Filmstrip cleanup failed:', cleanupErr);
-                         }
-                         
-                         console.log(`Filmstrip generated: ${finalFrames.length} frames`);
-                         resolve(finalFrames);
-                     } catch (e) {
-                         reject(e);
-                     }
-                 } else {
-                     console.error('Filmstrip generation failed:', stderr);
-                     reject(new Error('Filmstrip generation failed'));
-                 }
+                        } catch (cleanupErr) {
+                            console.warn('Filmstrip cleanup failed:', cleanupErr);
+                        }
+
+                        resolve(finalFrames);
+                    } catch (e) {
+                        reject(e);
+                    }
+                } else {
+                    console.error('Filmstrip generation failed with code:', code, stderr);
+                    reject(new Error('Filmstrip generation failed'));
+                }
             });
             process.on('error', reject);
         });
@@ -220,7 +212,7 @@ export class VideoMerger {
 
     async extractWaveform(filePath: string): Promise<number[]> {
         if (!this.ffmpegPath) throw new Error('FFmpeg not available');
-        
+
         console.log('Extracting waveform for:', filePath);
 
         return new Promise((resolve, reject) => {
@@ -251,13 +243,13 @@ export class VideoMerger {
                     try {
                         const buffer = Buffer.concat(chunks);
                         const data: number[] = [];
-                        
+
                         // Process 16-bit signed integers
                         // We want about 100 points per second.
                         // Sample rate is 8000 Hz.
                         // So 1 point every 80 samples.
                         const samplesPerPoint = 80;
-                        
+
                         for (let i = 0; i < buffer.length; i += samplesPerPoint * 2) { // * 2 because 16-bit = 2 bytes
                             let max = 0;
                             // Find max amplitude in this chunk
@@ -272,7 +264,7 @@ export class VideoMerger {
                             // Normalize to 0-1 (max 16-bit val is 32768)
                             data.push(max / 32768);
                         }
-                        
+
                         console.log(`Waveform extracted: ${data.length} points`);
                         resolve(data);
                     } catch (err) {
@@ -315,7 +307,7 @@ export class VideoMerger {
         }
 
         const videoInfos = await Promise.all(clips.map(c => this.getVideoInfo(c.path)));
-        
+
         // Calculate total duration considering trims
         let totalDuration = 0;
         clips.forEach((clip, i) => {
@@ -327,8 +319,8 @@ export class VideoMerger {
 
         // Determine output path
         const outputDir = outputPath ? path.dirname(outputPath) : app.getPath('downloads');
-        const outputFilename = outputPath 
-            ? path.basename(outputPath) 
+        const outputFilename = outputPath
+            ? path.basename(outputPath)
             : `merged_video_${Date.now()}.${format}`;
         const finalOutputPath = path.join(outputDir, outputFilename);
 
@@ -337,7 +329,7 @@ export class VideoMerger {
         }
 
         const args: string[] = [];
-        
+
         // Input files with trimming
         clips.forEach(clip => {
             if (clip.startTime !== undefined) {
@@ -358,11 +350,11 @@ export class VideoMerger {
 
         args.push('-filter_complex', filterStr);
         args.push('-map', '[v]', '-map', '[a]');
-        
+
         // Encoding options
         args.push('-c:v', 'libx264', '-preset', 'medium', '-crf', '23');
         args.push('-c:a', 'aac', '-b:a', '128k');
-        
+
         // Output
         args.push('-y', finalOutputPath);
 
@@ -373,11 +365,11 @@ export class VideoMerger {
             process.stderr.on('data', (data: Buffer) => {
                 const output = data.toString();
                 const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-                
+
                 if (timeMatch && progressCallback) {
                     const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
                     const percent = Math.min((currentTime / totalDuration) * 100, 100);
-                    
+
                     const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
                     const speed = speedMatch ? parseFloat(speedMatch[1]) : 1;
 

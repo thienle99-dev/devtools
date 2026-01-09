@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Loader2, 
+import {
+    Loader2,
     Play,
     Clock,
     Download,
@@ -29,7 +29,7 @@ export const VideoMerger: React.FC = () => {
     const [outputPath, setOutputPath] = useState<string | null>(null);
     const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'mkv' | 'avi' | 'mov' | 'webm'>('mp4');
     const [previewIndex, setPreviewIndex] = useState<number>(0);
-    const [zoomLevel, setZoomLevel] = useState(2.5); // Increased default zoom for better visibility
+    const [zoomLevel, setZoomLevel] = useState(1.5); // Reduced default zoom
     const [currentTime, setCurrentTime] = useState(0);
     const [trimmingIdx, setTrimmingIdx] = useState<number | null>(null);
     const [isLoadingAssets, setIsLoadingAssets] = useState(false);
@@ -41,7 +41,7 @@ export const VideoMerger: React.FC = () => {
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [selectedClips, setSelectedClips] = useState<number[]>([]);
     const [magneticSnap, setMagneticSnap] = useState(true);
-    
+
     // History Hook
     const { addToHistory, undo, redo } = useTimelineHistory([]);
 
@@ -58,16 +58,16 @@ export const VideoMerger: React.FC = () => {
 
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [isPlaying, setIsPlaying] = useState(false);
-    
+
     // Refs for accessing state in event handlers without dependency
     const isPlayingRef = useRef(isPlaying);
     const playbackSpeedRef = useRef(playbackSpeed);
-    
+
     useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
     useEffect(() => { playbackSpeedRef.current = playbackSpeed; }, [playbackSpeed]);
-    
-    
-    
+
+
+
     useEffect(() => {
         const cleanup = (window as any).videoMergerAPI?.onProgress((p: VideoMergeProgress) => {
             setProgress(p);
@@ -91,7 +91,7 @@ export const VideoMerger: React.FC = () => {
                 setIsLoadingAssets(true);
                 setAssetLoadingProgress(0);
                 const newInfos: ExtendedVideoInfo[] = [];
-                
+
                 // Listen for filmstrip progress
                 const removeFilmstripListener = (window as any).videoMergerAPI?.onFilmstripProgress((data: { current: number; total: number; timestamp: string }) => {
                     const timeText = data.timestamp === 'Processing...' ? '' : ` at ${data.timestamp}s`;
@@ -100,70 +100,71 @@ export const VideoMerger: React.FC = () => {
                         stage: `Extracting frame ${data.current}/${data.total}${timeText}...`
                     }));
                 });
-                
+
                 for (let i = 0; i < paths.length; i++) {
                     const p = paths[i];
                     const fileName = p.split(/[\\/]/).pop() || 'Unknown';
-                    
+
                     console.log(`Processing file ${i + 1}/${paths.length}:`, p);
-                    
+
                     // Update: Getting video info
-                    setLoadingDetail({ 
-                        fileName, 
-                        stage: 'Reading video info...', 
-                        current: i + 1, 
-                        total: paths.length 
+                    setLoadingDetail({
+                        fileName,
+                        stage: 'Reading video info...',
+                        current: i + 1,
+                        total: paths.length
                     });
                     const info = await (window as any).videoMergerAPI?.getVideoInfo(p);
                     console.log('Video info:', info);
-                    
+
                     // Update: Generating thumbnail
-                    setLoadingDetail({ 
-                        fileName, 
-                        stage: 'Generating thumbnail...', 
-                        current: i + 1, 
-                        total: paths.length 
+                    setLoadingDetail({
+                        fileName,
+                        stage: 'Generating thumbnail...',
+                        current: i + 1,
+                        total: paths.length
                     });
                     const thumb = await (window as any).videoMergerAPI?.generateThumbnail(p, 1);
                     console.log('Thumbnail generated:', thumb ? `${thumb.substring(0, 50)}...` : 'FAILED');
-                    
-                    // Update: Generating filmstrip
-                    setLoadingDetail({ 
-                        fileName, 
-                        stage: 'Extracting 15 frames for filmstrip...', 
-                        current: i + 1, 
-                        total: paths.length 
+
+                    // Update: Generating filmstrip - Higher density (1 frame per 2s)
+                    const frameCount = Math.min(100, Math.max(15, Math.floor(info.duration / 2)));
+                    setLoadingDetail({
+                        fileName,
+                        stage: `Extracting ${frameCount} frames for filmstrip...`,
+                        current: i + 1,
+                        total: paths.length
                     });
-                    const filmstrip = await (window as any).videoMergerAPI?.generateFilmstrip(p, info.duration, 15);
+                    const filmstrip = await (window as any).videoMergerAPI?.generateFilmstrip(p, info.duration, frameCount);
                     console.log('Filmstrip generated:', filmstrip ? `${filmstrip.length} frames` : 'FAILED');
-                    
+
                     // Update: Extracting waveform
-                    setLoadingDetail({ 
-                        fileName, 
-                        stage: 'Analyzing audio waveform...', 
-                        current: i + 1, 
-                        total: paths.length 
+                    setLoadingDetail({
+                        fileName,
+                        stage: 'Analyzing audio waveform...',
+                        current: i + 1,
+                        total: paths.length
                     });
                     const waveform = await (window as any).videoMergerAPI?.extractWaveform(p);
                     console.log('Waveform data points:', waveform ? waveform.length : 'FAILED');
-                    
+
                     newInfos.push({
                         ...info,
                         startTime: 0,
                         endTime: info.duration,
-                        timelineStart: newInfos.length > 0 ? newInfos[newInfos.length-1].timelineStart + (newInfos[newInfos.length-1].endTime - newInfos[newInfos.length-1].startTime) : 0,
+                        timelineStart: newInfos.length > 0 ? newInfos[newInfos.length - 1].timelineStart + (newInfos[newInfos.length - 1].endTime - newInfos[newInfos.length - 1].startTime) : 0,
                         trackIndex: 0,
                         thumbnail: thumb,
                         filmstrip: filmstrip,
                         waveform: waveform
                     });
-                    
+
                     setAssetLoadingProgress(Math.round(((i + 1) / paths.length) * 100));
                 }
-                
+
                 // Remove listener
                 removeFilmstripListener();
-                
+
                 console.log('All files processed:', newInfos);
                 setIsLoadingAssets(false);
                 setLoadingDetail({ fileName: '', stage: '', current: 0, total: 0 });
@@ -248,7 +249,7 @@ export const VideoMerger: React.FC = () => {
 
                     return Math.max(0, Math.min(totalDuration, next));
                 });
-                
+
                 playbackRef.current = requestAnimationFrame(animate);
             };
             playbackRef.current = requestAnimationFrame(animate);
@@ -261,80 +262,80 @@ export const VideoMerger: React.FC = () => {
     }, [isPlaying, totalDuration]); // Removed currentTime from dependency to avoid loop reset, but need initial start time handled carefully. Actually, if we use functional update on setCurrentTime it might be safer, but here we use a ref-like approach by capturing currentTime in the closure if we didn't re-create the loop. 
     // Wait, if I don't listen to currentTime, 'currentTime' in 'nextTime' calculation will be stale.
     // Correct approach for loop: use a ref for currentTime or functional update.
-    
+
     // Better implementation:
-     /*
-    useEffect(() => {
-        if (isPlaying) {
-             let lastTime = performance.now();
-             const animate = () => {
-                 const now = performance.now();
-                 const dt = (now - lastTime) / 1000;
-                 lastTime = now;
-                 
-                 setCurrentTime(prev => {
-                     const next = prev + dt * playbackSpeed;
-                     if (next >= totalDuration && playbackSpeed > 0) {
-                         setIsPlaying(false);
-                         return totalDuration;
-                     }
-                     if (next <= 0 && playbackSpeed < 0) {
-                         setIsPlaying(false);
-                         return 0;
-                     }
-                     return Math.max(0, Math.min(totalDuration, next));
-                 });
-                 playbackRef.current = requestAnimationFrame(animate);
-             };
-             playbackRef.current = requestAnimationFrame(animate);
-        }
-        // ...
-    */
+    /*
+   useEffect(() => {
+       if (isPlaying) {
+            let lastTime = performance.now();
+            const animate = () => {
+                const now = performance.now();
+                const dt = (now - lastTime) / 1000;
+                lastTime = now;
+                
+                setCurrentTime(prev => {
+                    const next = prev + dt * playbackSpeed;
+                    if (next >= totalDuration && playbackSpeed > 0) {
+                        setIsPlaying(false);
+                        return totalDuration;
+                    }
+                    if (next <= 0 && playbackSpeed < 0) {
+                        setIsPlaying(false);
+                        return 0;
+                    }
+                    return Math.max(0, Math.min(totalDuration, next));
+                });
+                playbackRef.current = requestAnimationFrame(animate);
+            };
+            playbackRef.current = requestAnimationFrame(animate);
+       }
+       // ...
+   */
     // Applying the better implementation logic:
 
+    // Unified Video Preview Sync Manager
     useEffect(() => {
-        const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
-        
-        console.log('🎬 Video Preview Sync:', {
-            currentTime,
-            totalClips: files.length,
-            activeClip: activeClip ? {
-                path: activeClip.path.split(/[\\/]/).pop(),
-                timelineStart: activeClip.timelineStart,
-                timelineEnd: activeClip.timelineStart + (activeClip.endTime - activeClip.startTime),
-                startTime: activeClip.startTime,
-                endTime: activeClip.endTime
-            } : 'NONE'
-        });
-        
+        // Prioritize higher trackIndex for preview (top-most layer visible)
+        const activeClip = [...files]
+            .sort((a, b) => b.trackIndex - a.trackIndex)
+            .find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
+
         if (activeClip) {
-            // Normalize path to ensure it works cross-platform and with the protocol handler
             const normalizedPath = activeClip.path.replace(/\\/g, '/');
-            // Use 3 slashes to denote absolute path with empty authority (prevents C: being treated as host)
-            const localSrc = `local-media:///${normalizedPath}`;
-            
+            // Use 2 slashes as standard for local-media protocol (handled by main.ts correctly)
+            const localSrc = `local-media://${normalizedPath}`;
+
+            // 1. Source Switching - Remove key to prevent flickering
             if (activeClipSrc !== localSrc) {
-                console.log('📹 Changing video source to:', localSrc);
+                console.log('📹 Switching video source:', localSrc);
                 setActiveClipSrc(localSrc);
+
+                // Also update preview index for properties if nothing is explicitly selected
+                if (selectedClips.length === 0) {
+                    const idx = files.findIndex(f => f.path === activeClip.path && f.timelineStart === activeClip.timelineStart);
+                    if (idx !== -1 && idx !== previewIndex) setPreviewIndex(idx);
+                }
+                return;
             }
+
+            // 2. Intra-clip Seeking
             if (videoPreviewRef.current) {
                 const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
-                console.log('⏱️ Seeking video to:', {
-                    clipLocalTime: clipLocalTime.toFixed(2),
-                    calculation: `(${currentTime.toFixed(2)} - ${activeClip.timelineStart.toFixed(2)}) + ${activeClip.startTime.toFixed(2)}`,
-                    currentVideoTime: videoPreviewRef.current.currentTime.toFixed(2),
-                    diff: Math.abs(videoPreviewRef.current.currentTime - clipLocalTime).toFixed(2)
-                });
-                
-                if (Math.abs(videoPreviewRef.current.currentTime - clipLocalTime) > 0.15) {
-                    videoPreviewRef.current.currentTime = clipLocalTime;
+                const videoTime = videoPreviewRef.current.currentTime;
+                const diff = Math.abs(videoTime - clipLocalTime);
+
+                // Tighten sync: Only seek if diff is significant or not playing
+                // 0.3s is a good threshold for "noticeable lag" without causing stutter
+                if (!isPlaying || diff > 0.5) {
+                    if (diff > 0.05) { // Small threshold to avoid micro-resets
+                        videoPreviewRef.current.currentTime = clipLocalTime;
+                    }
                 }
             }
         } else {
-            console.log('❌ No active clip found at currentTime:', currentTime);
-            setActiveClipSrc(null);
+            if (activeClipSrc !== null) setActiveClipSrc(null);
         }
-    }, [currentTime, files, activeClipSrc]);
+    }, [currentTime, files, activeClipSrc, isPlaying]);
 
     useEffect(() => {
         if (videoPreviewRef.current) {
@@ -353,9 +354,9 @@ export const VideoMerger: React.FC = () => {
 
         const rect = timelineRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left + timelineRef.current.scrollLeft;
-        const pxPerSecond = 80 * zoomLevel; // Same calculation as in CapCutTimeline
-        const clickedTime = x / pxPerSecond; // No offset needed - timelineRef is the canvas area
-        
+        const pxPerSecond = 40 * zoomLevel; // New scale
+        const clickedTime = x / pxPerSecond;
+
         setCurrentTime(Math.max(0, Math.min(clickedTime, totalDuration + 10)));
     };
 
@@ -363,8 +364,8 @@ export const VideoMerger: React.FC = () => {
         if (!timelineRef.current) return;
         const rect = timelineRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left + timelineRef.current.scrollLeft;
-        const pxPerSecond = 80 * zoomLevel;
-        const time = x / pxPerSecond; // No offset needed
+        const pxPerSecond = 40 * zoomLevel;
+        const time = x / pxPerSecond;
         setMouseTimelineTime(Math.max(0, time));
     };
 
@@ -373,7 +374,7 @@ export const VideoMerger: React.FC = () => {
 
     const toggleSelection = (idx: number, isMulti: boolean) => {
         if (isMulti) {
-            setSelectedClips(prev => 
+            setSelectedClips(prev =>
                 prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
             );
         } else {
@@ -395,7 +396,7 @@ export const VideoMerger: React.FC = () => {
         setFiles(prev => {
             const next = [...prev];
             const clipsToMove = selectedClips.includes(idx) ? selectedClips : [idx];
-            
+
             // 1. Calculate unsnapped target position for the PRIMARY dragged clip
             const primaryClip = prev[idx];
             let targetStart = primaryClip.timelineStart + deltaX;
@@ -405,7 +406,7 @@ export const VideoMerger: React.FC = () => {
             // 2. Magnetic Snapping (Horizontal only)
             if (magneticSnap) {
                 const snapPoints = [0, currentTime]; // Always snap to start and playhead
-                
+
                 // Add start/end of ALL UNSELECTED clips as snap points
                 prev.forEach((f, i) => {
                     if (!clipsToMove.includes(i)) {
@@ -416,10 +417,10 @@ export const VideoMerger: React.FC = () => {
 
                 // Find closest snap point
                 let minDist = Infinity;
-                
+
                 // Check snapping for the PRIMARY clip's start and end
                 const primaryDuration = primaryClip.endTime - primaryClip.startTime;
-                
+
                 for (const point of snapPoints) {
                     // Check Start
                     const distStart = Math.abs(targetStart - point);
@@ -442,12 +443,12 @@ export const VideoMerger: React.FC = () => {
 
             // 3. Grid Snapping (if magnetic didn't trigger or is closer)
             if (snapToGrid && snapDelta === 0) {
-                 const gridSnapStart = Math.round(targetStart / snapInterval) * snapInterval;
-                 if (Math.abs(gridSnapStart - targetStart) < magneticSnapThreshold) {
-                     snapDelta = gridSnapStart - targetStart;
-                 }
+                const gridSnapStart = Math.round(targetStart / snapInterval) * snapInterval;
+                if (Math.abs(gridSnapStart - targetStart) < magneticSnapThreshold) {
+                    snapDelta = gridSnapStart - targetStart;
+                }
             }
-            
+
             setSnapLineCtx(newSnapLine);
 
             // 4. Apply movements
@@ -457,14 +458,14 @@ export const VideoMerger: React.FC = () => {
                 const clip = prev[clipIdx];
                 const newStart = Math.max(0, clip.timelineStart + finalDeltaX);
                 const newTrack = Math.max(0, Math.min(5, clip.trackIndex + (deltaY || 0)));
-                
+
                 next[clipIdx] = {
                     ...clip,
                     timelineStart: newStart,
                     trackIndex: newTrack
                 };
             });
-            
+
             addToHistory(next);
             return next;
         });
@@ -479,36 +480,36 @@ export const VideoMerger: React.FC = () => {
 
         setFiles(prev => {
             const next = [...prev];
-            
+
             // Group deletions by track to handle ripple per track
             const deletionsByTrack: { [track: number]: { start: number, duration: number }[] } = {};
-            
+
             selectedClips.forEach(idx => {
                 const clip = prev[idx];
                 if (!deletionsByTrack[clip.trackIndex]) deletionsByTrack[clip.trackIndex] = [];
-                deletionsByTrack[clip.trackIndex].push({ 
-                    start: clip.timelineStart, 
-                    duration: clip.endTime - clip.startTime 
+                deletionsByTrack[clip.trackIndex].push({
+                    start: clip.timelineStart,
+                    duration: clip.endTime - clip.startTime
                 });
             });
 
             // Filter out deleted clips
             const remainingFiles = next.filter((_, i) => !selectedClips.includes(i));
-            
+
             // Apply ripple shift for each track
             const shiftedFiles = remainingFiles.map(clip => {
                 if (!deletionsByTrack[clip.trackIndex]) return clip;
-                
+
                 const gaps = deletionsByTrack[clip.trackIndex];
                 let shiftAmount = 0;
-                
+
                 // For every gap that is strictly BEFORE this clip, add to shift amount
                 for (const gap of gaps) {
                     if (gap.start < clip.timelineStart) {
                         shiftAmount += gap.duration;
                     }
                 }
-                
+
                 return { ...clip, timelineStart: Math.max(0, clip.timelineStart - shiftAmount) };
             });
 
@@ -553,7 +554,7 @@ export const VideoMerger: React.FC = () => {
             splitClip(foundIdx);
         }
     };
-    
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -563,13 +564,13 @@ export const VideoMerger: React.FC = () => {
                 splitAtPlayhead();
             } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
                 if (e.shiftKey) {
-                   e.preventDefault();
-                   const nextState = redo();
-                   if (nextState) setFiles(nextState);
+                    e.preventDefault();
+                    const nextState = redo();
+                    if (nextState) setFiles(nextState);
                 } else {
-                   e.preventDefault();
-                   const prevState = undo();
-                   if (prevState) setFiles(prevState);
+                    e.preventDefault();
+                    const prevState = undo();
+                    if (prevState) setFiles(prevState);
                 }
             } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { // Standard Redo for Windows
                 e.preventDefault();
@@ -581,7 +582,7 @@ export const VideoMerger: React.FC = () => {
             } else if ((e.code === 'Delete' || e.code === 'Backspace') && !e.ctrlKey) {
                 if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
                 e.preventDefault();
-                
+
                 if (e.shiftKey) {
                     handleRippleDelete();
                 } else {
@@ -700,17 +701,20 @@ export const VideoMerger: React.FC = () => {
                         <div className="flex-1 relative flex items-center justify-center bg-black">
                             {activeClipSrc ? (
                                 <>
-                                    <video 
-                                        key={activeClipSrc}
+                                    <video
                                         ref={videoPreviewRef}
                                         src={activeClipSrc}
                                         className="w-full h-full object-contain"
                                         preload="auto"
                                         onLoadedMetadata={(e) => {
                                             const video = e.currentTarget;
-                                            const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
-                                            if (activeClip) {
-                                                const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
+                                            // Priority sorting for metadata seek
+                                            const active = [...files]
+                                                .sort((a, b) => b.trackIndex - a.trackIndex)
+                                                .find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
+
+                                            if (active) {
+                                                const clipLocalTime = (currentTime - active.timelineStart) + active.startTime;
                                                 video.currentTime = clipLocalTime;
                                             }
                                             if (isPlaying) {
@@ -721,10 +725,10 @@ export const VideoMerger: React.FC = () => {
                                             console.error('Merger Video Error:', e.currentTarget.error);
                                         }}
                                     />
-                                    
+
                                     {/* Top Gradient Overlay */}
                                     <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-                                    
+
                                     {/* Timecode Display */}
                                     <div className="absolute top-4 left-4 flex items-center gap-3">
                                         <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
@@ -735,7 +739,7 @@ export const VideoMerger: React.FC = () => {
                                                 / {formatDuration(totalDuration)}
                                             </div>
                                         </div>
-                                        
+
                                         {/* Live Indicator */}
                                         {isPlaying && (
                                             <div className="flex items-center gap-2 bg-red-500/20 backdrop-blur-md px-3 py-1.5 rounded-lg border border-red-500/30">
@@ -744,7 +748,7 @@ export const VideoMerger: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     {/* Current Clip Info */}
                                     <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 max-w-xs">
                                         <div className="text-xs font-bold text-gray-400 mb-1">Current Clip</div>
@@ -769,7 +773,7 @@ export const VideoMerger: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                        
+
                         {/* Professional Controls Bar */}
                         <div className="bg-gradient-to-t from-black via-black/95 to-transparent p-4">
                             {/* Waveform Visualization Placeholder */}
@@ -777,10 +781,10 @@ export const VideoMerger: React.FC = () => {
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <div className="flex items-end gap-0.5 h-full py-2">
                                         {Array.from({ length: 100 }).map((_, i) => (
-                                            <div 
-                                                key={i} 
+                                            <div
+                                                key={i}
                                                 className="flex-1 bg-gradient-to-t from-indigo-500/30 to-indigo-400/50 rounded-sm"
-                                                style={{ 
+                                                style={{
                                                     height: `${20 + Math.random() * 80}%`,
                                                     opacity: i / 100 < (currentTime / totalDuration) ? 1 : 0.3
                                                 }}
@@ -789,11 +793,11 @@ export const VideoMerger: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Playback Controls */}
                             <div className="flex items-center gap-4">
                                 {/* Play/Pause Button */}
-                                <button 
+                                <button
                                     onClick={() => setIsPlaying(!isPlaying)}
                                     className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all active:scale-95 shadow-lg shadow-indigo-500/30"
                                 >
@@ -806,30 +810,30 @@ export const VideoMerger: React.FC = () => {
                                         <Play size={20} fill="currentColor" className="ml-0.5" />
                                     )}
                                 </button>
-                                
+
                                 {/* Skip Buttons */}
-                                <button 
+                                <button
                                     onClick={() => setCurrentTime(Math.max(0, currentTime - 5))}
                                     className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-all"
                                     title="Back 5s"
                                 >
                                     <span className="text-xs font-black">-5s</span>
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setCurrentTime(Math.min(totalDuration, currentTime + 5))}
                                     className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-all"
                                     title="Forward 5s"
                                 >
                                     <span className="text-xs font-black">+5s</span>
                                 </button>
-                                
+
                                 {/* Volume Control */}
                                 <div className="flex items-center gap-2 ml-auto">
                                     <Volume2 size={18} className="text-gray-400" />
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="100" 
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
                                         defaultValue="100"
                                         className="w-24 h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                                         onChange={(e) => {
@@ -843,7 +847,7 @@ export const VideoMerger: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Right Panel: Metadata & Info */}
                 <div className="w-80 flex flex-col gap-4">
                     {/* Video Info Card */}
@@ -854,7 +858,7 @@ export const VideoMerger: React.FC = () => {
                             </div>
                             <h3 className="text-sm font-black text-white">Video Properties</h3>
                         </div>
-                        
+
                         {files.length > 0 && files[previewIndex] && (
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
@@ -875,7 +879,7 @@ export const VideoMerger: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                        
+
                         {files.length === 0 && (
                             <div className="text-center py-8">
                                 <Film size={32} className="text-white/10 mx-auto mb-2" />
@@ -883,7 +887,7 @@ export const VideoMerger: React.FC = () => {
                             </div>
                         )}
                     </div>
-                    
+
                     {/* Project Stats */}
                     <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-white/5 p-4">
                         <div className="flex items-center gap-2 mb-3">
@@ -892,7 +896,7 @@ export const VideoMerger: React.FC = () => {
                             </div>
                             <h3 className="text-sm font-black text-white">Project Stats</h3>
                         </div>
-                        
+
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-gray-400 font-medium">Total Clips</span>
@@ -949,7 +953,7 @@ export const VideoMerger: React.FC = () => {
             />
 
             {/* Trimming Modal */}
-            <TrimmingModal 
+            <TrimmingModal
                 file={trimmingIdx !== null ? files[trimmingIdx] : null}
                 trimmingIdx={trimmingIdx}
                 onClose={() => setTrimmingIdx(null)}
@@ -959,7 +963,7 @@ export const VideoMerger: React.FC = () => {
             />
 
             {/* Export Progress Progress */}
-            <ExportResultModal 
+            <ExportResultModal
                 progress={progress}
                 outputPath={outputPath}
                 onDismiss={() => setProgress(null)}
@@ -967,13 +971,13 @@ export const VideoMerger: React.FC = () => {
             />
 
             {/* Keyboard Shortcuts Guide */}
-            <ShortcutsModal 
+            <ShortcutsModal
                 isOpen={showShortcuts}
                 onClose={() => setShowShortcuts(false)}
             />
 
             {/* Loading Assets Modal - Centered */}
-            <AssetLoadingModal 
+            <AssetLoadingModal
                 isOpen={isProcessing || isLoadingAssets}
                 isLoadingAssets={isLoadingAssets}
                 assetLoadingProgress={assetLoadingProgress}
