@@ -12,11 +12,12 @@ import {
     Minimize, 
     Command,
     Terminal,
-    Clipboard
+    Clipboard,
+    Clock
 } from 'lucide-react';
 import { useSettingsStore } from '@store/settingsStore';
 import { useClipboardStore } from '@store/clipboardStore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 export const Footer = () => {
     const { tabs, activeTabId, openTab } = useTabStore();
@@ -174,8 +175,13 @@ export const Footer = () => {
                 </button>
             </div>
 
-            {/* Right Section: Shortcuts Hint, Version & Meta */}
-            <div className="flex items-center space-x-2 sm:space-x-5 justify-end flex-1 min-w-0">
+            {/* Right Section: Shortcuts Hint, Session Info, Version & Meta */}
+            <div className="flex items-center space-x-2 sm:space-x-4 justify-end flex-1 min-w-0">
+                {/* Session & Time Info */}
+                <SessionTimer />
+
+                <div className="w-px h-4 bg-border-glass hidden md:block shrink-0" />
+
                 {/* Rotating Shortcuts Hint */}
                 <ShortcutHint activeTool={activeTool} />
 
@@ -193,6 +199,38 @@ export const Footer = () => {
                 </div>
             </div>
         </footer>
+    );
+};
+
+const SessionTimer = () => {
+    const [now, setNow] = useState(new Date());
+    const startTime = useMemo(() => new Date(), []); // Mark session start when component mounts
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const durationSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+    
+    const formatDuration = (s: number) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${h > 0 ? h + 'h ' : ''}${m}m ${sec}s`;
+    };
+
+    return (
+        <div className="flex items-center space-x-3 shrink-0">
+            <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-white/5 border border-border-glass text-[10px] group transition-all hover:border-emerald-500/30">
+                 <Clock size={10} className="text-emerald-400 group-hover:animate-pulse" />
+                 <span className="font-mono opacity-80">{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+            </div>
+            <div className="hidden xl:flex items-center space-x-1 text-[10px] opacity-50">
+                 <span className="italic">Session:</span>
+                 <span className="font-medium text-sky-400 whitespace-nowrap">{formatDuration(durationSeconds)}</span>
+            </div>
+        </div>
     );
 };
 
