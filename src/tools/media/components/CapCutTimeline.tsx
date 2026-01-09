@@ -13,13 +13,16 @@ interface CapCutTimelineProps {
     isPlaying: boolean;
     isRazorMode: boolean;
     snapToGrid: boolean;
+    magneticSnap: boolean;
     zoomLevel: number;
     previewIndex: number;
     mouseTimelineTime: number | null;
+    snapLineCtx?: { x: number } | null;
     timelineRef: React.RefObject<HTMLDivElement | null>;
     onAddFiles: () => void;
     onShowShortcuts: () => void;
     onToggleSnap: () => void;
+    onToggleMagnetic: () => void;
     onToggleRazor: () => void;
     onSplitAtPlayhead: () => void;
     onZoomIn: () => void;
@@ -27,6 +30,7 @@ interface CapCutTimelineProps {
     onTimelineClick: (e: React.MouseEvent) => void;
     onTimelineMouseMove: (e: React.MouseEvent) => void;
     onMouseLeave: () => void;
+    onDragEnd?: () => void;
     onToggleSelection: (idx: number, isMulti: boolean) => void;
     onClearSelection: () => void;
     onSplitClip: (idx: number) => void;
@@ -42,16 +46,18 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
     selectedClips,
     currentTime,
     totalDuration,
-    isPlaying,
     isRazorMode,
     snapToGrid,
+    magneticSnap,
     zoomLevel,
     previewIndex,
     mouseTimelineTime,
+    snapLineCtx,
     timelineRef,
     onAddFiles,
     onShowShortcuts,
     onToggleSnap,
+    onToggleMagnetic,
     onToggleRazor,
     onSplitAtPlayhead,
     onZoomIn,
@@ -59,6 +65,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
     onTimelineClick,
     onTimelineMouseMove,
     onMouseLeave,
+    onDragEnd,
     onToggleSelection,
     onClearSelection,
     onSplitClip,
@@ -68,7 +75,6 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
     onClipMove,
     formatDuration
 }) => {
-    const pxPerSecond = 80 * zoomLevel;
 
     return (
         <div className="h-80 bg-[#1a1a1a] border-t border-[#2a2a2a] flex flex-col relative">
@@ -104,9 +110,21 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                                 ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" 
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                         )}
-                        title="Snap (G)"
+                        title="Snap to Grid (G)"
                     >
                         <span className="text-xs">⊞</span>
+                    </button>
+                    <button 
+                        onClick={onToggleMagnetic}
+                        className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all",
+                            magneticSnap 
+                                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" 
+                                : "text-gray-400 hover:text-white hover:bg-white/5"
+                        )}
+                        title="Magnetic Snap"
+                    >
+                        <span className="text-xs">U</span>
                     </button>
                     <button 
                         onClick={onToggleRazor}
@@ -219,6 +237,17 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                         </div>
                     )}
 
+                    {/* Snap Guide */}
+                    {snapLineCtx && (
+                        <div 
+                            className="absolute top-0 bottom-0 w-[1px] bg-yellow-400 z-50 pointer-events-none shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+                            style={{ left: `${snapLineCtx.x * (80 * zoomLevel)}px` }}
+                        >
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform" />
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform" />
+                        </div>
+                    )}
+
                     {/* Tracks Container */}
                     <div className="relative min-w-max pt-2" style={{ height: 'calc(100% - 32px)' }}>
                         {/* Track Grid */}
@@ -247,6 +276,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                                 onRemoveFile={onRemoveFile}
                                 onUpdateTrim={onUpdateTrim}
                                 onClipMove={onClipMove}
+                                onDragEnd={onDragEnd}
                                 formatDuration={formatDuration}
                             />
                         ))}

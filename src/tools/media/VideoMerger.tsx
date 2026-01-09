@@ -67,97 +67,7 @@ export const VideoMerger: React.FC = () => {
     useEffect(() => { playbackSpeedRef.current = playbackSpeed; }, [playbackSpeed]);
     
     
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't trigger shortcuts if user is typing in an input
-            if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
-
-            if ((e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) || (e.code === 'KeyK' && (e.ctrlKey || e.metaKey))) {
-                // S or Ctrl+K / Cmd+K to split
-                e.preventDefault();
-                splitAtPlayhead();
-            } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    const nextState = redo();
-                    if (nextState) setFiles(nextState);
-                } else {
-                    const prevState = undo();
-                    if (prevState) setFiles(prevState);
-                }
-            } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { // Standard Redo for Windows
-                e.preventDefault();
-                const nextState = redo();
-                if (nextState) setFiles(nextState);
-            } else if (e.code === 'Delete' || e.code === 'Backspace') {
-                e.preventDefault();
-                if (previewIndex !== -1 && files[previewIndex]) {
-                    handleRemoveFile(files[previewIndex].path);
-                }
-            } else if (e.code === 'Space') {
-                e.preventDefault();
-                // Toggle play/pause - reset speed to 1x if starting
-                if (!isPlayingRef.current) {
-                    setPlaybackSpeed(1);
-                    setIsPlaying(true);
-                } else {
-                    setIsPlaying(false);
-                }
-            } else if (e.code === 'KeyJ') {
-                e.preventDefault();
-                if (!isPlayingRef.current) {
-                    setIsPlaying(true);
-                    setPlaybackSpeed(-1);
-                } else {
-                    // If already playing backwards, double speed (max -8x)
-                    // If playing forwards, switch to backwards -1x
-                    const currentSpeed = playbackSpeedRef.current;
-                    setPlaybackSpeed(currentSpeed > 0 ? -1 : Math.max(currentSpeed * 2, -8));
-                }
-            } else if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault();
-                setIsPlaying(false);
-                setPlaybackSpeed(1);
-            } else if (e.code === 'KeyL') {
-                e.preventDefault();
-                if (!isPlayingRef.current) {
-                    setIsPlaying(true);
-                    setPlaybackSpeed(1);
-                } else {
-                    // If already playing forwards, double speed (max 8x)
-                    // If playing backwards, switch to forwards 1x
-                    const currentSpeed = playbackSpeedRef.current;
-                    setPlaybackSpeed(currentSpeed < 0 ? 1 : Math.min(currentSpeed * 2, 8));
-                }
-            } else if (e.code === 'ArrowLeft') {
-                e.preventDefault();
-                const step = e.shiftKey ? 0.04 : (e.ctrlKey ? 1 : 0.2); // Frame / Second / 5 frames
-                setCurrentTime(prev => Math.max(0, prev - step));
-            } else if (e.code === 'ArrowRight') {
-                e.preventDefault();
-                const step = e.shiftKey ? 0.04 : (e.ctrlKey ? 1 : 0.2);
-                setCurrentTime(prev => Math.min(totalDuration, prev + step));
-            } else if (e.code === 'Home') {
-                e.preventDefault();
-                setCurrentTime(0);
-            } else if (e.code === 'End') {
-                e.preventDefault();
-                setCurrentTime(totalDuration);
-            } else if (e.code === 'KeyR' && !e.ctrlKey) {
-                e.preventDefault();
-                setIsRazorMode(prev => !prev);
-            } else if (e.code === 'KeyG' && !e.ctrlKey) {
-                e.preventDefault();
-                setSnapToGrid(prev => !prev);
-            } else if (e.code === 'Slash' && e.shiftKey) { // "?" key
-                e.preventDefault();
-                setShowShortcuts(prev => !prev);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentTime, previewIndex, files, totalDuration]);
-
+    
     useEffect(() => {
         const cleanup = (window as any).videoMergerAPI?.onProgress((p: VideoMergeProgress) => {
             setProgress(p);
@@ -465,6 +375,8 @@ export const VideoMerger: React.FC = () => {
     };
 
 
+    const [snapLineCtx, setSnapLineCtx] = React.useState<{ x: number } | null>(null);
+
     const toggleSelection = (idx: number, isMulti: boolean) => {
         if (isMulti) {
             setSelectedClips(prev => 
@@ -494,6 +406,7 @@ export const VideoMerger: React.FC = () => {
             const primaryClip = prev[idx];
             let targetStart = primaryClip.timelineStart + deltaX;
             let snapDelta = 0;
+            let newSnapLine: { x: number } | null = null;
 
             // 2. Magnetic Snapping (Horizontal only)
             if (magneticSnap) {
@@ -509,8 +422,7 @@ export const VideoMerger: React.FC = () => {
 
                 // Find closest snap point
                 let minDist = Infinity;
-                let closestPoint = null;
-
+                
                 // Check snapping for the PRIMARY clip's start and end
                 const primaryDuration = primaryClip.endTime - primaryClip.startTime;
                 
@@ -519,8 +431,8 @@ export const VideoMerger: React.FC = () => {
                     const distStart = Math.abs(targetStart - point);
                     if (distStart < magneticSnapThreshold && distStart < minDist) {
                         minDist = distStart;
-                        closestPoint = point;
-                        snapDelta = point - targetStart; // Adjustment needed
+                        snapDelta = point - targetStart;
+                        newSnapLine = { x: point };
                     }
 
                     // Check End
@@ -528,8 +440,8 @@ export const VideoMerger: React.FC = () => {
                     const distEnd = Math.abs(targetEnd - point);
                     if (distEnd < magneticSnapThreshold && distEnd < minDist) {
                         minDist = distEnd;
-                        closestPoint = point - primaryDuration; // Adjust start to align end
                         snapDelta = (point - primaryDuration) - targetStart;
+                        newSnapLine = { x: point };
                     }
                 }
             }
@@ -541,6 +453,8 @@ export const VideoMerger: React.FC = () => {
                      snapDelta = gridSnapStart - targetStart;
                  }
             }
+            
+            setSnapLineCtx(newSnapLine);
 
             // 4. Apply movements
             const finalDeltaX = deltaX + snapDelta;
@@ -559,6 +473,55 @@ export const VideoMerger: React.FC = () => {
             
             addToHistory(next);
             return next;
+        });
+    };
+
+    const handleDragEnd = () => {
+        setSnapLineCtx(null);
+    };
+
+    const handleRippleDelete = () => {
+        if (selectedClips.length === 0) return;
+
+        setFiles(prev => {
+            const next = [...prev];
+            
+            // Group deletions by track to handle ripple per track
+            const deletionsByTrack: { [track: number]: { start: number, duration: number }[] } = {};
+            
+            selectedClips.forEach(idx => {
+                const clip = prev[idx];
+                if (!deletionsByTrack[clip.trackIndex]) deletionsByTrack[clip.trackIndex] = [];
+                deletionsByTrack[clip.trackIndex].push({ 
+                    start: clip.timelineStart, 
+                    duration: clip.endTime - clip.startTime 
+                });
+            });
+
+            // Filter out deleted clips
+            const remainingFiles = next.filter((_, i) => !selectedClips.includes(i));
+            
+            // Apply ripple shift for each track
+            const shiftedFiles = remainingFiles.map(clip => {
+                if (!deletionsByTrack[clip.trackIndex]) return clip;
+                
+                const gaps = deletionsByTrack[clip.trackIndex];
+                let shiftAmount = 0;
+                
+                // For every gap that is strictly BEFORE this clip, add to shift amount
+                for (const gap of gaps) {
+                    if (gap.start < clip.timelineStart) {
+                        shiftAmount += gap.duration;
+                    }
+                }
+                
+                return { ...clip, timelineStart: Math.max(0, clip.timelineStart - shiftAmount) };
+            });
+
+            addToHistory(shiftedFiles);
+            setSelectedClips([]);
+            setPreviewIndex(-1);
+            return shiftedFiles;
         });
     };
 
@@ -596,6 +559,104 @@ export const VideoMerger: React.FC = () => {
             splitClip(foundIdx);
         }
     };
+    
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+            if ((e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) || (e.code === 'KeyK' && (e.ctrlKey || e.metaKey))) {
+                e.preventDefault();
+                splitAtPlayhead();
+            } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+                if (e.shiftKey) {
+                   e.preventDefault();
+                   const nextState = redo();
+                   if (nextState) setFiles(nextState);
+                } else {
+                   e.preventDefault();
+                   const prevState = undo();
+                   if (prevState) setFiles(prevState);
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { // Standard Redo for Windows
+                e.preventDefault();
+                const nextState = redo();
+                if (nextState) setFiles(nextState);
+            } else if (e.code === 'KeyG' && !e.ctrlKey) {
+                e.preventDefault();
+                setSnapToGrid(prev => !prev);
+            } else if ((e.code === 'Delete' || e.code === 'Backspace') && !e.ctrlKey) {
+                if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+                e.preventDefault();
+                
+                if (e.shiftKey) {
+                    handleRippleDelete();
+                } else {
+                    // Standard Delete: remove selected clips
+                    if (selectedClips.length > 0) {
+                        setFiles(prev => {
+                            const next = prev.filter((_, i) => !selectedClips.includes(i));
+                            addToHistory(next);
+                            return next;
+                        });
+                        setSelectedClips([]);
+                        setPreviewIndex(-1);
+                    }
+                }
+            } else if (e.code === 'Slash' && e.shiftKey) { // "?" key
+                e.preventDefault();
+                setShowShortcuts(prev => !prev);
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                if (!isPlayingRef.current) {
+                    setPlaybackSpeed(1);
+                    setIsPlaying(true);
+                } else {
+                    setIsPlaying(false);
+                }
+            } else if (e.code === 'KeyJ') {
+                e.preventDefault();
+                if (!isPlayingRef.current) {
+                    setIsPlaying(true);
+                    setPlaybackSpeed(-1);
+                } else {
+                    const currentSpeed = playbackSpeedRef.current;
+                    setPlaybackSpeed(currentSpeed > 0 ? -1 : Math.max(currentSpeed * 2, -8));
+                }
+            } else if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                setIsPlaying(false);
+                setPlaybackSpeed(1);
+            } else if (e.code === 'KeyL') {
+                e.preventDefault();
+                if (!isPlayingRef.current) {
+                    setIsPlaying(true);
+                    setPlaybackSpeed(1);
+                } else {
+                    const currentSpeed = playbackSpeedRef.current;
+                    setPlaybackSpeed(currentSpeed < 0 ? 1 : Math.min(currentSpeed * 2, 8));
+                }
+            } else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                const step = e.shiftKey ? 0.04 : (e.ctrlKey ? 1 : 0.2);
+                setCurrentTime(prev => Math.max(0, prev - step));
+            } else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                const step = e.shiftKey ? 0.04 : (e.ctrlKey ? 1 : 0.2);
+                setCurrentTime(prev => Math.min(totalDuration, prev + step));
+            } else if (e.code === 'Home') {
+                e.preventDefault();
+                setCurrentTime(0);
+            } else if (e.code === 'End') {
+                e.preventDefault();
+                setCurrentTime(totalDuration);
+            } else if (e.code === 'KeyR' && !e.ctrlKey) {
+                e.preventDefault();
+                setIsRazorMode(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentTime, previewIndex, files, totalDuration, selectedClips, handleRippleDelete]);
 
     return (
         <div className="flex flex-col h-full bg-background text-foreground overflow-hidden rounded-xl border border-border-glass font-sans relative">
@@ -865,13 +926,17 @@ export const VideoMerger: React.FC = () => {
                 isPlaying={isPlaying}
                 isRazorMode={isRazorMode}
                 snapToGrid={snapToGrid}
+                magneticSnap={magneticSnap}
                 zoomLevel={zoomLevel}
                 previewIndex={previewIndex}
                 mouseTimelineTime={mouseTimelineTime}
+                snapLineCtx={snapLineCtx}
                 timelineRef={timelineRef}
+                onDragEnd={handleDragEnd}
                 onAddFiles={handleAddFiles}
                 onShowShortcuts={() => setShowShortcuts(true)}
                 onToggleSnap={() => setSnapToGrid(!snapToGrid)}
+                onToggleMagnetic={() => setMagneticSnap(prev => !prev)}
                 onToggleRazor={() => setIsRazorMode(!isRazorMode)}
                 onSplitAtPlayhead={splitAtPlayhead}
                 onZoomIn={() => setZoomLevel(prev => Math.min(5, prev + 0.2))}

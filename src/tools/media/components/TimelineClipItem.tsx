@@ -18,6 +18,7 @@ interface TimelineClipItemProps {
     onRemoveFile: (path: string) => void;
     onUpdateTrim: (idx: number, start: number, end: number) => void;
     onClipMove: (idx: number, deltaX: number, deltaY: number) => void;
+    onDragEnd?: () => void;
     formatDuration: (seconds: number) => string;
 }
 
@@ -35,6 +36,7 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
     onRemoveFile,
     onUpdateTrim,
     onClipMove,
+    onDragEnd,
     formatDuration
 }) => {
     // Memoize expensive calculations
@@ -110,7 +112,8 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
         const deltaX = info.offset.x / pxPerSecond;
         const deltaY = Math.round(info.offset.y / 60);
         onClipMove(idx, deltaX, deltaY);
-    }, [idx, pxPerSecond, onClipMove]);
+        onDragEnd?.();
+    }, [idx, pxPerSecond, onClipMove, onDragEnd]);
 
     return (
         <motion.div 
