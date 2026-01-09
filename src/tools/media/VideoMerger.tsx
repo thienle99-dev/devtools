@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { CapCutTimeline } from './components/CapCutTimeline';
-import type { VideoMergeOptions, VideoMergeProgress, VideoInfo, ExtendedVideoInfo } from '../../types/video-merger';
+import type { VideoMergeOptions, VideoMergeProgress, ExtendedVideoInfo } from '../../types/video-merger';
 import { useTimelineHistory } from './hooks/useTimelineHistory';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { AssetLoadingModal } from './components/AssetLoadingModal';
@@ -94,9 +94,10 @@ export const VideoMerger: React.FC = () => {
                 
                 // Listen for filmstrip progress
                 const removeFilmstripListener = (window as any).videoMergerAPI?.onFilmstripProgress((data: { current: number; total: number; timestamp: string }) => {
+                    const timeText = data.timestamp === 'Processing...' ? '' : ` at ${data.timestamp}s`;
                     setLoadingDetail(prev => ({
                         ...prev,
-                        stage: `Extracting frame ${data.current}/${data.total} at ${data.timestamp}s...`
+                        stage: `Extracting frame ${data.current}/${data.total}${timeText}...`
                     }));
                 });
                 
@@ -221,13 +222,6 @@ export const VideoMerger: React.FC = () => {
         const ms = Math.floor((seconds % 1) * 100);
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
     };
-
-    const clipsWithOffsets = files.reduce((acc, file) => {
-        const start = acc.length > 0 ? acc[acc.length - 1].end : 0;
-        const clipDuration = file.endTime - file.startTime;
-        acc.push({ ...file, start, end: start + clipDuration });
-        return acc;
-    }, [] as (ExtendedVideoInfo & { start: number; end: number })[]);
 
     useEffect(() => {
         if (isPlaying) {

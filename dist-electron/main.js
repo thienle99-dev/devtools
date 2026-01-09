@@ -3796,67 +3796,63 @@ var VideoMerger = class {
 		const tempId = randomUUID$1();
 		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", tempId);
 		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		console.log(`Generating filmstrip: ${actualCount} frames from ${duration}s video`);
-		const frames = [];
-		for (let i = 0; i < actualCount; i++) {
-			const timestamp = duration / actualCount * i;
-			const outputPath = path$1.join(outputDir, `thumb_${i.toString().padStart(3, "0")}.jpg`);
-			console.log(`Extracting frame ${i + 1}/${actualCount} at ${timestamp.toFixed(2)}s`);
-			if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.webContents.send("filmstrip-progress", {
-				current: i + 1,
-				total: actualCount,
-				timestamp: timestamp.toFixed(2)
-			});
-			try {
-				await new Promise((resolve, reject) => {
-					const args = [
-						"-i",
-						filePath,
-						"-ss",
-						timestamp.toString(),
-						"-vframes",
-						"1",
-						"-vf",
-						"scale=80:45",
-						"-q:v",
-						"2",
-						"-f",
-						"image2",
-						"-y",
-						outputPath
-					];
-					const process$1 = spawn(this.ffmpegPath, args);
-					let stderr = "";
-					process$1.stderr.on("data", (data) => {
-						stderr += data.toString();
+		const safeDuration = duration > 0 ? duration : 1;
+		const fps = actualCount / safeDuration;
+		console.log(`Generating filmstrip (Optimized): Target ${actualCount} frames from ${safeDuration}s video (fps=${fps.toFixed(4)})`);
+		const outputPattern = path$1.join(outputDir, "thumb_%03d.jpg").replace(/\\/g, "/");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-vf",
+				`fps=${fps},scale=80:45`,
+				"-q:v",
+				"2",
+				"-f",
+				"image2",
+				outputPattern
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let stderr = "";
+			process$1.stderr.on("data", (data) => {
+				const text = data.toString();
+				stderr += text;
+				const match = text.match(/frame=\s*(\d+)/);
+				if (match) {
+					const currentFrame = parseInt(match[1]);
+					if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.webContents.send("filmstrip-progress", {
+						current: Math.min(currentFrame, actualCount),
+						total: actualCount,
+						timestamp: "Processing..."
 					});
-					process$1.on("close", (code) => {
-						if (code === 0 && fs$1.existsSync(outputPath)) resolve();
-						else {
-							console.error(`Frame extraction failed for frame ${i}:`, stderr);
-							reject(/* @__PURE__ */ new Error(`Frame ${i} extraction failed`));
-						}
-					});
-					process$1.on("error", reject);
-				});
-				if (fs$1.existsSync(outputPath)) {
-					const data = fs$1.readFileSync(outputPath, { encoding: "base64" });
-					frames.push(`data:image/jpeg;base64,${data}`);
 				}
-			} catch (err) {
-				console.warn(`Failed to extract frame ${i} at ${timestamp.toFixed(2)}s:`, err);
-			}
-		}
-		console.log(`Filmstrip generated: ${frames.length}/${actualCount} frames`);
-		try {
-			fs$1.rmSync(outputDir, {
-				recursive: true,
-				force: true
 			});
-		} catch (err) {
-			console.warn("Filmstrip cleanup failed:", err);
-		}
-		return frames;
+			process$1.on("close", (code) => {
+				if (code === 0) try {
+					const finalFrames = fs$1.readdirSync(outputDir).filter((f) => f.startsWith("thumb_") && f.endsWith(".jpg")).sort().map((f) => {
+						const p = path$1.join(outputDir, f);
+						return `data:image/jpeg;base64,${fs$1.readFileSync(p, { encoding: "base64" })}`;
+					}).slice(0, actualCount);
+					try {
+						fs$1.rmSync(outputDir, {
+							recursive: true,
+							force: true
+						});
+					} catch (cleanupErr) {
+						console.warn("Filmstrip cleanup failed:", cleanupErr);
+					}
+					console.log(`Filmstrip generated: ${finalFrames.length} frames`);
+					resolve(finalFrames);
+				} catch (e) {
+					reject(e);
+				}
+				else {
+					console.error("Filmstrip generation failed:", stderr);
+					reject(/* @__PURE__ */ new Error("Filmstrip generation failed"));
+				}
+			});
+			process$1.on("error", reject);
+		});
 	}
 	async extractWaveform(filePath) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");

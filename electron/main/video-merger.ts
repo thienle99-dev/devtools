@@ -140,81 +140,82 @@ export class VideoMerger {
         const outputDir = path.join(app.getPath('temp'), 'devtools-app-filmstrips', tempId);
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-        console.log(`Generating filmstrip: ${actualCount} frames from ${duration}s video`);
+        // Optimization: Use single ffmpeg command with fps filter
+        // fps = count / duration. 
+        // Ensure duration is safe
+        const safeDuration = duration > 0 ? duration : 1;
+        const fps = actualCount / safeDuration;
+        console.log(`Generating filmstrip (Optimized): Target ${actualCount} frames from ${safeDuration}s video (fps=${fps.toFixed(4)})`);
 
-        const frames: string[] = [];
-        
-        // Generate frames sequentially at specific timestamps
-        // Start from 0 and evenly distribute across the duration
-        for (let i = 0; i < actualCount; i++) {
-            const timestamp = (duration / actualCount) * i; // Start from 0, evenly distributed
-            const outputPath = path.join(outputDir, `thumb_${i.toString().padStart(3, '0')}.jpg`);
-            
-            console.log(`Extracting frame ${i + 1}/${actualCount} at ${timestamp.toFixed(2)}s`);
-            
-            // Emit progress to renderer
-            if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                this.mainWindow.webContents.send('filmstrip-progress', {
-                    current: i + 1,
-                    total: actualCount,
-                    timestamp: timestamp.toFixed(2)
-                });
-            }
-            
-            try {
-                await new Promise<void>((resolve, reject) => {
-                    // IMPORTANT: Place -ss AFTER -i for accurate seeking
-                    // -accurate_seek ensures we get the exact frame, not nearest keyframe
-                    const args = [
-                        '-i', filePath,
-                        '-ss', timestamp.toString(),
-                        '-vframes', '1',
-                        '-vf', 'scale=80:45',  // Use filter for better quality
-                        '-q:v', '2', // High quality
-                        '-f', 'image2',
-                        '-y', outputPath
-                    ];
+        // Normalize path for ffmpeg (Windows backslash issues with % pattern)
+        const outputPattern = path.join(outputDir, 'thumb_%03d.jpg').replace(/\\/g, '/');
 
-                    const process = spawn(this.ffmpegPath!, args);
-                    
-                    let stderr = '';
-                    process.stderr.on('data', (data) => {
-                        stderr += data.toString();
-                    });
-                    
-                    process.on('close', (code) => {
-                        if (code === 0 && fs.existsSync(outputPath)) {
-                            resolve();
-                        } else {
-                            console.error(`Frame extraction failed for frame ${i}:`, stderr);
-                            reject(new Error(`Frame ${i} extraction failed`));
-                        }
-                    });
-                    
-                    process.on('error', reject);
-                });
+        return new Promise((resolve, reject) => {
+            const args = [
+                '-i', filePath,
+                '-vf', `fps=${fps},scale=80:45`,
+                '-q:v', '2',
+                '-f', 'image2',
+                outputPattern
+            ];
+            
+            const process = spawn(this.ffmpegPath!, args);
+            
+            let stderr = '';
+            process.stderr.on('data', (data) => {
+                const text = data.toString();
+                stderr += text;
                 
-                // Read and convert to base64
-                if (fs.existsSync(outputPath)) {
-                    const data = fs.readFileSync(outputPath, { encoding: 'base64' });
-                    frames.push(`data:image/jpeg;base64,${data}`);
+                // Best effort progress parsing
+                const match = text.match(/frame=\s*(\d+)/);
+                if (match) {
+                     const currentFrame = parseInt(match[1]);
+                     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                        this.mainWindow.webContents.send('filmstrip-progress', {
+                            current: Math.min(currentFrame, actualCount),
+                            total: actualCount,
+                            timestamp: 'Processing...'
+                        });
+                    }
                 }
-            } catch (err) {
-                console.warn(`Failed to extract frame ${i} at ${timestamp.toFixed(2)}s:`, err);
-                // Continue with other frames
-            }
-        }
-        
-        console.log(`Filmstrip generated: ${frames.length}/${actualCount} frames`);
-        
-        // Cleanup
-        try {
-            fs.rmSync(outputDir, { recursive: true, force: true });
-        } catch (err) {
-            console.warn('Filmstrip cleanup failed:', err);
-        }
-        
-        return frames;
+            });
+
+            process.on('close', (code) => {
+                 if (code === 0) {
+                     try {
+                         // Read all generated files
+                         const files = fs.readdirSync(outputDir)
+                             .filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'))
+                             .sort(); // thumb_001.jpg, thumb_002.jpg...
+
+                         const frames = files.map(f => {
+                             const p = path.join(outputDir, f);
+                             const data = fs.readFileSync(p, { encoding: 'base64' });
+                             return `data:image/jpeg;base64,${data}`;
+                         });
+                         
+                         // Limit to requested count if we got extra
+                         const finalFrames = frames.slice(0, actualCount);
+
+                         // Cleanup
+                         try {
+                            fs.rmSync(outputDir, { recursive: true, force: true });
+                         } catch (cleanupErr) {
+                             console.warn('Filmstrip cleanup failed:', cleanupErr);
+                         }
+                         
+                         console.log(`Filmstrip generated: ${finalFrames.length} frames`);
+                         resolve(finalFrames);
+                     } catch (e) {
+                         reject(e);
+                     }
+                 } else {
+                     console.error('Filmstrip generation failed:', stderr);
+                     reject(new Error('Filmstrip generation failed'));
+                 }
+            });
+            process.on('error', reject);
+        });
     }
 
     async extractWaveform(filePath: string): Promise<number[]> {
