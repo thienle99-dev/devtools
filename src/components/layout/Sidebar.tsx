@@ -3,7 +3,6 @@ import { useTabStore } from '@store/tabStore';
 import { useToolStore } from '@store/toolStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Settings,
     Search,
     LayoutDashboard,
     Star,
@@ -11,28 +10,20 @@ import {
     ChevronRight
 } from 'lucide-react';
 import { cn } from '@utils/cn';
-import { CATEGORIES, getToolsByCategory, type ToolCategory } from '@tools/registry';
-import { Select } from '../ui/Select';
+import { CATEGORIES, getToolsByCategory } from '@tools/registry';
 import { useSettingsStore } from '@store/settingsStore';
 import { motion } from 'framer-motion';
-import { ShortcutBadge } from '../ui/KeyboardShortcut';
 import { usePlatform } from '@hooks/usePlatform';
 
 export const Sidebar: React.FC = React.memo(() => {
     const openTab = useTabStore(state => state.openTab);
-    const setActiveTab = useTabStore(state => state.setActiveTab);
     const activeTabId = useTabStore(state => state.activeTabId);
     const tabs = useTabStore(state => state.tabs);
     const navigate = useNavigate();
     const location = useLocation();
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
-    const isDashboard = location.pathname === '/dashboard';
-
-    // Count preview tabs
-    const previewTabsCount = useMemo(() => tabs.filter(t => t.isPreview).length, [tabs]);
 
     const [searchQuery, setSearchQuery] = React.useState('');
-    const [selectedCategory, setSelectedCategory] = React.useState<'all' | ToolCategory>('all');
 
     const favorites = useToolStore(state => state.favorites);
     const toggleFavorite = useToolStore(state => state.toggleFavorite);
@@ -42,7 +33,6 @@ export const Sidebar: React.FC = React.memo(() => {
 
     // Platform detection for shortcuts
     const { isMac } = usePlatform();
-    const searchShortcut = isMac ? '⌘K' : 'Ctrl+K';
 
     // Global shortcut for Search (Cmd+K)
     useEffect(() => {
@@ -57,7 +47,7 @@ export const Sidebar: React.FC = React.memo(() => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Filter tools based on search + optional category
+    // Filter tools based on search
     const filteredContent = useMemo(() => {
         if (!searchQuery.trim()) return null;
 
@@ -68,127 +58,141 @@ export const Sidebar: React.FC = React.memo(() => {
             .map(id => allCategories.find(t => t.id === id)!)
             .filter(t => t.id !== 'settings');
 
-        let results = uniqueTools.filter(tool =>
+        const results = uniqueTools.filter(tool =>
             tool.name.toLowerCase().includes(query) ||
             tool.description.toLowerCase().includes(query) ||
             tool.keywords?.some(k => k.toLowerCase().includes(query))
         );
 
-        if (selectedCategory !== 'all') {
-            results = results.filter(tool => tool.category === selectedCategory);
-        }
-
         return results.sort((a, b) => a.name.localeCompare(b.name));
-    }, [searchQuery, selectedCategory]);
-
-    const categoryFilterOptions: { id: 'all' | ToolCategory; label: string }[] = useMemo(() => {
-        return [
-            { id: 'all', label: 'All' },
-            ...CATEGORIES
-                .filter(c => !['favorites', 'recent'].includes(c.id))
-                .map(c => ({ id: c.id, label: c.name }))
-        ];
-    }, []);
+    }, [searchQuery]);
 
     return (
         <motion.aside
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
             className={cn(
-                "h-full sidebar-macos flex flex-col z-20 shrink-0 transition-all duration-300",
-                sidebarCollapsed ? "w-16" : "w-64"
+                "h-full sidebar-macos flex flex-col z-20 shrink-0 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                sidebarCollapsed ? "w-20" : "w-72"
             )}
         >
-            {/* Header with Toggle Button */}
+            {/* Header: Logo & Controls */}
             <div className={cn(
-                "pt-4 pb-1 flex items-center gap-2 transition-all duration-300",
-                sidebarCollapsed ? "px-2 flex-col" : "px-5 flex-row"
+                "pt-6 pb-2 transition-all duration-500",
+                sidebarCollapsed ? "px-3" : "px-6"
             )}>
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        navigate('/dashboard');
-                    }}
-                    className={cn(
-                        "flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm transition-all duration-200 cursor-pointer",
-                        "bg-[var(--color-glass-input)]/70 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass",
-                        isDashboard && "border-border-glass bg-[var(--color-glass-input)]",
-                        sidebarCollapsed ? "w-full justify-center px-2" : "flex-1"
-                    )}
-                    title={sidebarCollapsed ? "Dashboard" : undefined}
-                >
-                    <LayoutDashboard className="w-4 h-4 shrink-0" />
-                    {!sidebarCollapsed && <span className="truncate font-medium">Dashboard</span>}
-                </button>
-                <button
-                    type="button"
-                    onClick={toggleSidebar}
-                    className={cn(
-                        "p-2 rounded-lg text-foreground-muted hover:text-foreground hover:bg-[var(--color-glass-input)]/70 border border-transparent hover:border-border-glass transition-all duration-200",
-                        sidebarCollapsed && "w-full"
-                    )}
-                    title={sidebarCollapsed ? `Expand Sidebar (${isMac ? '⌘B' : 'Ctrl+B'})` : `Collapse Sidebar (${isMac ? '⌘B' : 'Ctrl+B'})`}
-                >
-                    {sidebarCollapsed ? (
-                        <ChevronRight className="w-4 h-4" />
-                    ) : (
-                        <ChevronLeft className="w-4 h-4" />
-                    )}
-                </button>
+                <div className={cn(
+                    "flex items-center gap-3",
+                    sidebarCollapsed ? "flex-col" : "justify-between"
+                )}>
+                    <div 
+                        onClick={() => navigate('/dashboard')}
+                        className={cn(
+                            "flex items-center gap-2.5 transition-all cursor-pointer hover:opacity-80 active:scale-95",
+                            sidebarCollapsed && "flex-col"
+                        )}
+                    >
+                        <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                            <LayoutDashboard className="w-5 h-5 text-white" />
+                        </div>
+                        {!sidebarCollapsed && (
+                            <div className="flex flex-col min-w-0">
+                                <span className="font-bold text-sm tracking-tight text-foreground truncate">DevTools</span>
+                                <span className="text-[10px] text-foreground-muted font-bold tracking-[0.1em] uppercase -mt-0.5">Control Panel</span>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <button
+                        type="button"
+                        onClick={toggleSidebar}
+                        className={cn(
+                            "group p-2.5 rounded-xl text-foreground-muted hover:text-foreground bg-foreground/[0.03] dark:bg-white/[0.03] hover:bg-foreground/[0.08] dark:hover:bg-white/10 border border-border-glass transition-all duration-300",
+                            sidebarCollapsed ? "w-full flex justify-center mt-2" : "shrink-0"
+                        )}
+                    >
+                        {sidebarCollapsed ? (
+                            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                        ) : (
+                            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+                        )}
+                    </button>
+                </div>
             </div>
 
-            {/* Enhanced Search Section */}
+            {/* Search Section */}
             {!sidebarCollapsed && (
-                <div className="px-5 pt-2 pb-4">
+                <div className="px-6 pt-3 pb-5">
                     <div className="relative group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/70 group-focus-within:text-foreground-muted pointer-events-none transition-colors duration-200 z-10" />
+                        <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none z-10">
+                            <Search className="w-4 h-4 text-foreground-muted/50 group-focus-within:text-indigo-500 transition-colors duration-300" />
+                        </div>
                         <input
                             type="text"
-                            placeholder={`Search tools... (${searchShortcut})`}
+                            placeholder={`Quick Search...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="sidebar-search-input w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 hover:border-white/30 dark:hover:border-white/20 focus:border-indigo-400/50 dark:focus:border-indigo-500/50 focus:bg-white/15 dark:focus:bg-white/10 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200 placeholder:text-foreground-muted/60 text-foreground shadow-sm hover:shadow-md focus:shadow-lg"
+                            className="sidebar-search-input w-full pl-10 pr-4 py-3 text-xs bg-foreground/[0.03] dark:bg-white/[0.03] backdrop-blur-3xl border border-border-glass focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-foreground-muted/40 rounded-2xl shadow-sm"
                         />
-                    </div>
-                    {/* Category Filter for Search (UI Select component) */}
-                    <div className="mt-2">
-                        <Select
-                            label="Category"
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value as 'all' | ToolCategory)}
-                            options={categoryFilterOptions.map(option => ({
-                                label: option.label,
-                                value: option.id
-                            }))}
-                            fullWidth
-                            variant="glass"
-                            className="text-[11px] py-1.5"
-                        />
+                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border-glass bg-background/50 px-1.5 font-mono text-[10px] font-bold text-foreground-muted opacity-40">
+                                {isMac ? '⌘' : 'Ctrl'} K
+                            </kbd>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Enhanced Navigation */}
+            {/* Navigation */}
             <nav className={cn(
-                "flex-1 overflow-y-auto space-y-5 custom-scrollbar pb-4 transition-all duration-300",
-                sidebarCollapsed ? "px-2" : "px-4"
+                "flex-1 overflow-y-auto space-y-4 custom-scrollbar pb-4 transition-all duration-300",
+                sidebarCollapsed ? "px-3" : "px-4"
             )}>
+                {/* Fixed Dashboard Entry */}
+                {!searchQuery && (
+                    <div className={cn(
+                        "space-y-0.5 mb-4",
+                        sidebarCollapsed ? "" : "px-2 pt-2"
+                    )}>
+                        <div
+                            onClick={() => navigate('/dashboard')}
+                            className={cn(
+                                "group relative flex items-center transition-all duration-300 cursor-pointer overflow-hidden",
+                                sidebarCollapsed 
+                                    ? "w-full aspect-square justify-center rounded-2xl" 
+                                    : "px-3.5 py-3 gap-3.5 rounded-2xl",
+                                location.pathname === '/dashboard'
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                    : "hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] text-foreground-secondary hover:text-foreground border border-transparent hover:border-border-glass"
+                            )}
+                        >
+                            <LayoutDashboard className={cn(
+                                "shrink-0 transition-transform duration-300 group-hover:scale-110",
+                                sidebarCollapsed ? "w-6 h-6" : "w-5 h-5"
+                            )} />
+                            {!sidebarCollapsed && (
+                                <div className="flex flex-col min-w-0">
+                                    <span className="font-bold text-[14px] tracking-tight">Dashboard</span>
+                                    <span className="text-[9px] opacity-40 uppercase font-black tracking-widest leading-none">Home Overview</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {!sidebarCollapsed && filteredContent ? (
                     <div className="space-y-1">
                         {filteredContent.length === 0 ? (
-                            <div className="text-center text-xs text-foreground-muted py-8">
-                                No tools found
+                            <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                                <div className="w-12 h-12 rounded-full bg-foreground/[0.03] flex items-center justify-center mb-3">
+                                    <Search className="w-6 h-6 text-foreground-muted/30" />
+                                </div>
+                                <p className="text-xs font-bold text-foreground/40 italic">Nothing found matching your query</p>
                             </div>
                         ) : filteredContent.map(tool => {
                             const isActive = activeTab?.toolId === tool.id;
                             const Icon = tool.icon;
-                            // Get configured or default shortcut
-                            const toolShortcuts = useSettingsStore.getState().toolShortcuts;
-                            const shortcut = toolShortcuts[tool.id] || tool.shortcut;
-
                             const category = CATEGORIES.find(c => c.id === tool.category);
                             const colorClass = tool.color || category?.color || 'text-foreground-muted';
 
@@ -198,56 +202,44 @@ export const Sidebar: React.FC = React.memo(() => {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        if (e.altKey) {
-                                            // Alt+Click: Force new tab and activate immediately
-                                            openTab(tool.id, tool.path, tool.name, tool.description, true, false);
-                                            navigate(tool.path);
-                                        } else {
-                                            // Single click: Activate immediately (no preview)
-                                            openTab(tool.id, tool.path, tool.name, tool.description, false, false);
-                                            navigate(tool.path);
-                                        }
+                                        openTab(tool.id, tool.path, tool.name, tool.description, e.altKey, false);
+                                        navigate(tool.path);
                                     }}
-                                    title={tool.description + (shortcut ? ` (${shortcut})` : '')}
                                     className={cn(
-                                        "sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
-                                        isActive
-                                            ? "sidebar-nav-item-active"
-                                            : "sidebar-nav-item-inactive"
+                                        "relative group flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[13px] transition-all duration-300 cursor-pointer mb-1",
+                                        isActive 
+                                            ? "bg-indigo-500/10 border border-indigo-500/20 text-foreground shadow-[0_4px_15px_-3px_rgba(99,102,241,0.1)]" 
+                                            : "hover:bg-foreground/[0.04] dark:hover:bg-white/[0.04] border border-transparent text-foreground-secondary hover:text-foreground hover:translate-x-1"
                                     )}
                                 >
-                                    {Icon && (
-                                        <Icon className={cn(
-                                            "w-4 h-4 shrink-0 transition-opacity",
-                                            isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
-                                        )} />
-                                    )}
-                                    <span className="truncate flex-1 font-medium">{tool.name}</span>
-                                    <div className="flex items-center gap-1">
+                                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-indigo-500 rounded-r-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />}
+                                    
+                                    <div className={cn(
+                                        "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
+                                        isActive ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/40" : cn("bg-foreground/[0.03] dark:bg-white/[0.03]", colorClass)
+                                    )}>
+                                        {Icon && <Icon className="w-4 h-4 shrink-0" />}
+                                    </div>
+                                    
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <span className="truncate font-bold tracking-tight">{tool.name}</span>
+                                        <span className="text-[10px] text-foreground-muted/60 truncate font-medium">{tool.description}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 toggleFavorite(tool.id);
                                             }}
-                                            className="text-[10px] text-foreground-muted hover:text-amber-400 transition-colors"
-                                            aria-label="Toggle favorite"
+                                            className="p-1 hover:scale-110 transition-transform"
                                         >
                                             <Star className={cn(
                                                 "w-3.5 h-3.5",
-                                                favorites.includes(tool.id) && "fill-amber-400 text-amber-400"
+                                                favorites.includes(tool.id) ? "fill-amber-400 text-amber-400" : "text-foreground-muted"
                                             )} />
                                         </button>
-                                        {shortcut && (
-                                            <ShortcutBadge
-                                                shortcut={shortcut}
-                                                size="sm"
-                                                className={cn(
-                                                    "opacity-0 group-hover:opacity-100 transition-opacity",
-                                                    isActive && "opacity-70"
-                                                )}
-                                            />
-                                        )}
                                     </div>
                                 </div>
                             );
@@ -255,7 +247,6 @@ export const Sidebar: React.FC = React.memo(() => {
                     </div>
                 ) : !sidebarCollapsed ? (
                     CATEGORIES
-                        .filter(category => selectedCategory === 'all' || category.id === selectedCategory)
                         .map((category, categoryIndex) => {
                             const tools = getToolsByCategory(category.id);
 
@@ -272,33 +263,29 @@ export const Sidebar: React.FC = React.memo(() => {
                                         <div className="h-px mx-2 my-3 bg-gradient-to-r from-transparent via-border-glass/80 to-transparent" />
                                     )}
 
-                                    {/* Enhanced Category Header với background & accent */}
+                                    {/* Premium Category Header */}
                                     {!sidebarCollapsed && (
-                                        <div className="px-3 py-1.5 rounded-lg bg-[var(--color-glass-panel)]/85 border border-border-glass/80 shadow-sm relative overflow-hidden">
-                                            {/* Left accent bar */}
-                                            <div className={cn("absolute inset-y-1 left-1 w-[3px] rounded-full bg-current opacity-70", category.color || "text-foreground")} />
-                                            <h3 className="pl-3 text-[10px] font-semibold text-foreground uppercase tracking-[0.16em] flex items-center gap-2">
-                                                <category.icon className={cn("w-3.5 h-3.5", category.color || "text-foreground/80")} />
-                                                <span>{category.name}</span>
-                                                <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/5 text-foreground/70 border border-border-glass/60">
-                                                    {visibleTools.length}
-                                                </span>
-                                            </h3>
+                                        <div className="px-3 pt-2 group/header">
+                                            <div className="flex items-center gap-2 mb-2 px-1">
+                                                <div className={cn("w-1 h-3 rounded-full bg-current opacity-40 group-hover/header:opacity-100 transition-opacity", category.color || "text-foreground")} />
+                                                <h3 className="text-[10px] font-black text-foreground-muted group-hover/header:text-foreground transition-colors uppercase tracking-[0.2em] flex items-center justify-between flex-1">
+                                                    <span>{category.name}</span>
+                                                    <span className="text-[8px] font-mono opacity-30 group-hover/header:opacity-50 transition-opacity">{visibleTools.length}</span>
+                                                </h3>
+                                            </div>
                                         </div>
                                     )}
 
                                     {/* Enhanced Tool Items với padding để tạo khoảng cách */}
                                     <div className={cn(
-                                        "space-y-1",
-                                        sidebarCollapsed ? "" : "pl-1"
+                                        "space-y-0.5",
+                                        sidebarCollapsed ? "" : "px-2"
                                     )}>
                                         {visibleTools.map((tool) => {
                                             const isActive = activeTab?.toolId === tool.id;
                                             const Icon = tool.icon;
-                                            // Get configured or default shortcut
                                             const toolShortcuts = useSettingsStore.getState().toolShortcuts;
                                             const shortcut = toolShortcuts[tool.id] || tool.shortcut;
-
                                             const colorClass = tool.color || category.color || 'text-foreground-muted';
 
                                             return (
@@ -307,48 +294,44 @@ export const Sidebar: React.FC = React.memo(() => {
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
-                                                        if (e.altKey) {
-                                                            // Alt+Click: Force new tab and activate immediately
-                                                            openTab(tool.id, tool.path, tool.name, tool.description, true, false);
-                                                            navigate(tool.path);
-                                                        } else {
-                                                            // Single click: Activate immediately (no preview)
-                                                            openTab(tool.id, tool.path, tool.name, tool.description, false, false);
-                                                            navigate(tool.path);
-                                                        }
+                                                        openTab(tool.id, tool.path, tool.name, tool.description, e.altKey, false);
+                                                        navigate(tool.path);
                                                     }}
-                                                    title={tool.description + (shortcut ? ` (${shortcut})` : '')}
+                                                    title={tool.description}
                                                     className={cn(
-                                                        "sidebar-nav-item flex items-center rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
-                                                        sidebarCollapsed
-                                                            ? "px-2 py-2.5 justify-center w-full"
-                                                            : "px-3 py-2.5 gap-3",
-                                                        isActive
-                                                            ? "sidebar-nav-item-active"
-                                                            : "sidebar-nav-item-inactive"
+                                                        "relative group flex items-center transition-all duration-300 cursor-pointer overflow-hidden",
+                                                        sidebarCollapsed 
+                                                            ? "px-3 py-3 justify-center rounded-2xl mb-1.5" 
+                                                            : "px-3 py-2.5 gap-3.5 rounded-xl mb-0.5",
+                                                        isActive 
+                                                            ? "sidebar-nav-item-active !bg-indigo-500 shadow-lg shadow-indigo-500/30 text-white" 
+                                                            : "hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] text-foreground-secondary hover:text-foreground"
                                                     )}
                                                 >
                                                     {Icon && (
                                                         <Icon className={cn(
-                                                            "shrink-0 transition-opacity",
-                                                            sidebarCollapsed ? "w-5 h-5" : "w-4 h-4",
-                                                            isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
+                                                            "shrink-0 transition-all duration-300",
+                                                            sidebarCollapsed ? "w-6 h-6" : "w-4 h-4",
+                                                            isActive ? "scale-110 text-white" : cn(colorClass, "group-hover:scale-110")
                                                         )} />
                                                     )}
+                                                    
                                                     {!sidebarCollapsed && (
                                                         <>
-                                                            <span className="truncate flex-1 font-medium">{tool.name}</span>
-                                                            {shortcut && (
-                                                                <ShortcutBadge
-                                                                    shortcut={shortcut}
-                                                                    size="sm"
-                                                                    className={cn(
-                                                                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                                                                        isActive && "opacity-70"
-                                                                    )}
-                                                                />
+                                                            <div className="flex flex-col min-w-0 flex-1">
+                                                                <span className="truncate font-bold tracking-tight text-[13px]">{tool.name}</span>
+                                                                {!isActive && <span className="text-[9px] opacity-40 truncate font-medium group-hover:opacity-70 transition-opacity uppercase tracking-tighter">{category.name}</span>}
+                                                            </div>
+                                                            {shortcut && !isActive && (
+                                                                <kbd className="hidden group-hover:block h-4 select-none items-center gap-1 rounded bg-foreground/10 px-1 font-mono text-[8px] font-black text-foreground/50">
+                                                                    {shortcut?.split('+').pop()}
+                                                                </kbd>
                                                             )}
                                                         </>
+                                                    )}
+                                                    
+                                                    {isActive && !sidebarCollapsed && (
+                                                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 w-1 h-3/4 bg-white/30 rounded-full" />
                                                     )}
                                                 </div>
                                             );
@@ -358,19 +341,16 @@ export const Sidebar: React.FC = React.memo(() => {
                             );
                         })) : (
                     // Collapsed view: Show all tools as icons only
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 px-1 py-2">
                         {CATEGORIES
                             .flatMap(category => {
                                 const tools = getToolsByCategory(category.id);
-                                // Determine fallback color for tools in this category in expanded view
                                 return tools.map(t => ({ ...t, categoryColor: category.color }));
                             })
                             .filter(tool => tool.id !== 'settings')
                             .map((tool, index, array) => {
-                                // Group by category for visual separation
                                 const prevTool = index > 0 ? array[index - 1] : null;
                                 const showSeparator = prevTool && prevTool.category !== tool.category;
-
                                 const isActive = activeTab?.toolId === tool.id;
                                 const Icon = tool.icon;
                                 const colorClass = tool.color || tool.categoryColor || 'text-foreground-muted';
@@ -378,7 +358,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                 return (
                                     <React.Fragment key={tool.id}>
                                         {showSeparator && (
-                                            <div className="h-px mx-2 my-2 bg-gradient-to-r from-transparent via-border-glass/60 to-transparent" />
+                                            <div className="h-px mx-3 my-2 bg-foreground/10 dark:bg-white/10" />
                                         )}
                                         <div
                                             onClick={(e) => {
@@ -387,18 +367,18 @@ export const Sidebar: React.FC = React.memo(() => {
                                                 openTab(tool.id, tool.path, tool.name, tool.description, false, false);
                                                 navigate(tool.path);
                                             }}
-                                            title={tool.name + (tool.description ? ` - ${tool.description}` : '')}
+                                            title={tool.name}
                                             className={cn(
-                                                "sidebar-nav-item flex items-center justify-center px-2 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer hover:scale-[1.02] active:scale-[0.98] w-full",
+                                                "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 group cursor-pointer hover:scale-105 mx-auto",
                                                 isActive
-                                                    ? "sidebar-nav-item-active"
-                                                    : "sidebar-nav-item-inactive"
+                                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/40 translate-x-1"
+                                                    : "hover:bg-foreground/[0.08] dark:hover:bg-white/10 text-foreground-secondary hover:text-foreground"
                                             )}
                                         >
                                             {Icon && (
                                                 <Icon className={cn(
-                                                    "w-5 h-5 shrink-0 transition-opacity",
-                                                    isActive ? "text-foreground opacity-100" : cn(colorClass, "opacity-70 group-hover:opacity-100")
+                                                    "w-6 h-6 shrink-0 transition-transform group-hover:scale-110",
+                                                    isActive ? "text-white" : colorClass
                                                 )} />
                                             )}
                                         </div>
@@ -408,58 +388,6 @@ export const Sidebar: React.FC = React.memo(() => {
                     </div>
                 )}
             </nav>
-
-            {/* Enhanced Footer - Settings Button */}
-            <div className={cn(
-                "py-2 border-t border-border-glass/50 bg-[var(--color-glass-panel)]/50 space-y-2 transition-all duration-300",
-                sidebarCollapsed ? "px-2" : "px-5"
-            )}>
-                {/* Preview Tabs Indicator */}
-                {!sidebarCollapsed && previewTabsCount > 0 && (
-                    <div className="px-3.5 py-2 text-xs text-foreground-muted flex items-center justify-between bg-[var(--color-glass-input)]/50 rounded-lg">
-                        <span>{previewTabsCount} preview tab{previewTabsCount > 1 ? 's' : ''}</span>
-                        <button
-                            onClick={() => {
-                                // Activate first preview tab
-                                const firstPreview = tabs.find(t => t.isPreview);
-                                if (firstPreview) {
-                                    setActiveTab(firstPreview.id);
-                                    const allTools = CATEGORIES.flatMap(c => getToolsByCategory(c.id));
-                                    const tool = allTools.find(t => t.id === firstPreview.toolId);
-                                    if (tool) {
-                                        navigate(tool.path);
-                                    }
-                                }
-                            }}
-                            className="text-indigo-400 hover:text-indigo-300 transition-colors text-xs underline"
-                        >
-                            Activate
-                        </button>
-                    </div>
-                )}
-                <div
-                    onClick={(e) => {
-                        e.preventDefault();
-                        // Settings always activates immediately (not preview)
-                        openTab('settings', '/settings', 'Settings', 'Customize your experience and manage application preferences', false, false);
-                        navigate('/settings');
-                    }}
-                    className={cn(
-                        "sidebar-settings-button flex items-center rounded-lg text-sm transition-all duration-200 cursor-pointer font-medium",
-                        sidebarCollapsed
-                            ? "px-2 py-2 justify-center w-full"
-                            : "px-3.5 py-2 gap-3",
-                        activeTab?.toolId === 'settings' && "sidebar-settings-button-active"
-                    )}
-                    title={sidebarCollapsed ? "Settings" : undefined}
-                >
-                    <Settings className={cn(
-                        "shrink-0",
-                        sidebarCollapsed ? "w-5 h-5" : "w-4 h-4"
-                    )} />
-                    {!sidebarCollapsed && <span>Settings</span>}
-                </div>
-            </div>
         </motion.aside>
     );
 });
