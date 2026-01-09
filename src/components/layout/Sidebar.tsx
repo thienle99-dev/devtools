@@ -4,7 +4,7 @@ import { useToolStore } from '@store/toolStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Search,
-    LayoutDashboard,
+    LayoutGrid,
     Star,
     ChevronLeft,
     ChevronRight
@@ -94,7 +94,7 @@ export const Sidebar: React.FC = React.memo(() => {
                         )}
                     >
                         <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                            <LayoutDashboard className="w-5 h-5 text-white" />
+                            <LayoutGrid className="w-5 h-5 text-white" />
                         </div>
                         {!sidebarCollapsed && (
                             <div className="flex flex-col min-w-0">
@@ -167,7 +167,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                     : "hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] text-foreground-secondary hover:text-foreground border border-transparent hover:border-border-glass"
                             )}
                         >
-                            <LayoutDashboard className={cn(
+                            <LayoutGrid className={cn(
                                 "shrink-0 transition-transform duration-300 group-hover:scale-110",
                                 sidebarCollapsed ? "w-6 h-6" : "w-5 h-5"
                             )} />

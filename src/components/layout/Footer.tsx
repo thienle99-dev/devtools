@@ -1,6 +1,7 @@
 import { useTabStore } from '@store/tabStore';
 import { TOOLS } from '@tools/registry';
 import { useLocation } from 'react-router-dom';
+import { cn } from '@utils/cn';
 import { 
     Layers, 
     Settings, 
@@ -492,6 +493,16 @@ export const Footer = () => {
                         <Command size={12} />
                         <span className="text-[10px] font-bold">K</span>
                     </button>
+
+                    <div className="w-px h-3 bg-border-glass mx-1" />
+
+                    <button 
+                        onClick={openSettings}
+                        className="p-1.5 text-foreground-muted hover:text-foreground hover:scale-110 rounded-full hover:bg-foreground/10 transition-all"
+                        title="Settings"
+                    >
+                        <Settings size={13} />
+                    </button>
                 </div>
             </div>
 
@@ -510,8 +521,16 @@ export const Footer = () => {
                 {/* The "Everything Else" Menu Hub */}
                 <div className="relative" ref={menuRef}>
                     <button 
-                        onClick={() => setShowMoreMenu(!showMoreMenu)}
-                        className={`p-2 rounded-xl transition-all relative ${showMoreMenu ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'hover:bg-foreground/10 text-foreground-muted'}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMoreMenu(!showMoreMenu);
+                        }}
+                        className={cn(
+                            "p-2 rounded-xl transition-all relative",
+                            showMoreMenu 
+                                ? "bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                : "hover:bg-foreground/10 text-foreground-muted hover:text-foreground"
+                        )}
                     >
                         {showMoreMenu ? <ChevronUp size={16} /> : <MoreHorizontal size={16} />}
                         
