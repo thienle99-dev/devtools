@@ -13,6 +13,7 @@ import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
 import { TOOLS } from '@tools/registry';
 import { useClipboardStore } from '@store/clipboardStore';
 import { useResponsive } from '@hooks/useResponsive';
+import { preloadHeavyModules } from '@utils/lazyLoad'; // Phase 2: Preload on idle
 
 
 // Loading fallback component
@@ -113,6 +114,11 @@ function App() {
       useSettingsStore.getState().setSidebarOpen(false);
     }
   }, [responsive.isMobile]);
+
+  // Phase 2: Preload heavy modules on idle for better UX
+  useEffect(() => {
+    preloadHeavyModules();
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;

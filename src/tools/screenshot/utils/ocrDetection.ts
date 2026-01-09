@@ -1,4 +1,5 @@
-import Tesseract from 'tesseract.js';
+// Phase 2: Lazy load Tesseract.js (30MB saved on initial load)
+import { loadTesseract } from '@utils/lazyLoad';
 
 export interface DetectedText {
     text: string;
@@ -53,10 +54,14 @@ export const SENSITIVE_PATTERNS: SensitivePattern[] = [
 
 /**
  * Perform OCR on an image to extract text
+ * Phase 2: Lazy loads Tesseract.js only when needed
  */
 export async function performOCR(imageDataUrl: string): Promise<DetectedText[]> {
     try {
-        const result = await Tesseract.recognize(imageDataUrl, 'eng', {
+        // Lazy load Tesseract.js
+        const Tesseract = await loadTesseract();
+        
+        const result = await Tesseract.default.recognize(imageDataUrl, 'eng', {
             logger: (m) => {
                 if (m.status === 'recognizing text') {
                     console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);

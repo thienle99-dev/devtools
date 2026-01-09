@@ -52,32 +52,59 @@ export default defineConfig({
     }),
   ],
   build: {
-    // Optimize bundle size
+    // Optimize bundle size - Phase 2 optimizations
     target: 'esnext',
-    minify: 'esbuild',
+    minify: 'esbuild', // Using esbuild for faster builds (terser is slower but smaller)
     cssMinify: true,
+    reportCompressedSize: false, // Faster builds
     // Code splitting optimization
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Split vendor libraries
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-            return 'react-vendor';
+          // Core framework
+          if (id.includes('react') && !id.includes('react-dom') && !id.includes('react-router')) {
+            return 'react-core';
           }
-          if (id.includes('framer-motion') || id.includes('sonner') || id.includes('lucide-react')) {
+          if (id.includes('react-dom')) {
+            return 'react-dom';
+          }
+          if (id.includes('react-router-dom')) {
+            return 'react-router';
+          }
+          
+          // UI libraries
+          if (id.includes('framer-motion')) {
+            return 'framer-motion';
+          }
+          if (id.includes('sonner') || id.includes('lucide-react')) {
             return 'ui-vendor';
           }
+          
+          // Heavy libraries (lazy loaded, separate chunks)
+          if (id.includes('fabric')) {
+            return 'fabric';
+          }
+          if (id.includes('tesseract')) {
+            return 'tesseract';
+          }
+          
+          // Code editor
           if (id.includes('@uiw/react-codemirror') || id.includes('@codemirror/view')) {
-            return 'editor-vendor';
+            return 'editor-core';
           }
           if (id.includes('@codemirror/lang-')) {
-            return 'codemirror-langs';
+            return 'editor-langs';
           }
+          
+          // Utilities
           if (id.includes('crypto-js') || id.includes('bcryptjs') || id.includes('uuid') || id.includes('ulid')) {
             return 'crypto-vendor';
           }
           if (id.includes('pdf-lib') || id.includes('jspdf')) {
             return 'pdf-vendor';
+          }
+          if (id.includes('jszip')) {
+            return 'jszip';
           }
           if (id.includes('js-yaml') || id.includes('fast-xml-parser') || id.includes('papaparse') || id.includes('marked')) {
             return 'parser-vendor';
@@ -92,16 +119,19 @@ export default defineConfig({
     // Reduce chunk size warnings threshold
     chunkSizeWarningLimit: 1000,
   },
-  // Optimize dependencies pre-bundling
+  // Optimize dependencies pre-bundling - Phase 2
   optimizeDeps: {
     include: [
       'react',
       'react-dom',
       'react-router-dom',
-      'framer-motion',
-      'sonner',
-      'lucide-react',
       'zustand',
+      'lucide-react',
+      'sonner',
     ],
+    exclude: [
+      'tesseract.js', // Lazy load
+      'fabric',       // Lazy load
+    ]
   },
 })

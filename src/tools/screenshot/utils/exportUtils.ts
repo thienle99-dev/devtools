@@ -1,4 +1,5 @@
-import * as fabric from 'fabric';
+// Phase 2: Lazy load Fabric.js (15MB saved on initial load)
+import { loadFabric } from '@utils/lazyLoad';
 import { applyAutoBalance } from './imageEnhancement';
 import { applyRedaction, type RedactionArea } from './redaction';
 import { applyGradientBackground, applyImageBackground, applySolidBackground, addPaddingToScreenshot, type Background } from './backgroundGenerator';
@@ -124,10 +125,13 @@ export async function generateFinalImage(
         return baseDataUrl;
     }
 
-    // 3. Apply annotations using Fabric.js
+    // 3. Apply annotations using Fabric.js (lazy loaded)
     // We create a temporary Fabric canvas, load the base image, overlay annotations, and export
-    const annotationPromise = new Promise<string>((resolve) => {
+    const annotationPromise = new Promise<string>(async (resolve) => {
         try {
+            // Lazy load Fabric.js
+            const fabric = await loadFabric();
+            
             // Create a virtual canvas element
             const canvasEl = document.createElement('canvas');
             const fabricCanvas = new fabric.StaticCanvas(canvasEl);

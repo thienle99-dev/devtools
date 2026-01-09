@@ -1,29 +1,49 @@
 appId: com.devtools.app
 productName: DevTools App
 copyright: Copyright © 2026 DevTools App
+
+# OPTIMIZATION: Maximum compression
+compression: maximum
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "**/ffmpeg*"
+
 directories:
   output: dist-electron/pack
   buildResources: build
+
 files:
   - "dist/**/*"
   - "dist-electron/**/*"
   - "package.json"
-  - "!**/*.{ts,tsx,jsx,map}"
+  # Comprehensive exclusions for smaller build
+  - "!**/*.{ts,tsx,jsx,map,md}"
+  - "!**/.{git,github,vscode,idea}"
+  - "!**/node_modules/*/{test,tests,*.test.*,*.spec.*}"
+  - "!**/node_modules/*/{README,LICENSE,CHANGELOG}*"
+  - "!**/node_modules/*/*.{md,markdown,txt}"
+  - "!**/node_modules/**/{example,examples,demo,demos,doc,docs}"
   - "!node_modules/**/*"
   - "!src/**/*"
   - "!electron/**/*"
   - "!docs/**/*"
-  - "!*.{md,yml,yaml}"
+  - "!debug_scripts/**/*"
+  - "!video/**/*"
+  - "!build/**/*"
+  - "!scripts/**/*"
+  - "!*.{md,yml,yaml,log}"
   - "!*.json"
+  - "!tmpfs*"
+  - "!dummy"
   - "package.json"
 
-# Windows Configuration
+# Windows Configuration (x64 ONLY)
 win:
   target:
     - target: nsis
       arch:
-        - x64
-        - ia32
+        - x64  # Removed ia32 for smaller builds
   icon: public/icon.png
   artifactName: ${productName}-${version}-${arch}.${ext}
   requestedExecutionLevel: asInvoker
@@ -37,31 +57,22 @@ nsis:
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: DevTools App
-  # installerIcon: public/icon.png
-  # uninstallerIcon: public/icon.png
-  # installerHeaderIcon: public/icon.png
   deleteAppDataOnUninstall: false
+  differentialPackage: true  # Smaller updates
 
 # macOS Configuration
 mac:
   target:
     - target: dmg
       arch:
-        - x64
-        - arm64
+        - universal  # Universal binary (smaller than separate builds)
   icon: public/icon.png
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  # Code signing - uses environment variables
-  # Set APPLE_IDENTITY environment variable for code signing
-  # Example: export APPLE_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
-  # Notarization is configured via environment variables:
-  # APPLE_TEAM_ID, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD
-  # See build/README.md for details
+  artifactName: ${productName}-${version}.${ext}
 
 # DMG Configuration
 dmg:
@@ -77,21 +88,13 @@ dmg:
   window:
     width: 540
     height: 380
-  # background: build/dmg-background.png  # Optional: Create custom DMG background image
-  format: UDZO
+  format: UDZO  # Maximum compression
 
 # Linux Configuration
 linux:
   target:
     - AppImage
-    - deb
   icon: public/icon.png
   category: Development
   synopsis: Developer Tools Application
   description: A comprehensive developer tools application with multiple utilities
-
-# Publishing Configuration (for auto-updater)
-# Uncomment and set UPDATE_SERVER_URL environment variable to enable auto-updates
-# publish:
-#   provider: generic
-#   url: ${UPDATE_SERVER_URL}

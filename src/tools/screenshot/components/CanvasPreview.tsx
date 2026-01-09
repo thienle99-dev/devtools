@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import * as fabric from 'fabric';
+// Phase 2: Lazy load Fabric.js
+import { loadFabric } from '@utils/lazyLoad';
+import type * as fabricTypes from 'fabric';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import {
     createArrow,
