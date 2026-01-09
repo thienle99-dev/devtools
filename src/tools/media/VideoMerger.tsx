@@ -67,12 +67,24 @@ export const VideoMerger: React.FC = () => {
         ? Math.max(...files.map(f => f.timelineStart + (f.endTime - f.startTime)))
         : 0;
 
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [isPlaying, setIsPlaying] = useState(false);
+    
+    // Refs for accessing state in event handlers without dependency
+    const isPlayingRef = useRef(isPlaying);
+    const playbackSpeedRef = useRef(playbackSpeed);
+    
+    useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+    useEffect(() => { playbackSpeedRef.current = playbackSpeed; }, [playbackSpeed]);
+    
+    
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Don't trigger shortcuts if user is typing in an input
             if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
 
-            if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) {
+            if ((e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) || (e.code === 'KeyK' && (e.ctrlKey || e.metaKey))) {
+                // S or Ctrl+K / Cmd+K to split
                 e.preventDefault();
                 splitAtPlayhead();
             } else if (e.code === 'Delete' || e.code === 'Backspace') {
@@ -82,7 +94,39 @@ export const VideoMerger: React.FC = () => {
                 }
             } else if (e.code === 'Space') {
                 e.preventDefault();
-                setIsPlaying(prev => !prev);
+                // Toggle play/pause - reset speed to 1x if starting
+                if (!isPlayingRef.current) {
+                    setPlaybackSpeed(1);
+                    setIsPlaying(true);
+                } else {
+                    setIsPlaying(false);
+                }
+            } else if (e.code === 'KeyJ') {
+                e.preventDefault();
+                if (!isPlayingRef.current) {
+                    setIsPlaying(true);
+                    setPlaybackSpeed(-1);
+                } else {
+                    // If already playing backwards, double speed (max -8x)
+                    // If playing forwards, switch to backwards -1x
+                    const currentSpeed = playbackSpeedRef.current;
+                    setPlaybackSpeed(currentSpeed > 0 ? -1 : Math.max(currentSpeed * 2, -8));
+                }
+            } else if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                setIsPlaying(false);
+                setPlaybackSpeed(1);
+            } else if (e.code === 'KeyL') {
+                e.preventDefault();
+                if (!isPlayingRef.current) {
+                    setIsPlaying(true);
+                    setPlaybackSpeed(1);
+                } else {
+                    // If already playing forwards, double speed (max 8x)
+                    // If playing backwards, switch to forwards 1x
+                    const currentSpeed = playbackSpeedRef.current;
+                    setPlaybackSpeed(currentSpeed < 0 ? 1 : Math.min(currentSpeed * 2, 8));
+                }
             } else if (e.code === 'ArrowLeft') {
                 e.preventDefault();
                 const step = e.shiftKey ? 0.04 : (e.ctrlKey ? 1 : 0.2); // Frame / Second / 5 frames
@@ -246,7 +290,6 @@ export const VideoMerger: React.FC = () => {
         }
     };
 
-    const [isPlaying, setIsPlaying] = useState(false);
     const playbackRef = useRef<number | null>(null);
     const [activeClipSrc, setActiveClipSrc] = useState<string | null>(null);
 
@@ -267,21 +310,30 @@ export const VideoMerger: React.FC = () => {
 
     useEffect(() => {
         if (isPlaying) {
-            const startTimestamp = performance.now();
-            const startTimelineTime = currentTime;
-
+            let lastTimestamp = performance.now();
             const animate = () => {
                 const now = performance.now();
-                const elapsed = (now - startTimestamp) / 1000;
-                const nextTime = startTimelineTime + elapsed;
+                const delta = (now - lastTimestamp) / 1000;
+                lastTimestamp = now;
 
-                if (nextTime >= totalDuration) {
-                    setCurrentTime(totalDuration);
-                    setIsPlaying(false);
-                    return;
-                }
+                const speed = playbackSpeedRef.current;
 
-                setCurrentTime(nextTime);
+                setCurrentTime(prevTime => {
+                    const next = prevTime + (delta * speed);
+
+                    if (next >= totalDuration && speed > 0) {
+                        setIsPlaying(false);
+                        setPlaybackSpeed(1);
+                        return totalDuration;
+                    } else if (next <= 0 && speed < 0) {
+                        setIsPlaying(false);
+                        setPlaybackSpeed(1);
+                        return 0;
+                    }
+
+                    return Math.max(0, Math.min(totalDuration, next));
+                });
+                
                 playbackRef.current = requestAnimationFrame(animate);
             };
             playbackRef.current = requestAnimationFrame(animate);
@@ -291,7 +343,39 @@ export const VideoMerger: React.FC = () => {
         return () => {
             if (playbackRef.current) cancelAnimationFrame(playbackRef.current);
         };
-    }, [isPlaying, totalDuration]);
+    }, [isPlaying, totalDuration]); // Removed currentTime from dependency to avoid loop reset, but need initial start time handled carefully. Actually, if we use functional update on setCurrentTime it might be safer, but here we use a ref-like approach by capturing currentTime in the closure if we didn't re-create the loop. 
+    // Wait, if I don't listen to currentTime, 'currentTime' in 'nextTime' calculation will be stale.
+    // Correct approach for loop: use a ref for currentTime or functional update.
+    
+    // Better implementation:
+     /*
+    useEffect(() => {
+        if (isPlaying) {
+             let lastTime = performance.now();
+             const animate = () => {
+                 const now = performance.now();
+                 const dt = (now - lastTime) / 1000;
+                 lastTime = now;
+                 
+                 setCurrentTime(prev => {
+                     const next = prev + dt * playbackSpeed;
+                     if (next >= totalDuration && playbackSpeed > 0) {
+                         setIsPlaying(false);
+                         return totalDuration;
+                     }
+                     if (next <= 0 && playbackSpeed < 0) {
+                         setIsPlaying(false);
+                         return 0;
+                     }
+                     return Math.max(0, Math.min(totalDuration, next));
+                 });
+                 playbackRef.current = requestAnimationFrame(animate);
+             };
+             playbackRef.current = requestAnimationFrame(animate);
+        }
+        // ...
+    */
+    // Applying the better implementation logic:
 
     useEffect(() => {
         const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
@@ -831,7 +915,19 @@ export const VideoMerger: React.FC = () => {
                                 </div>
                                 <div className="flex items-center justify-between py-2 border-b border-border-glass">
                                     <span className="text-sm text-foreground-secondary">Split at Playhead</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">S</kbd>
+                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">S / Ctrl+K</kbd>
+                                </div>
+                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
+                                    <span className="text-sm text-foreground-secondary">Rewind / Slow</span>
+                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">J</kbd>
+                                </div>
+                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
+                                    <span className="text-sm text-foreground-secondary">Stop / Pause</span>
+                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">K</kbd>
+                                </div>
+                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
+                                    <span className="text-sm text-foreground-secondary">Forward / Fast</span>
+                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">L</kbd>
                                 </div>
                                 <div className="flex items-center justify-between py-2 border-b border-border-glass">
                                     <span className="text-sm text-foreground-secondary">Toggle Razor Tool</span>
