@@ -23,11 +23,11 @@ export const TrimmingModal: React.FC<TrimmingModalProps> = ({
     return (
         <AnimatePresence>
             {trimmingIdx !== null && file && (
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md"
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-background/80 backdrop-blur-md"
                 >
                     <div className="w-full max-w-2xl bg-glass-background rounded-3xl border border-border-glass p-8 shadow-2xl relative">
                         <h3 className="text-xl font-black mb-6 flex items-center gap-3">
@@ -38,12 +38,12 @@ export const TrimmingModal: React.FC<TrimmingModalProps> = ({
                             <div className="space-y-4">
                                 <div className="flex justify-between text-xs font-bold text-foreground-secondary">
                                     <span>Start: {formatDuration(file.startTime)}</span>
-                                    <span className="text-indigo-400">Selected: {formatDuration(file.endTime - file.startTime)}</span>
+                                    <span className="text-indigo-500">Selected: {formatDuration(file.endTime - file.startTime)}</span>
                                     <span>End: {formatDuration(file.endTime)}</span>
                                 </div>
-                                
-                                <div className="relative h-12 bg-white/5 rounded-xl border border-white/10 overflow-hidden flex items-center px-4">
-                                    <input 
+
+                                <div className="relative h-12 bg-foreground/[0.05] rounded-xl border border-border-glass overflow-hidden flex items-center px-4">
+                                    <input
                                         type="range" min={0} max={file.duration} step={0.1}
                                         value={file.startTime}
                                         onChange={(e) => onUpdateTrim(trimmingIdx, Number(e.target.value), Math.max(Number(e.target.value) + 0.1, file.endTime))}
@@ -51,7 +51,7 @@ export const TrimmingModal: React.FC<TrimmingModalProps> = ({
                                         onTouchEnd={onFinalizeTrim}
                                         className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
                                     />
-                                    <input 
+                                    <input
                                         type="range" min={0} max={file.duration} step={0.1}
                                         value={file.endTime}
                                         onChange={(e) => onUpdateTrim(trimmingIdx, Math.min(Number(e.target.value) - 0.1, file.startTime), Number(e.target.value))}
@@ -59,9 +59,9 @@ export const TrimmingModal: React.FC<TrimmingModalProps> = ({
                                         onTouchEnd={onFinalizeTrim}
                                         className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
                                     />
-                                    
-                                    <div className="h-8 bg-indigo-500/20 border-x-2 border-indigo-500 absolute" 
-                                        style={{ 
+
+                                    <div className="h-8 bg-indigo-500/20 border-x-2 border-indigo-500 absolute"
+                                        style={{
                                             left: `${(file.startTime / file.duration) * 100}%`,
                                             right: `${100 - (file.endTime / file.duration) * 100}%`
                                         }}
@@ -71,9 +71,9 @@ export const TrimmingModal: React.FC<TrimmingModalProps> = ({
                             </div>
 
                             <div className="flex gap-3">
-                                <button 
+                                <button
                                     onClick={onClose}
-                                    className="flex-1 bg-white text-black py-4 rounded-2xl text-xs font-black hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl text-xs font-black hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
                                 >
                                     <Check size={18} /> APPLY CUT
                                 </button>

@@ -1952,34 +1952,22 @@ app.whenReady().then(() => {
     try {
       console.log('[LocalMedia] Request:', request.url);
 
-      // Strip scheme. Handle local-media:// and local-media:///
-      // We want to preserve any absolute path starting with /
-      let urlPath = request.url.substring('local-media://'.length);
+      const url = new URL(request.url);
+      // On Windows, the path might start with / followed by drive letter (e.g. /C:/)
+      // On Mac/Unix, it starts with / followed by Users
+      let decodedPath = decodeURIComponent(url.pathname);
 
-      // Decode the path
-      let decodedPath = decodeURIComponent(urlPath);
-      console.log('[LocalMedia] Decoded:', decodedPath);
+      console.log('[LocalMedia] Initial Path:', decodedPath);
 
       // Fix Windows path issues
       if (process.platform === 'win32') {
-        // Handle /C:/style paths (3+ slashes)
         if (/^\/[a-zA-Z]:/.test(decodedPath)) {
           decodedPath = decodedPath.slice(1);
-        }
-        // Handle C:/style paths (2 slashes)
-        else if (/^[a-zA-Z]:/.test(decodedPath)) {
-          // Already correct
-        }
-        // Handle C/ style paths (missing colon)
-        else if (/^[a-zA-Z]\//.test(decodedPath)) {
+        } else if (/^[a-zA-Z]\//.test(decodedPath)) {
           decodedPath = decodedPath.charAt(0) + ':' + decodedPath.slice(1);
         }
-        // Handle /C/ style paths (leading slash, missing colon)
-        else if (/^\/[a-zA-Z]\//.test(decodedPath)) {
-          decodedPath = decodedPath.charAt(1) + ':' + decodedPath.slice(2);
-        }
       } else {
-        // Unix systems: Ensure it starts with exactly one /
+        // Unix: Ensure it's not double-slashed at start
         decodedPath = decodedPath.replace(/^\/+/, '/');
       }
 

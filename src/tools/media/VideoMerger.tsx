@@ -8,7 +8,8 @@ import {
     MonitorPlay,
     Video,
     Film,
-    Layers
+    Layers,
+    AlertCircle
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { CapCutTimeline } from './components/CapCutTimeline';
@@ -41,6 +42,7 @@ export const VideoMerger: React.FC = () => {
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [selectedClips, setSelectedClips] = useState<number[]>([]);
     const [magneticSnap, setMagneticSnap] = useState(true);
+    const [showLabels, setShowLabels] = useState(true);
 
     // History Hook
     const { addToHistory, undo, redo } = useTimelineHistory([]);
@@ -93,8 +95,17 @@ export const VideoMerger: React.FC = () => {
                 const newInfos: ExtendedVideoInfo[] = [];
 
                 // Listen for filmstrip progress
+                let currentFileIdx = 0;
+                const fileWeight = 100 / paths.length;
+
                 const removeFilmstripListener = (window as any).videoMergerAPI?.onFilmstripProgress((data: { current: number; total: number; timestamp: string }) => {
                     const timeText = data.timestamp === 'Processing...' ? '' : ` at ${data.timestamp}s`;
+
+                    // Filmstrip is 70% of the file's progress (from 10% to 80%)
+                    const stageProgress = 0.10 + (data.current / data.total) * 0.70;
+                    const totalProgress = (currentFileIdx / paths.length) * 100 + (stageProgress * fileWeight);
+
+                    setAssetLoadingProgress(Math.round(totalProgress));
                     setLoadingDetail(prev => ({
                         ...prev,
                         stage: `Extracting frame ${data.current}/${data.total}${timeText}...`
@@ -102,12 +113,15 @@ export const VideoMerger: React.FC = () => {
                 });
 
                 for (let i = 0; i < paths.length; i++) {
+                    currentFileIdx = i;
                     const p = paths[i];
                     const fileName = p.split(/[\\/]/).pop() || 'Unknown';
+                    const baseFileProgress = (i / paths.length) * 100;
 
                     console.log(`Processing file ${i + 1}/${paths.length}:`, p);
 
-                    // Update: Getting video info
+                    // Stage 1: Info (0-5%)
+                    setAssetLoadingProgress(Math.round(baseFileProgress + 0.02 * fileWeight));
                     setLoadingDetail({
                         fileName,
                         stage: 'Reading video info...',
@@ -115,9 +129,9 @@ export const VideoMerger: React.FC = () => {
                         total: paths.length
                     });
                     const info = await (window as any).videoMergerAPI?.getVideoInfo(p);
-                    console.log('Video info:', info);
 
-                    // Update: Generating thumbnail
+                    // Stage 2: Thumbnail (5-10%)
+                    setAssetLoadingProgress(Math.round(baseFileProgress + 0.05 * fileWeight));
                     setLoadingDetail({
                         fileName,
                         stage: 'Generating thumbnail...',
@@ -125,20 +139,19 @@ export const VideoMerger: React.FC = () => {
                         total: paths.length
                     });
                     const thumb = await (window as any).videoMergerAPI?.generateThumbnail(p, 1);
-                    console.log('Thumbnail generated:', thumb ? `${thumb.substring(0, 50)}...` : 'FAILED');
 
-                    // Update: Generating filmstrip - Higher density (1 frame per 2s)
+                    // Stage 3: Filmstrip (10-80%) - Updated by listener
                     const frameCount = Math.min(100, Math.max(15, Math.floor(info.duration / 2)));
                     setLoadingDetail({
                         fileName,
-                        stage: `Extracting ${frameCount} frames for filmstrip...`,
+                        stage: `Preparing to extract ${frameCount} frames...`,
                         current: i + 1,
                         total: paths.length
                     });
                     const filmstrip = await (window as any).videoMergerAPI?.generateFilmstrip(p, info.duration, frameCount);
-                    console.log('Filmstrip generated:', filmstrip ? `${filmstrip.length} frames` : 'FAILED');
 
-                    // Update: Extracting waveform
+                    // Stage 4: Waveform (80-100%)
+                    setAssetLoadingProgress(Math.round(baseFileProgress + 0.85 * fileWeight));
                     setLoadingDetail({
                         fileName,
                         stage: 'Analyzing audio waveform...',
@@ -146,7 +159,6 @@ export const VideoMerger: React.FC = () => {
                         total: paths.length
                     });
                     const waveform = await (window as any).videoMergerAPI?.extractWaveform(p);
-                    console.log('Waveform data points:', waveform ? waveform.length : 'FAILED');
 
                     newInfos.push({
                         ...info,
@@ -159,6 +171,7 @@ export const VideoMerger: React.FC = () => {
                         waveform: waveform
                     });
 
+                    // File complete
                     setAssetLoadingProgress(Math.round(((i + 1) / paths.length) * 100));
                 }
 
@@ -215,6 +228,7 @@ export const VideoMerger: React.FC = () => {
 
     const playbackRef = useRef<number | null>(null);
     const [activeClipSrc, setActiveClipSrc] = useState<string | null>(null);
+    const [previewError, setPreviewError] = useState<string | null>(null);
 
     const formatDuration = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -302,13 +316,15 @@ export const VideoMerger: React.FC = () => {
 
         if (activeClip) {
             const normalizedPath = activeClip.path.replace(/\\/g, '/');
-            // Use 2 slashes as standard for local-media protocol (handled by main.ts correctly)
-            const localSrc = `local-media://${normalizedPath}`;
+            // Encode the path to handle spaces and special characters
+            const encodedPath = encodeURI(normalizedPath).replace(/#/g, '%23').replace(/\?/g, '%3F');
+            const localSrc = `local-media://${encodedPath}`;
 
             // 1. Source Switching - Remove key to prevent flickering
             if (activeClipSrc !== localSrc) {
                 console.log('📹 Switching video source:', localSrc);
                 setActiveClipSrc(localSrc);
+                setPreviewError(null); // Reset error on new source
 
                 // Also update preview index for properties if nothing is explicitly selected
                 if (selectedClips.length === 0) {
@@ -321,19 +337,23 @@ export const VideoMerger: React.FC = () => {
             // 2. Intra-clip Seeking
             if (videoPreviewRef.current) {
                 const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
-                const videoTime = videoPreviewRef.current.currentTime;
-                const diff = Math.abs(videoTime - clipLocalTime);
 
-                // Tighten sync: Only seek if diff is significant or not playing
-                // 0.3s is a good threshold for "noticeable lag" without causing stutter
-                if (!isPlaying || diff > 0.5) {
-                    if (diff > 0.05) { // Small threshold to avoid micro-resets
-                        videoPreviewRef.current.currentTime = clipLocalTime;
+                // If the video is still loading or has no metadata, it might not respect currentTime yet
+                // But we set it anyway, and onLoadedMetadata handles the final sync
+                if (videoPreviewRef.current.readyState >= 1) { // HAVE_METADATA or higher
+                    const videoTime = videoPreviewRef.current.currentTime;
+                    const diff = Math.abs(videoTime - clipLocalTime);
+
+                    if (!isPlaying || diff > 0.3) { // Lowered threshold for better responsiveness
+                        if (diff > 0.02) {
+                            videoPreviewRef.current.currentTime = clipLocalTime;
+                        }
                     }
                 }
             }
         } else {
             if (activeClipSrc !== null) setActiveClipSrc(null);
+            if (previewIndex !== -1 && selectedClips.length === 0) setPreviewIndex(-1);
         }
     }, [currentTime, files, activeClipSrc, isPlaying]);
 
@@ -597,6 +617,9 @@ export const VideoMerger: React.FC = () => {
                         setPreviewIndex(-1);
                     }
                 }
+            } else if (e.code === 'KeyT' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                setShowLabels(prev => !prev);
             } else if (e.code === 'Slash' && e.shiftKey) { // "?" key
                 e.preventDefault();
                 setShowShortcuts(prev => !prev);
@@ -654,7 +677,7 @@ export const VideoMerger: React.FC = () => {
     }, [currentTime, previewIndex, files, totalDuration, selectedClips, handleRippleDelete]);
 
     return (
-        <div className="flex flex-col h-full bg-background text-foreground overflow-hidden rounded-xl border border-border-glass font-sans relative">
+        <div className="flex flex-col h-full glass-panel text-foreground overflow-hidden rounded-xl border border-border-glass font-sans relative">
             {/* Top Toolbar */}
             <div className="h-10 flex items-center justify-between px-4 bg-foreground/[0.02] border-b border-border-glass z-20">
                 <div className="flex items-center gap-6">
@@ -682,7 +705,7 @@ export const VideoMerger: React.FC = () => {
                             "flex items-center gap-2 px-5 py-1.5 rounded-lg text-xs font-black transition-all shadow-lg",
                             files.length >= 2 && !isProcessing
                                 ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20"
-                                : "bg-white/5 text-gray-600 cursor-not-allowed"
+                                : "bg-foreground/[0.05] text-foreground-muted cursor-not-allowed"
                         )}
                     >
                         {isProcessing ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
@@ -695,20 +718,25 @@ export const VideoMerger: React.FC = () => {
             <div className="flex-1 flex overflow-hidden gap-4 p-4">
                 {/* Center Panel: Video Preview */}
                 <div className="flex-1 flex flex-col gap-4">
-                    {/* Video Player */}
-                    <div className="flex-1 bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 flex flex-col relative group">
-                        {/* Video Container */}
-                        <div className="flex-1 relative flex items-center justify-center bg-black">
+                    {/* Video Player Area */}
+                    <div className="flex-1 bg-foreground/[0.02] rounded-2xl overflow-hidden shadow-2xl border border-border-glass flex flex-col relative group">
+                        {/* Video Container - Always dark for the video itself */}
+                        <div className="flex-1 relative flex items-center justify-center bg-black/95">
                             {activeClipSrc ? (
                                 <>
                                     <video
+                                        key={activeClipSrc}
                                         ref={videoPreviewRef}
                                         src={activeClipSrc}
                                         className="w-full h-full object-contain"
                                         preload="auto"
-                                        onLoadedMetadata={(e) => {
+                                        muted
+                                        playsInline
+                                        crossOrigin="anonymous"
+                                        onLoadedData={(e) => {
+                                            setPreviewError(null);
                                             const video = e.currentTarget;
-                                            // Priority sorting for metadata seek
+                                            // Ensure we show the frame immediately
                                             const active = [...files]
                                                 .sort((a, b) => b.trackIndex - a.trackIndex)
                                                 .find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
@@ -717,25 +745,44 @@ export const VideoMerger: React.FC = () => {
                                                 const clipLocalTime = (currentTime - active.timelineStart) + active.startTime;
                                                 video.currentTime = clipLocalTime;
                                             }
-                                            if (isPlaying) {
-                                                video.play().catch(console.error);
-                                            }
                                         }}
-                                        onError={(e) => {
-                                            console.error('Merger Video Error:', e.currentTarget.error);
+                                        onError={() => {
+                                            const videoError = videoPreviewRef.current?.error;
+                                            console.error('Merger Video Error:', videoError);
+                                            setPreviewError(`Failed to load video: ${videoError?.message || 'Unknown error'}`);
                                         }}
                                     />
+
+                                    {previewError && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-50 p-6 text-center">
+                                            <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-500 mb-4">
+                                                <AlertCircle size={32} />
+                                            </div>
+                                            <h3 className="text-white font-black mb-2">Preview Failed</h3>
+                                            <p className="text-gray-400 text-xs mb-6 max-w-xs">{previewError}</p>
+                                            <button
+                                                onClick={() => {
+                                                    const current = activeClipSrc;
+                                                    setActiveClipSrc(null);
+                                                    setTimeout(() => setActiveClipSrc(current), 50);
+                                                }}
+                                                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                Retry Load
+                                            </button>
+                                        </div>
+                                    )}
 
                                     {/* Top Gradient Overlay */}
                                     <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
                                     {/* Timecode Display */}
                                     <div className="absolute top-4 left-4 flex items-center gap-3">
-                                        <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
-                                            <div className="text-2xl font-mono font-black text-white tabular-nums">
+                                        <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-xl border border-border-glass">
+                                            <div className="text-2xl font-mono font-black text-foreground tabular-nums">
                                                 {formatDuration(currentTime)}
                                             </div>
-                                            <div className="text-[10px] font-mono text-gray-400 text-center">
+                                            <div className="text-[10px] font-mono text-foreground-secondary text-center">
                                                 / {formatDuration(totalDuration)}
                                             </div>
                                         </div>
@@ -750,9 +797,9 @@ export const VideoMerger: React.FC = () => {
                                     </div>
 
                                     {/* Current Clip Info */}
-                                    <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 max-w-xs">
-                                        <div className="text-xs font-bold text-gray-400 mb-1">Current Clip</div>
-                                        <div className="text-sm font-black text-white truncate">
+                                    <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-md px-4 py-2 rounded-xl border border-border-glass max-w-xs">
+                                        <div className="text-xs font-bold text-foreground-secondary mb-1">Current Clip</div>
+                                        <div className="text-sm font-black text-foreground truncate">
                                             {files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)))?.path.split(/[\\/]/).pop() || 'No clip'}
                                         </div>
                                     </div>
@@ -766,8 +813,8 @@ export const VideoMerger: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <MonitorPlay size={64} className="text-white/10" />
-                                            <span className="text-sm font-bold text-white/30">No video selected</span>
+                                            <MonitorPlay size={64} className="text-foreground/10" />
+                                            <span className="text-sm font-bold text-foreground/30">No video selected</span>
                                         </>
                                     )}
                                 </div>
@@ -775,9 +822,9 @@ export const VideoMerger: React.FC = () => {
                         </div>
 
                         {/* Professional Controls Bar */}
-                        <div className="bg-gradient-to-t from-black via-black/95 to-transparent p-4">
+                        <div className="bg-gradient-to-t from-background via-background/95 to-transparent p-4">
                             {/* Waveform Visualization Placeholder */}
-                            <div className="h-12 mb-3 bg-white/5 rounded-lg overflow-hidden relative">
+                            <div className="h-12 mb-3 bg-foreground/[0.05] rounded-lg overflow-hidden relative">
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <div className="flex items-end gap-0.5 h-full py-2">
                                         {Array.from({ length: 100 }).map((_, i) => (
@@ -802,26 +849,26 @@ export const VideoMerger: React.FC = () => {
                                     className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all active:scale-95 shadow-lg shadow-indigo-500/30"
                                 >
                                     {isPlaying ? (
-                                        <div className="flex gap-1">
-                                            <div className="w-1 h-4 bg-white rounded-full" />
-                                            <div className="w-1 h-4 bg-white rounded-full" />
+                                        <div className="flex gap-1.5">
+                                            <div className="w-1 h-5 bg-white rounded-full shadow-sm" />
+                                            <div className="w-1 h-5 bg-white rounded-full shadow-sm" />
                                         </div>
                                     ) : (
-                                        <Play size={20} fill="currentColor" className="ml-0.5" />
+                                        <Play size={20} fill="white" className="ml-1" />
                                     )}
                                 </button>
 
                                 {/* Skip Buttons */}
                                 <button
                                     onClick={() => setCurrentTime(Math.max(0, currentTime - 5))}
-                                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-all"
+                                    className="w-9 h-9 bg-foreground/[0.05] hover:bg-foreground/[0.1] rounded-lg flex items-center justify-center text-foreground transition-all"
                                     title="Back 5s"
                                 >
                                     <span className="text-xs font-black">-5s</span>
                                 </button>
                                 <button
                                     onClick={() => setCurrentTime(Math.min(totalDuration, currentTime + 5))}
-                                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-all"
+                                    className="w-9 h-9 bg-foreground/[0.05] hover:bg-foreground/[0.1] rounded-lg flex items-center justify-center text-foreground transition-all"
                                     title="Forward 5s"
                                 >
                                     <span className="text-xs font-black">+5s</span>
@@ -829,13 +876,13 @@ export const VideoMerger: React.FC = () => {
 
                                 {/* Volume Control */}
                                 <div className="flex items-center gap-2 ml-auto">
-                                    <Volume2 size={18} className="text-gray-400" />
+                                    <Volume2 size={18} className="text-foreground-secondary" />
                                     <input
                                         type="range"
                                         min="0"
                                         max="100"
                                         defaultValue="100"
-                                        className="w-24 h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                        className="w-24 h-1 bg-foreground/[0.1] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500"
                                         onChange={(e) => {
                                             if (videoPreviewRef.current) {
                                                 videoPreviewRef.current.volume = parseInt(e.target.value) / 100;
@@ -851,64 +898,64 @@ export const VideoMerger: React.FC = () => {
                 {/* Right Panel: Metadata & Info */}
                 <div className="w-80 flex flex-col gap-4">
                     {/* Video Info Card */}
-                    <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-white/5 p-4 space-y-4">
+                    <div className="bg-foreground/[0.03] backdrop-blur-xl rounded-2xl border border-border-glass p-4 space-y-4 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                             <div className="w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center">
                                 <Video size={16} className="text-indigo-400" />
                             </div>
-                            <h3 className="text-sm font-black text-white">Video Properties</h3>
+                            <h3 className="text-sm font-black text-foreground">Video Properties</h3>
                         </div>
 
                         {files.length > 0 && files[previewIndex] && (
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-400 font-medium">Resolution</span>
-                                    <span className="text-xs font-black text-white">{files[previewIndex].width}x{files[previewIndex].height}</span>
+                                    <span className="text-xs text-foreground-secondary font-medium">Resolution</span>
+                                    <span className="text-xs font-black text-foreground">{files[previewIndex].width}x{files[previewIndex].height}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-400 font-medium">Frame Rate</span>
-                                    <span className="text-xs font-black text-white">{files[previewIndex].fps.toFixed(2)} FPS</span>
+                                    <span className="text-xs text-foreground-secondary font-medium">Frame Rate</span>
+                                    <span className="text-xs font-black text-foreground">{files[previewIndex].fps.toFixed(2)} FPS</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-400 font-medium">Codec</span>
-                                    <span className="text-xs font-black text-white uppercase">{files[previewIndex].codec}</span>
+                                    <span className="text-xs text-foreground-secondary font-medium">Codec</span>
+                                    <span className="text-xs font-black text-foreground uppercase">{files[previewIndex].codec}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-400 font-medium">Duration</span>
-                                    <span className="text-xs font-black text-white">{formatDuration(files[previewIndex].duration)}</span>
+                                    <span className="text-xs text-foreground-secondary font-medium">Duration</span>
+                                    <span className="text-xs font-black text-foreground">{formatDuration(files[previewIndex].duration)}</span>
                                 </div>
                             </div>
                         )}
 
                         {files.length === 0 && (
                             <div className="text-center py-8">
-                                <Film size={32} className="text-white/10 mx-auto mb-2" />
-                                <p className="text-xs text-gray-500 font-medium">No clips loaded</p>
+                                <Film size={32} className="text-foreground/10 mx-auto mb-2" />
+                                <p className="text-xs text-foreground-muted font-medium">No clips loaded</p>
                             </div>
                         )}
                     </div>
 
                     {/* Project Stats */}
-                    <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-white/5 p-4">
+                    <div className="bg-foreground/[0.03] backdrop-blur-xl rounded-2xl border border-border-glass p-4 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                             <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
                                 <Layers size={16} className="text-purple-400" />
                             </div>
-                            <h3 className="text-sm font-black text-white">Project Stats</h3>
+                            <h3 className="text-sm font-black text-foreground">Project Stats</h3>
                         </div>
 
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400 font-medium">Total Clips</span>
-                                <span className="text-xs font-black text-white">{files.length}</span>
+                                <span className="text-xs text-foreground-secondary font-medium">Total Clips</span>
+                                <span className="text-xs font-black text-foreground">{files.length}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400 font-medium">Total Duration</span>
-                                <span className="text-xs font-black text-white">{formatDuration(totalDuration)}</span>
+                                <span className="text-xs text-foreground-secondary font-medium">Total Duration</span>
+                                <span className="text-xs font-black text-foreground">{formatDuration(totalDuration)}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400 font-medium">Export Format</span>
-                                <span className="text-xs font-black text-indigo-400 uppercase">{selectedFormat}</span>
+                                <span className="text-xs text-foreground-secondary font-medium">Export Format</span>
+                                <span className="text-xs font-black text-indigo-500 uppercase">{selectedFormat}</span>
                             </div>
                         </div>
                     </div>
@@ -950,6 +997,8 @@ export const VideoMerger: React.FC = () => {
                 onUpdateTrim={updateTrim}
                 onClipMove={handleClipMove}
                 formatDuration={formatDuration}
+                showLabels={showLabels}
+                onToggleLabels={() => setShowLabels(prev => !prev)}
             />
 
             {/* Trimming Modal */}

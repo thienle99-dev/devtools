@@ -20,9 +20,10 @@ interface TimelineClipItemProps {
     onClipMove: (idx: number, deltaX: number, deltaY: number) => void;
     onDragEnd?: () => void;
     formatDuration: (seconds: number) => string;
+    showLabels: boolean;
 }
 
-export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
+export const TimelineClipItem: React.FC<TimelineClipItemProps> = React.memo(({
     file,
     idx,
     pxPerSecond,
@@ -30,6 +31,7 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
     isSelected,
     isRazorMode,
     mouseTimelineTime,
+    showLabels,
     onToggleSelection,
     onSplitClip,
     onSetTrimmingIdx,
@@ -147,7 +149,7 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
             onDragEnd={handleDragEnd}
             className={cn(
                 "absolute h-10 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing group",
-                isSelected || previewIndex === idx ? "z-30 ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#0f0f0f]" : "z-10"
+                isSelected || previewIndex === idx ? "z-30 ring-2 ring-indigo-500 ring-offset-2 ring-offset-background" : "z-10"
             )}
             style={{
                 left: `${file.timelineStart * pxPerSecond}px`,
@@ -167,8 +169,8 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
             <div className={cn(
                 "absolute inset-0 rounded-lg border-2 transition-colors overflow-hidden",
                 previewIndex === idx
-                    ? "bg-gradient-to-br from-indigo-900/40 to-indigo-800/30 border-indigo-500"
-                    : "bg-gradient-to-br from-gray-800/60 to-gray-900/50 border-gray-700/50 group-hover:border-gray-600"
+                    ? "bg-indigo-500/10 border-indigo-500"
+                    : "bg-foreground/[0.05] border-border-glass group-hover:border-foreground/20"
             )}>
                 {/* Filmstrip Thumbnails - Temporal Alignment Fix */}
                 {file.filmstrip && file.filmstrip.length > 0 ? (
@@ -233,30 +235,34 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
             </div>
 
             {/* Clip Label and Icon */}
-            <div className="absolute top-1 left-1 flex items-center gap-1 z-30 pointer-events-none bg-black/60 backdrop-blur-md py-0.5 px-1 rounded-md border border-white/10 max-w-[90%]">
-                <div className="w-3.5 h-3.5 rounded-sm overflow-hidden flex-shrink-0 bg-gray-800">
-                    {file.thumbnail && !thumbError ? (
-                        <img
-                            src={file.thumbnail}
-                            className="w-full h-full object-cover"
-                            alt=""
-                            onError={() => setThumbError(true)}
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <Film size={6} className="text-white/40" />
+            {showLabels && (
+                <div className="absolute top-1 left-1 flex items-center gap-1 z-30 pointer-events-none bg-background/60 backdrop-blur-md py-0.5 px-1.5 rounded-md border border-border-glass max-w-[90%] shadow-xl">
+                    <div className="w-3.5 h-3.5 rounded-sm overflow-hidden flex-shrink-0 bg-foreground/10 shadow-inner">
+                        {file.thumbnail && !thumbError ? (
+                            <img
+                                src={file.thumbnail}
+                                className="w-full h-full object-cover"
+                                alt=""
+                                onError={() => setThumbError(true)}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <Film size={6} className="text-white/40" />
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[8px] font-black text-white truncate leading-tight tracking-tight">
+                            {file.path.split(/[\\/]/).pop()}
+                        </span>
+                        <div className="flex items-center gap-1 -mt-0.5">
+                            <span className="text-[6px] text-indigo-300 font-bold uppercase tracking-tighter">
+                                {formatDuration(file.endTime - file.startTime)}
+                            </span>
                         </div>
-                    )}
+                    </div>
                 </div>
-                <div className="flex flex-col min-w-0">
-                    <span className="text-[8px] font-bold text-white truncate">
-                        {file.path.split(/[\\/]/).pop()}
-                    </span>
-                    <span className="text-[6px] text-gray-400 font-medium -mt-0.5">
-                        {formatDuration(file.endTime - file.startTime)}
-                    </span>
-                </div>
-            </div>
+            )}
 
             {/* Right Trim Handle */}
             <div

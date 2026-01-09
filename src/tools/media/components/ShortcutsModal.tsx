@@ -10,30 +10,30 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-background/80 backdrop-blur-md"
                     onClick={onClose}
                 >
-                    <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }} 
-                        animate={{ scale: 1, opacity: 1 }} 
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
                         className="bg-glass-background/95 backdrop-blur-xl rounded-3xl border border-border-glass p-8 shadow-2xl max-w-2xl w-full"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-2xl font-black">⌨️ Keyboard Shortcuts</h3>
-                            <button 
+                            <button
                                 onClick={onClose}
                                 className="w-8 h-8 rounded-full bg-foreground/[0.05] hover:bg-foreground/[0.1] flex items-center justify-center transition-all"
                             >
                                 ✕
                             </button>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                             <div className="flex items-center justify-between py-2 border-b border-border-glass">
                                 <span className="text-sm text-foreground-secondary">Play/Pause</span>
@@ -112,9 +112,9 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
                                 <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">?</kbd>
                             </div>
                         </div>
-                        
+
                         <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-                            <p className="text-xs text-indigo-300 font-bold">
+                            <p className="text-xs text-indigo-500 font-bold">
                                 💡 <span className="font-black">Pro Tip:</span> Use Shift for frame-by-frame precision, Ctrl for second-by-second jumps, and regular arrow keys for quick navigation!
                             </p>
                         </div>

@@ -6101,13 +6101,12 @@ app.whenReady().then(() => {
 	protocol.handle("local-media", async (request) => {
 		try {
 			console.log("[LocalMedia] Request:", request.url);
-			let urlPath = request.url.substring(14);
-			let decodedPath = decodeURIComponent(urlPath);
-			console.log("[LocalMedia] Decoded:", decodedPath);
+			const url = new URL(request.url);
+			let decodedPath = decodeURIComponent(url.pathname);
+			console.log("[LocalMedia] Initial Path:", decodedPath);
 			if (process.platform === "win32") {
 				if (/^\/[a-zA-Z]:/.test(decodedPath)) decodedPath = decodedPath.slice(1);
-				else if (/^[a-zA-Z]:/.test(decodedPath)) {} else if (/^[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(0) + ":" + decodedPath.slice(1);
-				else if (/^\/[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(1) + ":" + decodedPath.slice(2);
+				else if (/^[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(0) + ":" + decodedPath.slice(1);
 			} else decodedPath = decodedPath.replace(/^\/+/, "/");
 			console.log("[LocalMedia] Final Path:", decodedPath);
 			const fileSize = (await fs.stat(decodedPath)).size;

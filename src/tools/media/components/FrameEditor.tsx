@@ -1,6 +1,6 @@
 // Phase 2: Lazy load Fabric.js
 import { loadFabric } from '@utils/lazyLoad';
-import type { Canvas, FabricImage, filters, IText, Shadow, Point, Rect } from 'fabric';
+import { Canvas, FabricImage, filters, IText, Shadow, Point, Rect } from 'fabric';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Slider } from '../../../components/ui/Slider';
@@ -17,7 +17,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
     const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
     const [activeTool, setActiveTool] = useState<'adjust' | 'filters' | 'text' | 'crop'>('adjust');
     const [showSettings, setShowSettings] = useState(true);
-    
+
     // Filter State
     const [brightness, setBrightness] = useState(0);
     const [contrast, setContrast] = useState(0);
@@ -25,10 +25,10 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
     const [blur, setBlur] = useState(0);
     const [grayscale, setGrayscale] = useState(false);
     const [sepia, setSepia] = useState(false);
-    
+
     // Transform State
     const [zoom, setZoom] = useState(1);
-    
+
     // Crop State
     const [isCropping, setIsCropping] = useState(false);
     const cropRectRef = useRef<Rect | null>(null);
@@ -46,12 +46,12 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         const canvas = new Canvas(canvasRef.current, {
             width,
             height,
-            backgroundColor: '#18181b', // Zinc-950
+            backgroundColor: 'transparent',
             selection: true
         });
 
         // Zoom & Pan logic
-        canvas.on('mouse:wheel', function(opt) {
+        canvas.on('mouse:wheel', function (opt) {
             var delta = opt.e.deltaY;
             var zoom = canvas.getZoom();
             zoom *= 0.999 ** delta;
@@ -68,7 +68,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         let lastPosX = 0;
         let lastPosY = 0;
 
-        canvas.on('mouse:down', function(opt) {
+        canvas.on('mouse:down', function (opt) {
             const evt = opt.e as MouseEvent;
             if (evt.altKey || evt.button === 1) {
                 isDragging = true;
@@ -78,7 +78,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             }
         });
 
-        canvas.on('mouse:move', function(opt) {
+        canvas.on('mouse:move', function (opt) {
             if (isDragging) {
                 const e = opt.e as MouseEvent;
                 const vpt = canvas.viewportTransform!;
@@ -90,7 +90,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             }
         });
 
-        canvas.on('mouse:up', function() {
+        canvas.on('mouse:up', function () {
             canvas.setViewportTransform(canvas.viewportTransform!);
             isDragging = false;
             canvas.selection = true;
@@ -102,7 +102,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                 (width - 80) / img.width!,
                 (height - 80) / img.height!
             );
-            
+
             img.set({
                 originX: 'center',
                 originY: 'center',
@@ -110,7 +110,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                 top: height / 2
             });
             img.scale(scale);
-            
+
             img.set({
                 cornerColor: '#3b82f6',
                 cornerStyle: 'circle',
@@ -125,13 +125,13 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         });
 
         setFabricCanvas(canvas);
-        
+
         // Handle window resize
         const handleResize = () => {
-             if (container && canvas) {
-                 canvas.setDimensions({ width: container.clientWidth, height: container.clientHeight });
-                 canvas.renderAll();
-             }
+            if (container && canvas) {
+                canvas.setDimensions({ width: container.clientWidth, height: container.clientHeight });
+                canvas.renderAll();
+            }
         };
         window.addEventListener('resize', handleResize);
 
@@ -190,7 +190,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         if (!fabricCanvas) return;
         const mainImg = fabricCanvas.getObjects().find(obj => obj instanceof FabricImage) as FabricImage;
         if (!mainImg) return;
-        
+
         if (axis === 'X') {
             mainImg.set('flipX', !mainImg.flipX);
         } else {
@@ -218,7 +218,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
     // Crop Logic
     const startCrop = () => {
         if (!fabricCanvas || isCropping) return;
-        
+
         const mainImg = fabricCanvas.getObjects().find(obj => obj instanceof FabricImage) as FabricImage;
         if (!mainImg) return;
 
@@ -240,7 +240,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
             cornerColor: '#fff',
             cornerStyle: 'circle',
             transparentCorners: false,
-            excludeFromExport: true 
+            excludeFromExport: true
         });
 
         fabricCanvas.add(cropRect);
@@ -251,10 +251,10 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
 
     const applyCrop = async () => {
         if (!fabricCanvas || !cropRectRef.current) return;
-        
+
         const cropRect = cropRectRef.current;
         const mainImg = fabricCanvas.getObjects().find(obj => obj instanceof FabricImage) as FabricImage;
-        
+
         if (!mainImg) {
             cancelCrop();
             return;
@@ -269,7 +269,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
 
         // Temporarily hide crop rect
         cropRect.visible = false;
-        
+
         // Export cropped area
         const croppedDataURL = fabricCanvas.toDataURL({
             left: cropL,
@@ -282,18 +282,18 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
 
         // Load back as new image
         const newImg = await FabricImage.fromURL(croppedDataURL);
-        
+
         // Replace old image
         fabricCanvas.remove(mainImg);
         fabricCanvas.remove(cropRect);
-        
+
         newImg.set({
             left: fabricCanvas.width! / 2,
             top: fabricCanvas.height! / 2,
             originX: 'center',
             originY: 'center'
         });
-        
+
         // Fit to canvas if needed, or keep 1:1 scale if roughly fitting
         const scale = Math.min(
             (fabricCanvas.width! - 80) / newImg.width!,
@@ -311,11 +311,11 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
 
         fabricCanvas.add(newImg);
         fabricCanvas.setActiveObject(newImg);
-        
+
         setIsCropping(false);
         cropRectRef.current = null;
         setActiveTool('adjust');
-        
+
         // Reset filters as they are burnt in now (simplified for basic crop)
         // Ideally we preserve them, but recreating from DataURL burns them in.
         // If we want to keep them editable, we'd need to re-apply logic.
@@ -341,7 +341,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
 
     const handleSave = () => {
         if (!fabricCanvas) return;
-        
+
         if (isCropping) {
             cancelCrop(); // Or auto-apply? Let's cancel to be safe/avoid UI confusion
         }
@@ -352,7 +352,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         const dataURL = fabricCanvas.toDataURL({
             format: 'png',
             quality: 1,
-            multiplier: multiplier 
+            multiplier: multiplier
         });
 
         fetch(dataURL)
@@ -364,7 +364,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
         if (!fabricCanvas) return;
         fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
         setZoom(1);
-        
+
         const mainImg = fabricCanvas.getObjects().find(obj => obj instanceof FabricImage);
         if (mainImg) {
             fabricCanvas.setActiveObject(mainImg);
@@ -379,12 +379,12 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
     };
 
     return (
-        <div className="relative w-full h-full bg-zinc-950 overflow-hidden group flex">
+        <div className="relative w-full h-full bg-background overflow-hidden group flex">
             {/* Main Canvas Area */}
-            <div className="flex-1 relative bg-zinc-900/50">
-                 {/* Toggle Settings Button (When hidden) */}
+            <div className="flex-1 relative bg-foreground/[0.02]">
+                {/* Toggle Settings Button (When hidden) */}
                 {!showSettings && (
-                     <button 
+                    <button
                         onClick={() => setShowSettings(true)}
                         className="absolute right-4 top-4 p-2 glass-button text-white rounded-lg z-10 hover:bg-white/10 transition-colors"
                     >
@@ -392,35 +392,35 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                     </button>
                 )}
 
-                 <div className="absolute inset-0 flex items-center justify-center p-8">
-                     <canvas ref={canvasRef} className="w-full h-full shadow-2xl rounded-lg" />
-                 </div>
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                    <canvas ref={canvasRef} className="w-full h-full shadow-2xl rounded-lg" />
+                </div>
 
-                 {/* Canvas Overlay Controls */}
+                {/* Canvas Overlay Controls */}
                 <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-10">
-                     <div className="flex flex-col bg-black/60 backdrop-blur-md rounded-lg p-1 border border-white/10">
-                         <button onClick={() => {
+                    <div className="flex flex-col bg-black/60 backdrop-blur-md rounded-lg p-1 border border-white/10">
+                        <button onClick={() => {
                             fabricCanvas?.setZoom(zoom * 1.1);
                             setZoom(zoom * 1.1);
-                         }} className="p-2 hover:bg-white/10 rounded text-white transition-colors" title="Zoom In"><Plus className="w-4 h-4"/></button>
-                         <button onClick={() => {
+                        }} className="p-2 hover:bg-white/10 rounded text-white transition-colors" title="Zoom In"><Plus className="w-4 h-4" /></button>
+                        <button onClick={() => {
                             fabricCanvas?.setZoom(zoom / 1.1);
                             setZoom(zoom / 1.1);
-                         }} className="p-2 hover:bg-white/10 rounded text-white transition-colors" title="Zoom Out"><Minus className="w-4 h-4"/></button>
-                         <button onClick={resetZoom} className="p-2 hover:bg-white/10 rounded text-white transition-colors" title="Fit to Screen"><Maximize className="w-4 h-4"/></button>
-                     </div>
+                        }} className="p-2 hover:bg-white/10 rounded text-white transition-colors" title="Zoom Out"><Minus className="w-4 h-4" /></button>
+                        <button onClick={resetZoom} className="p-2 hover:bg-white/10 rounded text-white transition-colors" title="Fit to Screen"><Maximize className="w-4 h-4" /></button>
+                    </div>
                 </div>
             </div>
 
             {/* Right Sidebar - Tools */}
-            <div className={`w-[320px] bg-[#18181b] border-l border-white/10 flex flex-col z-20 transition-all duration-300 ${showSettings ? 'translate-x-0' : 'translate-x-full hidden'}`}>
+            <div className={`w-[320px] glass-panel border-l border-border-glass flex flex-col z-20 transition-all duration-300 ${showSettings ? 'translate-x-0' : 'translate-x-full hidden'}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                        <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                        <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
                         Editor
                     </h3>
-                     <button 
+                    <button
                         onClick={() => setShowSettings(false)}
                         className="p-1 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"
                     >
@@ -429,7 +429,7 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
-                     {/* Tools Nav */}
+                    {/* Tools Nav */}
                     <div className="grid grid-cols-4 gap-1 p-2 border-b border-white/10 bg-white/5">
                         <button
                             onClick={() => setActiveTool('adjust')}
@@ -471,18 +471,18 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                             <Type className="w-4 h-4" /> Text
                         </button>
                     </div>
-                    
+
                     <div className="p-5 space-y-8">
                         {activeTool === 'adjust' && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-3">
                                     <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Transform</label>
                                     <div className="grid grid-cols-2 gap-2">
-                                         <Button size="sm" variant="secondary" onClick={rotateImage} icon={RotateCw} className="w-full justify-center">Rotate 90°</Button>
-                                         <div className="grid grid-cols-2 gap-2">
-                                            <Button size="sm" variant="secondary" onClick={() => flipImage('X')} title="Flip Horizontal" className="w-full justify-center px-0"><FlipHorizontal className="w-4 h-4"/></Button>
-                                            <Button size="sm" variant="secondary" onClick={() => flipImage('Y')} title="Flip Vertical" className="w-full justify-center px-0"><FlipVertical className="w-4 h-4"/></Button>
-                                         </div>
+                                        <Button size="sm" variant="secondary" onClick={rotateImage} icon={RotateCw} className="w-full justify-center">Rotate 90°</Button>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button size="sm" variant="secondary" onClick={() => flipImage('X')} title="Flip Horizontal" className="w-full justify-center px-0"><FlipHorizontal className="w-4 h-4" /></Button>
+                                            <Button size="sm" variant="secondary" onClick={() => flipImage('Y')} title="Flip Vertical" className="w-full justify-center px-0"><FlipVertical className="w-4 h-4" /></Button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -532,27 +532,27 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                                         onChange={setBlur}
                                         className="text-xs"
                                     />
-                                    
+
                                     <div className="grid grid-cols-2 gap-3 pt-2">
-                                        <button 
+                                        <button
                                             onClick={() => setGrayscale(!grayscale)}
                                             className={cn(
                                                 "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                                                grayscale 
-                                                    ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300" 
+                                                grayscale
+                                                    ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300"
                                                     : "bg-black/20 border-white/10 text-white/50 hover:bg-white/5"
                                             )}
                                         >
                                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-800" />
                                             <span className="text-xs font-medium">Grayscale</span>
                                         </button>
-                                        
-                                        <button 
+
+                                        <button
                                             onClick={() => setSepia(!sepia)}
                                             className={cn(
                                                 "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                                                sepia 
-                                                    ? "bg-orange-500/20 border-orange-500/50 text-orange-300" 
+                                                sepia
+                                                    ? "bg-orange-500/20 border-orange-500/50 text-orange-300"
                                                     : "bg-black/20 border-white/10 text-white/50 hover:bg-white/5"
                                             )}
                                         >
@@ -565,31 +565,31 @@ export const FrameEditor: React.FC<FrameEditorProps> = ({ imageUrl, onSave, onCa
                         )}
 
                         {activeTool === 'crop' && (
-                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-4">
-                                 <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-400 border border-indigo-500/30">
-                                     <CropIcon className="w-6 h-6" />
-                                 </div>
-                                 <p className="text-sm text-white/80 px-2 font-medium">Crop Mode Active</p>
-                                 <p className="text-xs text-white/50 px-2 leading-relaxed">
-                                     Adjust the selection box on the canvas to crop your image. 
-                                 </p>
-                                 
-                                 <div className="flex flex-col gap-2 pt-4">
-                                     <Button onClick={applyCrop} className="w-full" variant="primary" icon={Check}>Apply Crop</Button>
-                                     <Button onClick={cancelCrop} className="w-full" variant="ghost" icon={X}>Cancel</Button>
-                                 </div>
-                             </div>
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-4">
+                                <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-400 border border-indigo-500/30">
+                                    <CropIcon className="w-6 h-6" />
+                                </div>
+                                <p className="text-sm text-white/80 px-2 font-medium">Crop Mode Active</p>
+                                <p className="text-xs text-white/50 px-2 leading-relaxed">
+                                    Adjust the selection box on the canvas to crop your image.
+                                </p>
+
+                                <div className="flex flex-col gap-2 pt-4">
+                                    <Button onClick={applyCrop} className="w-full" variant="primary" icon={Check}>Apply Crop</Button>
+                                    <Button onClick={cancelCrop} className="w-full" variant="ghost" icon={X}>Cancel</Button>
+                                </div>
+                            </div>
                         )}
 
                         {activeTool === 'text' && (
-                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-4">
-                                 <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-400 border border-indigo-500/30">
-                                     <Type className="w-6 h-6" />
-                                 </div>
-                                 <p className="text-sm text-white/80 px-4">Add a text overlay or watermark to your frame.</p>
-                                 <Button onClick={addText} className="w-full" variant="primary">Add Text Layer</Button>
-                                 <p className="text-[10px] text-white/40">Double click text on canvas to edit content.</p>
-                             </div>
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-center py-4">
+                                <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-400 border border-indigo-500/30">
+                                    <Type className="w-6 h-6" />
+                                </div>
+                                <p className="text-sm text-white/80 px-4">Add a text overlay or watermark to your frame.</p>
+                                <Button onClick={addText} className="w-full" variant="primary">Add Text Layer</Button>
+                                <p className="text-[10px] text-white/40">Double click text on canvas to edit content.</p>
+                            </div>
                         )}
                     </div>
                 </div>
