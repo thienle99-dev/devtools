@@ -1,39 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-    Plus, 
-    Trash2, 
     Loader2, 
-    CheckCircle2, 
-    AlertCircle,
     Play,
-    MonitorPlay,
     Clock,
-    Scissors,
     Download,
-    ZoomIn,
-    ZoomOut,
-    Check,
     Volume2,
+    MonitorPlay,
     Video,
     Film,
     Layers
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@utils/cn';
 import { CapCutTimeline } from './components/CapCutTimeline';
-import type { VideoMergeOptions, VideoMergeProgress, VideoInfo } from '../../types/video-merger';
+import type { VideoMergeOptions, VideoMergeProgress, VideoInfo, ExtendedVideoInfo } from '../../types/video-merger';
+import { useTimelineHistory } from './hooks/useTimelineHistory';
+import { ShortcutsModal } from './components/ShortcutsModal';
+import { AssetLoadingModal } from './components/AssetLoadingModal';
+import { ExportResultModal } from './components/ExportResultModal';
+import { TrimmingModal } from './components/TrimmingModal';
 
 const FORMATS = ['mp4', 'mkv', 'avi', 'mov', 'webm'];
 
-interface ExtendedVideoInfo extends VideoInfo {
-    startTime: number;
-    endTime: number;
-    timelineStart: number;
-    trackIndex: number;
-    thumbnail?: string;
-    filmstrip?: string[];
-    waveform?: number[];
-}
 
 export const VideoMerger: React.FC = () => {
     const [files, setFiles] = useState<ExtendedVideoInfo[]>([]);
@@ -54,8 +41,10 @@ export const VideoMerger: React.FC = () => {
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [selectedClips, setSelectedClips] = useState<number[]>([]);
     const [magneticSnap, setMagneticSnap] = useState(true);
-    const [history, setHistory] = useState<ExtendedVideoInfo[][]>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1);
+    
+    // History Hook
+    const { addToHistory, undo, redo } = useTimelineHistory([]);
+
     const snapInterval = 1; // Snap to 1 second intervals
     const magneticSnapThreshold = 0.5; // 0.5 seconds snap threshold
 
@@ -87,6 +76,19 @@ export const VideoMerger: React.FC = () => {
                 // S or Ctrl+K / Cmd+K to split
                 e.preventDefault();
                 splitAtPlayhead();
+            } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    const nextState = redo();
+                    if (nextState) setFiles(nextState);
+                } else {
+                    const prevState = undo();
+                    if (prevState) setFiles(prevState);
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { // Standard Redo for Windows
+                e.preventDefault();
+                const nextState = redo();
+                if (nextState) setFiles(nextState);
             } else if (e.code === 'Delete' || e.code === 'Backspace') {
                 e.preventDefault();
                 if (previewIndex !== -1 && files[previewIndex]) {
@@ -249,12 +251,17 @@ export const VideoMerger: React.FC = () => {
                 }
                 
                 // Remove listener
-                if (removeFilmstripListener) removeFilmstripListener();
+                removeFilmstripListener();
                 
                 console.log('All files processed:', newInfos);
-                setFiles(prev => [...prev, ...newInfos]);
                 setIsLoadingAssets(false);
                 setLoadingDetail({ fileName: '', stage: '', current: 0, total: 0 });
+
+                setFiles(prev => {
+                    const updated = [...prev, ...newInfos];
+                    addToHistory(updated);
+                    return updated;
+                });
             }
         } catch (error) {
             console.error('Failed to add files:', error);
@@ -264,7 +271,11 @@ export const VideoMerger: React.FC = () => {
     };
 
     const handleRemoveFile = (path: string) => {
-        setFiles(prev => prev.filter(f => f.path !== path));
+        setFiles(prev => {
+            const next = prev.filter(f => f.path !== path);
+            addToHistory(next);
+            return next;
+        });
     };
 
     const handleMerge = async () => {
@@ -469,6 +480,7 @@ export const VideoMerger: React.FC = () => {
                 timelineStart: newTimelineStart,
                 trackIndex: Math.max(0, Math.min(5, trackIndex)) // Max 6 tracks
             };
+            addToHistory(next); // Add to history on position update
             return next;
         });
     };
@@ -479,6 +491,10 @@ export const VideoMerger: React.FC = () => {
             next[idx] = { ...next[idx], startTime: Math.max(0, start), endTime: Math.min(next[idx].duration, end) };
             return next;
         });
+    };
+
+    const finalizeTrim = () => {
+        addToHistory(files);
     };
 
     const splitClip = (idx: number) => {
@@ -492,6 +508,7 @@ export const VideoMerger: React.FC = () => {
             const clip1 = { ...file, endTime: localTimeInClip };
             const clip2 = { ...file, startTime: localTimeInClip, timelineStart: currentTime };
             next.splice(idx, 1, clip1, clip2);
+            addToHistory(next);
             return next;
         });
     };
@@ -794,304 +811,37 @@ export const VideoMerger: React.FC = () => {
             />
 
             {/* Trimming Modal */}
-            <AnimatePresence>
-                {trimmingIdx !== null && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md"
-                    >
-                        <div className="w-full max-w-2xl bg-glass-background rounded-3xl border border-border-glass p-8 shadow-2xl relative">
-                            <h3 className="text-xl font-black mb-6 flex items-center gap-3">
-                                <Scissors className="text-indigo-500" /> Trim Clip: <span className="text-foreground-secondary">{files[trimmingIdx].path.split(/[\\/]/).pop()}</span>
-                            </h3>
-
-                            <div className="space-y-8">
-                                <div className="space-y-4">
-                                    <div className="flex justify-between text-xs font-bold text-foreground-secondary">
-                                        <span>Start: {formatDuration(files[trimmingIdx].startTime)}</span>
-                                        <span className="text-indigo-400">Selected: {formatDuration(files[trimmingIdx].endTime - files[trimmingIdx].startTime)}</span>
-                                        <span>End: {formatDuration(files[trimmingIdx].endTime)}</span>
-                                    </div>
-                                    
-                                    <div className="relative h-12 bg-white/5 rounded-xl border border-white/10 overflow-hidden flex items-center px-4">
-                                        <input 
-                                            type="range" min={0} max={files[trimmingIdx].duration} step={0.1}
-                                            value={files[trimmingIdx].startTime}
-                                            onChange={(e) => updateTrim(trimmingIdx, Number(e.target.value), Math.max(Number(e.target.value) + 0.1, files[trimmingIdx].endTime))}
-                                            className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
-                                        />
-                                        <input 
-                                            type="range" min={0} max={files[trimmingIdx].duration} step={0.1}
-                                            value={files[trimmingIdx].endTime}
-                                            onChange={(e) => updateTrim(trimmingIdx, Math.min(Number(e.target.value) - 0.1, files[trimmingIdx].startTime), Number(e.target.value))}
-                                            className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
-                                        />
-                                        
-                                        <div className="h-8 bg-indigo-500/20 border-x-2 border-indigo-500 absolute" 
-                                            style={{ 
-                                                left: `${(files[trimmingIdx].startTime / files[trimmingIdx].duration) * 100}%`,
-                                                right: `${100 - (files[trimmingIdx].endTime / files[trimmingIdx].duration) * 100}%`
-                                            }}
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-foreground-secondary text-center">Drag the sliders to select the portion of video you want to keep.</p>
-                                </div>
-
-                                <div className="flex gap-3">
-                                    <button 
-                                        onClick={() => setTrimmingIdx(null)}
-                                        className="flex-1 bg-white text-black py-4 rounded-2xl text-xs font-black hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Check size={18} /> APPLY CUT
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <TrimmingModal 
+                file={trimmingIdx !== null ? files[trimmingIdx] : null}
+                trimmingIdx={trimmingIdx}
+                onClose={() => setTrimmingIdx(null)}
+                onUpdateTrim={updateTrim}
+                onFinalizeTrim={finalizeTrim}
+                formatDuration={formatDuration}
+            />
 
             {/* Export Progress Progress */}
-            <AnimatePresence>
-                {progress && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-                        <div className="w-full max-w-sm bg-glass-background/90 backdrop-blur-xl rounded-3xl border border-border-glass p-8 shadow-2xl relative">
-                            <div className="text-center space-y-6">
-                                <div className="w-16 h-16 rounded-3xl bg-indigo-600/20 flex items-center justify-center mx-auto text-indigo-400">
-                                    {progress.state === 'complete' ? <CheckCircle2 size={32} /> : progress.state === 'error' ? <AlertCircle size={32} /> : <Loader2 size={32} className="animate-spin" />}
-                                </div>
-                                <div className="space-y-1">
-                                    <h3 className="text-lg font-black tracking-tight">{progress.state === 'processing' ? 'Exporting Project' : progress.state === 'complete' ? 'Export Success' : 'Initializing'}</h3>
-                                    <p className="text-[10px] font-bold text-foreground-secondary uppercase tracking-widest">{Math.round(progress.percent)}% Complete</p>
-                                </div>
-                                {(progress.state === 'processing' || progress.state === 'analyzing') && (
-                                    <div className="w-full bg-foreground/[0.05] h-1.5 rounded-full overflow-hidden">
-                                        <motion.div className="h-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.5)]" animate={{ width: `${progress.percent}%` }} />
-                                    </div>
-                                )}
-                                <div className="flex flex-col gap-2 pt-4">
-                                    {progress.state === 'complete' && outputPath && (
-                                        <button onClick={() => (window as any).videoMergerAPI?.openFile(outputPath)} className="w-full bg-foreground text-background py-4 rounded-xl text-xs font-black">PLAY RESULT</button>
-                                    )}
-                                    <button onClick={() => setProgress(null)} className="w-full bg-foreground/[0.05] py-4 rounded-xl text-xs font-black">DISMISS</button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <ExportResultModal 
+                progress={progress}
+                outputPath={outputPath}
+                onDismiss={() => setProgress(null)}
+                onPlay={() => (window as any).videoMergerAPI?.openFile(outputPath!)}
+            />
 
             {/* Keyboard Shortcuts Guide */}
-            <AnimatePresence>
-                {showShortcuts && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
-                        onClick={() => setShowShortcuts(false)}
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }} 
-                            animate={{ scale: 1, opacity: 1 }} 
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-glass-background/95 backdrop-blur-xl rounded-3xl border border-border-glass p-8 shadow-2xl max-w-2xl w-full"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-2xl font-black">⌨️ Keyboard Shortcuts</h3>
-                                <button 
-                                    onClick={() => setShowShortcuts(false)}
-                                    className="w-8 h-8 rounded-full bg-foreground/[0.05] hover:bg-foreground/[0.1] flex items-center justify-center transition-all"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Play/Pause</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Space</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Split at Playhead</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">S / Ctrl+K</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Rewind / Slow</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">J</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Stop / Pause</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">K</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Forward / Fast</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">L</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Toggle Razor Tool</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">R</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Toggle Snap to Grid</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">G</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Frame Forward (5 frames)</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">→</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Frame Backward (5 frames)</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">←</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">1 Second Forward</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Ctrl + →</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">1 Second Backward</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Ctrl + ←</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Single Frame Forward</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Shift + →</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Single Frame Backward</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Shift + ←</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Go to Start</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Home</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Go to End</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">End</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Delete Selected Clip</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">Del</kbd>
-                                </div>
-                                <div className="flex items-center justify-between py-2 border-b border-border-glass">
-                                    <span className="text-sm text-foreground-secondary">Show Shortcuts</span>
-                                    <kbd className="px-3 py-1 bg-foreground/[0.08] rounded-lg text-xs font-mono font-bold border border-border-glass">?</kbd>
-                                </div>
-                            </div>
-                            
-                            <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-                                <p className="text-xs text-indigo-300 font-bold">
-                                    💡 <span className="font-black">Pro Tip:</span> Use Shift for frame-by-frame precision, Ctrl for second-by-second jumps, and regular arrow keys for quick navigation!
-                                </p>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <ShortcutsModal 
+                isOpen={showShortcuts}
+                onClose={() => setShowShortcuts(false)}
+            />
 
             {/* Loading Assets Modal - Centered */}
-            <AnimatePresence>
-                {(isProcessing || isLoadingAssets) && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }} 
-                            animate={{ scale: 1, opacity: 1 }} 
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-glass-background/95 backdrop-blur-xl rounded-3xl border border-border-glass p-10 shadow-2xl max-w-lg w-full mx-4"
-                        >
-                            <div className="flex flex-col items-center gap-6">
-                                {/* Circular Progress */}
-                                <div className="relative w-32 h-32">
-                                    {/* Background Circle */}
-                                    <svg className="w-full h-full transform -rotate-90">
-                                        <circle
-                                            cx="64"
-                                            cy="64"
-                                            r="56"
-                                            stroke="currentColor"
-                                            strokeWidth="8"
-                                            fill="none"
-                                            className="text-white/10"
-                                        />
-                                        {/* Progress Circle */}
-                                        <motion.circle
-                                            cx="64"
-                                            cy="64"
-                                            r="56"
-                                            stroke="currentColor"
-                                            strokeWidth="8"
-                                            fill="none"
-                                            strokeLinecap="round"
-                                            className="text-indigo-500"
-                                            initial={{ strokeDasharray: "0 352" }}
-                                            animate={{ 
-                                                strokeDasharray: `${(isLoadingAssets ? assetLoadingProgress : progress?.percent || 0) * 3.52} 352` 
-                                            }}
-                                            transition={{ duration: 0.3, ease: "easeOut" }}
-                                        />
-                                    </svg>
-                                    
-                                    {/* Center Icon & Percentage */}
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <Loader2 className="text-indigo-500 animate-spin mb-2" size={32} />
-                                        <span className="text-2xl font-black text-white">
-                                            {Math.round(isLoadingAssets ? assetLoadingProgress : progress?.percent || 0)}%
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Status Text */}
-                                <div className="text-center space-y-2 w-full">
-                                    <h3 className="text-xl font-black text-white">
-                                        {isLoadingAssets ? 'Loading Assets' : 'Exporting Project'}
-                                    </h3>
-                                    
-                                    {/* Detailed Loading Info */}
-                                    {isLoadingAssets && loadingDetail.fileName && (
-                                        <div className="space-y-2 mt-4">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-gray-400 font-medium">File:</span>
-                                                <span className="text-indigo-400 font-bold">
-                                                    {loadingDetail.current}/{loadingDetail.total}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-white font-bold truncate px-4" title={loadingDetail.fileName}>
-                                                {loadingDetail.fileName}
-                                            </p>
-                                            <p className="text-xs text-gray-400 font-medium">
-                                                {loadingDetail.stage}
-                                            </p>
-                                        </div>
-                                    )}
-                                    
-                                    {!isLoadingAssets && (
-                                        <p className="text-sm text-gray-400 font-medium">
-                                            Please wait while we process your video...
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Progress Bar */}
-                                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                                    <motion.div 
-                                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/50"
-                                        initial={{ width: "0%" }}
-                                        animate={{ 
-                                            width: `${isLoadingAssets ? assetLoadingProgress : progress?.percent || 0}%` 
-                                        }}
-                                        transition={{ duration: 0.3, ease: "easeOut" }}
-                                    />
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <AssetLoadingModal 
+                isOpen={isProcessing || isLoadingAssets}
+                isLoadingAssets={isLoadingAssets}
+                assetLoadingProgress={assetLoadingProgress}
+                progress={progress}
+                loadingDetail={loadingDetail}
+            />
         </div>
     );
 };

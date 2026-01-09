@@ -38,3 +38,13 @@ export interface VideoInfo {
     fps: number;
     size: number;
 }
+
+export interface ExtendedVideoInfo extends VideoInfo {
+    startTime: number;
+    endTime: number;
+    timelineStart: number;
+    trackIndex: number;
+    thumbnail?: string;
+    filmstrip?: string[];
+    waveform?: number[];
+}
