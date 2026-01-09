@@ -3795,19 +3795,20 @@ var VideoMerger = class {
 		console.log(`Generating filmstrip: ${actualCount} frames from ${duration}s video`);
 		const frames = [];
 		for (let i = 0; i < actualCount; i++) {
-			const timestamp = duration / (actualCount + 1) * (i + 1);
+			const timestamp = duration / actualCount * i;
 			const outputPath = path$1.join(outputDir, `thumb_${i.toString().padStart(3, "0")}.jpg`);
+			console.log(`Extracting frame ${i + 1}/${actualCount} at ${timestamp.toFixed(2)}s`);
 			try {
 				await new Promise((resolve, reject) => {
 					const args = [
-						"-ss",
-						timestamp.toString(),
 						"-i",
 						filePath,
+						"-ss",
+						timestamp.toString(),
 						"-vframes",
 						"1",
-						"-s",
-						"80x45",
+						"-vf",
+						"scale=80:45",
 						"-q:v",
 						"2",
 						"-f",
@@ -3816,9 +3817,16 @@ var VideoMerger = class {
 						outputPath
 					];
 					const process$1 = spawn(this.ffmpegPath, args);
+					let stderr = "";
+					process$1.stderr.on("data", (data) => {
+						stderr += data.toString();
+					});
 					process$1.on("close", (code) => {
 						if (code === 0 && fs$1.existsSync(outputPath)) resolve();
-						else reject(/* @__PURE__ */ new Error(`Frame ${i} extraction failed`));
+						else {
+							console.error(`Frame extraction failed for frame ${i}:`, stderr);
+							reject(/* @__PURE__ */ new Error(`Frame ${i} extraction failed`));
+						}
 					});
 					process$1.on("error", reject);
 				});
@@ -3827,7 +3835,7 @@ var VideoMerger = class {
 					frames.push(`data:image/jpeg;base64,${data}`);
 				}
 			} catch (err) {
-				console.warn(`Failed to extract frame ${i} at ${timestamp}s:`, err);
+				console.warn(`Failed to extract frame ${i} at ${timestamp.toFixed(2)}s:`, err);
 			}
 		}
 		console.log(`Filmstrip generated: ${frames.length}/${actualCount} frames`);

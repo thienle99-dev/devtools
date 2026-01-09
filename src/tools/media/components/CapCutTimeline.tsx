@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Scissors, ZoomIn, ZoomOut, Trash2, Video, Film, Layers, Sparkles, Type, Volume2 } from 'lucide-react';
+import { Plus, Scissors, ZoomIn, ZoomOut, Video, Film, Layers, Sparkles, Type, Volume2 } from 'lucide-react';
 import { cn } from '@utils/cn';
+import { TimelineClipItem } from './TimelineClipItem';
 
 interface TimelineClip {
     path: string;
@@ -190,14 +191,13 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                                 className="border-l border-[#2a2a2a] h-full shrink-0 relative group hover:bg-white/[0.02] transition-colors"
                                 style={{ width: `${pxPerSecond}px` }}
                             >
-                                {(i % 5 === 0) && (
-                                    <span className="absolute left-1.5 top-1 text-[9px] font-mono font-bold text-gray-500 group-hover:text-gray-300 transition-colors">
-                                        {formatDuration(i)}
-                                    </span>
-                                )}
+                                {/* Show time label every second for better visibility */}
+                                <span className="absolute left-1 top-1 text-[8px] font-mono font-bold text-gray-500 group-hover:text-gray-300 transition-colors">
+                                    {i}s
+                                </span>
                                 <div className={cn(
                                     "absolute left-0 bottom-0 border-l",
-                                    i % 5 === 0 ? "h-2 border-gray-600" : "h-1 border-[#2a2a2a]"
+                                    i % 5 === 0 ? "h-3 border-gray-500" : "h-1.5 border-[#2a2a2a]"
                                 )} />
                             </div>
                         ))}
@@ -237,172 +237,22 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
 
                         {/* Video Clips */}
                         {files.map((file, idx) => (
-                            <motion.div 
+                            <TimelineClipItem
                                 key={`${file.path}-${idx}`}
-                                drag
-                                dragMomentum={false}
-                                dragElastic={0}
-                                dragTransition={{ 
-                                    power: 0,
-                                    timeConstant: 0
-                                }}
-                                whileDrag={{ 
-                                    scale: 1.03,
-                                    zIndex: 100,
-                                    boxShadow: "0 10px 30px rgba(99, 102, 241, 0.3)",
-                                    cursor: "grabbing"
-                                }}
-                                onDragEnd={(_e, info) => {
-                                    const deltaX = info.offset.x / pxPerSecond;
-                                    const deltaY = Math.round(info.offset.y / 60);
-                                    onUpdateClipPosition(idx, file.timelineStart + deltaX, file.trackIndex + deltaY);
-                                }}
-                                className={cn(
-                                    "absolute h-14 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing group",
-                                    previewIndex === idx ? "z-30 ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#0f0f0f]" : "z-10"
-                                )}
-                                style={{ 
-                                    left: `${file.timelineStart * pxPerSecond}px`,
-                                    top: `${file.trackIndex * 60}px`,
-                                    width: `${(file.endTime - file.startTime) * pxPerSecond}px`,
-                                    x: 0,
-                                    y: 0
-                                }}
-                                initial={{ scale: 0.95, opacity: 0 }}
-                                animate={{ 
-                                    scale: 1, 
-                                    opacity: 1,
-                                    x: 0,
-                                    y: 0
-                                }}
-                                transition={{ 
-                                    type: "tween",
-                                    duration: 0.15,
-                                    ease: "easeOut"
-                                }}
-                                onPointerDown={(e) => {
-                                    e.stopPropagation();
-                                    onSetPreviewIndex(idx);
-                                    if (isRazorMode && mouseTimelineTime !== null) {
-                                        onSplitClip(idx);
-                                    }
-                                }}
-                            >
-                                {/* Clip Background with Filmstrip */}
-                                <div className={cn(
-                                    "absolute inset-0 rounded-lg border-2 transition-all overflow-hidden",
-                                    previewIndex === idx 
-                                        ? "bg-gradient-to-br from-indigo-900/40 to-indigo-800/30 border-indigo-500" 
-                                        : "bg-gradient-to-br from-gray-800/60 to-gray-900/50 border-gray-700/50 group-hover:border-gray-600"
-                                )}>
-                                    {/* Filmstrip Thumbnails */}
-                                    {file.filmstrip && file.filmstrip.length > 0 ? (
-                                        <div className="absolute inset-0 flex opacity-80 group-hover:opacity-95 transition-opacity overflow-hidden">
-                                            {/* Repeat thumbnails to fill the clip width */}
-                                            {Array.from({ 
-                                                length: Math.ceil(((file.endTime - file.startTime) * pxPerSecond) / 60) 
-                                            }).map((_, repeatIdx) => (
-                                                <React.Fragment key={`repeat-${repeatIdx}`}>
-                                                    {file.filmstrip!.map((thumb, i) => (
-                                                        <img 
-                                                            key={`${repeatIdx}-${i}`}
-                                                            src={thumb} 
-                                                            className="h-full object-cover brightness-105 contrast-105" 
-                                                            style={{ 
-                                                                width: '60px',
-                                                                minWidth: '60px',
-                                                                maxWidth: '60px'
-                                                            }} 
-                                                            alt=""
-                                                            onError={(e) => {
-                                                                console.error('Filmstrip image failed to load:', thumb.substring(0, 50));
-                                                                e.currentTarget.style.display = 'none';
-                                                            }}
-                                                        />
-                                                    ))}
-                                                </React.Fragment>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        /* Fallback when no filmstrip */
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <Film className="text-white/20" size={32} />
-                                        </div>
-                                    )}
-                                    
-                                    {/* Gradient Overlay - lighter to show filmstrip better */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
-                                </div>
-
-                                {/* Left Trim Handle */}
-                                <div 
-                                    className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 hover:bg-indigo-400 cursor-ew-resize z-40 group/handle transition-all hover:w-1.5"
-                                    onMouseDown={(e) => {
-                                        e.stopPropagation();
-                                        const startX = e.clientX;
-                                        const initialStart = file.startTime;
-                                        const move = (me: MouseEvent) => {
-                                            const delta = (me.clientX - startX) / pxPerSecond;
-                                            onUpdateTrim(idx, initialStart + delta, file.endTime);
-                                        };
-                                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-                                        window.addEventListener('mousemove', move);
-                                        window.addEventListener('mouseup', up);
-                                    }}
-                                >
-                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white/80 rounded-r-full shadow-lg opacity-0 group-hover/handle:opacity-100 transition-opacity" />
-                                </div>
-
-                                {/* Clip Info */}
-                                <div className="absolute inset-0 flex flex-col justify-center px-3 z-20 pointer-events-none">
-                                    <p className="text-[10px] font-bold text-white truncate drop-shadow-lg">{file.path.split(/[\\\/]/).pop()}</p>
-                                    <p className="text-[8px] text-gray-300 font-medium mt-0.5">{formatDuration(file.endTime - file.startTime)}</p>
-                                </div>
-
-                                {/* Right Trim Handle */}
-                                <div 
-                                    className="absolute right-0 top-0 bottom-0 w-1 bg-indigo-500 hover:bg-indigo-400 cursor-ew-resize z-40 group/handle transition-all hover:w-1.5"
-                                    onMouseDown={(e) => {
-                                        e.stopPropagation();
-                                        const startX = e.clientX;
-                                        const initialEnd = file.endTime;
-                                        const move = (me: MouseEvent) => {
-                                            const delta = (me.clientX - startX) / pxPerSecond;
-                                            onUpdateTrim(idx, file.startTime, initialEnd + delta);
-                                        };
-                                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-                                        window.addEventListener('mousemove', move);
-                                        window.addEventListener('mouseup', up);
-                                    }}
-                                >
-                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white/80 rounded-l-full shadow-lg opacity-0 group-hover/handle:opacity-100 transition-opacity" />
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); onSplitClip(idx); }} 
-                                        className="p-1 px-1.5 bg-black/60 hover:bg-indigo-600 backdrop-blur-sm text-white rounded text-[8px] font-bold uppercase transition-all shadow-lg"
-                                        title="Split"
-                                    >
-                                        <Scissors size={10} />
-                                    </button>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); onSetTrimmingIdx(idx); }} 
-                                        className="p-1 px-1.5 bg-black/60 hover:bg-blue-600 backdrop-blur-sm text-white rounded text-[8px] font-bold uppercase transition-all shadow-lg"
-                                        title="Trim"
-                                    >
-                                        ✂
-                                    </button>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); onRemoveFile(file.path); }} 
-                                        className="p-1 px-1.5 bg-black/60 hover:bg-red-600 backdrop-blur-sm text-white rounded transition-all shadow-lg"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={10} />
-                                    </button>
-                                </div>
-                            </motion.div>
+                                file={file}
+                                idx={idx}
+                                pxPerSecond={pxPerSecond}
+                                previewIndex={previewIndex}
+                                isRazorMode={isRazorMode}
+                                mouseTimelineTime={mouseTimelineTime}
+                                onSetPreviewIndex={onSetPreviewIndex}
+                                onSplitClip={onSplitClip}
+                                onSetTrimmingIdx={onSetTrimmingIdx}
+                                onRemoveFile={onRemoveFile}
+                                onUpdateTrim={onUpdateTrim}
+                                onUpdateClipPosition={onUpdateClipPosition}
+                                formatDuration={formatDuration}
+                            />
                         ))}
                     </div>
                 </div>

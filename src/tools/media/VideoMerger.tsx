@@ -42,6 +42,7 @@ export const VideoMerger: React.FC = () => {
     const [trimmingIdx, setTrimmingIdx] = useState<number | null>(null);
     const [isLoadingAssets, setIsLoadingAssets] = useState(false);
     const [assetLoadingProgress, setAssetLoadingProgress] = useState(0);
+    const [loadingDetail, setLoadingDetail] = useState({ fileName: '', stage: '', current: 0, total: 0 });
     const [isRazorMode, setIsRazorMode] = useState(false);
     const [mouseTimelineTime, setMouseTimelineTime] = useState<number | null>(null);
     const [showShortcuts, setShowShortcuts] = useState(false);
@@ -132,14 +133,37 @@ export const VideoMerger: React.FC = () => {
                 
                 for (let i = 0; i < paths.length; i++) {
                     const p = paths[i];
+                    const fileName = p.split(/[\\/]/).pop() || 'Unknown';
+                    
                     console.log(`Processing file ${i + 1}/${paths.length}:`, p);
                     
+                    // Update: Getting video info
+                    setLoadingDetail({ 
+                        fileName, 
+                        stage: 'Reading video info...', 
+                        current: i + 1, 
+                        total: paths.length 
+                    });
                     const info = await (window as any).videoMergerAPI?.getVideoInfo(p);
                     console.log('Video info:', info);
                     
+                    // Update: Generating thumbnail
+                    setLoadingDetail({ 
+                        fileName, 
+                        stage: 'Generating thumbnail...', 
+                        current: i + 1, 
+                        total: paths.length 
+                    });
                     const thumb = await (window as any).videoMergerAPI?.generateThumbnail(p, 1);
                     console.log('Thumbnail generated:', thumb ? `${thumb.substring(0, 50)}...` : 'FAILED');
                     
+                    // Update: Generating filmstrip
+                    setLoadingDetail({ 
+                        fileName, 
+                        stage: 'Extracting 15 frames for filmstrip...', 
+                        current: i + 1, 
+                        total: paths.length 
+                    });
                     const filmstrip = await (window as any).videoMergerAPI?.generateFilmstrip(p, info.duration, 15);
                     console.log('Filmstrip generated:', filmstrip ? `${filmstrip.length} frames` : 'FAILED');
                     
@@ -159,10 +183,12 @@ export const VideoMerger: React.FC = () => {
                 console.log('All files processed:', newInfos);
                 setFiles(prev => [...prev, ...newInfos]);
                 setIsLoadingAssets(false);
+                setLoadingDetail({ fileName: '', stage: '', current: 0, total: 0 });
             }
         } catch (error) {
             console.error('Failed to add files:', error);
             setIsLoadingAssets(false);
+            setLoadingDetail({ fileName: '', stage: '', current: 0, total: 0 });
         }
     };
 
@@ -212,8 +238,6 @@ export const VideoMerger: React.FC = () => {
         return acc;
     }, [] as (ExtendedVideoInfo & { start: number; end: number })[]);
 
-    const pxPerSecond = 40 * zoomLevel;
-
     useEffect(() => {
         if (isPlaying) {
             const startTimestamp = performance.now();
@@ -244,6 +268,19 @@ export const VideoMerger: React.FC = () => {
 
     useEffect(() => {
         const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
+        
+        console.log('🎬 Video Preview Sync:', {
+            currentTime,
+            totalClips: files.length,
+            activeClip: activeClip ? {
+                path: activeClip.path.split(/[\\/]/).pop(),
+                timelineStart: activeClip.timelineStart,
+                timelineEnd: activeClip.timelineStart + (activeClip.endTime - activeClip.startTime),
+                startTime: activeClip.startTime,
+                endTime: activeClip.endTime
+            } : 'NONE'
+        });
+        
         if (activeClip) {
             // Normalize path to ensure it works cross-platform and with the protocol handler
             const normalizedPath = activeClip.path.replace(/\\/g, '/');
@@ -251,15 +288,24 @@ export const VideoMerger: React.FC = () => {
             const localSrc = `local-media:///${normalizedPath}`;
             
             if (activeClipSrc !== localSrc) {
+                console.log('📹 Changing video source to:', localSrc);
                 setActiveClipSrc(localSrc);
             }
             if (videoPreviewRef.current) {
                 const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
+                console.log('⏱️ Seeking video to:', {
+                    clipLocalTime: clipLocalTime.toFixed(2),
+                    calculation: `(${currentTime.toFixed(2)} - ${activeClip.timelineStart.toFixed(2)}) + ${activeClip.startTime.toFixed(2)}`,
+                    currentVideoTime: videoPreviewRef.current.currentTime.toFixed(2),
+                    diff: Math.abs(videoPreviewRef.current.currentTime - clipLocalTime).toFixed(2)
+                });
+                
                 if (Math.abs(videoPreviewRef.current.currentTime - clipLocalTime) > 0.15) {
                     videoPreviewRef.current.currentTime = clipLocalTime;
                 }
             }
         } else {
+            console.log('❌ No active clip found at currentTime:', currentTime);
             setActiveClipSrc(null);
         }
     }, [currentTime, files, activeClipSrc]);
@@ -275,12 +321,14 @@ export const VideoMerger: React.FC = () => {
     }, [isPlaying, activeClipSrc]);
 
 
+
     const handleTimelineClick = (e: React.MouseEvent) => {
         if (!timelineRef.current || trimmingIdx !== null) return;
 
         const rect = timelineRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left + timelineRef.current.scrollLeft;
-        const clickedTime = (x - 40) / pxPerSecond;
+        const pxPerSecond = 80 * zoomLevel; // Same calculation as in CapCutTimeline
+        const clickedTime = x / pxPerSecond; // No offset needed - timelineRef is the canvas area
         
         setCurrentTime(Math.max(0, Math.min(clickedTime, totalDuration + 10)));
     };
@@ -289,9 +337,11 @@ export const VideoMerger: React.FC = () => {
         if (!timelineRef.current) return;
         const rect = timelineRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left + timelineRef.current.scrollLeft;
-        const time = (x - 40) / pxPerSecond;
+        const pxPerSecond = 80 * zoomLevel;
+        const time = x / pxPerSecond; // No offset needed
         setMouseTimelineTime(Math.max(0, time));
     };
+
 
     const updateClipPosition = (idx: number, timelineStart: number, trackIndex: number) => {
         setFiles(prev => {
@@ -387,28 +437,39 @@ export const VideoMerger: React.FC = () => {
                     <div className="aspect-video w-full max-w-2xl bg-black rounded-xl overflow-hidden shadow-2xl border border-border-glass flex flex-col relative group">
                         <div className="absolute inset-0 flex items-center justify-center bg-black">
                             {activeClipSrc ? (
-                                <video 
-                                    key={activeClipSrc}
-                                    ref={videoPreviewRef}
-                                    src={activeClipSrc}
-                                    className="w-full h-full object-contain bg-black"
-                                    preload="auto"
-                                    onLoadedMetadata={(e) => {
-                                        const video = e.currentTarget;
-                                        // Immediately sync time when metadata is loaded
-                                        const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
-                                        if (activeClip) {
-                                            const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
-                                            video.currentTime = clipLocalTime;
-                                        }
-                                        if (isPlaying) {
-                                            video.play().catch(console.error);
-                                        }
-                                    }}
-                                    onError={(e) => {
-                                        console.error('Merger Video Error:', e.currentTarget.error);
-                                    }}
-                                />
+                                <>
+                                    <video 
+                                        key={activeClipSrc}
+                                        ref={videoPreviewRef}
+                                        src={activeClipSrc}
+                                        className="w-full h-full object-contain bg-black"
+                                        preload="auto"
+                                        onLoadedMetadata={(e) => {
+                                            const video = e.currentTarget;
+                                            // Immediately sync time when metadata is loaded
+                                            const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
+                                            if (activeClip) {
+                                                const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
+                                                video.currentTime = clipLocalTime;
+                                            }
+                                            if (isPlaying) {
+                                                video.play().catch(console.error);
+                                            }
+                                        }}
+                                        onError={(e) => {
+                                            console.error('Merger Video Error:', e.currentTarget.error);
+                                        }}
+                                    />
+                                    
+                                    {/* Debug Overlay */}
+                                    <div className="absolute top-2 left-2 bg-black/80 text-white p-2 rounded text-[10px] font-mono space-y-1 pointer-events-none">
+                                        <div>Timeline: {currentTime.toFixed(2)}s</div>
+                                        <div>Video: {videoPreviewRef.current?.currentTime.toFixed(2) || '0.00'}s</div>
+                                        <div className="text-yellow-400">
+                                            {files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)))?.path.split(/[\\/]/).pop() || 'No clip'}
+                                        </div>
+                                    </div>
+                                </>
                             ) : (
                                 files.length > 0 && currentTime < totalDuration ? (
                                     <div className="flex flex-col items-center gap-2">
@@ -651,35 +712,106 @@ export const VideoMerger: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Footer Progress Bar */}
+            {/* Loading Assets Modal - Centered */}
             <AnimatePresence>
                 {(isProcessing || isLoadingAssets) && (
                     <motion.div 
-                        initial={{ y: 100 }} 
-                        animate={{ y: 0 }} 
-                        exit={{ y: 100 }}
-                        className="absolute bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-t border-border-glass p-2 px-6 flex items-center justify-between gap-6 overflow-hidden"
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
                     >
-                        <div className="flex items-center gap-3 shrink-0">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-400">
-                                <Loader2 size={12} className="animate-spin" />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground-secondary">
-                                {isLoadingAssets ? `Loading Assets... (${Math.round(assetLoadingProgress)}%)` : 'Exporting Project...'}
-                            </span>
-                        </div>
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-glass-background/95 backdrop-blur-xl rounded-3xl border border-border-glass p-10 shadow-2xl max-w-lg w-full mx-4"
+                        >
+                            <div className="flex flex-col items-center gap-6">
+                                {/* Circular Progress */}
+                                <div className="relative w-32 h-32">
+                                    {/* Background Circle */}
+                                    <svg className="w-full h-full transform -rotate-90">
+                                        <circle
+                                            cx="64"
+                                            cy="64"
+                                            r="56"
+                                            stroke="currentColor"
+                                            strokeWidth="8"
+                                            fill="none"
+                                            className="text-white/10"
+                                        />
+                                        {/* Progress Circle */}
+                                        <motion.circle
+                                            cx="64"
+                                            cy="64"
+                                            r="56"
+                                            stroke="currentColor"
+                                            strokeWidth="8"
+                                            fill="none"
+                                            strokeLinecap="round"
+                                            className="text-indigo-500"
+                                            initial={{ strokeDasharray: "0 352" }}
+                                            animate={{ 
+                                                strokeDasharray: `${(isLoadingAssets ? assetLoadingProgress : progress?.percent || 0) * 3.52} 352` 
+                                            }}
+                                            transition={{ duration: 0.3, ease: "easeOut" }}
+                                        />
+                                    </svg>
+                                    
+                                    {/* Center Icon & Percentage */}
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                        <Loader2 className="text-indigo-500 animate-spin mb-2" size={32} />
+                                        <span className="text-2xl font-black text-white">
+                                            {Math.round(isLoadingAssets ? assetLoadingProgress : progress?.percent || 0)}%
+                                        </span>
+                                    </div>
+                                </div>
 
-                        <div className="flex-1 flex items-center gap-4">
-                            <div className="flex-1 h-1.5 bg-foreground/[0.05] rounded-full overflow-hidden">
-                                <motion.div 
-                                    className="h-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.3)]"
-                                    animate={{ width: `${isLoadingAssets ? assetLoadingProgress : progress?.percent || 0}%` }}
-                                />
+                                {/* Status Text */}
+                                <div className="text-center space-y-2 w-full">
+                                    <h3 className="text-xl font-black text-white">
+                                        {isLoadingAssets ? 'Loading Assets' : 'Exporting Project'}
+                                    </h3>
+                                    
+                                    {/* Detailed Loading Info */}
+                                    {isLoadingAssets && loadingDetail.fileName && (
+                                        <div className="space-y-2 mt-4">
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-gray-400 font-medium">File:</span>
+                                                <span className="text-indigo-400 font-bold">
+                                                    {loadingDetail.current}/{loadingDetail.total}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-white font-bold truncate px-4" title={loadingDetail.fileName}>
+                                                {loadingDetail.fileName}
+                                            </p>
+                                            <p className="text-xs text-gray-400 font-medium">
+                                                {loadingDetail.stage}
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    {!isLoadingAssets && (
+                                        <p className="text-sm text-gray-400 font-medium">
+                                            Please wait while we process your video...
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                    <motion.div 
+                                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/50"
+                                        initial={{ width: "0%" }}
+                                        animate={{ 
+                                            width: `${isLoadingAssets ? assetLoadingProgress : progress?.percent || 0}%` 
+                                        }}
+                                        transition={{ duration: 0.3, ease: "easeOut" }}
+                                    />
+                                </div>
                             </div>
-                            <span className="text-[10px] font-mono font-black w-8 text-right">
-                                {Math.round(isLoadingAssets ? assetLoadingProgress : progress?.percent || 0)}%
-                            </span>
-                        </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

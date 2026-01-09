@@ -140,17 +140,22 @@ export class VideoMerger {
         const frames: string[] = [];
         
         // Generate frames sequentially at specific timestamps
+        // Start from 0 and evenly distribute across the duration
         for (let i = 0; i < actualCount; i++) {
-            const timestamp = (duration / (actualCount + 1)) * (i + 1); // Evenly distributed
+            const timestamp = (duration / actualCount) * i; // Start from 0, evenly distributed
             const outputPath = path.join(outputDir, `thumb_${i.toString().padStart(3, '0')}.jpg`);
+            
+            console.log(`Extracting frame ${i + 1}/${actualCount} at ${timestamp.toFixed(2)}s`);
             
             try {
                 await new Promise<void>((resolve, reject) => {
+                    // IMPORTANT: Place -ss AFTER -i for accurate seeking
+                    // -accurate_seek ensures we get the exact frame, not nearest keyframe
                     const args = [
-                        '-ss', timestamp.toString(),
                         '-i', filePath,
+                        '-ss', timestamp.toString(),
                         '-vframes', '1',
-                        '-s', '80x45',
+                        '-vf', 'scale=80:45',  // Use filter for better quality
                         '-q:v', '2', // High quality
                         '-f', 'image2',
                         '-y', outputPath
@@ -158,10 +163,16 @@ export class VideoMerger {
 
                     const process = spawn(this.ffmpegPath!, args);
                     
+                    let stderr = '';
+                    process.stderr.on('data', (data) => {
+                        stderr += data.toString();
+                    });
+                    
                     process.on('close', (code) => {
                         if (code === 0 && fs.existsSync(outputPath)) {
                             resolve();
                         } else {
+                            console.error(`Frame extraction failed for frame ${i}:`, stderr);
                             reject(new Error(`Frame ${i} extraction failed`));
                         }
                     });
@@ -175,7 +186,7 @@ export class VideoMerger {
                     frames.push(`data:image/jpeg;base64,${data}`);
                 }
             } catch (err) {
-                console.warn(`Failed to extract frame ${i} at ${timestamp}s:`, err);
+                console.warn(`Failed to extract frame ${i} at ${timestamp.toFixed(2)}s:`, err);
                 // Continue with other frames
             }
         }
