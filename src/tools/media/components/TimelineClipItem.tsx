@@ -44,11 +44,6 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
         () => (file.endTime - file.startTime) * pxPerSecond,
         [file.endTime, file.startTime, pxPerSecond]
     );
-    
-    const thumbnailRepeatCount = React.useMemo(
-        () => Math.ceil(clipWidth / 60),
-        [clipWidth]
-    );
 
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
@@ -156,28 +151,25 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
                     ? "bg-gradient-to-br from-indigo-900/40 to-indigo-800/30 border-indigo-500" 
                     : "bg-gradient-to-br from-gray-800/60 to-gray-900/50 border-gray-700/50 group-hover:border-gray-600"
             )}>
-                {/* Filmstrip Thumbnails - Optimized */}
+                {/* Filmstrip Thumbnails - Temporal Alignment Fix */}
                 {file.filmstrip && file.filmstrip.length > 0 ? (
-                    <div className="absolute inset-0 flex opacity-80 group-hover:opacity-95 transition-opacity overflow-hidden">
-                        {/* Limit repeats to avoid too many DOM elements */}
-                        {Array.from({ length: Math.min(thumbnailRepeatCount, 50) }).map((_, repeatIdx) => (
-                            <React.Fragment key={repeatIdx}>
-                                {file.filmstrip!.map((thumb, i) => (
-                                    <img 
-                                        key={`${repeatIdx}-${i}`}
-                                        src={thumb} 
-                                        className="h-full object-cover brightness-105 contrast-105" 
-                                        style={{ 
-                                            width: '60px',
-                                            minWidth: '60px',
-                                            maxWidth: '60px'
-                                        }} 
-                                        alt=""
-                                        loading="lazy"
-                                        draggable={false}
-                                    />
-                                ))}
-                            </React.Fragment>
+                    <div 
+                        className="absolute inset-y-0 flex opacity-60 group-hover:opacity-80 transition-opacity"
+                        style={{
+                            width: `${file.duration * pxPerSecond}px`,
+                            left: `${-file.startTime * pxPerSecond}px`
+                        }}
+                    >
+                        {file.filmstrip.map((thumb, i) => (
+                            <div key={i} className="flex-1 h-full relative overflow-hidden">
+                                <img 
+                                    src={thumb} 
+                                    className="absolute inset-0 w-full h-full object-cover brightness-105 contrast-105 pointer-events-none" 
+                                    alt=""
+                                    loading="lazy"
+                                    onDragStart={(e) => e.preventDefault()}
+                                />
+                            </div>
                         ))}
                     </div>
                 ) : (

@@ -3805,7 +3805,7 @@ var VideoMerger = class {
 				"-i",
 				filePath,
 				"-vf",
-				`fps=${fps},scale=80:45`,
+				`fps=${fps},scale=240:135`,
 				"-q:v",
 				"2",
 				"-f",

@@ -153,7 +153,7 @@ export class VideoMerger {
         return new Promise((resolve, reject) => {
             const args = [
                 '-i', filePath,
-                '-vf', `fps=${fps},scale=80:45`,
+                '-vf', `fps=${fps},scale=240:135`,
                 '-q:v', '2',
                 '-f', 'image2',
                 outputPattern
