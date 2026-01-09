@@ -32,6 +32,7 @@ interface ExtendedVideoInfo extends VideoInfo {
     trackIndex: number;
     thumbnail?: string;
     filmstrip?: string[];
+    waveform?: number[];
 }
 
 export const VideoMerger: React.FC = () => {
@@ -179,6 +180,16 @@ export const VideoMerger: React.FC = () => {
                     const filmstrip = await (window as any).videoMergerAPI?.generateFilmstrip(p, info.duration, 15);
                     console.log('Filmstrip generated:', filmstrip ? `${filmstrip.length} frames` : 'FAILED');
                     
+                    // Update: Extracting waveform
+                    setLoadingDetail({ 
+                        fileName, 
+                        stage: 'Analyzing audio waveform...', 
+                        current: i + 1, 
+                        total: paths.length 
+                    });
+                    const waveform = await (window as any).videoMergerAPI?.extractWaveform(p);
+                    console.log('Waveform data points:', waveform ? waveform.length : 'FAILED');
+                    
                     newInfos.push({
                         ...info,
                         startTime: 0,
@@ -186,7 +197,8 @@ export const VideoMerger: React.FC = () => {
                         timelineStart: newInfos.length > 0 ? newInfos[newInfos.length-1].timelineStart + (newInfos[newInfos.length-1].endTime - newInfos[newInfos.length-1].startTime) : 0,
                         trackIndex: 0,
                         thumbnail: thumb,
-                        filmstrip: filmstrip
+                        filmstrip: filmstrip,
+                        waveform: waveform
                     });
                     
                     setAssetLoadingProgress(Math.round(((i + 1) / paths.length) * 100));

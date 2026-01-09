@@ -12,6 +12,7 @@ interface TimelineClip {
     trackIndex: number;
     thumbnail?: string;
     filmstrip?: string[];
+    waveform?: number[];
 }
 
 interface TimelineClipItemProps {
@@ -55,6 +56,52 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
         () => Math.ceil(clipWidth / 60),
         [clipWidth]
     );
+
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+    React.useEffect(() => {
+        if (!file.waveform || !canvasRef.current || file.duration <= 0) return;
+        
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Set physical size
+        canvas.width = clipWidth * dpr;
+        canvas.height = 56 * dpr; // h-14 is 56px
+        
+        // Scale context
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, clipWidth, 56);
+        
+        // Style
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        
+        const totalPoints = file.waveform.length;
+        const pointsPerSec = totalPoints / file.duration;
+        const startPoint = Math.floor(file.startTime * pointsPerSec);
+        const endPoint = Math.ceil(file.endTime * pointsPerSec);
+        
+        const visibleData = file.waveform.slice(startPoint, endPoint);
+        if (visibleData.length === 0) return;
+        
+        // Draw using Path for better performance
+        ctx.beginPath();
+        const barWidth = clipWidth / visibleData.length;
+        
+        for (let i = 0; i < visibleData.length; i++) {
+            const val = visibleData[i];
+            const barHeight = val * 40; // 40px height max
+            const x = i * barWidth;
+            const y = (56 - barHeight) / 2;
+            
+            ctx.rect(x, y, Math.max(0.5, barWidth - 0.5), barHeight);
+        }
+        ctx.fill();
+        
+    }, [file.waveform, file.startTime, file.endTime, file.duration, clipWidth]);
 
     const handlePointerDown = React.useCallback((e: React.PointerEvent) => {
         e.stopPropagation();
@@ -143,6 +190,15 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
                 
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
+                
+                {/* Audio Waveform Overlay */}
+                {file.waveform && (
+                    <canvas 
+                        ref={canvasRef} 
+                        className="absolute inset-0 w-full h-full pointer-events-none z-20"
+                        style={{ width: clipWidth, height: 56 }}
+                    />
+                )}
             </div>
 
             {/* Left Trim Handle */}

@@ -217,6 +217,75 @@ export class VideoMerger {
         return frames;
     }
 
+    async extractWaveform(filePath: string): Promise<number[]> {
+        if (!this.ffmpegPath) throw new Error('FFmpeg not available');
+        
+        console.log('Extracting waveform for:', filePath);
+
+        return new Promise((resolve, reject) => {
+            const args = [
+                '-i', filePath,
+                '-vn', // No video
+                '-ac', '1', // Mono
+                '-filter:a', 'aresample=8000', // Resample to 8kHz
+                '-map', '0:a',
+                '-c:a', 'pcm_s16le', // Raw 16-bit PCM
+                '-f', 'data',
+                '-' // Output to stdout
+            ];
+
+            const process = spawn(this.ffmpegPath!, args);
+            const chunks: Buffer[] = [];
+
+            process.stdout.on('data', (chunk: Buffer) => {
+                chunks.push(chunk);
+            });
+
+            process.stderr.on('data', () => {
+                // Ignore stderr (ffmpeg progress)
+            });
+
+            process.on('close', (code) => {
+                if (code === 0) {
+                    try {
+                        const buffer = Buffer.concat(chunks);
+                        const data: number[] = [];
+                        
+                        // Process 16-bit signed integers
+                        // We want about 100 points per second.
+                        // Sample rate is 8000 Hz.
+                        // So 1 point every 80 samples.
+                        const samplesPerPoint = 80;
+                        
+                        for (let i = 0; i < buffer.length; i += samplesPerPoint * 2) { // * 2 because 16-bit = 2 bytes
+                            let max = 0;
+                            // Find max amplitude in this chunk
+                            for (let j = 0; j < samplesPerPoint; j++) {
+                                const offset = i + j * 2;
+                                if (offset + 1 < buffer.length) {
+                                    // Read Int16 Little Endian
+                                    const val = Math.abs(buffer.readInt16LE(offset));
+                                    if (val > max) max = val;
+                                }
+                            }
+                            // Normalize to 0-1 (max 16-bit val is 32768)
+                            data.push(max / 32768);
+                        }
+                        
+                        console.log(`Waveform extracted: ${data.length} points`);
+                        resolve(data);
+                    } catch (err) {
+                        reject(err);
+                    }
+                } else {
+                    reject(new Error('Waveform extraction failed'));
+                }
+            });
+
+            process.on('error', reject);
+        });
+    }
+
     async mergeVideos(
         options: VideoMergeOptions,
         progressCallback?: (progress: VideoMergeProgress) => void

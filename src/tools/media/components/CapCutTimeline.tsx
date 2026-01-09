@@ -13,6 +13,7 @@ interface TimelineClip {
     trackIndex: number;
     thumbnail?: string;
     filmstrip?: string[];
+    waveform?: number[];
 }
 
 interface CapCutTimelineProps {

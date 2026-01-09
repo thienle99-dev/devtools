@@ -1840,6 +1840,10 @@ app.whenReady().then(() => {
     return await videoMerger.generateFilmstrip(filePath, duration, count);
   });
 
+  ipcMain.handle('video-merger:extract-waveform', async (_, filePath: string) => {
+    return await videoMerger.extractWaveform(filePath);
+  });
+
   ipcMain.handle('video-merger:merge', async (_, options) => {
     return new Promise((resolve, reject) => {
       videoMerger.mergeVideos(options, (progress) => {

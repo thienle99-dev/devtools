@@ -3858,6 +3858,58 @@ var VideoMerger = class {
 		}
 		return frames;
 	}
+	async extractWaveform(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		console.log("Extracting waveform for:", filePath);
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-vn",
+				"-ac",
+				"1",
+				"-filter:a",
+				"aresample=8000",
+				"-map",
+				"0:a",
+				"-c:a",
+				"pcm_s16le",
+				"-f",
+				"data",
+				"-"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			const chunks = [];
+			process$1.stdout.on("data", (chunk) => {
+				chunks.push(chunk);
+			});
+			process$1.stderr.on("data", () => {});
+			process$1.on("close", (code) => {
+				if (code === 0) try {
+					const buffer = Buffer.concat(chunks);
+					const data = [];
+					const samplesPerPoint = 80;
+					for (let i = 0; i < buffer.length; i += samplesPerPoint * 2) {
+						let max = 0;
+						for (let j = 0; j < samplesPerPoint; j++) {
+							const offset = i + j * 2;
+							if (offset + 1 < buffer.length) {
+								const val = Math.abs(buffer.readInt16LE(offset));
+								if (val > max) max = val;
+							}
+						}
+						data.push(max / 32768);
+					}
+					console.log(`Waveform extracted: ${data.length} points`);
+					resolve(data);
+				} catch (err) {
+					reject(err);
+				}
+				else reject(/* @__PURE__ */ new Error("Waveform extraction failed"));
+			});
+			process$1.on("error", reject);
+		});
+	}
 	async mergeVideos(options, progressCallback) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
 		const id = options.id || randomUUID$1();
@@ -5833,6 +5885,9 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("video-filmstrip:generate", async (_, filePath, duration, count) => {
 		return await videoMerger.generateFilmstrip(filePath, duration, count);
+	});
+	ipcMain.handle("video-merger:extract-waveform", async (_, filePath) => {
+		return await videoMerger.extractWaveform(filePath);
 	});
 	ipcMain.handle("video-merger:merge", async (_, options) => {
 		return new Promise((resolve, reject) => {
