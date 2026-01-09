@@ -850,19 +850,19 @@
 ## Phase 12: Universal Media Downloader Implementation (UNIVERSAL_DOWNLOADER_PLAN.md)
 
 ### 12.1 Backend Service
-- [ ] Create `electron/main/universal-downloader.ts`
-- [ ] Implement `UniversalDownloader` class with generic `getVideoInfo` and `downloadMedia`
-- [ ] Implement platform-specific arguments system (cookies, user-agent)
-- [ ] Register IPC handlers: `universal:get-info`, `universal:download`, `universal:cancel`, `universal:get-history`
-- [ ] Expose `window.universalAPI` in preload script
+- [x] Create `electron/main/universal-downloader.ts`
+- [x] Implement `UniversalDownloader` class with generic `getVideoInfo` and `downloadMedia`
+- [x] Implement platform-specific arguments system (cookies, user-agent)
+- [x] Register IPC handlers: `universal:get-info`, `universal:download`, `universal:cancel`, `universal:get-history`
+- [x] Expose `window.universalAPI` in preload script
 
 ### 12.2 React Components
-- [ ] Create `utils/platform-detector.ts` for URL type identification
-- [ ] Create `UniversalDownloader.tsx` main container
-- [ ] Implement `PlatformDetector.tsx` for visual feedback
-- [ ] Implement `UniversalVideoInfo.tsx` for unified metadata display
-- [ ] Implement `UniversalFormatSelector.tsx` for simplified audio/video selection
-- [ ] Implement `PlatformBadge.tsx` for platform indication
+- [x] Create `utils/platform-detector.ts` for URL type identification
+- [x] Create `UniversalDownloader.tsx` main container
+- [x] Implement `PlatformDetector.tsx` for visual feedback
+- [x] Implement `UniversalVideoInfo.tsx` for unified metadata display
+- [x] Implement `UniversalFormatSelector.tsx` for simplified audio/video selection
+- [x] Implement `PlatformBadge.tsx` for platform indication
 
 ### 12.3 Advanced Media Features
 - [ ] Batch URL Download capability (paste multiple links) (Phase 3.1)
@@ -873,6 +873,11 @@
 - [ ] Facebook/Watch video support
 - [ ] Cloud Storage auto-sync after download
 - [ ] Audio Extractor tool enhancements (AUDIO_EXTRACTOR_PLAN.md)
+
+### 12.4 Advanced Tooling (UNIVERSAL_DOWNLOADER_IMPROVEMENTS.md)
+- [x] Queue Management UI (Visualization, Cancel, Clear)
+- [x] Disk Space Check (Pre-download, Warning, Auto-pause)
+- [x] Enhanced History (Search, Filter, Sort, Export CSV/JSON)
 
 ---
 

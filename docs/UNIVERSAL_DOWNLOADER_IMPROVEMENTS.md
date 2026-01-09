@@ -9,21 +9,21 @@
   - [ ] Import từ clipboard history
 
 - [ ] **Queue Management UI**
-  - [ ] Hiển thị queue visualization
+  - [x] Hiển thị queue visualization
   - [ ] Drag để sắp xếp priority
-  - [ ] Pause/Resume/Cancel từng item
-  - [ ] Clear completed downloads
+  - [x] Pause/Resume/Cancel từng item
+  - [x] Clear completed downloads
 
-- [ ] **Disk Space Check**
-  - [ ] Check trước khi download
-  - [ ] Warning khi disk space thấp
-  - [ ] Auto-pause nếu không đủ space
+- [x] **Disk Space Check**
+  - [x] Check trước khi download
+  - [x] Warning khi disk space thấp
+  - [x] Auto-pause nếu không đủ space
 
-- [ ] **Enhanced History**
-  - [ ] Search/filter history (platform, date, format)
-  - [ ] Sort options (date, size, platform)
+- [x] **Enhanced History**
+  - [x] Search/filter history (platform, date, format)
+  - [x] Sort options (date, size, platform)
   - [ ] Bulk operations (delete, re-download)
-  - [ ] Export history to CSV/JSON
+  - [x] Export history to CSV/JSON
 
 - [ ] **Drag & Drop URL Support**
   - [ ] Drag URL vào input area
