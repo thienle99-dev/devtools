@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, desktopCapturer } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, desktopCapturer, protocol } from 'electron'
 import { join } from 'node:path'
+import path from 'node:path';
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
@@ -9,6 +10,8 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import { setupCleanerHandlers } from './cleaner'
 import { setupScreenshotHandlers } from './screenshot'
+import { createReadStream } from 'node:fs'
+import { Readable } from 'node:stream'
 import { youtubeDownloader } from './youtube-downloader'
 import { tiktokDownloader } from './tiktok-downloader'
 import { universalDownloader } from './universal-downloader'
@@ -16,6 +19,7 @@ import { audioExtractor } from './audio-extractor'
 import { videoMerger } from './video-merger'
 import { audioManager } from './audio-manager'
 import { videoTrimmer } from './video-trimmer'
+import { videoEffects } from './video-effects'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -28,6 +32,11 @@ const __dirname = dirname(__filename)
 
 process.env.DIST = join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, '../public')
+
+// Register protocol for local media files
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'local-media', privileges: { bypassCSP: true, stream: true, secure: true, supportFetchAPI: true } }
+])
 
 let win: BrowserWindow | null
 let tray: Tray | null = null
@@ -1864,6 +1873,21 @@ app.whenReady().then(() => {
     });
   });
 
+  // Video Effects IPC Handlers
+  ipcMain.handle('video-effects:apply', async (_event, options) => {
+    return await videoEffects.applyEffects(options, (progress) => {
+      win?.webContents.send('video-effects:progress', progress);
+    });
+  });
+
+  ipcMain.on('video-effects:cancel', (_event, id) => {
+    videoEffects.cancelEffects(id);
+  });
+
+  ipcMain.handle('video-effects:get-info', async (_event, path) => {
+    return await videoMerger.getVideoInfo(path);
+  });
+
   ipcMain.handle('video-trimmer:cancel', async (_, id: string) => {
     videoTrimmer.cancel(id);
   });
@@ -1917,6 +1941,100 @@ app.whenReady().then(() => {
   }
 
   setupCleanerHandlers();
+  
+  // Handle local-media protocol
+  protocol.handle('local-media', async (request) => {
+    try {
+      console.log('[LocalMedia] Request:', request.url);
+      
+      // Strip scheme. Handle local-media:// and local-media:///
+      // If 3 slashes, we usually get /path
+      let urlPath = request.url.replace(/^local-media:\/*/, '');
+      
+      // Decode the path
+      let decodedPath = decodeURIComponent(urlPath);
+      console.log('[LocalMedia] Decoded:', decodedPath);
+
+      // Fix Windows path issues
+      if (process.platform === 'win32') {
+        // If it starts with /C:/..., remove leading slash
+        if (/^\/[a-zA-Z]:/.test(decodedPath)) {
+          decodedPath = decodedPath.slice(1);
+        }
+        // If it looks like C/Users... (missing colon), inject it
+        // This handles cases where browser/electron path parsing swallowed the colon from the host
+        if (/^[a-zA-Z]\//.test(decodedPath)) {
+             decodedPath = decodedPath.charAt(0) + ':' + decodedPath.slice(1);
+        }
+        // If it starts with /C/Users... (missing colon)
+        if (/^\/[a-zA-Z]\//.test(decodedPath)) {
+             decodedPath = decodedPath.charAt(1) + ':' + decodedPath.slice(2);
+        }
+      }
+      
+      console.log('[LocalMedia] Final Path:', decodedPath);
+
+      // Verify file exists and get stats
+      const stats = await fs.stat(decodedPath);
+      const fileSize = stats.size;
+
+      // Determine MIME type
+      const ext = path.extname(decodedPath).toLowerCase();
+      let mimeType = 'application/octet-stream';
+      if (ext === '.mp4') mimeType = 'video/mp4';
+      else if (ext === '.webm') mimeType = 'video/webm';
+      else if (ext === '.mov') mimeType = 'video/quicktime';
+      else if (ext === '.avi') mimeType = 'video/x-msvideo';
+      else if (ext === '.mkv') mimeType = 'video/x-matroska';
+      else if (ext === '.mp3') mimeType = 'audio/mpeg';
+      else if (ext === '.wav') mimeType = 'audio/wav';
+
+      // Handle Range Header
+      const range = request.headers.get('Range');
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
+
+        console.log(`[LocalMedia] Streaming Range: ${start}-${end}/${fileSize}`);
+
+        const nodeStream = createReadStream(decodedPath, { start, end });
+        const webStream = Readable.toWeb(nodeStream as any);
+
+        return new Response(webStream as any, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunksize.toString(),
+            'Content-Type': mimeType
+          }
+        });
+      } else {
+        console.log(`[LocalMedia] Streaming Full: ${fileSize}`);
+        const nodeStream = createReadStream(decodedPath);
+        const webStream = Readable.toWeb(nodeStream as any);
+
+        return new Response(webStream as any, {
+          headers: {
+            'Content-Length': fileSize.toString(),
+            'Content-Type': mimeType,
+            'Accept-Ranges': 'bytes'
+          }
+        });
+      }
+
+    } catch (e) {
+      console.error('[LocalMedia] Error:', e);
+      // Basic erro handling
+      if ((e as any).code === 'ENOENT') {
+          return new Response('File not found', { status: 404 });
+      }
+      return new Response('Error loading media: ' + (e as any).message, { status: 500 });
+    }
+  })
+
   createTray();
   createWindow();
 })

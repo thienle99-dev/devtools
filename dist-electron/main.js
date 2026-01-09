@@ -1,5 +1,5 @@
 import { i as __require } from "./chunk-B2qFFjWa.js";
-import { BrowserWindow, Menu, Notification, Tray, app, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, screen } from "electron";
+import { BrowserWindow, Menu, Notification, Tray, app, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, protocol, screen } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
@@ -8,6 +8,8 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import os from "node:os";
 import si from "systeminformation";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 import { createRequire } from "module";
 import fs$1 from "fs";
 import path$1 from "path";
@@ -3775,34 +3777,69 @@ var VideoMerger = class {
 			];
 			const process$1 = spawn(this.ffmpegPath, args);
 			process$1.on("close", (code) => {
-				if (code === 0) resolve(`file://${outputPath}`);
-				else reject(/* @__PURE__ */ new Error("Thumbnail generation failed"));
+				if (code === 0) {
+					const data = fs$1.readFileSync(outputPath, { encoding: "base64" });
+					fs$1.unlinkSync(outputPath);
+					resolve(`data:image/jpeg;base64,${data}`);
+				} else reject(/* @__PURE__ */ new Error("Thumbnail generation failed"));
 			});
 			process$1.on("error", reject);
 		});
 	}
 	async generateFilmstrip(filePath, duration, count = 10) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", randomUUID$1());
+		const actualCount = Math.min(20, Math.max(5, Math.min(count, Math.floor(duration))));
+		const tempId = randomUUID$1();
+		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", tempId);
 		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const interval = duration / count;
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-vf",
-				`fps=1/${interval},scale=160:-1`,
-				"-f",
-				"image2",
-				path$1.join(outputDir, "thumb_%03d.jpg")
-			];
-			const process$1 = spawn(this.ffmpegPath, args);
-			process$1.on("close", (code) => {
-				if (code === 0) resolve(fs$1.readdirSync(outputDir).filter((f) => f.endsWith(".jpg")).map((f) => `file://${path$1.join(outputDir, f)}`));
-				else reject(/* @__PURE__ */ new Error("Filmstrip generation failed"));
+		console.log(`Generating filmstrip: ${actualCount} frames from ${duration}s video`);
+		const frames = [];
+		for (let i = 0; i < actualCount; i++) {
+			const timestamp = duration / (actualCount + 1) * (i + 1);
+			const outputPath = path$1.join(outputDir, `thumb_${i.toString().padStart(3, "0")}.jpg`);
+			try {
+				await new Promise((resolve, reject) => {
+					const args = [
+						"-ss",
+						timestamp.toString(),
+						"-i",
+						filePath,
+						"-vframes",
+						"1",
+						"-s",
+						"80x45",
+						"-q:v",
+						"2",
+						"-f",
+						"image2",
+						"-y",
+						outputPath
+					];
+					const process$1 = spawn(this.ffmpegPath, args);
+					process$1.on("close", (code) => {
+						if (code === 0 && fs$1.existsSync(outputPath)) resolve();
+						else reject(/* @__PURE__ */ new Error(`Frame ${i} extraction failed`));
+					});
+					process$1.on("error", reject);
+				});
+				if (fs$1.existsSync(outputPath)) {
+					const data = fs$1.readFileSync(outputPath, { encoding: "base64" });
+					frames.push(`data:image/jpeg;base64,${data}`);
+				}
+			} catch (err) {
+				console.warn(`Failed to extract frame ${i} at ${timestamp}s:`, err);
+			}
+		}
+		console.log(`Filmstrip generated: ${frames.length}/${actualCount} frames`);
+		try {
+			fs$1.rmSync(outputDir, {
+				recursive: true,
+				force: true
 			});
-			process$1.on("error", reject);
-		});
+		} catch (err) {
+			console.warn("Filmstrip cleanup failed:", err);
+		}
+		return frames;
 	}
 	async mergeVideos(options, progressCallback) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
@@ -4134,11 +4171,164 @@ var VideoTrimmer = class {
 	}
 };
 const videoTrimmer = new VideoTrimmer();
+var VideoEffects = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Video Effects: FFmpeg ready");
+			} else console.warn("⚠️ Video Effects: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async applyEffects(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPath, outputPath, format } = options;
+		if (!fs$1.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const videoInfo = await this.getVideoInfo(inputPath);
+		const totalDuration = options.speed ? videoInfo.duration / options.speed : videoInfo.duration;
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `effect_video_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = ["-i", inputPath];
+		let vFilters = [];
+		let aFilters = [];
+		if (options.speed && options.speed !== 1) {
+			vFilters.push(`setpts=${1 / options.speed}*PTS`);
+			let tempSpeed = options.speed;
+			while (tempSpeed > 2) {
+				aFilters.push("atempo=2.0");
+				tempSpeed /= 2;
+			}
+			while (tempSpeed < .5) {
+				aFilters.push("atempo=0.5");
+				tempSpeed /= .5;
+			}
+			aFilters.push(`atempo=${tempSpeed}`);
+		}
+		if (options.flip === "horizontal" || options.flip === "both") vFilters.push("hflip");
+		if (options.flip === "vertical" || options.flip === "both") vFilters.push("vflip");
+		if (options.rotate) {
+			if (options.rotate === 90) vFilters.push("transpose=1");
+			else if (options.rotate === 180) vFilters.push("transpose=2,transpose=2");
+			else if (options.rotate === 270) vFilters.push("transpose=2");
+		}
+		if (options.brightness !== void 0 || options.contrast !== void 0 || options.saturation !== void 0 || options.gamma !== void 0) vFilters.push(`eq=brightness=${options.brightness || 0}:contrast=${options.contrast !== void 0 ? options.contrast : 1}:saturation=${options.saturation !== void 0 ? options.saturation : 1}:gamma=${options.gamma !== void 0 ? options.gamma : 1}`);
+		if (options.grayscale) vFilters.push("hue=s=0");
+		if (options.sepia) vFilters.push("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131");
+		if (options.blur) vFilters.push(`boxblur=${options.blur}:1`);
+		if (options.noise) vFilters.push(`noise=alls=${options.noise}:allf=t+u`);
+		if (options.sharpen) vFilters.push("unsharp=5:5:1.0:5:5:0.0");
+		if (options.vintage) {
+			vFilters.push("curves=vintage");
+			vFilters.push("vignette=PI/4");
+		}
+		if (options.reverse) {
+			vFilters.push("reverse");
+			aFilters.push("areverse");
+		}
+		if (vFilters.length > 0) args.push("-vf", vFilters.join(","));
+		if (aFilters.length > 0) args.push("-af", aFilters.join(","));
+		if (options.quality === "low") args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "30");
+		else if (options.quality === "high") args.push("-c:v", "libx264", "-preset", "slow", "-crf", "18");
+		else args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");
+		args.push("-c:a", "aac", "-b:a", "128k");
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / totalDuration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Effects application failed with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	async getVideoInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, [
+				"-i",
+				filePath,
+				"-hide_banner"
+			]);
+			let output = "";
+			process$1.stderr.on("data", (data) => output += data.toString());
+			process$1.on("close", (code) => {
+				if (code !== 0 && !output.includes("Duration")) {
+					reject(/* @__PURE__ */ new Error("Failed to get video info"));
+					return;
+				}
+				const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				resolve({ duration: durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0 });
+			});
+			process$1.on("error", reject);
+		});
+	}
+	cancelEffects(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoEffects = new VideoEffects();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
 process.env.DIST = join(__dirname, "../dist");
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : join(process.env.DIST, "../public");
+protocol.registerSchemesAsPrivileged([{
+	scheme: "local-media",
+	privileges: {
+		bypassCSP: true,
+		stream: true,
+		secure: true,
+		supportFetchAPI: true
+	}
+}]);
 var win;
 var tray = null;
 var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -5652,6 +5842,17 @@ app.whenReady().then(() => {
 			event.sender.send("video-trimmer:progress", progress);
 		});
 	});
+	ipcMain.handle("video-effects:apply", async (_event, options) => {
+		return await videoEffects.applyEffects(options, (progress) => {
+			win?.webContents.send("video-effects:progress", progress);
+		});
+	});
+	ipcMain.on("video-effects:cancel", (_event, id) => {
+		videoEffects.cancelEffects(id);
+	});
+	ipcMain.handle("video-effects:get-info", async (_event, path$2) => {
+		return await videoMerger.getVideoInfo(path$2);
+	});
 	ipcMain.handle("video-trimmer:cancel", async (_, id) => {
 		videoTrimmer.cancel(id);
 	});
@@ -5698,6 +5899,65 @@ app.whenReady().then(() => {
 		return dateStr;
 	}
 	setupCleanerHandlers();
+	protocol.handle("local-media", async (request) => {
+		try {
+			console.log("[LocalMedia] Request:", request.url);
+			let urlPath = request.url.replace(/^local-media:\/*/, "");
+			let decodedPath = decodeURIComponent(urlPath);
+			console.log("[LocalMedia] Decoded:", decodedPath);
+			if (process.platform === "win32") {
+				if (/^\/[a-zA-Z]:/.test(decodedPath)) decodedPath = decodedPath.slice(1);
+				if (/^[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(0) + ":" + decodedPath.slice(1);
+				if (/^\/[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(1) + ":" + decodedPath.slice(2);
+			}
+			console.log("[LocalMedia] Final Path:", decodedPath);
+			const fileSize = (await fs.stat(decodedPath)).size;
+			const ext = path.extname(decodedPath).toLowerCase();
+			let mimeType = "application/octet-stream";
+			if (ext === ".mp4") mimeType = "video/mp4";
+			else if (ext === ".webm") mimeType = "video/webm";
+			else if (ext === ".mov") mimeType = "video/quicktime";
+			else if (ext === ".avi") mimeType = "video/x-msvideo";
+			else if (ext === ".mkv") mimeType = "video/x-matroska";
+			else if (ext === ".mp3") mimeType = "audio/mpeg";
+			else if (ext === ".wav") mimeType = "audio/wav";
+			const range = request.headers.get("Range");
+			if (range) {
+				const parts = range.replace(/bytes=/, "").split("-");
+				const start = parseInt(parts[0], 10);
+				const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+				const chunksize = end - start + 1;
+				console.log(`[LocalMedia] Streaming Range: ${start}-${end}/${fileSize}`);
+				const nodeStream = createReadStream(decodedPath, {
+					start,
+					end
+				});
+				const webStream = Readable.toWeb(nodeStream);
+				return new Response(webStream, {
+					status: 206,
+					headers: {
+						"Content-Range": `bytes ${start}-${end}/${fileSize}`,
+						"Accept-Ranges": "bytes",
+						"Content-Length": chunksize.toString(),
+						"Content-Type": mimeType
+					}
+				});
+			} else {
+				console.log(`[LocalMedia] Streaming Full: ${fileSize}`);
+				const nodeStream = createReadStream(decodedPath);
+				const webStream = Readable.toWeb(nodeStream);
+				return new Response(webStream, { headers: {
+					"Content-Length": fileSize.toString(),
+					"Content-Type": mimeType,
+					"Accept-Ranges": "bytes"
+				} });
+			}
+		} catch (e) {
+			console.error("[LocalMedia] Error:", e);
+			if (e.code === "ENOENT") return new Response("File not found", { status: 404 });
+			return new Response("Error loading media: " + e.message, { status: 500 });
+		}
+	});
 	createTray();
 	createWindow();
 });

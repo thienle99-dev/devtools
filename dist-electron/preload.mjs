@@ -232,3 +232,16 @@ electron.contextBridge.exposeInMainWorld("videoTrimmerAPI", {
 		return () => electron.ipcRenderer.removeListener("video-trimmer:progress", listener);
 	}
 });
+electron.contextBridge.exposeInMainWorld("videoEffectsAPI", {
+	apply: (options) => electron.ipcRenderer.invoke("video-effects:apply", options),
+	cancel: (id) => electron.ipcRenderer.send("video-effects:cancel", id),
+	getInfo: (filePath) => electron.ipcRenderer.invoke("video-effects:get-info", filePath),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("video-effects:progress", listener);
+		return () => electron.ipcRenderer.removeListener("video-effects:progress", listener);
+	},
+	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});

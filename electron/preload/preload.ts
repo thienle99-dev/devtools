@@ -255,3 +255,16 @@ contextBridge.exposeInMainWorld('videoTrimmerAPI', {
     return () => ipcRenderer.removeListener('video-trimmer:progress', listener);
   },
 })
+contextBridge.exposeInMainWorld('videoEffectsAPI', {
+  apply: (options: any) => ipcRenderer.invoke('video-effects:apply', options),
+  cancel: (id: string) => ipcRenderer.send('video-effects:cancel', id),
+  getInfo: (filePath: string) => ipcRenderer.invoke('video-effects:get-info', filePath),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-effects:progress', listener);
+    return () => ipcRenderer.removeListener('video-effects:progress', listener);
+  },
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})

@@ -113,8 +113,14 @@ export class VideoMerger {
 
             const process = spawn(this.ffmpegPath!, args);
             process.on('close', (code) => {
-                if (code === 0) resolve(`file://${outputPath}`);
-                else reject(new Error('Thumbnail generation failed'));
+                if (code === 0) {
+                    const data = fs.readFileSync(outputPath, { encoding: 'base64' });
+                    // Cleanup
+                    fs.unlinkSync(outputPath);
+                    resolve(`data:image/jpeg;base64,${data}`);
+                } else {
+                    reject(new Error('Thumbnail generation failed'));
+                }
             });
             process.on('error', reject);
         });
@@ -122,32 +128,68 @@ export class VideoMerger {
 
     async generateFilmstrip(filePath: string, duration: number, count: number = 10): Promise<string[]> {
         if (!this.ffmpegPath) throw new Error('FFmpeg not available');
-        const outputDir = path.join(app.getPath('temp'), 'devtools-app-filmstrips', randomUUID());
+        
+        // Limit count to reasonable number (at least 5, max 20)
+        const actualCount = Math.min(20, Math.max(5, Math.min(count, Math.floor(duration))));
+        const tempId = randomUUID();
+        const outputDir = path.join(app.getPath('temp'), 'devtools-app-filmstrips', tempId);
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-        const interval = duration / count;
+        console.log(`Generating filmstrip: ${actualCount} frames from ${duration}s video`);
 
-        return new Promise((resolve, reject) => {
-            const args = [
-                '-i', filePath,
-                '-vf', `fps=1/${interval},scale=160:-1`,
-                '-f', 'image2',
-                path.join(outputDir, 'thumb_%03d.jpg')
-            ];
+        const frames: string[] = [];
+        
+        // Generate frames sequentially at specific timestamps
+        for (let i = 0; i < actualCount; i++) {
+            const timestamp = (duration / (actualCount + 1)) * (i + 1); // Evenly distributed
+            const outputPath = path.join(outputDir, `thumb_${i.toString().padStart(3, '0')}.jpg`);
+            
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    const args = [
+                        '-ss', timestamp.toString(),
+                        '-i', filePath,
+                        '-vframes', '1',
+                        '-s', '80x45',
+                        '-q:v', '2', // High quality
+                        '-f', 'image2',
+                        '-y', outputPath
+                    ];
 
-            const process = spawn(this.ffmpegPath!, args);
-            process.on('close', (code) => {
-                if (code === 0) {
-                    const files = fs.readdirSync(outputDir)
-                        .filter(f => f.endsWith('.jpg'))
-                        .map(f => `file://${path.join(outputDir, f)}`);
-                    resolve(files);
-                } else {
-                    reject(new Error('Filmstrip generation failed'));
+                    const process = spawn(this.ffmpegPath!, args);
+                    
+                    process.on('close', (code) => {
+                        if (code === 0 && fs.existsSync(outputPath)) {
+                            resolve();
+                        } else {
+                            reject(new Error(`Frame ${i} extraction failed`));
+                        }
+                    });
+                    
+                    process.on('error', reject);
+                });
+                
+                // Read and convert to base64
+                if (fs.existsSync(outputPath)) {
+                    const data = fs.readFileSync(outputPath, { encoding: 'base64' });
+                    frames.push(`data:image/jpeg;base64,${data}`);
                 }
-            });
-            process.on('error', reject);
-        });
+            } catch (err) {
+                console.warn(`Failed to extract frame ${i} at ${timestamp}s:`, err);
+                // Continue with other frames
+            }
+        }
+        
+        console.log(`Filmstrip generated: ${frames.length}/${actualCount} frames`);
+        
+        // Cleanup
+        try {
+            fs.rmSync(outputDir, { recursive: true, force: true });
+        } catch (err) {
+            console.warn('Filmstrip cleanup failed:', err);
+        }
+        
+        return frames;
     }
 
     async mergeVideos(
