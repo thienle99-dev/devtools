@@ -11,17 +11,21 @@ import {
     Maximize, 
     Minimize, 
     Command,
-    Terminal
+    Terminal,
+    Clipboard
 } from 'lucide-react';
 import { useSettingsStore } from '@store/settingsStore';
+import { useClipboardStore } from '@store/clipboardStore';
 import { useState, useEffect } from 'react';
 
 export const Footer = () => {
     const { tabs, activeTabId, openTab } = useTabStore();
     const { theme, setTheme, notificationsEnabled, setNotificationsEnabled } = useSettingsStore();
+    const { getStatistics } = useClipboardStore();
     const location = useLocation();
     const navigate = useNavigate();
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [stats, setStats] = useState({ totalItems: 0, totalCopies: 0 });
 
     // Find the active tab
     const activeTab = tabs.find(t => t.id === activeTabId);
@@ -31,6 +35,12 @@ export const Footer = () => {
     
     // If we're on dashboard but not in a tab
     const isDashboard = location.pathname === '/dashboard';
+
+    // Update stats periodically or when items change
+    useEffect(() => {
+        const s = getStatistics();
+        setStats({ totalItems: s.totalItems, totalCopies: s.totalCopies });
+    }, [useClipboardStore.getState().items, getStatistics]);
 
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -55,6 +65,13 @@ export const Footer = () => {
         }
     };
 
+    const openClipboard = () => {
+        const clipboardTool = TOOLS.find(t => t.id === 'clipboard-manager');
+        if (clipboardTool) {
+            openTab(clipboardTool.id, clipboardTool.path, clipboardTool.name, clipboardTool.description, false, false);
+        }
+    };
+
     useEffect(() => {
         const handleFSChange = () => setIsFullscreen(!!document.fullscreenElement);
         document.addEventListener('fullscreenchange', handleFSChange);
@@ -75,7 +92,7 @@ export const Footer = () => {
                 <div className="w-px h-4 bg-border-glass hidden sm:block shrink-0" />
                 
                 {/* Active Tool Info */}
-                <div className="flex items-center space-x-3 overflow-hidden">
+                <div className="flex items-center space-x-3 overflow-hidden shrink-0">
                     {activeTool ? (
                         <>
                             <div className={`flex items-center space-x-1.5 ${activeTool.color || 'text-foreground'}`}>
@@ -96,6 +113,22 @@ export const Footer = () => {
                         <span className="opacity-70 italic truncate">Idle</span>
                     )}
                 </div>
+
+                <div className="w-px h-4 bg-border-glass hidden md:block shrink-0" />
+
+                {/* Clipboard Stats */}
+                <button 
+                    onClick={openClipboard}
+                    className="flex items-center space-x-3 hover:text-amber-400 transition-colors shrink-0 group"
+                >
+                    <div className="flex items-center space-x-1.5">
+                        <Clipboard size={12} className="group-hover:scale-110 transition-transform" />
+                        <span className="font-medium">{stats.totalItems} items</span>
+                    </div>
+                    <div className="flex items-center space-x-1 opacity-60 text-[9px] uppercase tracking-tighter">
+                        <span>{stats.totalCopies} copies</span>
+                    </div>
+                </button>
             </div>
 
             {/* Center Section: Quick Actions Bar (Mobile hidden usually, but let's make it compact) */}
