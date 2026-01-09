@@ -4161,8 +4161,9 @@ function createWindow() {
 			contextIsolation: true
 		},
 		...windowBounds,
-		minWidth: 900,
+		minWidth: 800,
 		minHeight: 600,
+		resizable: true,
 		show: !startMinimized,
 		frame: false,
 		transparent: true,

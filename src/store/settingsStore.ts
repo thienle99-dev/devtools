@@ -10,6 +10,12 @@ interface SettingsStore {
     startMinimized: boolean;
     launchAtLogin: boolean;
     sidebarCollapsed: boolean;
+    
+    // Responsive settings
+    autoCollapseSidebar: boolean;
+    compactMode: boolean;
+    adaptiveLayout: boolean;
+    setSidebarOpen: (open: boolean) => void;
 
     // Notifications
     notificationsEnabled: boolean;
@@ -48,6 +54,11 @@ interface SettingsStore {
     setLaunchAtLogin: (value: boolean) => void;
     setSidebarCollapsed: (collapsed: boolean) => void;
     toggleSidebar: () => void;
+    
+    // Responsive setters
+    setAutoCollapseSidebar: (value: boolean) => void;
+    setCompactMode: (value: boolean) => void;
+    setAdaptiveLayout: (value: boolean) => void;
 
     // Notifications setters
     setNotificationsEnabled: (value: boolean) => void;
@@ -91,6 +102,11 @@ const defaultSettings = {
     launchAtLogin: false,
     sidebarCollapsed: false,
     toolShortcuts: {},
+    
+    // Responsive defaults
+    autoCollapseSidebar: true,
+    compactMode: false,
+    adaptiveLayout: true,
 
     // Notifications
     notificationsEnabled: true,
@@ -151,6 +167,12 @@ export const useSettingsStore = create<SettingsStore>()(
             },
             setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
             toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+            setSidebarOpen: (open) => set({ sidebarCollapsed: !open }),
+            
+            // Responsive setters
+            setAutoCollapseSidebar: (autoCollapseSidebar) => set({ autoCollapseSidebar }),
+            setCompactMode: (compactMode) => set({ compactMode }),
+            setAdaptiveLayout: (adaptiveLayout) => set({ adaptiveLayout }),
 
             // Notifications setters
             setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
@@ -210,6 +232,7 @@ export const useSettingsStore = create<SettingsStore>()(
                         enableAnimations, lazyLoading, memoryLimit, backgroundProcessing, maxBackgroundTabs,
                         autoBackup, backupRetentionDays,
                         toolShortcuts,
+                        autoCollapseSidebar, compactMode, adaptiveLayout,
                     } = data;
 
                     set({
@@ -240,6 +263,9 @@ export const useSettingsStore = create<SettingsStore>()(
                         autoBackup: autoBackup ?? defaultSettings.autoBackup,
                         backupRetentionDays: backupRetentionDays ?? defaultSettings.backupRetentionDays,
                         toolShortcuts: toolShortcuts ?? defaultSettings.toolShortcuts,
+                        autoCollapseSidebar: autoCollapseSidebar ?? defaultSettings.autoCollapseSidebar,
+                        compactMode: compactMode ?? defaultSettings.compactMode,
+                        adaptiveLayout: adaptiveLayout ?? defaultSettings.adaptiveLayout,
                     });
 
                     return true;

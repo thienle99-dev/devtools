@@ -12,6 +12,7 @@ import { GlobalClipboardMonitor } from '@components/GlobalClipboardMonitor';
 import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
 import { TOOLS } from '@tools/registry';
 import { useClipboardStore } from '@store/clipboardStore';
+import { useResponsive } from '@hooks/useResponsive';
 
 
 // Loading fallback component
@@ -104,6 +105,14 @@ const MainLayout = () => {
 
 function App() {
   const { theme } = useSettingsStore();
+  const responsive = useResponsive();
+
+  // Auto-collapse sidebar on mobile/tablet
+  useEffect(() => {
+    if (responsive.isMobile) {
+      useSettingsStore.getState().setSidebarOpen(false);
+    }
+  }, [responsive.isMobile]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -273,19 +282,21 @@ function App() {
             </main>
           </div>
 
-          {/* Enhanced Footer/Status Bar */}
-          <footer className="h-9 px-6 flex items-center justify-between text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30 backdrop-blur-xl">
-            <div className="flex items-center space-x-5">
+          {/* Enhanced Footer/Status Bar - Responsive */}
+          <footer className="h-9 px-3 sm:px-6 flex items-center justify-between text-[10px] sm:text-[11px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-30 backdrop-blur-xl">
+            <div className="flex items-center space-x-2 sm:space-x-5">
               <div className="flex items-center space-x-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
-                <span className="font-medium">Ready</span>
+                <span className="font-medium hidden sm:inline">Ready</span>
+                <span className="font-medium sm:hidden">●</span>
               </div>
-              <div className="w-px h-4 bg-border-glass" />
-              <span className="opacity-70">UTF-8</span>
+              <div className="w-px h-4 bg-border-glass hidden sm:block" />
+              <span className="opacity-70 hidden md:inline">UTF-8</span>
             </div>
-            <div className="flex items-center space-x-5">
+            <div className="flex items-center space-x-2 sm:space-x-5">
               <span className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity font-medium">
-                v0.2.0-beta
+                <span className="hidden sm:inline">v0.2.0-beta</span>
+                <span className="sm:hidden">v0.2.0</span>
               </span>
             </div>
           </footer>

@@ -544,8 +544,9 @@ function createWindow() {
       contextIsolation: true,
     },
     ...windowBounds,
-    minWidth: 900, // Increased from 900
-    minHeight: 600, // Increased from 600
+    minWidth: 800, // Reduced for better tablet support
+    minHeight: 600,
+    resizable: true, // Explicitly enable resizing for frameless window
     show: !startMinimized, // Respect startMinimized
     // Frameless and transparent for custom UI
     frame: false,
