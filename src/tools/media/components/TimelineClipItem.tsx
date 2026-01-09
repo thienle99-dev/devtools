@@ -2,32 +2,22 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Scissors, Trash2, Film } from 'lucide-react';
 import { cn } from '@utils/cn';
-
-interface TimelineClip {
-    path: string;
-    duration: number;
-    startTime: number;
-    endTime: number;
-    timelineStart: number;
-    trackIndex: number;
-    thumbnail?: string;
-    filmstrip?: string[];
-    waveform?: number[];
-}
+import type { ExtendedVideoInfo } from '../../../types/video-merger';
 
 interface TimelineClipItemProps {
-    file: TimelineClip;
+    file: ExtendedVideoInfo;
     idx: number;
     pxPerSecond: number;
     previewIndex: number;
+    isSelected: boolean;
     isRazorMode: boolean;
     mouseTimelineTime: number | null;
-    onSetPreviewIndex: (idx: number) => void;
+    onToggleSelection: (idx: number, isMulti: boolean) => void;
     onSplitClip: (idx: number) => void;
     onSetTrimmingIdx: (idx: number) => void;
     onRemoveFile: (path: string) => void;
     onUpdateTrim: (idx: number, start: number, end: number) => void;
-    onUpdateClipPosition: (idx: number, timelineStart: number, trackIndex: number) => void;
+    onClipMove: (idx: number, deltaX: number, deltaY: number) => void;
     formatDuration: (seconds: number) => string;
 }
 
@@ -36,14 +26,15 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
     idx,
     pxPerSecond,
     previewIndex,
+    isSelected,
     isRazorMode,
     mouseTimelineTime,
-    onSetPreviewIndex,
+    onToggleSelection,
     onSplitClip,
     onSetTrimmingIdx,
     onRemoveFile,
     onUpdateTrim,
-    onUpdateClipPosition,
+    onClipMove,
     formatDuration
 }) => {
     // Memoize expensive calculations
@@ -105,17 +96,21 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
 
     const handlePointerDown = React.useCallback((e: React.PointerEvent) => {
         e.stopPropagation();
-        onSetPreviewIndex(idx);
+        
+        // Handle selection logic
+        const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+        onToggleSelection(idx, isMulti);
+        
         if (isRazorMode && mouseTimelineTime !== null) {
             onSplitClip(idx);
         }
-    }, [idx, isRazorMode, mouseTimelineTime, onSetPreviewIndex, onSplitClip]);
+    }, [idx, isRazorMode, mouseTimelineTime, onToggleSelection, onSplitClip]);
 
     const handleDragEnd = React.useCallback((_e: any, info: any) => {
         const deltaX = info.offset.x / pxPerSecond;
         const deltaY = Math.round(info.offset.y / 60);
-        onUpdateClipPosition(idx, file.timelineStart + deltaX, file.trackIndex + deltaY);
-    }, [idx, file.timelineStart, file.trackIndex, pxPerSecond, onUpdateClipPosition]);
+        onClipMove(idx, deltaX, deltaY);
+    }, [idx, pxPerSecond, onClipMove]);
 
     return (
         <motion.div 
@@ -135,7 +130,7 @@ export const TimelineClipItem = React.memo<TimelineClipItemProps>(({
             onDragEnd={handleDragEnd}
             className={cn(
                 "absolute h-14 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing group",
-                previewIndex === idx ? "z-30 ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#0f0f0f]" : "z-10"
+                isSelected || previewIndex === idx ? "z-30 ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#0f0f0f]" : "z-10"
             )}
             style={{ 
                 left: `${file.timelineStart * pxPerSecond}px`,

@@ -3,21 +3,11 @@ import { motion } from 'framer-motion';
 import { Plus, Scissors, ZoomIn, ZoomOut, Video, Film, Layers, Sparkles, Type, Volume2 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { TimelineClipItem } from './TimelineClipItem';
-
-interface TimelineClip {
-    path: string;
-    duration: number;
-    startTime: number;
-    endTime: number;
-    timelineStart: number;
-    trackIndex: number;
-    thumbnail?: string;
-    filmstrip?: string[];
-    waveform?: number[];
-}
+import type { ExtendedVideoInfo } from '../../../types/video-merger';
 
 interface CapCutTimelineProps {
-    files: TimelineClip[];
+    files: ExtendedVideoInfo[];
+    selectedClips: number[];
     currentTime: number;
     totalDuration: number;
     isPlaying: boolean;
@@ -37,19 +27,22 @@ interface CapCutTimelineProps {
     onTimelineClick: (e: React.MouseEvent) => void;
     onTimelineMouseMove: (e: React.MouseEvent) => void;
     onMouseLeave: () => void;
-    onSetPreviewIndex: (idx: number) => void;
+    onToggleSelection: (idx: number, isMulti: boolean) => void;
+    onClearSelection: () => void;
     onSplitClip: (idx: number) => void;
     onSetTrimmingIdx: (idx: number) => void;
     onRemoveFile: (path: string) => void;
     onUpdateTrim: (idx: number, start: number, end: number) => void;
-    onUpdateClipPosition: (idx: number, timelineStart: number, trackIndex: number) => void;
+    onClipMove: (idx: number, deltaX: number, deltaY: number) => void;
     formatDuration: (seconds: number) => string;
 }
 
 export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
     files,
+    selectedClips,
     currentTime,
     totalDuration,
+    isPlaying,
     isRazorMode,
     snapToGrid,
     zoomLevel,
@@ -66,12 +59,13 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
     onTimelineClick,
     onTimelineMouseMove,
     onMouseLeave,
-    onSetPreviewIndex,
+    onToggleSelection,
+    onClearSelection,
     onSplitClip,
     onSetTrimmingIdx,
     onRemoveFile,
     onUpdateTrim,
-    onUpdateClipPosition,
+    onClipMove,
     formatDuration
 }) => {
     const pxPerSecond = 80 * zoomLevel;
@@ -88,14 +82,12 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                     <div className="h-4 w-[1px] bg-[#2a2a2a]" />
                     <button 
                         onClick={onAddFiles}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-[10px] font-bold uppercase transition-all shadow-lg shadow-indigo-600/20"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
                     >
-                        <Plus size={12} />
-                        <span>Media</span>
+                        <Plus size={12} strokeWidth={3} />
+                        Add Media
                     </button>
-                </div>
-                
-                <div className="flex items-center gap-2">
+                    <div className="h-4 w-[1px] bg-[#2a2a2a]" />
                     <button 
                         onClick={onShowShortcuts}
                         className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/5 transition-all"
@@ -180,7 +172,10 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                         "flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative",
                         isRazorMode ? "cursor-crosshair" : "cursor-default"
                     )}
-                    onClick={onTimelineClick}
+                    onClick={(e) => {
+                         onClearSelection();
+                         onTimelineClick(e);
+                    }}
                     onMouseMove={onTimelineMouseMove}
                     onMouseLeave={onMouseLeave}
                 >
@@ -190,9 +185,8 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                             <div 
                                 key={i} 
                                 className="border-l border-[#2a2a2a] h-full shrink-0 relative group hover:bg-white/[0.02] transition-colors"
-                                style={{ width: `${pxPerSecond}px` }}
+                                style={{ width: `${80 * zoomLevel}px` }}
                             >
-                                {/* Show time label every second for better visibility */}
                                 <span className="absolute left-1 top-1 text-[8px] font-mono font-bold text-gray-500 group-hover:text-gray-300 transition-colors">
                                     {i}s
                                 </span>
@@ -207,7 +201,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                     {/* Playhead */}
                     <motion.div 
                         className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-50 pointer-events-none shadow-lg shadow-red-500/50"
-                        style={{ left: `${currentTime * pxPerSecond}px` }}
+                        style={{ left: `${currentTime * (80 * zoomLevel)}px` }}
                         transition={{ type: 'spring', bounce: 0, duration: 0.15 }}
                     >
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-sm shadow-lg shadow-red-500/50" />
@@ -218,7 +212,7 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                     {mouseTimelineTime !== null && (
                         <div 
                             className="absolute top-0 bottom-0 w-[1px] bg-indigo-400/40 z-40 pointer-events-none"
-                            style={{ left: `${mouseTimelineTime * pxPerSecond}px` }}
+                            style={{ left: `${mouseTimelineTime * (80 * zoomLevel)}px` }}
                         >
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50" />
                             <div className="absolute top-2 left-0 w-[1px] h-full border-l border-dashed border-indigo-400/40" />
@@ -242,16 +236,17 @@ export const CapCutTimeline: React.FC<CapCutTimelineProps> = ({
                                 key={`${file.path}-${idx}`}
                                 file={file}
                                 idx={idx}
-                                pxPerSecond={pxPerSecond}
+                                pxPerSecond={80 * zoomLevel}
                                 previewIndex={previewIndex}
+                                isSelected={selectedClips.includes(idx)}
                                 isRazorMode={isRazorMode}
                                 mouseTimelineTime={mouseTimelineTime}
-                                onSetPreviewIndex={onSetPreviewIndex}
+                                onToggleSelection={onToggleSelection}
                                 onSplitClip={onSplitClip}
                                 onSetTrimmingIdx={onSetTrimmingIdx}
                                 onRemoveFile={onRemoveFile}
                                 onUpdateTrim={onUpdateTrim}
-                                onUpdateClipPosition={onUpdateClipPosition}
+                                onClipMove={onClipMove}
                                 formatDuration={formatDuration}
                             />
                         ))}

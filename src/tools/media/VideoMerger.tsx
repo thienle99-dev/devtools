@@ -465,22 +465,99 @@ export const VideoMerger: React.FC = () => {
     };
 
 
-    const updateClipPosition = (idx: number, timelineStart: number, trackIndex: number) => {
+    const toggleSelection = (idx: number, isMulti: boolean) => {
+        if (isMulti) {
+            setSelectedClips(prev => 
+                prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+            );
+        } else {
+            // If already selecting this one and only this one, do nothing.
+            // If clicking a different one, select only that one.
+            if (!selectedClips.includes(idx) || selectedClips.length > 1) {
+                setSelectedClips([idx]);
+            }
+        }
+        setPreviewIndex(idx);
+    };
+
+    const clearSelection = () => {
+        setSelectedClips([]);
+        setPreviewIndex(-1);
+    };
+
+    const handleClipMove = (idx: number, deltaX: number, deltaY: number) => {
         setFiles(prev => {
             const next = [...prev];
-            let newTimelineStart = Math.max(0, timelineStart);
+            const clipsToMove = selectedClips.includes(idx) ? selectedClips : [idx];
             
-            // Snap to grid if enabled
-            if (snapToGrid) {
-                newTimelineStart = Math.round(newTimelineStart / snapInterval) * snapInterval;
+            // 1. Calculate unsnapped target position for the PRIMARY dragged clip
+            const primaryClip = prev[idx];
+            let targetStart = primaryClip.timelineStart + deltaX;
+            let snapDelta = 0;
+
+            // 2. Magnetic Snapping (Horizontal only)
+            if (magneticSnap) {
+                const snapPoints = [0, currentTime]; // Always snap to start and playhead
+                
+                // Add start/end of ALL UNSELECTED clips as snap points
+                prev.forEach((f, i) => {
+                    if (!clipsToMove.includes(i)) {
+                        snapPoints.push(f.timelineStart);
+                        snapPoints.push(f.timelineStart + (f.endTime - f.startTime));
+                    }
+                });
+
+                // Find closest snap point
+                let minDist = Infinity;
+                let closestPoint = null;
+
+                // Check snapping for the PRIMARY clip's start and end
+                const primaryDuration = primaryClip.endTime - primaryClip.startTime;
+                
+                for (const point of snapPoints) {
+                    // Check Start
+                    const distStart = Math.abs(targetStart - point);
+                    if (distStart < magneticSnapThreshold && distStart < minDist) {
+                        minDist = distStart;
+                        closestPoint = point;
+                        snapDelta = point - targetStart; // Adjustment needed
+                    }
+
+                    // Check End
+                    const targetEnd = targetStart + primaryDuration;
+                    const distEnd = Math.abs(targetEnd - point);
+                    if (distEnd < magneticSnapThreshold && distEnd < minDist) {
+                        minDist = distEnd;
+                        closestPoint = point - primaryDuration; // Adjust start to align end
+                        snapDelta = (point - primaryDuration) - targetStart;
+                    }
+                }
             }
+
+            // 3. Grid Snapping (if magnetic didn't trigger or is closer)
+            if (snapToGrid && snapDelta === 0) {
+                 const gridSnapStart = Math.round(targetStart / snapInterval) * snapInterval;
+                 if (Math.abs(gridSnapStart - targetStart) < magneticSnapThreshold) {
+                     snapDelta = gridSnapStart - targetStart;
+                 }
+            }
+
+            // 4. Apply movements
+            const finalDeltaX = deltaX + snapDelta;
+
+            clipsToMove.forEach(clipIdx => {
+                const clip = prev[clipIdx];
+                const newStart = Math.max(0, clip.timelineStart + finalDeltaX);
+                const newTrack = Math.max(0, Math.min(5, clip.trackIndex + (deltaY || 0)));
+                
+                next[clipIdx] = {
+                    ...clip,
+                    timelineStart: newStart,
+                    trackIndex: newTrack
+                };
+            });
             
-            next[idx] = {
-                ...next[idx],
-                timelineStart: newTimelineStart,
-                trackIndex: Math.max(0, Math.min(5, trackIndex)) // Max 6 tracks
-            };
-            addToHistory(next); // Add to history on position update
+            addToHistory(next);
             return next;
         });
     };
@@ -782,6 +859,7 @@ export const VideoMerger: React.FC = () => {
             {/* CapCut-Style Timeline */}
             <CapCutTimeline
                 files={files}
+                selectedClips={selectedClips}
                 currentTime={currentTime}
                 totalDuration={totalDuration}
                 isPlaying={isPlaying}
@@ -801,12 +879,13 @@ export const VideoMerger: React.FC = () => {
                 onTimelineClick={handleTimelineClick}
                 onTimelineMouseMove={handleTimelineMouseMove}
                 onMouseLeave={() => setMouseTimelineTime(null)}
-                onSetPreviewIndex={setPreviewIndex}
+                onToggleSelection={toggleSelection}
+                onClearSelection={clearSelection}
                 onSplitClip={splitClip}
                 onSetTrimmingIdx={setTrimmingIdx}
                 onRemoveFile={handleRemoveFile}
                 onUpdateTrim={updateTrim}
-                onUpdateClipPosition={updateClipPosition}
+                onClipMove={handleClipMove}
                 formatDuration={formatDuration}
             />
 
