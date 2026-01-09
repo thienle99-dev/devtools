@@ -20,7 +20,10 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 		const [channel, ...omit] = args;
 		return electron.ipcRenderer.invoke(channel, ...omit);
 	},
-	process: { platform: process.platform },
+	process: {
+		platform: process.platform,
+		versions: process.versions
+	},
 	tray: {
 		updateMenu: (items) => electron.ipcRenderer.send("tray-update-menu", items),
 		updateClipboard: (items) => electron.ipcRenderer.send("tray-update-clipboard", items),
@@ -33,7 +36,8 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 	window: {
 		minimize: () => electron.ipcRenderer.send("window-minimize"),
 		maximize: () => electron.ipcRenderer.send("window-maximize"),
-		close: () => electron.ipcRenderer.send("window-close")
+		close: () => electron.ipcRenderer.send("window-close"),
+		openDevTools: () => electron.ipcRenderer.send("window-open-devtools")
 	},
 	system: {
 		getHomeDir: () => electron.ipcRenderer.invoke("get-home-dir"),

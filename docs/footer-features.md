@@ -219,40 +219,44 @@ Footer hiện tại đang hiển thị thông tin cơ bản (Ready status, UTF-8
 
 ---
 
-## 🎨 Thiết kế đề xuất
+## 🎨 Thiết kế thực tế (Final Implementation)
 
 ### Layout Structure
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ LEFT SECTION    │    CENTER SECTION    │    RIGHT SECTION       │
-│ - Status        │    - Quick Actions   │    - Time              │
-│ - Resources     │    - Notifications   │    - Version           │
-│ - Active Tool   │    - Tasks           │    - Settings          │
+│ - Status        │    - Task Monitor    │    - Shortcuts Hint    │
+│ - Resources     │    - Quick Actions   │    - Time & Session    │
+│ - Active Tool   │    - NotificationsCenter│ - Dev Info          │
+│ - Clipboard     │                      │    - Settings/Version  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Left Section (Status & Info)
 
-- 🟢 Ready / ⚙️ Processing / ⚠️ Warning
-- 💻 CPU: 45% | RAM: 2.1/8 GB
-- 📁 12 items | 2.3 MB
-- 🎬 Video Editor (2 tabs)
+- 🟢 Ready (Connection/System status)
+- 📊 **Resources**: CPU & RAM real-time usage (Auto-scaling bars)
+- 🎬 **Active Tool**: Current tool icon, name and open tabs count
+- 📁 **Clipboard**: Total items and copies statistics
 
 ### Center Section (Actions & Tasks)
 
-- ⚙️ Settings
-- 🌙 Theme
-- 🔔 Notifications (3)
-- ⌘ Command Palette
-- 📥 2 tasks running (with mini progress)
+- 📥 **Task Monitor**: Displays running background tasks (Downloads/Processing)
+- ⚡ **Quick Actions Bar**:
+  - Theme toggle (🌙/☀️)
+  - Notifications Center (Unread badge)
+  - App Notifications Toggle
+  - Fullscreen toggle
+  - Command palette (⌘K)
 
 ### Right Section (Meta Info)
 
-- 🕐 10:14 AM | Session: 1h 23m
-- 🌐 Online
-- v0.2.0-beta
-- 🔄 Update available
+- 🛠️ **Dev Info**: Dev mode indicator + Open DevTools + System versions
+- ⌨️ **Shortcuts**: Rotating keyboard hints for active tool
+- 🕐 **Time**: Current clock + Session duration timer
+- ⚙️ **Settings**: Quick access to global settings
+- 📦 **Version**: Application version info
 
 ---
 

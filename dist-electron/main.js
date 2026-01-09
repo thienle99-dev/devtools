@@ -4584,6 +4584,9 @@ function createWindow() {
 	ipcMain.on("window-close", () => {
 		win?.close();
 	});
+	ipcMain.on("window-open-devtools", () => {
+		win?.webContents.openDevTools();
+	});
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
 	});

@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // You can expose other weird methods here
   process: {
     platform: process.platform,
+    versions: process.versions,
   },
   tray: {
     updateMenu: (items: any[]) => ipcRenderer.send('tray-update-menu', items),
@@ -41,6 +42,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
+    openDevTools: () => ipcRenderer.send('window-open-devtools'),
   },
   system: {
     getHomeDir: () => ipcRenderer.invoke('get-home-dir'),

@@ -1113,6 +1113,9 @@ function createWindow() {
   ipcMain.on('window-close', () => {
     win?.close();
   });
+  ipcMain.on('window-open-devtools', () => {
+    win?.webContents.openDevTools();
+  });
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
