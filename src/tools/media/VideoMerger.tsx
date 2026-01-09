@@ -12,7 +12,11 @@ import {
     Download,
     ZoomIn,
     ZoomOut,
-    Check
+    Check,
+    Volume2,
+    Video,
+    Film,
+    Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@utils/cn';
@@ -131,6 +135,14 @@ export const VideoMerger: React.FC = () => {
                 setAssetLoadingProgress(0);
                 const newInfos: ExtendedVideoInfo[] = [];
                 
+                // Listen for filmstrip progress
+                const removeFilmstripListener = (window as any).videoMergerAPI?.onFilmstripProgress((data: { current: number; total: number; timestamp: string }) => {
+                    setLoadingDetail(prev => ({
+                        ...prev,
+                        stage: `Extracting frame ${data.current}/${data.total} at ${data.timestamp}s...`
+                    }));
+                });
+                
                 for (let i = 0; i < paths.length; i++) {
                     const p = paths[i];
                     const fileName = p.split(/[\\/]/).pop() || 'Unknown';
@@ -179,6 +191,9 @@ export const VideoMerger: React.FC = () => {
                     
                     setAssetLoadingProgress(Math.round(((i + 1) / paths.length) * 100));
                 }
+                
+                // Remove listener
+                if (removeFilmstripListener) removeFilmstripListener();
                 
                 console.log('All files processed:', newInfos);
                 setFiles(prev => [...prev, ...newInfos]);
@@ -431,22 +446,23 @@ export const VideoMerger: React.FC = () => {
             </div>
 
             {/* Workspace Area */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Center Panel: Preview */}
-                <div className="flex-1 bg-background-tertiary/20 flex flex-col items-center justify-center relative p-4 group">
-                    <div className="aspect-video w-full max-w-2xl bg-black rounded-xl overflow-hidden shadow-2xl border border-border-glass flex flex-col relative group">
-                        <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <div className="flex-1 flex overflow-hidden gap-4 p-4">
+                {/* Center Panel: Video Preview */}
+                <div className="flex-1 flex flex-col gap-4">
+                    {/* Video Player */}
+                    <div className="flex-1 bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 flex flex-col relative group">
+                        {/* Video Container */}
+                        <div className="flex-1 relative flex items-center justify-center bg-black">
                             {activeClipSrc ? (
                                 <>
                                     <video 
                                         key={activeClipSrc}
                                         ref={videoPreviewRef}
                                         src={activeClipSrc}
-                                        className="w-full h-full object-contain bg-black"
+                                        className="w-full h-full object-contain"
                                         preload="auto"
                                         onLoadedMetadata={(e) => {
                                             const video = e.currentTarget;
-                                            // Immediately sync time when metadata is loaded
                                             const activeClip = files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)));
                                             if (activeClip) {
                                                 const clipLocalTime = (currentTime - activeClip.timelineStart) + activeClip.startTime;
@@ -461,36 +477,189 @@ export const VideoMerger: React.FC = () => {
                                         }}
                                     />
                                     
-                                    {/* Debug Overlay */}
-                                    <div className="absolute top-2 left-2 bg-black/80 text-white p-2 rounded text-[10px] font-mono space-y-1 pointer-events-none">
-                                        <div>Timeline: {currentTime.toFixed(2)}s</div>
-                                        <div>Video: {videoPreviewRef.current?.currentTime.toFixed(2) || '0.00'}s</div>
-                                        <div className="text-yellow-400">
+                                    {/* Top Gradient Overlay */}
+                                    <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+                                    
+                                    {/* Timecode Display */}
+                                    <div className="absolute top-4 left-4 flex items-center gap-3">
+                                        <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
+                                            <div className="text-2xl font-mono font-black text-white tabular-nums">
+                                                {formatDuration(currentTime)}
+                                            </div>
+                                            <div className="text-[10px] font-mono text-gray-400 text-center">
+                                                / {formatDuration(totalDuration)}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Live Indicator */}
+                                        {isPlaying && (
+                                            <div className="flex items-center gap-2 bg-red-500/20 backdrop-blur-md px-3 py-1.5 rounded-lg border border-red-500/30">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                                <span className="text-xs font-black text-red-400 uppercase">Live</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Current Clip Info */}
+                                    <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 max-w-xs">
+                                        <div className="text-xs font-bold text-gray-400 mb-1">Current Clip</div>
+                                        <div className="text-sm font-black text-white truncate">
                                             {files.find(f => currentTime >= f.timelineStart && currentTime < (f.timelineStart + (f.endTime - f.startTime)))?.path.split(/[\\/]/).pop() || 'No clip'}
                                         </div>
                                     </div>
                                 </>
                             ) : (
-                                files.length > 0 && currentTime < totalDuration ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Loader2 className="animate-spin text-indigo-500" size={32} />
-                                        <span className="text-[10px] font-black uppercase text-indigo-500/50">Loading Frame...</span>
-                                    </div>
-                                ) : (
-                                    <MonitorPlay size={48} className="text-white/10" />
-                                )
+                                <div className="flex flex-col items-center gap-4">
+                                    {files.length > 0 && currentTime < totalDuration ? (
+                                        <>
+                                            <Loader2 className="animate-spin text-indigo-500" size={48} />
+                                            <span className="text-sm font-black uppercase text-indigo-500/50 tracking-wider">Loading Frame...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <MonitorPlay size={64} className="text-white/10" />
+                                            <span className="text-sm font-bold text-white/30">No video selected</span>
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </div>
                         
-                        <div className="mt-auto p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 transition-all z-10">
+                        {/* Professional Controls Bar */}
+                        <div className="bg-gradient-to-t from-black via-black/95 to-transparent p-4">
+                            {/* Waveform Visualization Placeholder */}
+                            <div className="h-12 mb-3 bg-white/5 rounded-lg overflow-hidden relative">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="flex items-end gap-0.5 h-full py-2">
+                                        {Array.from({ length: 100 }).map((_, i) => (
+                                            <div 
+                                                key={i} 
+                                                className="flex-1 bg-gradient-to-t from-indigo-500/30 to-indigo-400/50 rounded-sm"
+                                                style={{ 
+                                                    height: `${20 + Math.random() * 80}%`,
+                                                    opacity: i / 100 < (currentTime / totalDuration) ? 1 : 0.3
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Playback Controls */}
                             <div className="flex items-center gap-4">
+                                {/* Play/Pause Button */}
                                 <button 
                                     onClick={() => setIsPlaying(!isPlaying)}
-                                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black hover:scale-110 transition-transform active:scale-95"
+                                    className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all active:scale-95 shadow-lg shadow-indigo-500/30"
                                 >
-                                    {isPlaying ? <span className="w-3 h-3 bg-black rounded-sm" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+                                    {isPlaying ? (
+                                        <div className="flex gap-1">
+                                            <div className="w-1 h-4 bg-white rounded-full" />
+                                            <div className="w-1 h-4 bg-white rounded-full" />
+                                        </div>
+                                    ) : (
+                                        <Play size={20} fill="currentColor" className="ml-0.5" />
+                                    )}
                                 </button>
-                                <div className="text-sm font-mono font-bold text-white drop-shadow-md">{formatDuration(currentTime)} / {formatDuration(totalDuration)}</div>
+                                
+                                {/* Skip Buttons */}
+                                <button 
+                                    onClick={() => setCurrentTime(Math.max(0, currentTime - 5))}
+                                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-all"
+                                    title="Back 5s"
+                                >
+                                    <span className="text-xs font-black">-5s</span>
+                                </button>
+                                <button 
+                                    onClick={() => setCurrentTime(Math.min(totalDuration, currentTime + 5))}
+                                    className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-all"
+                                    title="Forward 5s"
+                                >
+                                    <span className="text-xs font-black">+5s</span>
+                                </button>
+                                
+                                {/* Volume Control */}
+                                <div className="flex items-center gap-2 ml-auto">
+                                    <Volume2 size={18} className="text-gray-400" />
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        defaultValue="100"
+                                        className="w-24 h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                        onChange={(e) => {
+                                            if (videoPreviewRef.current) {
+                                                videoPreviewRef.current.volume = parseInt(e.target.value) / 100;
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Right Panel: Metadata & Info */}
+                <div className="w-80 flex flex-col gap-4">
+                    {/* Video Info Card */}
+                    <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-white/5 p-4 space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                                <Video size={16} className="text-indigo-400" />
+                            </div>
+                            <h3 className="text-sm font-black text-white">Video Properties</h3>
+                        </div>
+                        
+                        {files.length > 0 && files[previewIndex] && (
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-400 font-medium">Resolution</span>
+                                    <span className="text-xs font-black text-white">{files[previewIndex].width}x{files[previewIndex].height}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-400 font-medium">Frame Rate</span>
+                                    <span className="text-xs font-black text-white">{files[previewIndex].fps.toFixed(2)} FPS</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-400 font-medium">Codec</span>
+                                    <span className="text-xs font-black text-white uppercase">{files[previewIndex].codec}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-400 font-medium">Duration</span>
+                                    <span className="text-xs font-black text-white">{formatDuration(files[previewIndex].duration)}</span>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {files.length === 0 && (
+                            <div className="text-center py-8">
+                                <Film size={32} className="text-white/10 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 font-medium">No clips loaded</p>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Project Stats */}
+                    <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-white/5 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                                <Layers size={16} className="text-purple-400" />
+                            </div>
+                            <h3 className="text-sm font-black text-white">Project Stats</h3>
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-400 font-medium">Total Clips</span>
+                                <span className="text-xs font-black text-white">{files.length}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-400 font-medium">Total Duration</span>
+                                <span className="text-xs font-black text-white">{formatDuration(totalDuration)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-400 font-medium">Export Format</span>
+                                <span className="text-xs font-black text-indigo-400 uppercase">{selectedFormat}</span>
                             </div>
                         </div>
                     </div>

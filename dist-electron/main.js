@@ -3701,7 +3701,11 @@ var VideoMerger = class {
 	constructor() {
 		this.ffmpegPath = null;
 		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.mainWindow = null;
 		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	setMainWindow(window) {
+		this.mainWindow = window;
 	}
 	async initFFmpeg() {
 		try {
@@ -3798,6 +3802,11 @@ var VideoMerger = class {
 			const timestamp = duration / actualCount * i;
 			const outputPath = path$1.join(outputDir, `thumb_${i.toString().padStart(3, "0")}.jpg`);
 			console.log(`Extracting frame ${i + 1}/${actualCount} at ${timestamp.toFixed(2)}s`);
+			if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.webContents.send("filmstrip-progress", {
+				current: i + 1,
+				total: actualCount,
+				timestamp: timestamp.toFixed(2)
+			});
 			try {
 				await new Promise((resolve, reject) => {
 					const args = [
@@ -4778,6 +4787,7 @@ function createWindow() {
 			y: 15
 		}
 	});
+	videoMerger.setMainWindow(win);
 	const saveBounds = () => {
 		store.set("windowBounds", win?.getBounds());
 	};

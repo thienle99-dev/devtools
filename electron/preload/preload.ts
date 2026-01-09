@@ -229,6 +229,11 @@ contextBridge.exposeInMainWorld('videoMergerAPI', {
     ipcRenderer.on('video-merger:progress', listener);
     return () => ipcRenderer.removeListener('video-merger:progress', listener);
   },
+  onFilmstripProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('filmstrip-progress', listener);
+    return () => ipcRenderer.removeListener('filmstrip-progress', listener);
+  },
   openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
   showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
 })

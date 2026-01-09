@@ -568,6 +568,9 @@ function createWindow() {
     trafficLightPosition: { x: 15, y: 15 }, // macOS specific
   })
 
+  // Set main window for video merger to enable IPC callbacks
+  videoMerger.setMainWindow(win);
+
   // Save window bounds on change
   const saveBounds = () => {
     store.set('windowBounds', win?.getBounds())

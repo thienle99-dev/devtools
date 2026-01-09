@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
 import type { 
@@ -13,9 +13,14 @@ import type {
 export class VideoMerger {
     private ffmpegPath: string | null = null;
     private activeProcesses: Map<string, any> = new Map();
+    private mainWindow: BrowserWindow | null = null;
 
     constructor() {
         this.initFFmpeg().catch(e => console.error('FFmpeg init error:', e));
+    }
+
+    setMainWindow(window: BrowserWindow) {
+        this.mainWindow = window;
     }
 
     private async initFFmpeg() {
@@ -146,6 +151,15 @@ export class VideoMerger {
             const outputPath = path.join(outputDir, `thumb_${i.toString().padStart(3, '0')}.jpg`);
             
             console.log(`Extracting frame ${i + 1}/${actualCount} at ${timestamp.toFixed(2)}s`);
+            
+            // Emit progress to renderer
+            if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                this.mainWindow.webContents.send('filmstrip-progress', {
+                    current: i + 1,
+                    total: actualCount,
+                    timestamp: timestamp.toFixed(2)
+                });
+            }
             
             try {
                 await new Promise<void>((resolve, reject) => {

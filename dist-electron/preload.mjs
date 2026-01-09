@@ -208,6 +208,11 @@ electron.contextBridge.exposeInMainWorld("videoMergerAPI", {
 		electron.ipcRenderer.on("video-merger:progress", listener);
 		return () => electron.ipcRenderer.removeListener("video-merger:progress", listener);
 	},
+	onFilmstripProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("filmstrip-progress", listener);
+		return () => electron.ipcRenderer.removeListener("filmstrip-progress", listener);
+	},
 	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
 	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
 });
