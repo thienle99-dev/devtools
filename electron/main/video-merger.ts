@@ -93,6 +93,63 @@ export class VideoMerger {
         });
     }
 
+    async generateThumbnail(filePath: string, time: number = 1): Promise<string> {
+        if (!this.ffmpegPath) throw new Error('FFmpeg not available');
+        const outputDir = path.join(app.getPath('temp'), 'devtools-app-thumbs');
+        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+        
+        const thumbName = `thumb_${randomUUID()}.jpg`;
+        const outputPath = path.join(outputDir, thumbName);
+
+        return new Promise((resolve, reject) => {
+            const args = [
+                '-ss', time.toString(),
+                '-i', filePath,
+                '-vframes', '1',
+                '-s', '160x90',
+                '-f', 'image2',
+                '-y', outputPath
+            ];
+
+            const process = spawn(this.ffmpegPath!, args);
+            process.on('close', (code) => {
+                if (code === 0) resolve(`file://${outputPath}`);
+                else reject(new Error('Thumbnail generation failed'));
+            });
+            process.on('error', reject);
+        });
+    }
+
+    async generateFilmstrip(filePath: string, duration: number, count: number = 10): Promise<string[]> {
+        if (!this.ffmpegPath) throw new Error('FFmpeg not available');
+        const outputDir = path.join(app.getPath('temp'), 'devtools-app-filmstrips', randomUUID());
+        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+        const interval = duration / count;
+
+        return new Promise((resolve, reject) => {
+            const args = [
+                '-i', filePath,
+                '-vf', `fps=1/${interval},scale=160:-1`,
+                '-f', 'image2',
+                path.join(outputDir, 'thumb_%03d.jpg')
+            ];
+
+            const process = spawn(this.ffmpegPath!, args);
+            process.on('close', (code) => {
+                if (code === 0) {
+                    const files = fs.readdirSync(outputDir)
+                        .filter(f => f.endsWith('.jpg'))
+                        .map(f => `file://${path.join(outputDir, f)}`);
+                    resolve(files);
+                } else {
+                    reject(new Error('Filmstrip generation failed'));
+                }
+            });
+            process.on('error', reject);
+        });
+    }
+
     async mergeVideos(
         options: VideoMergeOptions,
         progressCallback?: (progress: VideoMergeProgress) => void

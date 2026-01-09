@@ -219,6 +219,8 @@ contextBridge.exposeInMainWorld('audioAPI', {
 
 contextBridge.exposeInMainWorld('videoMergerAPI', {
   getVideoInfo: (filePath: string) => ipcRenderer.invoke('video-merger:get-info', filePath),
+  generateThumbnail: (filePath: string, time: number) => ipcRenderer.invoke('video-merger:generate-thumbnail', filePath, time),
+  generateFilmstrip: (filePath: string, duration: number, count?: number) => ipcRenderer.invoke('video-filmstrip:generate', filePath, duration, count),
   merge: (options: any) => ipcRenderer.invoke('video-merger:merge', options),
   cancel: (id: string) => ipcRenderer.invoke('video-merger:cancel', id),
   chooseInputFiles: () => ipcRenderer.invoke('video-merger:choose-files'),

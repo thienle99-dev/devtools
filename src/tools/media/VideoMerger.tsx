@@ -2,12 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     Plus, 
     Trash2, 
-    GripVertical, 
-    Video as VideoIcon, 
     Loader2, 
     CheckCircle2, 
     AlertCircle,
-    X,
     Play,
     MonitorPlay,
     Clock,
@@ -15,19 +12,19 @@ import {
     Download,
     ZoomIn,
     ZoomOut,
-    Music,
-    Type,
     Check
 } from 'lucide-react';
-import { motion, Reorder, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@utils/cn';
-import type { VideoMergeOptions, VideoMergeProgress, VideoInfo, VideoClip } from '../../types/video-merger';
+import type { VideoMergeOptions, VideoMergeProgress, VideoInfo } from '../../types/video-merger';
 
 const FORMATS = ['mp4', 'mkv', 'avi', 'mov', 'webm'];
 
 interface ExtendedVideoInfo extends VideoInfo {
     startTime: number;
     endTime: number;
+    thumbnail?: string;
+    filmstrip?: string[];
 }
 
 export const VideoMerger: React.FC = () => {
@@ -40,6 +37,8 @@ export const VideoMerger: React.FC = () => {
     const [zoomLevel, setZoomLevel] = useState(1);
     const [currentTime, setCurrentTime] = useState(0);
     const [trimmingIdx, setTrimmingIdx] = useState<number | null>(null);
+    const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+    const [assetLoadingProgress, setAssetLoadingProgress] = useState(0);
 
     const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -63,17 +62,29 @@ export const VideoMerger: React.FC = () => {
         try {
             const paths = await (window as any).videoMergerAPI?.chooseInputFiles();
             if (paths && paths.length > 0) {
-                const newInfos = await Promise.all(
-                    paths.map(async (p: string) => {
-                        const info = await (window as any).videoMergerAPI?.getVideoInfo(p);
-                        return {
-                            ...info,
-                            startTime: 0,
-                            endTime: info.duration
-                        };
-                    })
-                );
+                setIsLoadingAssets(true);
+                setAssetLoadingProgress(0);
+                const newInfos: ExtendedVideoInfo[] = [];
+                
+                for (let i = 0; i < paths.length; i++) {
+                    const p = paths[i];
+                    const info = await (window as any).videoMergerAPI?.getVideoInfo(p);
+                    const thumb = await (window as any).videoMergerAPI?.generateThumbnail(p, 1);
+                    const filmstrip = await (window as any).videoMergerAPI?.generateFilmstrip(p, info.duration, 15);
+                    
+                    newInfos.push({
+                        ...info,
+                        startTime: 0,
+                        endTime: info.duration,
+                        thumbnail: thumb,
+                        filmstrip: filmstrip
+                    });
+                    
+                    setAssetLoadingProgress(Math.round(((i + 1) / paths.length) * 100));
+                }
+                
                 setFiles(prev => [...prev, ...newInfos]);
+                setIsLoadingAssets(false);
             }
         } catch (error) {
             console.error('Failed to add files:', error);
@@ -107,14 +118,6 @@ export const VideoMerger: React.FC = () => {
         }
     };
 
-    const formatSize = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    };
-
     const formatDuration = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
@@ -145,19 +148,42 @@ export const VideoMerger: React.FC = () => {
     const updateTrim = (idx: number, start: number, end: number) => {
         setFiles(prev => {
             const next = [...prev];
-            next[idx] = { ...next[idx], startTime: start, endTime: end };
+            next[idx] = { ...next[idx], startTime: Math.max(0, start), endTime: Math.min(next[idx].duration, end) };
             return next;
         });
     };
 
+    const splitClip = (idx: number) => {
+        const file = files[idx];
+        const clipOffset = clipsWithOffsets[idx];
+        const localTimeInClip = currentTime - clipOffset.start + file.startTime;
+
+        if (localTimeInClip <= file.startTime || localTimeInClip >= file.endTime) return;
+
+        setFiles(prev => {
+            const next = [...prev];
+            const clip1 = { ...file, endTime: localTimeInClip };
+            const clip2 = { ...file, startTime: localTimeInClip };
+            next.splice(idx, 1, clip1, clip2);
+            return next;
+        });
+    };
+
+    const splitAtPlayhead = () => {
+        const foundIdx = clipsWithOffsets.findIndex(c => currentTime >= c.start && currentTime < c.end);
+        if (foundIdx !== -1) {
+            splitClip(foundIdx);
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-background text-foreground overflow-hidden rounded-2xl border border-border-glass font-sans">
+        <div className="flex flex-col h-full bg-background text-foreground overflow-hidden rounded-2xl border border-border-glass font-sans relative">
             {/* Top Toolbar */}
             <div className="h-14 flex items-center justify-between px-6 bg-foreground/[0.02] border-b border-border-glass z-20">
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-xs font-bold text-foreground-secondary">
                         <Clock size={14} className="text-indigo-500" />
-                        <span>Duration: <span className="text-foreground">{formatDuration(totalDuration)}</span></span>
+                        <span>Timeline Duration: <span className="text-foreground">{formatDuration(totalDuration)}</span></span>
                     </div>
                 </div>
 
@@ -190,52 +216,6 @@ export const VideoMerger: React.FC = () => {
 
             {/* Workspace Area */}
             <div className="flex-1 flex overflow-hidden">
-                {/* Left Panel: Assets */}
-                <div className="w-64 bg-foreground/[0.02] border-r border-border-glass flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-border-glass">
-                        <button 
-                            onClick={handleAddFiles}
-                            disabled={isProcessing}
-                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-black py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/10"
-                        >
-                            <Plus size={16} />
-                            <span>Import Clips</span>
-                        </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-                        {files.length === 0 ? (
-                            <div className="text-center py-10 opacity-20">
-                                <VideoIcon size={32} className="mx-auto mb-2" />
-                                <p className="text-[10px] font-bold">Import media to start</p>
-                            </div>
-                        ) : (
-                            files.map((file, idx) => (
-                                <div 
-                                    key={file.path} 
-                                    onClick={() => {
-                                        setPreviewIndex(idx);
-                                        setCurrentTime(clipsWithOffsets[idx].start);
-                                    }}
-                                    className={cn(
-                                        "p-2 rounded-lg border border-transparent hover:bg-foreground/[0.05] cursor-pointer transition-all group",
-                                        previewIndex === idx && "bg-indigo-600/10 border-indigo-500/30"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded bg-black/40 flex items-center justify-center text-indigo-500 group-hover:text-white overflow-hidden relative">
-                                            <VideoIcon size={18} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[10px] font-bold truncate tracking-tight">{file.path.split(/[\\/]/).pop()}</p>
-                                            <p className="text-[8px] text-foreground-secondary font-bold uppercase">{formatDuration(file.duration)} • {formatSize(file.size)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
                 {/* Center Panel: Preview */}
                 <div className="flex-1 bg-background-tertiary/20 flex flex-col items-center justify-center relative p-8 group">
                     <div className="aspect-video w-full max-w-2xl bg-black rounded-2xl overflow-hidden shadow-2xl border border-border-glass flex flex-col relative group">
@@ -263,20 +243,35 @@ export const VideoMerger: React.FC = () => {
             </div>
 
             {/* Timeline Area */}
-            <div className="h-72 bg-foreground/[0.02] border-t border-border-glass flex flex-col relative">
+            <div className="h-80 bg-foreground/[0.02] border-t border-border-glass flex flex-col relative">
                 <div className="h-10 flex items-center justify-between px-6 border-b border-border-glass bg-foreground/[0.03]">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-foreground-secondary uppercase tracking-widest">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-foreground-secondary uppercase tracking-widest mr-4">
                             <Scissors size={12} className="text-indigo-500" />
-                            <span>Workbench Timeline</span>
+                            <span>Multi-track Editor</span>
                         </div>
+                        <button 
+                            onClick={handleAddFiles}
+                            className="flex items-center gap-2 px-3 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase transition-all"
+                        >
+                            <Plus size={12} />
+                            <span>Import Clips</span>
+                        </button>
                     </div>
                     
                     <div className="flex items-center gap-4">
+                        <button 
+                            onClick={splitAtPlayhead}
+                            disabled={files.length === 0}
+                            className="flex items-center gap-2 px-3 py-1 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all border border-indigo-500/20 disabled:opacity-30"
+                        >
+                            <Scissors size={12} />
+                            <span>Split</span>
+                        </button>
                         <div className="flex items-center gap-1.5 p-1 bg-background rounded-lg border border-border-glass shadow-sm">
                             <button onClick={() => setZoomLevel(prev => Math.max(0.2, prev - 0.2))} className="p-1 hover:bg-foreground/[0.05] rounded text-foreground-secondary transition-colors"><ZoomOut size={14} /></button>
-                            <div className="w-16 h-1 bg-foreground/[0.1] rounded-full overflow-hidden">
-                                <motion.div className="h-full bg-indigo-500" animate={{ width: `${zoomLevel * 33}%` }} />
+                            <div className="w-16 h-1 bg-indigo-500/10 rounded-full overflow-hidden">
+                                <motion.div className="h-full bg-indigo-500" animate={{ width: `${zoomLevel * 20}%` }} />
                             </div>
                             <button onClick={() => setZoomLevel(prev => Math.min(5, prev + 0.2))} className="p-1 hover:bg-foreground/[0.05] rounded text-foreground-secondary transition-colors"><ZoomIn size={14} /></button>
                         </div>
@@ -284,18 +279,21 @@ export const VideoMerger: React.FC = () => {
                 </div>
 
                 <div className="flex-1 flex overflow-hidden">
-                    <div className="w-16 border-r border-border-glass flex flex-col bg-foreground/[0.02] pt-6 gap-6 items-center">
-                        <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400" title="Video Track"><VideoIcon size={16} /></div>
-                        <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400" title="Audio Track"><Music size={16} /></div>
+                    {/* Track Labels */}
+                    <div className="w-12 border-r border-border-glass flex flex-col bg-foreground/[0.02] pt-6 gap-6 items-center shrink-0">
+                        {files.map((_, i) => (
+                            <div key={i} className="h-14 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[10px] font-bold">V{i+1}</div>
+                        ))}
                     </div>
 
+                    {/* Timeline Tracks */}
                     <div 
                         ref={timelineRef}
-                        className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar-h relative select-none"
+                        className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar relative select-none"
                         onClick={handleTimelineClick}
                     >
                         {/* Time Ruler */}
-                        <div className="h-6 bg-foreground/[0.03] border-b border-border-glass sticky top-0 z-10 flex items-end">
+                        <div className="h-6 bg-foreground/[0.03] border-b border-border-glass sticky top-0 z-10 flex items-end min-w-max">
                             {Array.from({ length: Math.ceil(totalDuration) + 1 }).map((_, i) => (
                                 <div 
                                     key={i} 
@@ -314,82 +312,126 @@ export const VideoMerger: React.FC = () => {
 
                         {/* Playhead */}
                         <motion.div 
-                            className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none after:content-[''] after:absolute after:top-0 after:left-1/2 after:-translate-x-1/2 after:w-3 after:h-4 after:bg-red-500 after:rounded-b-sm"
+                            className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-30 pointer-events-none"
                             style={{ left: `${currentTime * pxPerSecond}px` }}
                             transition={{ type: 'spring', bounce: 0, duration: 0.1 }}
-                        />
+                        >
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-4 bg-red-500 rounded-b-sm shadow-lg shadow-red-500/50" />
+                        </motion.div>
 
-                        {/* Tracks */}
-                        <div className="p-6 pt-4 space-y-8 min-w-max">
+                        {/* Tracks Vertical Layout */}
+                        <div className="p-4 pt-2 space-y-4 min-w-max">
                             {files.length === 0 ? (
-                                <div className="h-24 w-full flex items-center justify-center border-2 border-dashed border-border-glass rounded-2xl opacity-10 italic text-xs font-bold">
-                                    Assemble your project here
+                                <div className="h-32 w-full flex items-center justify-center border-2 border-dashed border-border-glass rounded-3xl opacity-10 italic text-xs font-bold">
+                                    Drop your clips into the multi-track timeline
                                 </div>
                             ) : (
-                                <>
-                                    <Reorder.Group axis="x" values={files} onReorder={setFiles} className="flex gap-1">
-                                        {clipsWithOffsets.map((file, idx) => (
-                                            <Reorder.Item
-                                                key={file.path}
-                                                value={file}
-                                                className={cn(
-                                                    "h-16 border rounded-xl overflow-hidden flex flex-col group cursor-grab active:cursor-grabbing hover:border-indigo-500 transition-all relative",
-                                                    previewIndex === idx ? "border-indigo-600 bg-indigo-600/10 shadow-lg shadow-indigo-600/20" : "border-border-glass bg-foreground/[0.05]"
-                                                )}
-                                                style={{ width: `${(file.endTime - file.startTime) * pxPerSecond}px` }}
-                                                onPointerDown={() => {
-                                                    setPreviewIndex(idx);
-                                                    setCurrentTime(file.start);
+                                files.map((file, idx) => (
+                                    <div 
+                                        key={`${file.path}-${idx}`}
+                                        className="h-14 flex items-center relative"
+                                    >
+                                        {/* Row Background (Ghost Track) */}
+                                        <div 
+                                            className="absolute h-12 bg-foreground/[0.03] border border-border-glass rounded-xl opacity-30 flex overflow-hidden"
+                                            style={{ 
+                                                left: `${clipsWithOffsets[idx].start * pxPerSecond}px`,
+                                                width: `${file.duration * pxPerSecond}px` 
+                                            }}
+                                        >
+                                            {/* Thumbnail Background Repeated */}
+                                            {file.thumbnail && Array.from({ length: Math.ceil(file.duration / 5) }).map((_, i) => (
+                                                <img key={i} src={file.thumbnail} className="h-full w-20 object-cover opacity-20 grayscale" alt="" />
+                                            ))}
+                                        </div>
+
+                                        {/* Active Trim Portion */}
+                                        <motion.div
+                                            className={cn(
+                                                "h-12 rounded-xl overflow-hidden border-2 flex items-center group cursor-pointer shadow-lg transition-all z-10",
+                                                previewIndex === idx ? "border-indigo-500 bg-indigo-900/40 shadow-indigo-500/20" : "border-indigo-500/30 bg-zinc-900"
+                                            )}
+                                            style={{ 
+                                                marginLeft: `${(clipsWithOffsets[idx].start + (file.startTime > 0 ? 0 : 0)) * pxPerSecond}px`,
+                                                width: `${(file.endTime - file.startTime) * pxPerSecond}px`
+                                            }}
+                                            onPointerDown={(e) => {
+                                                e.stopPropagation();
+                                                setPreviewIndex(idx);
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const clickX = e.clientX - rect.left;
+                                                setCurrentTime(clipsWithOffsets[idx].start + (clickX / pxPerSecond));
+                                            }}
+                                        >
+                                            {/* Filmstrip in Active Part */}
+                                            <div className="absolute inset-0 flex pointer-events-none opacity-60">
+                                                {file.filmstrip?.map((thumb, i) => (
+                                                    <img 
+                                                        key={i} 
+                                                        src={thumb} 
+                                                        className="h-full object-cover flex-1" 
+                                                        style={{ 
+                                                            minWidth: '80px',
+                                                            filter: 'contrast(1.1) brightness(0.9)'
+                                                        }} 
+                                                        alt="" 
+                                                    />
+                                                ))}
+                                            </div>
+
+                                            {/* Left Handle */}
+                                            <div 
+                                                className="absolute left-0 top-0 bottom-0 w-3 bg-indigo-500/60 hover:bg-indigo-400 cursor-ew-resize flex items-center justify-center z-20"
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                    const startX = e.clientX;
+                                                    const initialStart = file.startTime;
+                                                    const move = (me: MouseEvent) => {
+                                                        const delta = (me.clientX - startX) / pxPerSecond;
+                                                        updateTrim(idx, initialStart + delta, file.endTime);
+                                                    };
+                                                    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                                                    window.addEventListener('mousemove', move);
+                                                    window.addEventListener('mouseup', up);
                                                 }}
                                             >
-                                                <div className="flex-1 flex flex-col justify-center px-3 py-1 relative">
-                                                    <p className="text-[10px] font-black truncate text-foreground-secondary group-hover:text-indigo-400 transition-colors">{file.path.split(/[\\/]/).pop()}</p>
-                                                    <p className="text-[8px] text-foreground-secondary/60">Trimmed: {formatDuration(file.endTime - file.startTime)}</p>
-                                                </div>
-                                                
-                                                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); setTrimmingIdx(idx); }}
-                                                        className="p-1 px-2 bg-indigo-600 text-white rounded-md text-[8px] font-black uppercase hover:bg-indigo-500 transition-all"
-                                                    >
-                                                        Cut
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleRemoveFile(file.path); }}
-                                                        className="p-1.5 bg-rose-500/10 text-rose-500 rounded-md hover:bg-rose-500 transition-colors"
-                                                    >
-                                                        <Trash2 size={10} />
-                                                    </button>
-                                                </div>
-
-                                                <div className="h-1 bg-indigo-500/40" />
-                                            </Reorder.Item>
-                                        ))}
-                                    </Reorder.Group>
-
-                                    <div className="flex gap-1">
-                                        {clipsWithOffsets.map((file, idx) => (
-                                            <div
-                                                key={`audio-${file.path}`}
-                                                className={cn(
-                                                    "h-12 border rounded-xl overflow-hidden flex flex-col group transition-all opacity-40",
-                                                    previewIndex === idx ? "border-emerald-500 bg-emerald-500/10" : "border-border-glass bg-foreground/[0.02]"
-                                                )}
-                                                style={{ width: `${(file.endTime - file.startTime) * pxPerSecond}px` }}
-                                            >
-                                                <div className="flex-1 flex items-center gap-[2px] px-2 pointer-events-none">
-                                                    {Array.from({ length: Math.ceil(((file.endTime - file.startTime) * pxPerSecond) / 4) }).map((_, i) => (
-                                                        <div 
-                                                            key={i} 
-                                                            className="flex-1 bg-emerald-500/40 rounded-full" 
-                                                            style={{ height: `${20 + Math.sin(file.startTime + i * 0.2) * 30 + Math.random() * 50}%` }} 
-                                                        />
-                                                    ))}
-                                                </div>
+                                                <div className="w-[1.5px] h-4 bg-white/40" />
                                             </div>
-                                        ))}
+
+                                            {/* Clip Info */}
+                                            <div className="flex-1 px-4 z-10">
+                                                <p className="text-[10px] font-black text-white truncate drop-shadow-md">{file.path.split(/[\\/]/).pop()}</p>
+                                                <p className="text-[8px] text-indigo-200/80 font-bold">{formatDuration(file.endTime - file.startTime)}</p>
+                                            </div>
+
+                                            {/* Right Handle */}
+                                            <div 
+                                                className="absolute right-0 top-0 bottom-0 w-3 bg-indigo-500/60 hover:bg-indigo-400 cursor-ew-resize flex items-center justify-center z-20"
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                    const startX = e.clientX;
+                                                    const initialEnd = file.endTime;
+                                                    const move = (me: MouseEvent) => {
+                                                        const delta = (me.clientX - startX) / pxPerSecond;
+                                                        updateTrim(idx, file.startTime, initialEnd + delta);
+                                                    };
+                                                    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                                                    window.addEventListener('mousemove', move);
+                                                    window.addEventListener('mouseup', up);
+                                                }}
+                                            >
+                                                <div className="w-[1.5px] h-4 bg-white/40" />
+                                            </div>
+
+                                            {/* Actions Group Overlay */}
+                                            <div className="absolute right-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                                                <button onClick={(e) => { e.stopPropagation(); splitClip(idx); }} className="p-1 px-2 bg-indigo-600 text-[8px] font-black uppercase rounded shadow-lg border border-white/10 hover:bg-indigo-500 transition-all">Split</button>
+                                                <button onClick={(e) => { e.stopPropagation(); setTrimmingIdx(idx); }} className="p-1 px-2 bg-white/10 text-[8px] font-black uppercase rounded backdrop-blur-md border border-white/5 hover:bg-white/20 transition-all">Precision</button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleRemoveFile(file.path); }} className="p-1.5 bg-rose-500/20 text-rose-500 rounded hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={10} /></button>
+                                            </div>
+                                        </motion.div>
                                     </div>
-                                </>
+                                ))
                             )}
                         </div>
                     </div>
@@ -479,6 +521,39 @@ export const VideoMerger: React.FC = () => {
                                     <button onClick={() => setProgress(null)} className="w-full bg-foreground/[0.05] py-4 rounded-xl text-xs font-black">DISMISS</button>
                                 </div>
                             </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Footer Progress Bar */}
+            <AnimatePresence>
+                {(isProcessing || isLoadingAssets) && (
+                    <motion.div 
+                        initial={{ y: 100 }} 
+                        animate={{ y: 0 }} 
+                        exit={{ y: 100 }}
+                        className="absolute bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-t border-border-glass p-2 px-6 flex items-center justify-between gap-6 overflow-hidden"
+                    >
+                        <div className="flex items-center gap-3 shrink-0">
+                            <div className="w-6 h-6 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-400">
+                                <Loader2 size={12} className="animate-spin" />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground-secondary">
+                                {isLoadingAssets ? 'Loading Assets...' : 'Exporting Project...'}
+                            </span>
+                        </div>
+
+                        <div className="flex-1 flex items-center gap-4">
+                            <div className="flex-1 h-1.5 bg-foreground/[0.05] rounded-full overflow-hidden">
+                                <motion.div 
+                                    className="h-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.3)]"
+                                    animate={{ width: `${isLoadingAssets ? assetLoadingProgress : progress?.percent || 0}%` }}
+                                />
+                            </div>
+                            <span className="text-[10px] font-mono font-black w-8 text-right">
+                                {Math.round(isLoadingAssets ? assetLoadingProgress : progress?.percent || 0)}%
+                            </span>
                         </div>
                     </motion.div>
                 )}

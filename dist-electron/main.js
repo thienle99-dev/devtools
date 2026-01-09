@@ -3752,6 +3752,58 @@ var VideoMerger = class {
 			process$1.on("error", reject);
 		});
 	}
+	async generateThumbnail(filePath, time = 1) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-thumbs");
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const thumbName = `thumb_${randomUUID$1()}.jpg`;
+		const outputPath = path$1.join(outputDir, thumbName);
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-ss",
+				time.toString(),
+				"-i",
+				filePath,
+				"-vframes",
+				"1",
+				"-s",
+				"160x90",
+				"-f",
+				"image2",
+				"-y",
+				outputPath
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			process$1.on("close", (code) => {
+				if (code === 0) resolve(`file://${outputPath}`);
+				else reject(/* @__PURE__ */ new Error("Thumbnail generation failed"));
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async generateFilmstrip(filePath, duration, count = 10) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", randomUUID$1());
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const interval = duration / count;
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-vf",
+				`fps=1/${interval},scale=160:-1`,
+				"-f",
+				"image2",
+				path$1.join(outputDir, "thumb_%03d.jpg")
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			process$1.on("close", (code) => {
+				if (code === 0) resolve(fs$1.readdirSync(outputDir).filter((f) => f.endsWith(".jpg")).map((f) => `file://${path$1.join(outputDir, f)}`));
+				else reject(/* @__PURE__ */ new Error("Filmstrip generation failed"));
+			});
+			process$1.on("error", reject);
+		});
+	}
 	async mergeVideos(options, progressCallback) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
 		const id = options.id || randomUUID$1();
@@ -5567,6 +5619,12 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("video-merger:get-info", async (_, filePath) => {
 		return await videoMerger.getVideoInfo(filePath);
+	});
+	ipcMain.handle("video-merger:generate-thumbnail", async (_, filePath, time) => {
+		return await videoMerger.generateThumbnail(filePath, time);
+	});
+	ipcMain.handle("video-filmstrip:generate", async (_, filePath, duration, count) => {
+		return await videoMerger.generateFilmstrip(filePath, duration, count);
 	});
 	ipcMain.handle("video-merger:merge", async (_, options) => {
 		return new Promise((resolve, reject) => {

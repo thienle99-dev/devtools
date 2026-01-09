@@ -1820,6 +1820,14 @@ app.whenReady().then(() => {
     return await videoMerger.getVideoInfo(filePath);
   });
 
+  ipcMain.handle('video-merger:generate-thumbnail', async (_, filePath: string, time: number) => {
+    return await videoMerger.generateThumbnail(filePath, time);
+  });
+
+  ipcMain.handle('video-filmstrip:generate', async (_, filePath: string, duration: number, count?: number) => {
+    return await videoMerger.generateFilmstrip(filePath, duration, count);
+  });
+
   ipcMain.handle('video-merger:merge', async (_, options) => {
     return new Promise((resolve, reject) => {
       videoMerger.mergeVideos(options, (progress) => {
