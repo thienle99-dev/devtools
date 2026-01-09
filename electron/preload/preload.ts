@@ -243,3 +243,13 @@ contextBridge.exposeInMainWorld('audioManagerAPI', {
   chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
   chooseInputFiles: () => ipcRenderer.invoke('audio:choose-input-files'),
 })
+
+contextBridge.exposeInMainWorld('videoTrimmerAPI', {
+  process: (options: any) => ipcRenderer.invoke('video-trimmer:process', options),
+  cancel: (id: string) => ipcRenderer.invoke('video-trimmer:cancel', id),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-trimmer:progress', listener);
+    return () => ipcRenderer.removeListener('video-trimmer:progress', listener);
+  },
+})

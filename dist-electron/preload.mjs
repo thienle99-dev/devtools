@@ -221,3 +221,12 @@ electron.contextBridge.exposeInMainWorld("audioManagerAPI", {
 	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
 	chooseInputFiles: () => electron.ipcRenderer.invoke("audio:choose-input-files")
 });
+electron.contextBridge.exposeInMainWorld("videoTrimmerAPI", {
+	process: (options) => electron.ipcRenderer.invoke("video-trimmer:process", options),
+	cancel: (id) => electron.ipcRenderer.invoke("video-trimmer:cancel", id),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("video-trimmer:progress", listener);
+		return () => electron.ipcRenderer.removeListener("video-trimmer:progress", listener);
+	}
+});

@@ -3969,6 +3969,119 @@ var AudioManager = class {
 	}
 };
 const audioManager = new AudioManager();
+var VideoTrimmer = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("Video Trimmer FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
+		} catch (e) {
+			console.warn("FFmpeg setup failed for Video Trimmer:", e);
+		}
+	}
+	async process(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const { inputPath, ranges, mode, outputFormat, outputPath } = options;
+		const id = randomUUID$1();
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const results = [];
+		if (mode === "trim" || mode === "cut") {
+			const finalOutputPath = outputPath || path$1.join(outputDir, `trimmed_${Date.now()}.${outputFormat}`);
+			const args = [];
+			if (ranges.length === 1 && mode === "trim") {
+				args.push("-ss", ranges[0].start.toString(), "-to", ranges[0].end.toString(), "-i", inputPath);
+				args.push("-c", "copy", "-y", finalOutputPath);
+			} else {
+				args.push("-i", inputPath);
+				let filterStr = "";
+				ranges.forEach((range, i) => {
+					filterStr += `[0:v]trim=start=${range.start}:end=${range.end},setpts=PTS-STARTPTS[v${i}];`;
+					filterStr += `[0:a]atrim=start=${range.start}:end=${range.end},asetpts=PTS-STARTPTS[a${i}];`;
+				});
+				for (let i = 0; i < ranges.length; i++) filterStr += `[v${i}][a${i}]`;
+				filterStr += `concat=n=${ranges.length}:v=1:a=1[outv][outa]`;
+				args.push("-filter_complex", filterStr);
+				args.push("-map", "[outv]", "-map", "[outa]");
+				args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "23");
+				args.push("-c:a", "aac", "-y", finalOutputPath);
+			}
+			await this.runFFmpeg(args, id, ranges.reduce((acc, r) => acc + (r.end - r.start), 0), progressCallback);
+			results.push(finalOutputPath);
+		} else if (mode === "split") for (let i = 0; i < ranges.length; i++) {
+			const range = ranges[i];
+			const splitPath = path$1.join(outputDir, `split_${i + 1}_${Date.now()}.${outputFormat}`);
+			const args = [
+				"-ss",
+				range.start.toString(),
+				"-to",
+				range.end.toString(),
+				"-i",
+				inputPath,
+				"-c",
+				"copy",
+				"-y",
+				splitPath
+			];
+			if (progressCallback) progressCallback({
+				id,
+				percent: i / ranges.length * 100,
+				state: "processing"
+			});
+			await this.runFFmpeg(args, id, range.end - range.start);
+			results.push(splitPath);
+		}
+		if (progressCallback) progressCallback({
+			id,
+			percent: 100,
+			state: "complete",
+			outputPath: results[0]
+		});
+		return results;
+	}
+	async runFFmpeg(args, id, totalDuration, progressCallback) {
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					progressCallback({
+						id,
+						percent: Math.min(currentTime / totalDuration * 100, 100),
+						state: "processing"
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) resolve();
+				else reject(/* @__PURE__ */ new Error(`FFmpeg exited with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancel(id) {
+		const p = this.activeProcesses.get(id);
+		if (p) {
+			p.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoTrimmer = new VideoTrimmer();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -5475,6 +5588,14 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("audio-manager:cancel", async (_, id) => {
 		audioManager.cancel(id);
+	});
+	ipcMain.handle("video-trimmer:process", async (event, options) => {
+		return await videoTrimmer.process(options, (progress) => {
+			event.sender.send("video-trimmer:progress", progress);
+		});
+	});
+	ipcMain.handle("video-trimmer:cancel", async (_, id) => {
+		videoTrimmer.cancel(id);
 	});
 	ipcMain.handle("video-merger:choose-files", async () => {
 		const result = await dialog.showOpenDialog({

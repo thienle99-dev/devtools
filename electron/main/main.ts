@@ -15,6 +15,7 @@ import { universalDownloader } from './universal-downloader'
 import { audioExtractor } from './audio-extractor'
 import { videoMerger } from './video-merger'
 import { audioManager } from './audio-manager'
+import { videoTrimmer } from './video-trimmer'
 import si from 'systeminformation'
 import Store from 'electron-store'
 
@@ -1846,6 +1847,17 @@ app.whenReady().then(() => {
 
   ipcMain.handle('audio-manager:cancel', async (_, id: string) => {
     audioManager.cancel(id);
+  });
+
+  // Video Trimmer IPC Handlers
+  ipcMain.handle('video-trimmer:process', async (event, options: any) => {
+    return await videoTrimmer.process(options, (progress) => {
+      event.sender.send('video-trimmer:progress', progress);
+    });
+  });
+
+  ipcMain.handle('video-trimmer:cancel', async (_, id: string) => {
+    videoTrimmer.cancel(id);
   });
 
   ipcMain.handle('video-merger:choose-files', async () => {

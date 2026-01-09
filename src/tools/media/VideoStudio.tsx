@@ -5,6 +5,7 @@ import { GifCreator } from './components/GifCreator';
 import { ScreenRecorder } from './components/ScreenRecorder';
 import { VideoMerger } from './VideoMerger';
 import { AudioManager } from './components/AudioManager';
+import { VideoTrimmer } from './components/VideoTrimmer';
 import { cn } from '@utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -21,13 +22,14 @@ import {
     Music
 } from 'lucide-react';
 
-type TabType = 'extract' | 'create' | 'merge' | 'gif' | 'record' | 'audio';
+type TabType = 'extract' | 'create' | 'merge' | 'gif' | 'record' | 'audio' | 'trim';
 
 export const VideoStudio: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('merge');
 
     const MENU_ITEMS = [
         { id: 'merge', icon: Combine, label: 'Merger', description: 'Combine multiple videos' },
+        { id: 'trim', icon: Scissors, label: 'Trim/Split', description: 'Cut and split videos' },
         { id: 'audio', icon: Music, label: 'Audio', description: 'Add and mix music' },
         { id: 'extract', icon: Video, label: 'To Frames', description: 'Extract video frames' },
         { id: 'create', icon: ImagesIcon, label: 'To Video', description: 'Create video from images' },
@@ -120,6 +122,7 @@ export const VideoStudio: React.FC = () => {
                         {activeTab === 'gif' && <GifCreator />}
                         {activeTab === 'record' && <ScreenRecorder />}
                         {activeTab === 'audio' && <AudioManager />}
+                        {activeTab === 'trim' && <VideoTrimmer />}
                                 </div>
                             </div>
                         </motion.div>
