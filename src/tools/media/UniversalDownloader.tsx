@@ -41,6 +41,7 @@ export default function UniversalDownloader() {
 
     const [embedSubs, setEmbedSubs] = useState(false);
     const [downloadEntirePlaylist, setDownloadEntirePlaylist] = useState(false);
+    const [selectedPlaylistItems, setSelectedPlaylistItems] = useState<Set<number>>(new Set());
     const [diskSpace, setDiskSpace] = useState<{ available: number; total: number; warning: boolean } | null>(null);
     const [queuedDownloads, setQueuedDownloads] = useState<any[]>([]);
 
@@ -146,6 +147,7 @@ export default function UniversalDownloader() {
             if (!url) {
                 setMediaInfo(null);
                 setDownloadEntirePlaylist(false);
+                setSelectedPlaylistItems(new Set());
                 return;
             }
 
@@ -162,6 +164,10 @@ export default function UniversalDownloader() {
                 // If it's a playlist, default TO playlist mode if requested or just keep it false
                 if (infoData.isPlaylist) {
                     setDownloadEntirePlaylist(true);
+                    // Select all by default
+                    if (infoData.playlistVideos) {
+                        setSelectedPlaylistItems(new Set(infoData.playlistVideos.map((_: any, i: number) => i + 1)));
+                    }
                 }
 
                 // Update detected platform from backend info if 'other'
@@ -227,7 +233,8 @@ export default function UniversalDownloader() {
                 outputPath: downloadPath || undefined,
                 id: downloadId,
                 embedSubs: embedSubs,
-                isPlaylist: downloadEntirePlaylist
+                isPlaylist: downloadEntirePlaylist,
+                playlistItems: downloadEntirePlaylist ? Array.from(selectedPlaylistItems).join(',') : undefined
             };
 
             // Fire and forget
@@ -384,7 +391,25 @@ export default function UniversalDownloader() {
                     {/* Left: Media Info (2 columns) */}
                     <div className="lg:col-span-2 space-y-6">
                         {mediaInfo ? (
-                            <UniversalVideoInfo info={mediaInfo} />
+                            <UniversalVideoInfo
+                                info={mediaInfo}
+                                selectedItems={selectedPlaylistItems}
+                                onSelectItem={(index) => {
+                                    setSelectedPlaylistItems(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(index)) next.delete(index);
+                                        else next.add(index);
+                                        return next;
+                                    });
+                                }}
+                                onSelectAll={(selected) => {
+                                    if (selected && mediaInfo.playlistVideos) {
+                                        setSelectedPlaylistItems(new Set(mediaInfo.playlistVideos.map((_, i) => i + 1)));
+                                    } else {
+                                        setSelectedPlaylistItems(new Set());
+                                    }
+                                }}
+                            />
                         ) : (
                             <Card className="p-8 bg-glass-panel border-border-glass min-h-[300px] flex flex-col items-center justify-center">
                                 {fetchingInfo ? (
@@ -427,6 +452,18 @@ export default function UniversalDownloader() {
                                     setEmbedSubs={setEmbedSubs}
                                     downloadEntirePlaylist={downloadEntirePlaylist}
                                     setDownloadEntirePlaylist={setDownloadEntirePlaylist}
+                                    selectedItemsCount={selectedPlaylistItems.size}
+                                    totalItemsCount={mediaInfo?.playlistVideos?.length || 0}
+                                    playlistVideos={mediaInfo?.playlistVideos}
+                                    selectedItems={selectedPlaylistItems}
+                                    onSelectItem={(index) => {
+                                        setSelectedPlaylistItems(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(index)) next.delete(index);
+                                            else next.add(index);
+                                            return next;
+                                        });
+                                    }}
                                 />
                             </Card>
                         ) : (

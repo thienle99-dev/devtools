@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@components/ui/Button';
 import { Card } from '@components/ui/Card';
-import { Download, Music, Video, FolderOpen, MonitorPlay, Smartphone, Tv, Box, ListVideo, Languages } from 'lucide-react';
+import { Download, Music, Video, FolderOpen, MonitorPlay, Smartphone, Tv, Box, ListVideo, Languages, Check } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { Switch } from '@components/ui/Switch';
 
@@ -19,6 +19,11 @@ interface UniversalFormatSelectorProps {
     setEmbedSubs: (v: boolean) => void;
     downloadEntirePlaylist: boolean;
     setDownloadEntirePlaylist: (v: boolean) => void;
+    selectedItemsCount?: number;
+    totalItemsCount?: number;
+    playlistVideos?: Array<{ id: string; title: string }>;
+    selectedItems?: Set<number>;
+    onSelectItem?: (index: number) => void;
 }
 
 export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = ({
@@ -34,7 +39,12 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
     embedSubs,
     setEmbedSubs,
     downloadEntirePlaylist,
-    setDownloadEntirePlaylist
+    setDownloadEntirePlaylist,
+    selectedItemsCount,
+    totalItemsCount,
+    playlistVideos,
+    selectedItems,
+    onSelectItem
 }) => {
     // Get recommended quality based on network speed (simplified)
     const getRecommendedQuality = (): string => {
@@ -152,6 +162,53 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                 checked={downloadEntirePlaylist}
                                 onChange={(e) => setDownloadEntirePlaylist(e.target.checked)}
                             />
+                        </div>
+                    )}
+                    {isPlaylist && downloadEntirePlaylist && selectedItemsCount !== undefined && totalItemsCount !== undefined && selectedItemsCount < totalItemsCount && (
+                        <div className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                            <p className="text-[10px] text-amber-400 font-medium leading-tight">
+                                Note: Only {selectedItemsCount} of {totalItemsCount} videos will be downloaded
+                            </p>
+                        </div>
+                    )}
+                    {isPlaylist && downloadEntirePlaylist && playlistVideos && (
+                        <div className="mt-2 space-y-2 border-t border-white/5 pt-2">
+                            <div className="flex items-center justify-between px-1">
+                                <span className="text-[10px] text-foreground-secondary uppercase tracking-wider font-bold">
+                                    Select Videos
+                                </span>
+                            </div>
+                            <div className="max-h-[200px] overflow-y-auto px-1 space-y-1 custom-scrollbar">
+                                {playlistVideos.map((video, idx) => {
+                                    const index = idx + 1;
+                                    const isSelected = selectedItems?.has(index);
+                                    return (
+                                        <div
+                                            key={video.id + idx}
+                                            onClick={() => onSelectItem?.(index)}
+                                            className={cn(
+                                                "flex items-center gap-2 p-1.5 rounded cursor-pointer group transition-colors",
+                                                isSelected ? "bg-primary/10" : "bg-white/5 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <div className="flex-shrink-0">
+                                                <div className={cn(
+                                                    "w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors",
+                                                    isSelected ? "bg-primary border-primary" : "border-white/20 group-hover:border-white/40"
+                                                )}>
+                                                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                                </div>
+                                            </div>
+                                            <span className={cn(
+                                                "text-[11px] truncate transition-colors",
+                                                isSelected ? "text-foreground-primary font-medium" : "text-foreground-secondary group-hover:text-foreground-primary"
+                                            )}>
+                                                {index}. {video.title}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                     {platform === 'youtube' && format === 'video' && (

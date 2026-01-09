@@ -109,7 +109,6 @@ export class TikTokDownloader {
                 '--skip-download',
                 '--no-playlist',
                 '--no-check-certificate',
-                '--no-call-home'
             ]);
 
             return {

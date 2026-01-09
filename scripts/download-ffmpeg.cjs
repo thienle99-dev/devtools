@@ -53,10 +53,24 @@ function downloadFile(url, dest) {
         const request = client.get(url, (response) => {
             // Handle redirects
             if (response.statusCode === 301 || response.statusCode === 302) {
-                console.log(`🔄 Following redirect to: ${response.headers.location}`);
+                const redirectUrl = response.headers.location;
+                console.log(`🔄 Following redirect to: ${redirectUrl}`);
                 file.close();
                 fs.unlinkSync(dest);
-                return downloadFile(response.headers.location, dest).then(resolve).catch(reject);
+                
+                // Handle relative URLs in redirect
+                let fullRedirectUrl = redirectUrl;
+                if (redirectUrl.startsWith('/')) {
+                    const urlObj = new URL(url);
+                    fullRedirectUrl = `${urlObj.protocol}//${urlObj.host}${redirectUrl}`;
+                    console.log(`🔗 Resolved to: ${fullRedirectUrl}`);
+                } else if (!redirectUrl.startsWith('http')) {
+                    const urlObj = new URL(url);
+                    fullRedirectUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1)}${redirectUrl}`;
+                    console.log(`🔗 Resolved to: ${fullRedirectUrl}`);
+                }
+                
+                return downloadFile(fullRedirectUrl, dest).then(resolve).catch(reject);
             }
 
             if (response.statusCode !== 200) {

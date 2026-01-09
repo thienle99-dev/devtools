@@ -319,7 +319,6 @@ export class YouTubeDownloader {
                 '--skip-download',
                 '--no-playlist',
                 '--no-check-certificate',
-                '--no-call-home', // Optimization: Don't contact yt-dlp server for updates
             ]);
             
             // Parse available formats

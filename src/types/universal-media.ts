@@ -25,6 +25,7 @@ export interface UniversalMediaInfo {
         url: string;
         thumbnail?: string;
     }>;
+    size?: number;
 }
 
 export interface UniversalDownloadOptions {
@@ -40,7 +41,7 @@ export interface UniversalDownloadOptions {
     cookiesBrowser?: 'chrome' | 'firefox' | 'edge';
     embedSubs?: boolean; // New: Support for subtitles
     isPlaylist?: boolean; // New: Support for playlist mode
-    playlistItems?: string[]; // New: Specific indices or IDs to download from playlist
+    playlistItems?: string; // New: Specific indices or IDs to download from playlist
 }
 
 export interface UniversalDownloadProgress {

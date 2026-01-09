@@ -2472,8 +2472,7 @@ var YouTubeDownloader = class {
 				url,
 				"--skip-download",
 				"--no-playlist",
-				"--no-check-certificate",
-				"--no-call-home"
+				"--no-check-certificate"
 			]);
 			const formats = (info.formats || []).map((format) => ({
 				itag: format.format_id ? parseInt(format.format_id) : 0,
@@ -2924,8 +2923,7 @@ var TikTokDownloader = class {
 				url,
 				"--skip-download",
 				"--no-playlist",
-				"--no-check-certificate",
-				"--no-call-home"
+				"--no-check-certificate"
 			]);
 			return {
 				id: info.id,
@@ -3202,22 +3200,64 @@ var UniversalDownloader = class {
 	async getMediaInfo(url) {
 		await this.ensureInitialized();
 		try {
-			const args = [
-				url,
-				"--dump-json",
-				"--no-check-certificate",
-				"--no-call-home"
-			];
-			const hasVideoId = url.includes("v=") || url.includes("youtu.be/");
-			if ((url.includes("list=") || url.includes("/playlist") || url.includes("/sets/")) && !hasVideoId) args.push("--flat-playlist");
-			else args.push("--no-playlist");
+			const hasVideoId = url.includes("v=") || url.includes("youtu.be/") || url.includes("/video/") || url.includes("/v/");
+			const hasPlaylistId = url.includes("list=") || url.includes("/playlist") || url.includes("/sets/") || url.includes("/album/") || url.includes("/c/") || url.includes("/channel/") || url.includes("/user/");
 			const settings = this.getSettings();
-			if (settings.useBrowserCookies) args.push("--cookies-from-browser", settings.useBrowserCookies);
-			const stdout = await this.ytDlp.execPromise(args);
-			const info = JSON.parse(stdout);
+			const commonArgs = ["--dump-json", "--no-check-certificate"];
+			if (settings.useBrowserCookies) commonArgs.push("--cookies-from-browser", settings.useBrowserCookies);
+			const mainArgs = [url, ...commonArgs];
+			if (hasPlaylistId && !hasVideoId) mainArgs.push("--flat-playlist");
+			else mainArgs.push("--no-playlist");
+			const playlistArgs = hasPlaylistId && hasVideoId ? [
+				url,
+				...commonArgs,
+				"--flat-playlist"
+			] : null;
+			const [mainRes, playlistRes] = await Promise.allSettled([this.ytDlp.execPromise(mainArgs), playlistArgs ? this.ytDlp.execPromise(playlistArgs) : Promise.resolve(null)]);
+			if (mainRes.status === "rejected") throw mainRes.reason;
+			const lines = mainRes.value.trim().split("\n");
+			let info = JSON.parse(lines[0]);
+			if (lines.length > 1 && !info.entries) {
+				const entries = lines.map((l) => {
+					try {
+						return JSON.parse(l);
+					} catch (e) {
+						return null;
+					}
+				}).filter((i) => i !== null);
+				info = {
+					...entries[0],
+					entries,
+					_type: "playlist"
+				};
+			}
+			if (playlistRes.status === "fulfilled" && playlistRes.value) try {
+				const pLines = playlistRes.value.trim().split("\n");
+				let playlistInfo = JSON.parse(pLines[0]);
+				if (pLines.length > 1 && !playlistInfo.entries) {
+					const entries = pLines.map((l) => {
+						try {
+							return JSON.parse(l);
+						} catch (e) {
+							return null;
+						}
+					}).filter((i) => i !== null);
+					playlistInfo = {
+						...entries[0],
+						entries
+					};
+				}
+				if (playlistInfo.entries && !info.entries) {
+					info.entries = playlistInfo.entries;
+					info.playlist_count = playlistInfo.playlist_count || playlistInfo.entries.length;
+					if (!info._type) info._type = "playlist";
+				}
+			} catch (e) {
+				console.warn("Failed to parse auxiliary playlist info:", e);
+			}
 			const platform = this.detectPlatform(url, info.extractor);
-			const isPlaylist = info._type === "playlist" || !!info.entries;
-			const hasPlaylistContext = url.includes("list=") || !!info.playlist_id;
+			const isPlaylist = info._type === "playlist" || !!info.entries || info._type === "multi_video";
+			const hasPlaylistContext = hasPlaylistId || !!info.playlist_id;
 			const availableQualities = [];
 			const formatsSource = isPlaylist && info.entries && info.entries[0] ? info.entries[0].formats : info.formats;
 			if (formatsSource && Array.isArray(formatsSource)) {
@@ -3266,12 +3306,17 @@ var UniversalDownloader = class {
 				availableQualities: availableQualities.length > 0 ? availableQualities : void 0,
 				isPlaylist: isPlaylist || hasPlaylistContext,
 				playlistCount: isPlaylist || hasPlaylistContext ? info.playlist_count || info.entries?.length : void 0,
-				playlistVideos
+				playlistVideos,
+				size: info.filesize || info.filesize_approx
 			};
 		} catch (error) {
 			let msg = error.message || String(error);
+			if (msg.includes("nodename nor servname provided") || msg.includes("getaddrinfo") || msg.includes("ENOTFOUND") || msg.includes("Unable to download webpage") || msg.includes("Unable to download API page")) throw new Error("Network error: Please check your internet connection");
 			if (msg.includes("Video unavailable")) msg = "Video is unavailable or private";
 			if (msg.includes("Login required")) msg = "Login required to access this content";
+			if (msg.includes("Private video")) msg = "This video is private";
+			if (msg.includes("HTTP Error 429")) msg = "Too many requests. Please try again later";
+			if (msg.includes("Geographic restriction")) msg = "This video is not available in your country";
 			throw new Error(`Failed to get media info: ${msg}`);
 		}
 	}
@@ -3353,7 +3398,7 @@ var UniversalDownloader = class {
 	}
 	async executeDownload(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist } = options;
+		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems } = options;
 		const downloadId = id || randomUUID$1();
 		try {
 			const info = await this.getMediaInfo(url);
@@ -3388,6 +3433,7 @@ var UniversalDownloader = class {
 				"10"
 			];
 			if (!shouldDownloadPlaylist) args.push("--no-playlist");
+			else if (playlistItems) args.push("--playlist-items", playlistItems);
 			if (embedSubs && info.platform === "youtube") args.push("--all-subs", "--embed-subs", "--write-auto-subs");
 			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
 			if (maxSpeed) args.push("--limit-rate", maxSpeed);
@@ -3411,48 +3457,64 @@ var UniversalDownloader = class {
 				let downloadedBytes = 0;
 				let percent = 0;
 				let currentItemFilename = displayFilename;
+				let stderrOutput = "";
 				const process$1 = this.ytDlp.exec(args);
 				this.activeProcesses.set(downloadId, process$1);
-				if (process$1.ytDlpProcess) process$1.ytDlpProcess.stdout?.on("data", (data) => {
-					data.toString().split(/\r?\n/).forEach((line) => {
-						if (!line.trim()) return;
-						const itemMatch = line.match(/\[download\] Destination: .*[/\\](.*)$/);
-						if (itemMatch) currentItemFilename = itemMatch[1];
-						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
-						if (progressMatch) {
-							percent = parseFloat(progressMatch[1]);
-							const sizeVal = parseFloat(progressMatch[2]);
-							const sizeUnit = progressMatch[3];
-							const speedVal = parseFloat(progressMatch[4]);
-							const speedUnit = progressMatch[5];
-							const etaStr = progressMatch[6];
-							const unitMultipliers = {
-								"B": 1,
-								"KiB": 1024,
-								"MiB": 1024 * 1024,
-								"GiB": 1024 * 1024 * 1024
-							};
-							totalBytes = sizeVal * (unitMultipliers[sizeUnit] || 1);
-							downloadedBytes = percent / 100 * totalBytes;
-							const speed = speedVal * (unitMultipliers[speedUnit] || 1);
-							const etaParts = etaStr.split(":");
-							let eta = 0;
-							if (etaParts.length === 2) eta = parseInt(etaParts[0]) * 60 + parseInt(etaParts[1]);
-							if (etaParts.length === 3) eta = parseInt(etaParts[0]) * 3600 + parseInt(etaParts[1]) * 60 + parseInt(etaParts[2]);
-							if (progressCallback) progressCallback({
-								id: downloadId,
-								percent,
-								downloaded: downloadedBytes,
-								total: totalBytes,
-								speed,
-								eta,
-								state: "downloading",
-								filename: info.isPlaylist ? `${displayFilename} (${currentItemFilename})` : displayFilename,
-								platform: info.platform
-							});
-						}
+				if (process$1.ytDlpProcess) {
+					process$1.ytDlpProcess.stderr?.on("data", (data) => {
+						stderrOutput += data.toString();
 					});
-				});
+					process$1.ytDlpProcess.stdout?.on("data", (data) => {
+						data.toString().split(/\r?\n/).forEach((line) => {
+							if (!line.trim()) return;
+							const itemMatch = line.match(/\[download\] Destination: .*[/\\](.*)$/);
+							if (itemMatch) currentItemFilename = itemMatch[1];
+							const progressMatch = line.match(/\[download\]\s+([\d.]+)%\s+of\s+~?([\d.]+)([\w]+)\s+at\s+([\d.]+)([\w/]+)\s+ETA\s+([\d:]+)/);
+							if (progressMatch) {
+								percent = parseFloat(progressMatch[1]);
+								const sizeVal = parseFloat(progressMatch[2]);
+								const sizeUnit = progressMatch[3];
+								const speedVal = parseFloat(progressMatch[4]);
+								const speedUnit = progressMatch[5].split("/")[0];
+								const etaStr = progressMatch[6];
+								const unitMultipliers = {
+									"B": 1,
+									"KB": 1024,
+									"KIB": 1024,
+									"K": 1024,
+									"MB": 1024 * 1024,
+									"MIB": 1024 * 1024,
+									"M": 1024 * 1024,
+									"GB": 1024 * 1024 * 1024,
+									"GIB": 1024 * 1024 * 1024,
+									"G": 1024 * 1024 * 1024,
+									"TB": 1024 * 1024 * 1024 * 1024,
+									"TIB": 1024 * 1024 * 1024 * 1024,
+									"T": 1024 * 1024 * 1024 * 1024
+								};
+								totalBytes = sizeVal * (unitMultipliers[sizeUnit.toUpperCase()] || 1);
+								downloadedBytes = percent / 100 * totalBytes;
+								const speed = speedVal * (unitMultipliers[speedUnit.toUpperCase()] || 1);
+								const etaParts = etaStr.split(":").reverse();
+								let eta = 0;
+								if (etaParts[0]) eta += parseInt(etaParts[0]);
+								if (etaParts[1]) eta += parseInt(etaParts[1]) * 60;
+								if (etaParts[2]) eta += parseInt(etaParts[2]) * 3600;
+								if (progressCallback) progressCallback({
+									id: downloadId,
+									percent,
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed,
+									eta,
+									state: "downloading",
+									filename: info.isPlaylist ? `${displayFilename} (${currentItemFilename})` : displayFilename,
+									platform: info.platform
+								});
+							}
+						});
+					});
+				}
 				process$1.on("close", (code) => {
 					this.activeProcesses.delete(downloadId);
 					if (code === 0) {
@@ -3484,12 +3546,83 @@ var UniversalDownloader = class {
 							status: "completed"
 						});
 						resolve(finalPath);
-					} else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
+					} else if (code === null) {
+						console.error("yt-dlp process terminated unexpectedly");
+						if (stderrOutput) console.error("stderr output:", stderrOutput);
+						const errorMsg = stderrOutput ? `Download terminated: ${stderrOutput.substring(0, 200)}` : "Download was cancelled or terminated unexpectedly";
+						if (progressCallback) progressCallback({
+							id: downloadId,
+							percent: 0,
+							downloaded: downloadedBytes,
+							total: totalBytes,
+							speed: 0,
+							eta: 0,
+							state: "error",
+							filename: displayFilename,
+							platform: info.platform
+						});
+						reject(new Error(errorMsg));
+					} else {
+						console.error(`yt-dlp exited with code ${code}`);
+						if (stderrOutput) console.error("stderr output:", stderrOutput);
+						let errorMsg = `Download failed (exit code: ${code})`;
+						if (stderrOutput.includes("Video unavailable")) errorMsg = "Video is unavailable or has been removed";
+						else if (stderrOutput.includes("Private video")) errorMsg = "Video is private";
+						else if (stderrOutput.includes("Login required")) errorMsg = "Login required to access this content";
+						else if (stderrOutput.includes("HTTP Error 429")) errorMsg = "Too many requests. Please try again later";
+						else if (stderrOutput.includes("No space left")) errorMsg = "No space left on device";
+						else if (stderrOutput) {
+							const firstErrorLine = stderrOutput.split("\n").find((line) => line.trim());
+							if (firstErrorLine) errorMsg = firstErrorLine.substring(0, 150);
+						}
+						if (progressCallback) progressCallback({
+							id: downloadId,
+							percent: 0,
+							downloaded: downloadedBytes,
+							total: totalBytes,
+							speed: 0,
+							eta: 0,
+							state: "error",
+							filename: displayFilename,
+							platform: info.platform
+						});
+						reject(new Error(errorMsg));
+					}
 				});
 				process$1.on("error", (err) => {
 					this.activeProcesses.delete(downloadId);
-					reject(err);
+					console.error("yt-dlp process error:", err);
+					if (stderrOutput) console.error("stderr output:", stderrOutput);
+					if (progressCallback) progressCallback({
+						id: downloadId,
+						percent: 0,
+						downloaded: downloadedBytes,
+						total: totalBytes,
+						speed: 0,
+						eta: 0,
+						state: "error",
+						filename: displayFilename,
+						platform: info.platform
+					});
+					reject(/* @__PURE__ */ new Error(`Download process error: ${err.message}`));
 				});
+				const timeout = setTimeout(() => {
+					if (this.activeProcesses.has(downloadId)) {
+						console.warn(`Download timeout for ${downloadId}, killing process`);
+						const proc = this.activeProcesses.get(downloadId);
+						if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill("SIGTERM");
+					}
+				}, 36e5);
+				const originalResolve = resolve;
+				const originalReject = reject;
+				resolve = (value) => {
+					clearTimeout(timeout);
+					originalResolve(value);
+				};
+				reject = (reason) => {
+					clearTimeout(timeout);
+					originalReject(reason);
+				};
 			});
 		} catch (error) {
 			this.activeProcesses.delete(downloadId);
