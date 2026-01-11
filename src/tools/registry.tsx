@@ -14,6 +14,7 @@ import {
     Binary,
     Braces,
     FileImage,
+    Image as ImageIcon,
     Settings,
     Clipboard,
     Activity,
@@ -54,7 +55,7 @@ import {
 } from 'lucide-react';
 
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image';
 
 export interface ToolDefinition {
     id: string;
@@ -87,6 +88,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'pdf', name: 'PDF Tools', icon: FileText, color: 'text-rose-500' },
     { id: 'utilities', name: 'Utilities', icon: Box, color: 'text-yellow-400' },
     { id: 'development', name: 'Dev Utils', icon: Code2, color: 'text-pink-400' },
+    { id: 'image', name: 'Image Tools', icon: ImageIcon, color: 'text-purple-400' },
 ];
 
 // Lazy load all tool components for better performance
@@ -100,6 +102,7 @@ const MarkdownHtmlConverter = React.lazy(() => import('@tools/converters/Markdow
 const DateConverter = React.lazy(() => import('@tools/converters/DateConverter').then(m => ({ default: m.DateConverter })));
 const ColorConverter = React.lazy(() => import('@tools/converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
 const Base64FileConverter = React.lazy(() => import('@tools/converters/Base64FileConverter').then(m => ({ default: m.Base64FileConverter })));
+const CsvExcelConverter = React.lazy(() => import('@tools/converters/CsvExcelConverter').then(m => ({ default: m.CsvExcelConverter })));
 const ImagesToPdfConverter = React.lazy(() => import('@tools/pdf/ImagesToPdfConverter').then(m => ({ default: m.ImagesToPdfConverter })));
 const PdfMerger = React.lazy(() => import('@tools/pdf/PdfMerger').then(m => ({ default: m.PdfMerger })));
 const PdfSplitter = React.lazy(() => import('@tools/pdf/PdfSplitter').then(m => ({ default: m.PdfSplitter })));
@@ -157,6 +160,9 @@ const VideoStudio = React.lazy(() => import('@tools/media/VideoStudio'));
 const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
 const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
 const SettingsPage = React.lazy(() => import('@pages/Settings'));
+const QrCodeGenerator = React.lazy(() => import('@tools/image/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));
+const ImageConverter = React.lazy(() => import('@tools/image/ImageConverter').then(m => ({ default: m.ImageConverter })));
+const DataUriGenerator = React.lazy(() => import('@tools/image/DataUriGenerator').then(m => ({ default: m.DataUriGenerator })));
 
 // Import placeholders for now (we'll replace them as we build them)
 
@@ -318,6 +324,17 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-sky-400',
         component: DateConverter,
         keywords: ['date', 'time', 'timestamp', 'unix', 'iso']
+    },
+    {
+        id: 'csv-excel',
+        name: 'CSV to Excel',
+        path: '/csv-excel',
+        description: 'Convert CSV to Excel (XLSX)',
+        category: 'converters',
+        icon: Table2,
+        color: 'text-emerald-500',
+        component: CsvExcelConverter,
+        keywords: ['csv', 'excel', 'xlsx', 'convert', 'spreadsheet']
     },
 
     // PDF Tools
@@ -859,6 +876,41 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-purple-500',
         component: AudioExtractor,
         keywords: ['audio', 'extract', 'mp3', 'convert', 'music', 'sound', 'trim', 'normalize'],
+    },
+
+    // Image Tools
+    {
+        id: 'qr-code',
+        name: 'QR Code Tool',
+        path: '/qr-code',
+        description: 'Generate and scan QR codes with custom styling',
+        category: 'image',
+        icon: ImageIcon,
+        color: 'text-purple-400',
+        component: QrCodeGenerator,
+        keywords: ['qr', 'code', 'generate', 'scan', 'wifi', 'svg', 'image']
+    },
+    {
+        id: 'image-converter',
+        name: 'Image Converter/Compressor',
+        path: '/image-converter',
+        description: 'Batch convert, resize and compress images (PNG, JPG, WebP, AVIF)',
+        category: 'image',
+        icon: FileImage,
+        color: 'text-emerald-400',
+        component: ImageConverter,
+        keywords: ['image', 'convert', 'compress', 'resize', 'batch', 'webp', 'avif']
+    },
+    {
+        id: 'data-uri',
+        name: 'Data URI Generator',
+        path: '/data-uri',
+        description: 'Convert images or files into base64 Data URIs',
+        category: 'image',
+        icon: Code,
+        color: 'text-amber-400',
+        component: DataUriGenerator,
+        keywords: ['base64', 'image', 'data-uri', 'css', 'html', 'encode']
     },
 
     // Settings (Special tool - not in any category)
