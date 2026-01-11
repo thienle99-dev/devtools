@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   system: {
     getHomeDir: () => ipcRenderer.invoke('get-home-dir'),
     selectFolder: () => ipcRenderer.invoke('select-folder'),
+    getInfo: () => ipcRenderer.invoke('system:get-info'),
   }
 })
 

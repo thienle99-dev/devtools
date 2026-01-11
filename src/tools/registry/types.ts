@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math' | 'media';
 
 export interface ToolDefinition {
     id: string;

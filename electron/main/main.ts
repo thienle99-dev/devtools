@@ -1405,6 +1405,32 @@ app.whenReady().then(() => {
     }
   });
 
+  // System Info IPC Handlers
+  ipcMain.handle('system:get-info', async () => {
+    try {
+      const [cpu, mem, os, graphics, disk, net] = await Promise.all([
+        si.cpu(),
+        si.mem(),
+        si.osInfo(),
+        si.graphics(),
+        si.diskLayout(),
+        si.networkInterfaces()
+      ]);
+
+      return {
+        cpu,
+        memory: mem,
+        os,
+        graphics: graphics.controllers,
+        disks: disk,
+        network: net.filter(n => n.operstate === 'up')
+      };
+    } catch (error) {
+      console.error('Error fetching system info:', error);
+      return null;
+    }
+  });
+
   // Application Manager IPC Handlers
   ipcMain.handle('app-manager:get-installed-apps', async () => {
     try {

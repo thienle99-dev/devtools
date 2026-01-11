@@ -8,7 +8,8 @@ import {
     FileText,
     Image as ImageIcon,
     Type,
-    Percent
+    Percent,
+    Film
 } from 'lucide-react';
 import type { CategoryDefinition } from './types';
 
@@ -26,4 +27,5 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'image', name: 'Image Tools', icon: ImageIcon, color: 'text-purple-400' },
     { id: 'text', name: 'Text Tools', icon: Type, color: 'text-indigo-400' },
     { id: 'math', name: 'Math Tools', icon: Percent, color: 'text-emerald-400' },
+    { id: 'media', name: 'Media Tools', icon: Film, color: 'text-indigo-400' },
 ];

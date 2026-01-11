@@ -72,6 +72,7 @@ export const DockerConverter = React.lazy(() => import('@tools/development/Docke
 
 // Utilities
 export const ClipboardManager = React.lazy(() => import('@tools/utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));
+export const DeviceInfo = React.lazy(() => import('@tools/utilities/DeviceInfo').then(m => ({ default: m.DeviceInfo })));
 export const StatsMonitor = React.lazy(() => import('@tools/utilities/stats-monitor/StatsMonitor').then(m => ({ default: m.default })));
 export const ApplicationManager = React.lazy(() => import('@tools/utilities/ApplicationManager').then(m => ({ default: m.default })));
 export const SystemCleaner = React.lazy(() => import('@tools/utilities/system-cleaner/SystemCleaner').then(m => ({ default: m.SystemCleaner })));
@@ -79,14 +80,18 @@ export const SystemCleaner = React.lazy(() => import('@tools/utilities/system-cl
 // Screenshot & Media
 export const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
 export const VideoStudio = React.lazy(() => import('@tools/media/VideoStudio'));
+export const VoiceRecorder = React.lazy(() => import('@tools/media/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
+export const Camera = React.lazy(() => import('@tools/media/Camera').then(m => ({ default: m.Camera })));
 export const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
 export const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
 
 // Image
 export const QrCodeGenerator = React.lazy(() => import('@tools/image/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));
 export const ImageConverter = React.lazy(() => import('@tools/image/ImageConverter').then(m => ({ default: m.ImageConverter })));
+export const ImageMetadata = React.lazy(() => import('@tools/image/ImageMetadata').then(m => ({ default: m.ImageMetadata })));
 export const DataUriGenerator = React.lazy(() => import('@tools/image/DataUriGenerator').then(m => ({ default: m.DataUriGenerator })));
 export const SvgPlaceholderGenerator = React.lazy(() => import('@tools/image/SvgPlaceholderGenerator').then(m => ({ default: m.SvgPlaceholderGenerator })));
+export const ImageToAscii = React.lazy(() => import('@tools/image/ImageToAscii').then(m => ({ default: m.ImageToAscii })));
 
 // Text
 export const LoremIpsumGenerator = React.lazy(() => import('@tools/text/LoremIpsumGenerator').then(m => ({ default: m.LoremIpsumGenerator })));

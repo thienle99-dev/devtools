@@ -164,7 +164,7 @@
 - [x] User-agent parser
 - [x] HTTP status codes list
 - [x] JSON diff
-- [ ] Device information
+- [x] Device information
 - [ ] Open Graph meta generator
 - [x] MIME types lookup
 - [ ] OTP code generator (TOTP)
@@ -263,8 +263,8 @@
 - [ ] Image Brightness/Contrast Adjuster
 - [ ] Image Color Adjuster (saturation, hue, etc.)
 - [ ] Image Watermarker (text/image watermark)
-- [ ] Image Metadata Viewer (EXIF, metadata)
-- [ ] Image Metadata Remover (privacy)
+- [x] Image Metadata Viewer (EXIF, metadata)
+- [x] Image Metadata Remover (privacy)
 - [ ] Image Color Palette Extractor
 - [ ] Image Dominant Color Extractor
 - [ ] Image Dimension Analyzer
@@ -279,7 +279,7 @@
 - [ ] Image Optimizer (auto format, compression)
 - [ ] Responsive Image Generator (multiple sizes)
 - [ ] Image OCR (text recognition)
-- [ ] Image to ASCII Art Converter
+- [x] Image to ASCII Art Converter
 - [ ] Image to SVG Converter (vectorization)
 - [ ] Image Background Remover
 - [ ] Image Upscaler (AI-based)
