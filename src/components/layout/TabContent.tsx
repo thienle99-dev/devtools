@@ -118,7 +118,7 @@ export const TabContent: React.FC = React.memo(() => {
                               Keep tool instances mounted up to maxBackgroundTabs limit.
                               Each tab maintains its own state via tabId prop.
                             */}
-                            <ToolComponent tabId={tab.id} />
+                            <ToolComponent tabId={tab.id} {...(toolDef.props || {})} />
                         </Suspense>
                     </motion.div>
                 );

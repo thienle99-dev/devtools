@@ -2,7 +2,7 @@ import React from 'react';
 
 export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math' | 'media';
 
-export type ToolDataType = 'text' | 'json' | 'image' | 'file' | 'clipboard' | 'hex' | 'binary' | 'any';
+export type ToolDataType = 'text' | 'json' | 'image' | 'file' | 'clipboard' | 'hex' | 'binary' | 'any' | 'xml' | 'yaml' | 'sql';
 
 export interface ToolDefinition {
     id: string;
@@ -12,6 +12,7 @@ export interface ToolDefinition {
     category: ToolCategory;
     icon: React.ElementType;
     component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>;
+    props?: Record<string, any>;
     keywords?: string[];
     shortcut?: string;
     color?: string;

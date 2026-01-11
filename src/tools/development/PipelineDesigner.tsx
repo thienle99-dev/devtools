@@ -7,6 +7,7 @@ import { Input } from '@components/ui/Input';
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 import { TOOLS } from '@tools/registry';
+import { ConfirmationModal } from '@components/ui/ConfirmationModal';
 
 const PipelineDesigner: React.FC = () => {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, addStep, removeStep } = useWorkflowStore();
@@ -15,6 +16,7 @@ const PipelineDesigner: React.FC = () => {
     const [input, setInput] = useState('');
     const [output, setOutput] = useState<any>(null);
     const [isRunning, setIsRunning] = useState(false);
+    const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
 
     const activeWorkflow = useMemo(() =>
         workflows.find(w => w.id === activeWorkflowId),
@@ -44,10 +46,6 @@ const PipelineDesigner: React.FC = () => {
                 const tool = TOOLS.find((t: any) => t.id === step.toolId);
                 if (tool && tool.process) {
                     currentData = await tool.process(currentData, step.options);
-                } else {
-                    // If no process function, we might want to throw or just skip
-                    // For now, let's assume we need it
-                    // console.warn(`Tool ${step.toolId} doesn't support processing in pipeline.`);
                 }
             }
             setOutput(currentData);
@@ -71,7 +69,7 @@ const PipelineDesigner: React.FC = () => {
                         <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
-                        <h4 className="text-sm font-semibold">{tool?.name || 'Unknown Tool'}</h4>
+                        <h4 className="text-sm font-semibold text-foreground">{tool?.name || 'Unknown Tool'}</h4>
                         <p className="text-[10px] text-foreground-muted">{tool?.description}</p>
                     </div>
 
@@ -88,7 +86,7 @@ const PipelineDesigner: React.FC = () => {
                 {index < activeWorkflow!.steps.length - 1 && (
                     <div className="flex flex-col items-center">
                         <div className="w-px h-8 bg-border-glass" />
-                        <ArrowRight className="w-4 h-4 text-indigo-500/50 my-1 rotate-90" />
+                        <ArrowRight className="w-4 h-4 text-foreground-muted/50 my-1 rotate-90" />
                         <div className="w-px h-8 bg-border-glass" />
                     </div>
                 )}
@@ -120,8 +118,8 @@ const PipelineDesigner: React.FC = () => {
                                         className={cn(
                                             "w-full px-3 py-2 rounded-lg text-left text-xs transition-all border pr-8",
                                             activeWorkflowId === w.id
-                                                ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300"
-                                                : "border-transparent hover:bg-white/5 text-foreground-muted"
+                                                ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400 font-medium"
+                                                : "border-transparent hover:bg-glass-button text-foreground-muted"
                                         )}
                                     >
                                         {w.name}
@@ -129,11 +127,7 @@ const PipelineDesigner: React.FC = () => {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            if (confirm('Delete this pipeline?')) {
-                                                const isActive = activeWorkflowId === w.id;
-                                                removeWorkflow(w.id);
-                                                if (isActive) setActiveWorkflowId(null);
-                                            }
+                                            setWorkflowToDelete(w.id);
                                         }}
                                         className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-foreground-muted hover:text-rose-400 transition-all"
                                     >
@@ -152,17 +146,17 @@ const PipelineDesigner: React.FC = () => {
                                     <button
                                         key={t.id}
                                         onClick={() => addStep(activeWorkflowId, { toolId: t.id, options: {} })}
-                                        className="w-full p-3 rounded-xl bg-white/5 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/30 text-left transition-all group"
+                                        className="w-full p-3 rounded-xl bg-glass-button hover:bg-glass-button-hover border border-transparent hover:border-indigo-500/30 text-left transition-all group"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className={cn("p-1.5 rounded-lg bg-black/20", t.color)}>
+                                            <div className={cn("p-1.5 rounded-lg bg-foreground/5", t.color)}>
                                                 <t.icon className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <div className="text-xs font-medium group-hover:text-indigo-400">{t.name}</div>
+                                                <div className="text-xs font-medium text-foreground group-hover:text-indigo-400">{t.name}</div>
                                                 <div className="text-[10px] text-foreground-muted truncate w-40">{t.description}</div>
                                             </div>
-                                            <Plus className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100" />
+                                            <Plus className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-foreground-muted" />
                                         </div>
                                     </button>
                                 ))}
@@ -179,7 +173,7 @@ const PipelineDesigner: React.FC = () => {
                                 <Plus className="w-12 h-12" />
                             </div>
                             <div className="space-y-2">
-                                <h2 className="text-xl font-bold">Select or Create a Pipeline</h2>
+                                <h2 className="text-xl font-bold text-foreground">Select or Create a Pipeline</h2>
                                 <p className="text-sm text-foreground-muted max-w-sm">
                                     Start building your automation by creating a new pipeline and adding your favorite tools.
                                 </p>
@@ -195,7 +189,7 @@ const PipelineDesigner: React.FC = () => {
                                 <Input
                                     value={activeWorkflow?.name || ''}
                                     onChange={(e) => updateWorkflow(activeWorkflowId!, { name: e.target.value })}
-                                    className="bg-transparent border-none text-lg font-bold p-0 focus:ring-0 min-w-[200px]"
+                                    className="bg-transparent border-none text-lg font-bold p-0 focus:ring-0 min-w-[200px] text-foreground"
                                 />
                                 <div className="ml-auto flex items-center gap-1.5">
                                     <Button
@@ -231,17 +225,17 @@ const PipelineDesigner: React.FC = () => {
                                 {/* Testing Area */}
                                 <div className="flex flex-col gap-4 overflow-hidden">
                                     <div className="flex flex-col gap-2 flex-1 overflow-hidden">
-                                        <label className="text-[10px] font-bold uppercase opacity-50 ml-1">Initial Input</label>
+                                        <label className="text-[10px] font-bold uppercase opacity-50 ml-1 text-foreground-muted">Initial Input</label>
                                         <textarea
                                             value={input}
                                             onChange={(e) => setInput(e.target.value)}
                                             placeholder="Paste initial data here..."
-                                            className="flex-1 bg-black/20 border border-border-glass rounded-xl p-4 text-xs font-mono resize-none focus:outline-none focus:border-indigo-500/50"
+                                            className="flex-1 glass-input rounded-xl p-4 text-xs font-mono resize-none focus:outline-none focus:border-indigo-500/50"
                                         />
                                     </div>
                                     <div className="flex flex-col gap-2 flex-1 overflow-hidden">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-[10px] font-bold uppercase opacity-50 ml-1">Pipeline Output</label>
+                                            <label className="text-[10px] font-bold uppercase opacity-50 ml-1 text-foreground-muted">Pipeline Output</label>
                                             <div className="flex items-center gap-1">
                                                 <Button variant="ghost" size="xs" icon={Copy} onClick={() => {
                                                     if (output) {
@@ -266,8 +260,8 @@ const PipelineDesigner: React.FC = () => {
                                             readOnly
                                             placeholder="Execution result will appear here..."
                                             className={cn(
-                                                "flex-1 bg-indigo-500/5 border border-border-glass rounded-xl p-4 text-xs font-mono resize-none focus:outline-none",
-                                                output && "text-indigo-300"
+                                                "flex-1 bg-indigo-500/5 border border-border-glass rounded-xl p-4 text-xs font-mono resize-none focus:outline-none text-foreground",
+                                                output && "text-indigo-400"
                                             )}
                                         />
                                     </div>
@@ -276,6 +270,24 @@ const PipelineDesigner: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                <ConfirmationModal
+                    isOpen={!!workflowToDelete}
+                    onClose={() => setWorkflowToDelete(null)}
+                    onConfirm={() => {
+                        if (workflowToDelete) {
+                            const isActive = activeWorkflowId === workflowToDelete;
+                            removeWorkflow(workflowToDelete);
+                            if (isActive) setActiveWorkflowId(null);
+                            setWorkflowToDelete(null);
+                            toast.success('Pipeline deleted');
+                        }
+                    }}
+                    title="Delete Pipeline"
+                    message="Are you sure you want to delete this pipeline? This action cannot be undone."
+                    confirmText="Delete"
+                    variant="danger"
+                />
             </div>
         </ToolPane>
     );

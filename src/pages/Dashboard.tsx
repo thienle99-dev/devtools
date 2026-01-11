@@ -3,6 +3,7 @@ import { QuickAccessSection } from './dashboard/QuickAccessSection';
 import { ToolDiscoverySection } from './dashboard/ToolDiscoverySection';
 import { StatisticsSection } from './dashboard/StatisticsSection';
 
+
 export const Dashboard: React.FC = () => {
     return (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

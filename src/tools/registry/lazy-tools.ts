@@ -3,10 +3,8 @@ import React from 'react';
 // Lazy load all tool components for better performance
 
 // Formatters
-export const JsonFormatter = React.lazy(() => import('@tools/json/JsonFormatter').then(m => ({ default: m.JsonFormatter })));
-export const SqlFormatter = React.lazy(() => import('@tools/development/SqlFormatter').then(m => ({ default: m.SqlFormatter })));
-export const XmlFormatter = React.lazy(() => import('@tools/development/XmlFormatter').then(m => ({ default: m.XmlFormatter })));
-export const YamlFormatter = React.lazy(() => import('@tools/development/YamlFormatter').then(m => ({ default: m.YamlFormatter })));
+// Handled by UniversalFormatter
+
 
 // Converters
 export const JsonYamlConverter = React.lazy(() => import('@tools/converters/JsonYamlConverter').then(m => ({ default: m.JsonYamlConverter })));
@@ -108,4 +106,8 @@ export const TemperatureConverter = React.lazy(() => import('@tools/math/Tempera
 export const Chronometer = React.lazy(() => import('@tools/math/Chronometer').then(m => ({ default: m.Chronometer })));
 
 // Pages
+// Pages
 export const SettingsPage = React.lazy(() => import('@pages/Settings'));
+
+export const UniversalFormatter = React.lazy(() => import('@tools/development/UniversalFormatter').then(m => ({ default: m.UniversalFormatter })));
+
