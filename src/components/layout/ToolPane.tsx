@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import type { ReactNode, DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Copy, Download, Upload, Clipboard, ExternalLink, ArrowRight, Link as LinkIcon } from 'lucide-react';
+import { cn } from '../../utils/cn';
 import { useToolState, useToolStore } from '../../store/toolStore';
 import { readFileAsText, downloadFile, openContentInNewTab } from '../../utils/fileIo';
 import { ToolSelector } from './ToolSelector';
@@ -18,6 +19,7 @@ interface ToolPaneProps {
     onCopy?: () => void;
     onDownload?: () => void;
     onClear?: () => void;
+    contentClassName?: string;
 }
 
 export const ToolPane: React.FC<ToolPaneProps> = ({
@@ -28,7 +30,8 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
     toolId,
     onCopy,
     onDownload,
-    onClear
+    onClear,
+    contentClassName
 }) => {
     const navigate = useNavigate();
 
@@ -290,7 +293,7 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 min-h-0 overflow-auto p-8 custom-scrollbar">
+            <div className={cn("flex-1 min-h-0 overflow-auto p-8 custom-scrollbar", contentClassName)}>
                 {children}
             </div>
         </div>

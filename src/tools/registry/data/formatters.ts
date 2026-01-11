@@ -17,7 +17,7 @@ export const formatters: ToolDefinition[] = [
         inputTypes: ['json', 'text', 'xml', 'yaml', 'sql'],
         outputTypes: ['json', 'text', 'xml', 'yaml', 'sql'],
         shortcut: 'Ctrl+Shift+F',
-        process: (input: any, options: any) => {
+        process: (input: any, _options: any) => {
             // Basic default: try to format as JSON
             try { return formatJson(input); } catch { return input; }
         }
