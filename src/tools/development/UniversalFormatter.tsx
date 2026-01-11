@@ -13,6 +13,8 @@ import { format as sqlFormatter } from 'sql-formatter';
 import { Braces, FileCode, FileText, Database, Lightbulb, Copy, Trash2, ArrowRight } from 'lucide-react';
 import { detectContent } from '../../utils/detector';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { getToolById } from '../registry';
 
 const MODES = [
     { id: 'json', name: 'JSON', icon: Braces, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
@@ -52,6 +54,8 @@ export const UniversalFormatter: React.FC<UniversalFormatterProps> = ({ initialM
         setSuggestion(null);
     };
 
+    const navigate = useNavigate();
+
     const handleInputChange = useCallback((val: string) => {
         setToolData(effectiveId, { input: val });
         setSuggestion(null);
@@ -59,7 +63,8 @@ export const UniversalFormatter: React.FC<UniversalFormatterProps> = ({ initialM
         if (!val.trim()) return;
 
         const detected = detectContent(val);
-        if (detected && detected.confidence > 0.8) {
+        if (detected && detected.confidence >= 0.7) {
+            // 1. Same Tool, different mode (JSON <-> XML <-> YAML <-> SQL)
             if (detected.toolId === 'code-formatter' && detected.type && detected.type !== mode) {
                 const targetMode = detected.type as Mode;
                 setSuggestion({
@@ -67,8 +72,19 @@ export const UniversalFormatter: React.FC<UniversalFormatterProps> = ({ initialM
                     action: () => handleModeChange(targetMode)
                 });
             }
+            // 2. Different Tool (e.g. JWT)
+            else if (detected.toolId !== 'code-formatter') {
+                const targetTool = getToolById(detected.toolId);
+                // Only suggest if we found the tool and it's not the current one (though toolId check covers that)
+                if (targetTool) {
+                    setSuggestion({
+                        label: `Detected ${detected.description}. Switch to ${targetTool.name}?`,
+                        action: () => navigate(targetTool.path)
+                    });
+                }
+            }
         }
-    }, [setToolData, effectiveId, mode]);
+    }, [setToolData, effectiveId, mode, navigate]);
 
     const handleClear = () => {
         clearToolData(effectiveId);
