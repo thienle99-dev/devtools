@@ -50,7 +50,7 @@ export const VideoMerger: React.FC = () => {
     const snapInterval = 1; // Snap to 1 second intervals
     const magneticSnapThreshold = 0.5; // 0.5 seconds snap threshold
 
-    const timelineRef = useRef<HTMLDivElement>(null);
+    const timelineRef = useRef<HTMLDivElement>(null!);
     const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
     // Calculate total duration from files

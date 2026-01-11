@@ -1,4 +1,4 @@
-import React, { useState, type RefObject } from 'react';
+import React, { useState } from 'react';
 import { Search, Filter, Settings, Trash2, TrendingUp, Tag, X } from 'lucide-react';
 import type { FilterOptions, SearchMode } from '../../../store/clipboardStore';
 import { Input } from '../../../components/ui/Input';

@@ -36,7 +36,7 @@ const MacOSStyleTimeline: React.FC<MacOSStyleTimelineProps> = ({
     onPlayingChange,
     formatTime
 }) => {
-    const timelineRef = useRef<HTMLDivElement>(null);
+    const timelineRef = useRef<HTMLDivElement>(null!);
     const [isDragging, setIsDragging] = useState<{ type: 'start' | 'end' | null; rangeId: string | null }>({ type: null, rangeId: null });
     const [hoverHandle, setHoverHandle] = useState<{ type: 'start' | 'end' | null; rangeId: string | null }>({ type: null, rangeId: null });
     const [dragTooltip, setDragTooltip] = useState<{ show: boolean; time: number; x: number } | null>(null);

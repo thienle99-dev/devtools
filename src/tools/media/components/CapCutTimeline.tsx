@@ -18,7 +18,7 @@ interface CapCutTimelineProps {
     previewIndex: number;
     mouseTimelineTime: number | null;
     snapLineCtx?: { x: number } | null;
-    timelineRef: React.RefObject<HTMLDivElement | null>;
+    timelineRef: React.RefObject<HTMLDivElement>;
     onAddFiles: () => void;
     onShowShortcuts: () => void;
     onToggleSnap: () => void;
