@@ -113,6 +113,13 @@ let statsMenuData: {
   gpu?: { load: number; memoryUsed: number; memoryTotal: number };
   battery?: { level: number; charging: boolean; timeRemaining: number };
   enabledModules?: string[];
+  preferences?: {
+    showMenuBar: boolean;
+    updateInterval: number;
+    theme: string;
+    colorScheme: string;
+    menuBarPosition: string;
+  };
 } | null = null;
 
 // Health monitor data for System Cleaner tray widget
@@ -129,6 +136,26 @@ let healthMonitoringInterval: NodeJS.Timeout | null = null;
 
 function updateTrayMenu() {
   if (!tray) return
+
+  // Update Tray Title (macOS only) for real-time stats display
+  if (process.platform === 'darwin') {
+    if (statsMenuData && statsMenuData.preferences?.showMenuBar) {
+      let titleParts: string[] = [];
+
+      const isModuleEnabled = (mod: string) => statsMenuData?.enabledModules?.includes(mod) ?? false;
+
+      if (isModuleEnabled('cpu')) {
+        titleParts.push(`${statsMenuData.cpu.toFixed(0)}%`);
+      }
+      if (isModuleEnabled('memory')) {
+        titleParts.push(`${statsMenuData.memory.percent.toFixed(0)}%`);
+      }
+
+      tray.setTitle(titleParts.length > 0 ? titleParts.join(' ') : '');
+    } else {
+      tray.setTitle('');
+    }
+  }
 
   const template: Electron.MenuItemConstructorOptions[] = [
     {

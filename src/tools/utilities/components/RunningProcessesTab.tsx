@@ -8,6 +8,8 @@ import { useRunningProcesses } from '../hooks/useRunningProcesses';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
 
+import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+
 interface RunningProcessesTabProps {
     onKill: (pid: number) => Promise<void>;
 }
@@ -26,6 +28,8 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
     const [groupBy, setGroupBy] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [killing, setKilling] = useState<Set<number>>(new Set());
+    const [confirmKill, setConfirmKill] = useState<{ pid: number; name: string } | null>(null);
+    const [confirmKillGroup, setConfirmKillGroup] = useState<{ pids: number[]; name: string; count: number } | null>(null);
     const { processes, groups, loading, error, refresh } = useRunningProcesses(3000, groupBy);
 
     const filteredProcesses = useMemo(() => {
@@ -56,19 +60,21 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
             return;
         }
 
-        const confirmed = confirm(
-            `Are you sure you want to kill process "${process.name}" (PID: ${pid})?\n\nThis action cannot be undone.`
-        );
+        setConfirmKill({ pid, name: process.name });
+    };
 
-        if (!confirmed) return;
+    const executeKill = async () => {
+        if (!confirmKill) return;
+        const { pid, name } = confirmKill;
+        setConfirmKill(null);
 
         setKilling(prev => new Set(prev).add(pid));
         try {
             await onKill(pid);
-            toast.success(`Successfully killed ${process.name}`);
+            toast.success(`Successfully killed ${name}`);
             await refresh();
         } catch (error) {
-            toast.error(`Failed to kill ${process.name}: ${(error as Error).message}`);
+            toast.error(`Failed to kill ${name}: ${(error as Error).message}`);
         } finally {
             setKilling(prev => {
                 const next = new Set(prev);
@@ -87,11 +93,13 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
             return;
         }
 
-        const confirmed = confirm(
-            `Are you sure you want to kill all ${group.count} process(es) of "${group.name}"?\n\nThis action cannot be undone.`
-        );
+        setConfirmKillGroup({ pids, name: group.name, count: group.count });
+    };
 
-        if (!confirmed) return;
+    const executeKillGroup = async () => {
+        if (!confirmKillGroup) return;
+        const { pids, name, count } = confirmKillGroup;
+        setConfirmKillGroup(null);
 
         setKilling(prev => {
             const next = new Set(prev);
@@ -101,7 +109,7 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
 
         try {
             await Promise.all(pids.map(pid => onKill(pid)));
-            toast.success(`Successfully killed ${group.count} process(es)`);
+            toast.success(`Successfully killed ${count} process(es) of ${name}`);
             await refresh();
         } catch (error) {
             toast.error(`Failed to kill processes: ${(error as Error).message}`);
@@ -222,6 +230,24 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
                     )}
                 </>
             )}
+
+            <ConfirmationModal
+                isOpen={!!confirmKill}
+                onClose={() => setConfirmKill(null)}
+                onConfirm={executeKill}
+                title="Kill Process"
+                message={`Are you sure you want to end "${confirmKill?.name}" (PID: ${confirmKill?.pid})? This may cause data loss.`}
+                confirmText="Kill Process"
+            />
+
+            <ConfirmationModal
+                isOpen={!!confirmKillGroup}
+                onClose={() => setConfirmKillGroup(null)}
+                onConfirm={executeKillGroup}
+                title="Kill Process Group"
+                message={`Are you sure you want to kill all ${confirmKillGroup?.count} process(es) of "${confirmKillGroup?.name}"?`}
+                confirmText="Kill All"
+            />
         </div>
     );
 };

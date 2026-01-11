@@ -9,6 +9,8 @@ import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
 import type { InstalledApp } from '../../../types/application-manager';
 
+import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+
 interface InstalledAppsTabProps {
     onUninstall: (app: InstalledApp) => Promise<void>;
 }
@@ -16,6 +18,7 @@ interface InstalledAppsTabProps {
 export const InstalledAppsTab: React.FC<InstalledAppsTabProps> = ({ onUninstall }) => {
     const { apps, allApps, loading, error, filter, setFilter, searchQuery, setSearchQuery, refresh } = useInstalledApps();
     const [uninstalling, setUninstalling] = useState<string | null>(null);
+    const [confirmUninstall, setConfirmUninstall] = useState<InstalledApp | null>(null);
 
     const counts = useMemo(() => {
         const all = allApps.length;
@@ -24,17 +27,19 @@ export const InstalledAppsTab: React.FC<InstalledAppsTabProps> = ({ onUninstall 
         return { all, user, system };
     }, [allApps]);
 
-    const handleUninstall = async (app: InstalledApp) => {
+    const handleUninstall = (app: InstalledApp) => {
         if (app.isSystemApp) {
             toast.warning('System apps cannot be uninstalled');
             return;
         }
 
-        const confirmed = confirm(
-            `Are you sure you want to uninstall "${app.name}"?\n\nThis action cannot be undone.`
-        );
+        setConfirmUninstall(app);
+    };
 
-        if (!confirmed) return;
+    const executeUninstall = async () => {
+        if (!confirmUninstall) return;
+        const app = confirmUninstall;
+        setConfirmUninstall(null);
 
         setUninstalling(app.id);
         try {
@@ -119,6 +124,16 @@ export const InstalledAppsTab: React.FC<InstalledAppsTabProps> = ({ onUninstall 
                     )}
                 </>
             )}
+
+            <ConfirmationModal
+                isOpen={!!confirmUninstall}
+                onClose={() => setConfirmUninstall(null)}
+                onConfirm={executeUninstall}
+                title="Uninstall Application"
+                message={`Are you sure you want to uninstall "${confirmUninstall?.name}"? This will permanently remove the application and its data.`}
+                confirmText="Uninstall"
+                loading={uninstalling !== null}
+            />
         </div>
     );
 };

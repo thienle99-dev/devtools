@@ -3,6 +3,7 @@ import { useSystemMetrics } from './hooks/useSystemMetrics';
 import { useStatsStore } from './store/statsStore';
 import { getModuleColors } from './constants/moduleColors';
 import { Settings, Activity, RefreshCw, ChevronDown } from 'lucide-react';
+import { StatsSettingsModal } from './components/StatsSettingsModal';
 
 // Lazy load modules để code splitting
 const CPUModule = React.lazy(() => import('./components/CPUModule'));
@@ -49,7 +50,7 @@ const INTERVAL_PRESETS = [
 ];
 
 const StatsMonitor: React.FC = () => {
-  const { enabledModules, preferences, toggleModule, updatePreferences } = useStatsStore();
+  const { enabledModules, moduleOrder, preferences, toggleModule, updatePreferences } = useStatsStore();
   // Chỉ fetch metrics cho modules được bật
   const metrics = useSystemMetrics(enabledModules, preferences.updateInterval);
   const hasEnabledModules = enabledModules.length > 0;
@@ -82,14 +83,16 @@ const StatsMonitor: React.FC = () => {
           memoryUsed: metrics.gpu.controllers[0].vram * (metrics.gpu.controllers[0].utilizationMemory / 100),
           memoryTotal: metrics.gpu.controllers[0].vram
         } : undefined,
-        enabledModules // Gửi cả danh sách các module đang bật để hiển thị linh hoạt
+        enabledModules, // Gửi cả danh sách các module đang bật để hiển thị linh hoạt
+        preferences // Gửi preferences để biết có hiện text ở menu bar không
       });
     }
-  }, [metrics, hasEnabledModules, enabledModules]);
+  }, [metrics, hasEnabledModules, enabledModules, preferences]);
 
   const allModules = React.useMemo(() => ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors', 'bluetooth', 'timezones'], []);
 
   const [showIntervalMenu, setShowIntervalMenu] = React.useState(false);
+  const [showSettings, setShowSettings] = React.useState(false);
   const intervalMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Listen for module toggles from the tray
@@ -210,7 +213,10 @@ const StatsMonitor: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {renderIntervalControl()}
-            <button className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]"
+            >
               <Settings className="w-5 h-5" />
             </button>
           </div>
@@ -280,7 +286,10 @@ const StatsMonitor: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {renderIntervalControl()}
-          <button className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]">
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]"
+          >
             <Settings className="w-5 h-5" />
           </button>
         </div>
@@ -289,60 +298,74 @@ const StatsMonitor: React.FC = () => {
       {renderModuleSelector()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {enabledModules.includes('cpu') && metrics?.cpu && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <CPUModule data={metrics.cpu} />
-          </Suspense>
-        )}
+        {moduleOrder.map((modId) => {
+          if (!enabledModules.includes(modId)) return null;
 
-        {enabledModules.includes('memory') && metrics?.memory && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <MemoryModule data={metrics.memory} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('network') && metrics?.network && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <NetworkModule data={metrics.network} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('disk') && metrics?.disk && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <DiskModule data={metrics.disk} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('gpu') && metrics?.gpu && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <GPUModule data={metrics.gpu} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('battery') && metrics?.battery && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <BatteryModule data={metrics.battery} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('sensors') && metrics?.sensors && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <SensorsModule data={metrics.sensors} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('bluetooth') && metrics?.bluetooth && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <BluetoothModule data={metrics.bluetooth} />
-          </Suspense>
-        )}
-
-        {enabledModules.includes('timezones') && metrics?.timeZones && (
-          <Suspense fallback={<ModuleSkeleton />}>
-            <TimeZonesModule data={metrics.timeZones} />
-          </Suspense>
-        )}
+          switch (modId) {
+            case 'cpu':
+              return metrics?.cpu ? (
+                <Suspense key="cpu" fallback={<ModuleSkeleton />}>
+                  <CPUModule data={metrics.cpu} />
+                </Suspense>
+              ) : null;
+            case 'memory':
+              return metrics?.memory ? (
+                <Suspense key="memory" fallback={<ModuleSkeleton />}>
+                  <MemoryModule data={metrics.memory} />
+                </Suspense>
+              ) : null;
+            case 'network':
+              return metrics?.network ? (
+                <Suspense key="network" fallback={<ModuleSkeleton />}>
+                  <NetworkModule data={metrics.network} />
+                </Suspense>
+              ) : null;
+            case 'disk':
+              return metrics?.disk ? (
+                <Suspense key="disk" fallback={<ModuleSkeleton />}>
+                  <DiskModule data={metrics.disk} />
+                </Suspense>
+              ) : null;
+            case 'gpu':
+              return metrics?.gpu ? (
+                <Suspense key="gpu" fallback={<ModuleSkeleton />}>
+                  <GPUModule data={metrics.gpu} />
+                </Suspense>
+              ) : null;
+            case 'battery':
+              return metrics?.battery ? (
+                <Suspense key="battery" fallback={<ModuleSkeleton />}>
+                  <BatteryModule data={metrics.battery} />
+                </Suspense>
+              ) : null;
+            case 'sensors':
+              return metrics?.sensors ? (
+                <Suspense key="sensors" fallback={<ModuleSkeleton />}>
+                  <SensorsModule data={metrics.sensors} />
+                </Suspense>
+              ) : null;
+            case 'bluetooth':
+              return metrics?.bluetooth ? (
+                <Suspense key="bluetooth" fallback={<ModuleSkeleton />}>
+                  <BluetoothModule data={metrics.bluetooth} />
+                </Suspense>
+              ) : null;
+            case 'timezones':
+              return metrics?.timeZones ? (
+                <Suspense key="timezones" fallback={<ModuleSkeleton />}>
+                  <TimeZonesModule data={metrics.timeZones} />
+                </Suspense>
+              ) : null;
+            default:
+              return null;
+          }
+        })}
       </div>
+
+      <StatsSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
 
       {/* Debug / Raw Data View (Optional, maybe hidden or collapsible) */}
       {/* <div className="mt-8 p-4 bg-black/40 rounded-lg overflow-auto max-h-60 text-xs font-mono text-white/30">

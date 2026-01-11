@@ -764,7 +764,7 @@
 - [ ] Menu bar icon states (color-coded, animated)
 - [ ] Real-time graphs in menu
 - [x] Quick actions (toggle modules)
-- [ ] Settings modal functionality
+- [x] Settings modal functionality
 - [ ] Module reordering (drag & drop)
 - [ ] Customizable time zones
 
