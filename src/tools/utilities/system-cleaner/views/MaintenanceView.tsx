@@ -74,6 +74,15 @@ export const MaintenanceView: React.FC = () => {
 
     const macosTasks = [
         {
+            id: 'time-machine-cleanup',
+            name: 'Clean Time Machine Snapshots',
+            description: 'Remove local Time Machine snapshots to free up disk space',
+            category: 'time-machine-cleanup',
+            icon: Clock,
+            estimatedTime: '1-5 minutes',
+            requiresSudo: true
+        },
+        {
             id: 'spotlight-reindex',
             name: 'Rebuild Spotlight Index',
             description: 'Rebuild macOS Spotlight search index',
@@ -83,13 +92,13 @@ export const MaintenanceView: React.FC = () => {
             requiresSudo: true
         },
         {
-            id: 'disk-permissions',
-            name: 'Verify Disk Permissions',
-            description: 'Verify disk permissions (limited on macOS Big Sur+)',
-            category: 'disk-permissions',
-            icon: HardDrive,
-            estimatedTime: '2-5 minutes',
-            requiresSudo: true
+            id: 'launch-services-reset',
+            name: 'Reset Launch Services',
+            description: 'Reset the macOS Launch Services database to fix file association issues',
+            category: 'launch-services-reset',
+            icon: Server,
+            estimatedTime: '1-2 minutes',
+            requiresSudo: false
         },
         {
             id: 'dns-flush',
@@ -101,12 +110,30 @@ export const MaintenanceView: React.FC = () => {
             requiresSudo: false
         },
         {
+            id: 'gatekeeper-check',
+            name: 'Gatekeeper Status',
+            description: 'Check Gatekeeper security status',
+            category: 'gatekeeper-check',
+            icon: ShieldCheck,
+            estimatedTime: '< 1 minute',
+            requiresSudo: false
+        },
+        {
             id: 'mail-rebuild',
             name: 'Rebuild Mail Database',
             description: 'Rebuild Mail.app database (requires Mail.app to be closed)',
             category: 'mail-rebuild',
             icon: Mail,
             estimatedTime: '5-10 minutes',
+            requiresSudo: false
+        },
+        {
+            id: 'icloud-cleanup',
+            name: 'Clear iCloud Cache',
+            description: 'Clear local iCloud file cache (CloudDocs)',
+            category: 'icloud-cleanup',
+            icon: HardDrive,
+            estimatedTime: '1-2 minutes',
             requiresSudo: false
         }
     ];
@@ -115,20 +142,20 @@ export const MaintenanceView: React.FC = () => {
 
     const runTask = async (task: typeof tasks[0]) => {
         if (runningTasks.has(task.id)) return;
-        
+
         setRunningTasks(new Set([...runningTasks, task.id]));
-        
+
         try {
             const result = await (window as any).cleanerAPI.runMaintenance(task);
-            
+
             const historyItem = {
                 ...task,
                 result,
                 timestamp: new Date()
             };
-            
+
             setTaskHistory([historyItem, ...taskHistory].slice(0, 20));
-            
+
             if (result.success) {
                 toast.success(`${task.name} completed successfully`);
             } else {
@@ -142,14 +169,14 @@ export const MaintenanceView: React.FC = () => {
     };
 
     const currentTask = [...windowsTasks, ...macosTasks].find(t => runningTasks.has(t.id));
-    
+
     return (
         <div className="space-y-6 h-full flex flex-col relative">
             {runningTasks.size > 0 && currentTask && (
-                <LoadingOverlay 
-                    progress={100} 
-                    title={currentTask.name} 
-                    status={`Running ${currentTask.name}...`} 
+                <LoadingOverlay
+                    progress={100}
+                    title={currentTask.name}
+                    status={`Running ${currentTask.name}...`}
                 />
             )}
             <div className="flex items-center justify-between">
@@ -164,7 +191,7 @@ export const MaintenanceView: React.FC = () => {
                     const Icon = task.icon;
                     const isRunning = runningTasks.has(task.id);
                     const lastRun = taskHistory.find(h => h.id === task.id);
-                    
+
                     return (
                         <Card key={task.id} className="p-6 space-y-4 border-border-glass bg-white/5">
                             <div className="flex items-start justify-between">

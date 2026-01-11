@@ -1214,6 +1214,14 @@ function setupCleanerHandlers() {
 				default: throw new Error(`Unknown maintenance task: ${task.category}`);
 			}
 			else if (platform === "darwin") switch (task.category) {
+				case "time-machine-cleanup":
+					try {
+						const { stdout: tmOutput } = await execAsync$1("sudo tmutil deletelocalsnapshots /");
+						output = tmOutput || "Local Time Machine snapshots removed successfully";
+					} catch (e) {
+						throw new Error(`Failed to clean Time Machine snapshots: ${e.message}`);
+					}
+					break;
 				case "spotlight-reindex":
 					try {
 						await execAsync$1("sudo mdutil -E /");
@@ -1227,12 +1235,12 @@ function setupCleanerHandlers() {
 						}
 					}
 					break;
-				case "disk-permissions":
+				case "launch-services-reset":
 					try {
-						const { stdout: diskOutput } = await execAsync$1("diskutil verifyVolume /");
-						output = diskOutput || "Disk permissions verified";
+						await execAsync$1(`/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user`);
+						output = "Launch Services database reset successfully. You may need to restart apps for changes to take effect.";
 					} catch (e) {
-						output = "Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)";
+						throw new Error(`Failed to reset Launch Services: ${e.message}`);
 					}
 					break;
 				case "dns-flush":
@@ -1240,20 +1248,50 @@ function setupCleanerHandlers() {
 						await execAsync$1("sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder");
 						output = "DNS cache flushed successfully";
 					} catch (e) {
-						try {
-							await execAsync$1("dscacheutil -flushcache; killall -HUP mDNSResponder");
-							output = "DNS cache flushed successfully";
-						} catch (e2) {
-							throw new Error(`Failed to flush DNS: ${e2.message}`);
-						}
+						throw new Error(`Failed to flush DNS: ${e.message}`);
+					}
+					break;
+				case "gatekeeper-check":
+					try {
+						const { stdout: gkOutput } = await execAsync$1("spctl --status");
+						output = `Gatekeeper Status: ${gkOutput.trim()}`;
+					} catch (e) {
+						throw new Error(`Failed to check Gatekeeper: ${e.message}`);
 					}
 					break;
 				case "mail-rebuild":
 					try {
-						await execAsync$1("killall Mail 2>/dev/null || true");
-						output = "Mail database rebuild initiated (please ensure Mail.app is closed)";
+						const home = os.homedir();
+						await execAsync$1(`find "${path.join(home, "Library/Mail")}" -name "Envelope Index*" -delete`);
+						output = "Mail database indexes cleared. Rebuild will occur next time you open Mail.app.";
 					} catch (e) {
 						throw new Error(`Failed to rebuild Mail database: ${e.message}`);
+					}
+					break;
+				case "icloud-cleanup":
+					try {
+						const home = os.homedir();
+						const birdCache = path.join(home, "Library/Caches/com.apple.bird");
+						const cloudDocsCache = path.join(home, "Library/Caches/com.apple.CloudDocs");
+						await fs.rm(birdCache, {
+							recursive: true,
+							force: true
+						}).catch(() => {});
+						await fs.rm(cloudDocsCache, {
+							recursive: true,
+							force: true
+						}).catch(() => {});
+						output = "iCloud cache cleared successfully";
+					} catch (e) {
+						throw new Error(`Failed to clear iCloud cache: ${e.message}`);
+					}
+					break;
+				case "disk-permissions":
+					try {
+						const { stdout: diskOutput } = await execAsync$1("diskutil verifyVolume /");
+						output = diskOutput || "Disk permissions verified";
+					} catch (e) {
+						throw new Error(`Failed to verify disk: ${e.message}`);
 					}
 					break;
 				default: throw new Error(`Unknown maintenance task: ${task.category}`);

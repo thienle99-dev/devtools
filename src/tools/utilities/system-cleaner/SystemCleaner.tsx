@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ToolPane } from '../../../components/layout/ToolPane';
-import { 
-    Trash2, 
-    Shield, 
+import {
+    Trash2,
+    Shield,
     ShieldCheck,
     Wrench,
     Activity,
@@ -47,7 +47,7 @@ export const SystemCleaner: React.FC = () => {
     const { settings } = useSettingsStore();
     const hasCompletedOnboarding = true; // Default to true for now
     const { runSmartScan } = useSmartScan();
-    
+
     // Load platform info on mount
     useEffect(() => {
         const loadPlatform = async () => {
@@ -82,7 +82,7 @@ export const SystemCleaner: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [hasCompletedOnboarding, settings.autoScanOnLaunch, platformInfo]);
-    
+
     // Start health monitoring for tray widget
     useEffect(() => {
         const startMonitoring = async () => {
@@ -92,15 +92,15 @@ export const SystemCleaner: React.FC = () => {
                 console.warn('Failed to start health monitoring:', error);
             }
         };
-        
+
         startMonitoring();
-        
+
         return () => {
             // Stop monitoring on unmount
-            (window as any).cleanerAPI.stopHealthMonitoring().catch(() => {});
+            (window as any).cleanerAPI.stopHealthMonitoring().catch(() => { });
         };
     }, []);
-    
+
     // Update tray with health data when health status changes
     const { privacyData } = useSystemCleanerStore();
     useEffect(() => {
@@ -114,19 +114,19 @@ export const SystemCleaner: React.FC = () => {
                 // Silently fail - tray updates are optional
             }
         };
-        
+
         // Update tray periodically
         const interval = setInterval(updateTray, 5000);
         updateTray(); // Initial update
-        
+
         return () => clearInterval(interval);
     }, [privacyData]);
-    
+
     // Platform-specific UI adaptations
     const platform = platformInfo?.platform;
     const isWindows = platform === 'windows';
     const isMacOS = platform === 'macos';
-    
+
     const tabs = [
         { id: 'smart-scan', name: 'Smart Care', icon: Shield },
         { id: 'space-lens', name: 'Space Lens', icon: LayoutGrid },
@@ -151,7 +151,7 @@ export const SystemCleaner: React.FC = () => {
             {showWelcome && <WelcomeScreen onComplete={() => setShowWelcome(false)} />}
             <div className="flex h-full gap-8 overflow-hidden">
                 {/* Sidebar Navigation */}
-                <div className="w-56 flex flex-col space-y-1 shrink-0">
+                <div className="w-56 flex flex-col space-y-1 shrink-0 overflow-y-auto custom-scrollbar pr-2">
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mb-3 opacity-50">Intelligence</div>
                     {tabs.slice(0, 2).map((tab) => (
                         <button
@@ -159,8 +159,8 @@ export const SystemCleaner: React.FC = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
-                                activeTab === tab.id 
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                activeTab === tab.id
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >
@@ -168,7 +168,7 @@ export const SystemCleaner: React.FC = () => {
                             <span>{tab.name}</span>
                         </button>
                     ))}
-                    
+
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">Cleaning</div>
                     {tabs.slice(2, 5).map((tab) => (
                         <button
@@ -176,8 +176,8 @@ export const SystemCleaner: React.FC = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
-                                activeTab === tab.id 
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                activeTab === tab.id
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >
@@ -193,8 +193,8 @@ export const SystemCleaner: React.FC = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
-                                activeTab === tab.id 
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                activeTab === tab.id
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >
@@ -210,8 +210,8 @@ export const SystemCleaner: React.FC = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
-                                activeTab === tab.id 
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                activeTab === tab.id
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >
@@ -227,8 +227,8 @@ export const SystemCleaner: React.FC = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
-                                activeTab === tab.id 
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                activeTab === tab.id
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >
@@ -236,7 +236,7 @@ export const SystemCleaner: React.FC = () => {
                             <span>{tab.name}</span>
                         </button>
                     ))}
-                    
+
                     <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest px-4 mt-6 mb-3 opacity-50">System</div>
                     {tabs.slice(12).map((tab) => (
                         <button
@@ -244,8 +244,8 @@ export const SystemCleaner: React.FC = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium",
-                                activeTab === tab.id 
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                                activeTab === tab.id
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                     : "text-foreground-muted hover:bg-white/5 hover:text-foreground"
                             )}
                         >

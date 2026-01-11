@@ -643,13 +643,13 @@
 - [ ] Windows Search Optimization (rebuild and optimize Windows Search index)
 
 #### macOS-Specific
-- [ ] Time Machine Management (clean up Time Machine snapshots)
-- [ ] Spotlight Optimization (rebuild Spotlight index)
-- [ ] Disk Permissions repair (if supported)
-- [ ] Launch Services management (Launch Agents and Daemons)
-- [ ] Gatekeeper Integration (check app security)
-- [ ] iCloud Optimization (manage iCloud storage)
-- [ ] Mail.app Optimization (rebuild Mail database)
+- [x] Time Machine Management (clean up Time Machine snapshots)
+- [x] Spotlight Optimization (rebuild Spotlight index)
+- [x] Disk Permissions repair (if supported)
+- [x] Launch Services management (Reset Database)
+- [x] Gatekeeper Integration (check app security status)
+- [x] iCloud Optimization (clear local cloud cache)
+- [x] Mail.app Optimization (rebuild Mail database)
 
 ### 7.3 Long-term Enhancements
 

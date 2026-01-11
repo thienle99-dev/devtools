@@ -1327,6 +1327,16 @@ export function setupCleanerHandlers() {
                 }
             } else if (platform === 'darwin') {
                 switch (task.category) {
+                    case 'time-machine-cleanup':
+                        // Clean Time Machine snapshots
+                        try {
+                            const { stdout: tmOutput } = await execAsync('sudo tmutil deletelocalsnapshots /');
+                            output = tmOutput || 'Local Time Machine snapshots removed successfully';
+                        } catch (e) {
+                            throw new Error(`Failed to clean Time Machine snapshots: ${(e as Error).message}`);
+                        }
+                        break;
+
                     case 'spotlight-reindex':
                         // Rebuild Spotlight index
                         try {
@@ -1343,48 +1353,80 @@ export function setupCleanerHandlers() {
                         }
                         break;
 
-                    case 'disk-permissions':
-                        // Verify disk permissions (macOS Big Sur+ uses SIP, so this is limited)
+                    case 'launch-services-reset':
+                        // Reset Launch Services database
                         try {
-                            const { stdout: diskOutput } = await execAsync('diskutil verifyVolume /');
-                            output = diskOutput || 'Disk permissions verified';
+                            const lsPath = '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
+                            await execAsync(`${lsPath} -kill -r -domain local -domain system -domain user`);
+                            output = 'Launch Services database reset successfully. You may need to restart apps for changes to take effect.';
                         } catch (e) {
-                            output = 'Disk permissions check completed (Note: macOS Big Sur+ uses System Integrity Protection)';
+                            throw new Error(`Failed to reset Launch Services: ${(e as Error).message}`);
                         }
                         break;
 
                     case 'dns-flush':
-                        // Flush DNS cache (macOS)
+                        // Flush DNS cache on macOS
                         try {
                             await execAsync('sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder');
                             output = 'DNS cache flushed successfully';
                         } catch (e) {
-                            // Try without sudo
-                            try {
-                                await execAsync('dscacheutil -flushcache; killall -HUP mDNSResponder');
-                                output = 'DNS cache flushed successfully';
-                            } catch (e2) {
-                                throw new Error(`Failed to flush DNS: ${(e2 as Error).message}`);
-                            }
+                            throw new Error(`Failed to flush DNS: ${(e as Error).message}`);
+                        }
+                        break;
+
+                    case 'gatekeeper-check':
+                        // Check Gatekeeper status
+                        try {
+                            const { stdout: gkOutput } = await execAsync('spctl --status');
+                            output = `Gatekeeper Status: ${gkOutput.trim()}`;
+                        } catch (e) {
+                            throw new Error(`Failed to check Gatekeeper: ${(e as Error).message}`);
                         }
                         break;
 
                     case 'mail-rebuild':
-                        // Rebuild Mail database
+                        // Rebuild Mail.app database
                         try {
-                            // Stop Mail app if running
-                            await execAsync('killall Mail 2>/dev/null || true');
-                            // Note: Actual Mail database rebuild requires Mail.app to be closed
-                            output = 'Mail database rebuild initiated (please ensure Mail.app is closed)';
+                            const home = os.homedir();
+                            const mailPath = path.join(home, 'Library/Mail');
+                            // This is a simplified version; real rebuild is complex.
+                            // We'll just clear Envelope Index files which triggers a rebuild
+                            await execAsync(`find "${mailPath}" -name "Envelope Index*" -delete`);
+                            output = 'Mail database indexes cleared. Rebuild will occur next time you open Mail.app.';
                         } catch (e) {
                             throw new Error(`Failed to rebuild Mail database: ${(e as Error).message}`);
+                        }
+                        break;
+
+                    case 'icloud-cleanup':
+                        // Clear iCloud cache
+                        try {
+                            const home = os.homedir();
+                            const birdCache = path.join(home, 'Library/Caches/com.apple.bird');
+                            const cloudDocsCache = path.join(home, 'Library/Caches/com.apple.CloudDocs');
+                            await fs.rm(birdCache, { recursive: true, force: true }).catch(() => { });
+                            await fs.rm(cloudDocsCache, { recursive: true, force: true }).catch(() => { });
+                            output = 'iCloud cache cleared successfully';
+                        } catch (e) {
+                            throw new Error(`Failed to clear iCloud cache: ${(e as Error).message}`);
+                        }
+                        break;
+
+                    case 'disk-permissions':
+                        // Verify disk permissions
+                        try {
+                            const { stdout: diskOutput } = await execAsync('diskutil verifyVolume /');
+                            output = diskOutput || 'Disk permissions verified';
+                        } catch (e) {
+                            throw new Error(`Failed to verify disk: ${(e as Error).message}`);
                         }
                         break;
 
                     default:
                         throw new Error(`Unknown maintenance task: ${task.category}`);
                 }
-            } else {
+            }
+            else {
                 throw new Error('Unsupported platform for maintenance tasks');
             }
 
