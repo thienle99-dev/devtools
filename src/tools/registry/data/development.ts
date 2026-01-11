@@ -1,8 +1,19 @@
-import { Percent, Clock, Lock, Container, Settings } from 'lucide-react';
+import { Percent, Clock, Lock, Container, Settings, GitBranch } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
 export const developmentTools: ToolDefinition[] = [
+    {
+        id: 'pipeline-designer',
+        name: 'Pipeline Mode',
+        path: '/pipeline',
+        description: 'Chain tools together for automated workflows',
+        category: 'development',
+        icon: GitBranch,
+        color: 'text-indigo-400',
+        component: Lazy.PipelineDesigner,
+        keywords: ['pipeline', 'workflow', 'chain', 'automation', 'sequence']
+    },
     {
         id: 'regex-tester',
         name: 'Regex Tester',

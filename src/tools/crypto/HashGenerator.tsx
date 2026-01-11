@@ -1,12 +1,17 @@
 import React, { useEffect } from 'react';
-import CryptoJS from 'crypto-js';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
+import { generateHash } from './logic';
 
 const TOOL_ID = 'hash-generator';
+
+// Export for pipeline support
+export const process = async (input: string, options: { algorithm?: 'md5' | 'sha1' | 'sha256' | 'sha512' | 'ripemd160' | 'sha3' } = {}) => {
+    return generateHash(input, options.algorithm);
+};
 
 interface HashGeneratorProps {
     tabId?: string;
@@ -38,10 +43,10 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
 
     const handleInputChange = (val: string) => {
         setToolData(effectiveId, { input: val });
-        generateHashes(val);
+        generateAllHashes(val);
     };
 
-    const generateHashes = (text: string) => {
+    const generateAllHashes = (text: string) => {
         if (!text) {
             setToolData(effectiveId, { options: { md5: '', sha1: '', sha256: '', sha512: '', ripemd160: '', sha3: '' } });
             return;
@@ -49,12 +54,12 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
 
         setToolData(effectiveId, {
             options: {
-                md5: CryptoJS.MD5(text).toString(),
-                sha1: CryptoJS.SHA1(text).toString(),
-                sha256: CryptoJS.SHA256(text).toString(),
-                sha512: CryptoJS.SHA512(text).toString(),
-                ripemd160: CryptoJS.RIPEMD160(text).toString(),
-                sha3: CryptoJS.SHA3(text).toString()
+                md5: generateHash(text, 'md5'),
+                sha1: generateHash(text, 'sha1'),
+                sha256: generateHash(text, 'sha256'),
+                sha512: generateHash(text, 'sha512'),
+                ripemd160: generateHash(text, 'ripemd160'),
+                sha3: generateHash(text, 'sha3')
             }
         });
     };

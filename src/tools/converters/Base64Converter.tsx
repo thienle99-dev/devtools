@@ -1,11 +1,18 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import CryptoJS from 'crypto-js';
 import { Button } from '@components/ui/Button';
 import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
+import { base64Encode, base64Decode } from './logic';
 
 const TOOL_ID = 'base64';
+
+// Export for pipeline support
+export const process = async (input: string, options: { action?: 'encode' | 'decode' } = {}) => {
+    const action = options.action || 'encode';
+    if (action === 'decode') return base64Decode(input);
+    return base64Encode(input);
+};
 
 interface Base64ConverterProps {
     tabId?: string;
@@ -28,40 +35,25 @@ export const Base64Converter: React.FC<Base64ConverterProps> = ({ tabId }) => {
         setToolData(effectiveId, { input: val });
     }, [setToolData, effectiveId]);
 
-    const handleEncode = () => {
-        setLoadingAction('Encode');
-        setTimeout(() => {
-            try {
-                if (!input) return;
-                const encoded = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(input));
-                setToolData(effectiveId, { output: encoded });
-            } catch (error) {
-                setToolData(effectiveId, { output: `Error: ${(error as Error).message}` });
-            } finally {
-                setLoadingAction(null);
+    const handleAction = async (action: 'Encode' | 'Decode', fn: (s: string) => string) => {
+        setLoadingAction(action);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        try {
+            if (!input) {
+                // allow empty input to clear output or just do nothing? 
+                // logic functions return empty string for empty input roughly
             }
-        }, 300);
+            const result = fn(input);
+            setToolData(effectiveId, { output: result });
+        } catch (error) {
+            setToolData(effectiveId, { output: `Error: ${(error as Error).message}` });
+        } finally {
+            setLoadingAction(null);
+        }
     };
 
-    const handleDecode = () => {
-        setLoadingAction('Decode');
-        setTimeout(() => {
-            try {
-                if (!input) return;
-                const decoded = CryptoJS.enc.Base64.parse(input).toString(CryptoJS.enc.Utf8);
-                // If the resulting string is empty but input wasn't, it might be invalid encoding or binary data
-                if (!decoded && input.trim().length > 0) {
-                    setToolData(effectiveId, { output: 'Error: Could not decode to UTF-8 string. Input might be invalid Base64 or binary data.' });
-                } else {
-                    setToolData(effectiveId, { output: decoded });
-                }
-            } catch (error) {
-                setToolData(effectiveId, { output: `Error: Invalid Base64 input\n${(error as Error).message}` });
-            } finally {
-                setLoadingAction(null);
-            }
-        }, 300);
-    };
+    const handleEncode = () => handleAction('Encode', base64Encode);
+    const handleDecode = () => handleAction('Decode', base64Decode);
 
     const handleClear = () => clearToolData(effectiveId);
 

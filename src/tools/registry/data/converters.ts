@@ -1,6 +1,7 @@
 import { ArrowRightLeft, Code, Table2, FileCode, Lock, FileArchive, Binary, Type, Palette, Calendar } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { base64Encode, base64Decode } from '../../converters/logic';
 
 export const converters: ToolDefinition[] = [
     {
@@ -56,7 +57,14 @@ export const converters: ToolDefinition[] = [
         icon: Lock,
         color: 'text-amber-500',
         component: Lazy.Base64Converter,
-        keywords: ['base64', 'encode', 'decode', 'string']
+        keywords: ['base64', 'encode', 'decode', 'string'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => {
+            const action = options?.action || 'encode';
+            if (action === 'decode') return base64Decode(input);
+            return base64Encode(input);
+        }
     },
     {
         id: 'base64-file',

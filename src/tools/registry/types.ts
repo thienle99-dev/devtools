@@ -2,6 +2,8 @@ import React from 'react';
 
 export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math' | 'media';
 
+export type ToolDataType = 'text' | 'json' | 'image' | 'file' | 'clipboard' | 'hex' | 'binary' | 'any';
+
 export interface ToolDefinition {
     id: string;
     name: string;
@@ -13,6 +15,11 @@ export interface ToolDefinition {
     keywords?: string[];
     shortcut?: string;
     color?: string;
+
+    // Pipeline Support
+    inputTypes?: ToolDataType[];
+    outputTypes?: ToolDataType[];
+    process?: (input: any, options?: any) => Promise<any> | any;
 }
 
 export interface CategoryDefinition {

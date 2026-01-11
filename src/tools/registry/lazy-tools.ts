@@ -69,6 +69,7 @@ export const RegexTester = React.lazy(() => import('@tools/development/RegexTest
 export const CrontabGenerator = React.lazy(() => import('@tools/development/CrontabGenerator').then(m => ({ default: m.CrontabGenerator })));
 export const ChmodCalculator = React.lazy(() => import('@tools/development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
 export const DockerConverter = React.lazy(() => import('@tools/development/DockerConverter').then(m => ({ default: m.DockerConverter })));
+export const PipelineDesigner = React.lazy(() => import('@tools/development/PipelineDesigner').then(m => ({ default: m.default })));
 
 // Utilities
 export const ClipboardManager = React.lazy(() => import('@tools/utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));

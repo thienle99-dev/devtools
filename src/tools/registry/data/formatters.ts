@@ -1,6 +1,7 @@
 import { FileCode, FileText, Braces, Database } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { formatJson, minifyJson, validateJson } from '../../json/logic';
 
 export const formatters: ToolDefinition[] = [
     {
@@ -35,7 +36,19 @@ export const formatters: ToolDefinition[] = [
         color: 'text-yellow-400',
         component: Lazy.JsonFormatter,
         keywords: ['json', 'format', 'minify', 'prettier'],
-        shortcut: 'Ctrl+Shift+J'
+        shortcut: 'Ctrl+Shift+J',
+        inputTypes: ['json', 'text'],
+        outputTypes: ['json', 'text'],
+        process: (input, options) => {
+            const method = options?.method || 'format';
+            try {
+                if (method === 'minify') return minifyJson(input);
+                if (method === 'validate') return validateJson(input);
+                return formatJson(input);
+            } catch (e) {
+                throw new Error('Invalid JSON');
+            }
+        }
     },
     {
         id: 'sql-format',

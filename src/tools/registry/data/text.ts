@@ -1,6 +1,7 @@
 import { AlignLeft, BarChart3, FileDiff, Lock, Type } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { process as obfuscatorProcess } from '../../text/StringObfuscator';
 
 export const textTools: ToolDefinition[] = [
     {
@@ -46,6 +47,9 @@ export const textTools: ToolDefinition[] = [
         color: 'text-indigo-400',
         component: Lazy.StringObfuscator,
         keywords: ['text', 'obfuscate', 'encode', 'rot13', 'base64', 'hex'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => obfuscatorProcess(input, options)
     },
     {
         id: 'ascii-art',

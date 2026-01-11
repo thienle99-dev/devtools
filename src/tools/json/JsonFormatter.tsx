@@ -3,8 +3,19 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
+import { formatJson, minifyJson, validateJson } from './logic';
 
 const TOOL_ID = 'json-format';
+
+// Export for pipeline support
+export const process = async (input: string, options: { method?: 'format' | 'minify' | 'validate' } = {}) => {
+    const method = options.method || 'format';
+    switch (method) {
+        case 'minify': return minifyJson(input);
+        case 'validate': return validateJson(input);
+        default: return formatJson(input);
+    }
+};
 
 interface JsonFormatterProps {
     tabId?: string;
@@ -30,55 +41,23 @@ export const JsonFormatter: React.FC<JsonFormatterProps> = ({ tabId }) => {
         setToolData(effectiveId, { input: val });
     }, [setToolData, effectiveId]);
 
-    const handleFormat = () => {
-        setLoadingAction('Format');
-        setTimeout(() => {
-            try {
-                if (!input.trim()) return;
-                const parsed = JSON.parse(input);
-                const formatted = JSON.stringify(parsed, null, 2);
-                setToolData(effectiveId, { output: formatted });
-            } catch (error) {
-                setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
-            } finally {
-                setLoadingAction(null);
-            }
-        }, 400); // Fake delay for UX
+    const handleAction = async (action: 'Format' | 'Minify' | 'Validate', fn: (s: string) => string) => {
+        setLoadingAction(action);
+        // Fake delay for UX
+        await new Promise(resolve => setTimeout(resolve, 400));
+        try {
+            const result = fn(input);
+            setToolData(effectiveId, { output: result });
+        } catch (error) {
+            setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
+        } finally {
+            setLoadingAction(null);
+        }
     };
 
-    const handleMinify = () => {
-        setLoadingAction('Minify');
-        setTimeout(() => {
-            try {
-                if (!input.trim()) return;
-                const parsed = JSON.parse(input);
-                const minified = JSON.stringify(parsed);
-                setToolData(effectiveId, { output: minified });
-            } catch (error) {
-                setToolData(effectiveId, { output: `Error: Invalid JSON\n${(error as Error).message}` });
-            } finally {
-                setLoadingAction(null);
-            }
-        }, 400);
-    };
-
-    const handleValidate = () => {
-        setLoadingAction('Validate');
-        setTimeout(() => {
-            try {
-                if (!input.trim()) {
-                    setToolData(effectiveId, { output: 'Empty input.' });
-                    return;
-                }
-                JSON.parse(input);
-                setToolData(effectiveId, { output: 'Valid JSON ✔️' });
-            } catch (error) {
-                setToolData(effectiveId, { output: `Invalid JSON ❌\n${(error as Error).message}` });
-            } finally {
-                setLoadingAction(null);
-            }
-        }, 400);
-    };
+    const handleFormat = () => handleAction('Format', formatJson);
+    const handleMinify = () => handleAction('Minify', minifyJson);
+    const handleValidate = () => handleAction('Validate', validateJson);
 
     const handleClear = () => {
         clearToolData(effectiveId);
@@ -87,7 +66,6 @@ export const JsonFormatter: React.FC<JsonFormatterProps> = ({ tabId }) => {
     const handleCopy = () => {
         if (output) {
             navigator.clipboard.writeText(output);
-            // Optionally add toast here later
         }
     };
 

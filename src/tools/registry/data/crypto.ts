@@ -1,6 +1,8 @@
 import { Fingerprint, ShieldCheck, Shield, ScanLine, Key, Lock } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { generateHash } from '../../crypto/logic';
+import { process as aesProcess } from '../../crypto/AesEncryptor';
 
 export const cryptoTools: ToolDefinition[] = [
     {
@@ -12,7 +14,10 @@ export const cryptoTools: ToolDefinition[] = [
         icon: Fingerprint,
         color: 'text-violet-500',
         component: Lazy.HashGenerator,
-        keywords: ['hash', 'md5', 'sha', 'crypto']
+        keywords: ['hash', 'md5', 'sha', 'crypto'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => generateHash(input, options?.algorithm)
     },
     {
         id: 'hmac',
@@ -68,6 +73,9 @@ export const cryptoTools: ToolDefinition[] = [
         icon: Lock,
         color: 'text-emerald-500',
         component: Lazy.AesEncryptor,
-        keywords: ['aes', 'encrypt', 'decrypt', 'cipher']
+        keywords: ['aes', 'encrypt', 'decrypt', 'cipher'],
+        inputTypes: ['text', 'json'],
+        outputTypes: ['text'],
+        process: (input, options) => aesProcess(input, options)
     },
 ];
