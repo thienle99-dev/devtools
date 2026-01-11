@@ -10,9 +10,14 @@ interface ToolData {
     meta?: Record<string, any>;
 }
 
+interface HistoryItem {
+    id: string;
+    timestamp: number;
+}
+
 interface ToolStore {
     tools: Record<string, ToolData>;
-    history: string[]; // IDs of used tools
+    history: HistoryItem[]; // List of usage with timestamps
     favorites: string[]; // Favorite tool IDs
 
     setToolData: (id: string, data: Partial<ToolData>) => void;
@@ -63,17 +68,21 @@ export const useToolStore = create<ToolStore>()(
             })),
 
             addToHistory: (id) => {
-                // Track history locally
-                set((state) => ({
-                history: [id, ...state.history.filter(h => h !== id)].slice(0, 50)
-                }));
+                set((state) => {
+                    const newItem = { id, timestamp: Date.now() };
+                    // Keep history unique but most recent first
+                    const filteredHistory = state.history.filter(h => h.id !== id);
+                    return {
+                        history: [newItem, ...filteredHistory].slice(0, 50)
+                    };
+                });
 
                 // Track usage in dashboard store
                 try {
                     const incrementUsage = useDashboardStore.getState().incrementUsage;
                     incrementUsage(id);
                 } catch {
-                    // Ignore if dashboard store is not available for some reason
+                    // Ignore if dashboard store is not available
                 }
             },
 
@@ -103,14 +112,14 @@ export const useToolStore = create<ToolStore>()(
 export const useToolState = (id: string) => {
     // Get data - this will only re-render when this specific tool's data changes
     const data = useToolStore((state) => state.tools[id]);
-    
+
     // Get actions separately - Zustand actions are stable references
     // This prevents creating a new object on each render which causes infinite loops
     const setToolData = useToolStore((state) => state.setToolData);
     const clearToolData = useToolStore((state) => state.clearToolData);
     const addToHistory = useToolStore((state) => state.addToHistory);
     const removeToolData = useToolStore((state) => state.removeToolData);
-    
+
     // Return object - actions are stable so this won't cause infinite loops
     return {
         data,

@@ -461,12 +461,12 @@
 
 ### 4.6 History & Favorites
 
-- [ ] Create history store
-- [ ] Implement tool usage history
-- [ ] Add favorites functionality
-- [ ] Create history UI
-- [ ] Add clear history option
-- [ ] Test history persistence
+- [x] Create history store
+- [x] Implement tool usage history
+- [x] Add favorites functionality
+- [x] Create history UI
+- [x] Add clear history option
+- [x] Test history persistence
 
 ### 4.7 Export/Import
 

@@ -12,7 +12,7 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@utils/cn';
-import { CATEGORIES, getToolsByCategory } from '@tools/registry';
+import { CATEGORIES, getToolsByCategory, getToolById } from '@tools/registry';
 import { useSettingsStore } from '@store/settingsStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,6 +27,7 @@ export const Sidebar: React.FC = React.memo(() => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const favorites = useToolStore(state => state.favorites);
+    const history = useToolStore(state => state.history);
     const toggleFavorite = useToolStore(state => state.toggleFavorite);
 
     const sidebarCollapsed = useSettingsStore(state => state.sidebarCollapsed);
@@ -61,6 +62,29 @@ export const Sidebar: React.FC = React.memo(() => {
 
         return results.sort((a, b) => a.name.localeCompare(b.name));
     }, [searchQuery]);
+
+    const categoriesWithTools = useMemo(() => {
+        return CATEGORIES.map(category => {
+            let tools;
+            if (category.id === 'favorites') {
+                tools = favorites.map(id => getToolById(id)).filter((t): t is any => Boolean(t));
+            } else if (category.id === 'recent') {
+                // Unique based on tool ID, limited to 5
+                const seen = new Set<string>();
+                tools = history
+                    .map(h => getToolById(h.id))
+                    .filter((t): t is any => {
+                        if (!t || seen.has(t.id)) return false;
+                        seen.add(t.id);
+                        return true;
+                    })
+                    .slice(0, 5);
+            } else {
+                tools = getToolsByCategory(category.id);
+            }
+            return { ...category, tools: tools.filter((t: any) => t.id !== 'settings') };
+        });
+    }, [favorites, history]);
 
     return (
         <motion.aside
@@ -197,11 +221,10 @@ export const Sidebar: React.FC = React.memo(() => {
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {CATEGORIES.map((category) => {
-                                const tools = getToolsByCategory(category.id);
+                            {categoriesWithTools.map((category) => {
+                                const tools = category.tools;
                                 if (['favorites', 'recent'].includes(category.id) && tools.length === 0) return null;
                                 if (tools.length === 0) return null;
-                                const visibleTools = tools.filter(tool => tool.id !== 'settings');
 
                                 return (
                                     <div key={category.id} className="space-y-1.5">
@@ -211,12 +234,12 @@ export const Sidebar: React.FC = React.memo(() => {
                                                     <div className={cn("w-1 h-3 rounded-full bg-current opacity-40 group-hover/cat:opacity-100 transition-opacity", category.color || "text-foreground")} />
                                                     <h3 className="text-[10px] font-black text-foreground-muted uppercase tracking-widest group-hover/cat:text-foreground transition-colors">{category.name}</h3>
                                                 </div>
-                                                <span className="text-[9px] font-mono text-foreground-muted/30 group-hover/cat:opacity-100">{visibleTools.length}</span>
+                                                <span className="text-[9px] font-mono text-foreground-muted/30 group-hover/cat:opacity-100">{tools.length}</span>
                                             </div>
                                         )}
 
                                         <div className={cn("space-y-0.5", sidebarCollapsed ? "flex flex-col items-center" : "px-2")}>
-                                            {visibleTools.map((tool) => (
+                                            {tools.map((tool: any) => (
                                                 <ToolNavItem
                                                     key={tool.id}
                                                     tool={tool}

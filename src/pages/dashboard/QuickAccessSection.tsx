@@ -8,19 +8,17 @@ import { cn } from '../../utils/cn';
 
 export const QuickAccessSection: React.FC = () => {
     const history = useToolStore(state => state.history);
+    const clearHistory = useToolStore(state => state.clearHistory);
     const favorites = useToolStore(state => state.favorites);
     const toggleFavorite = useToolStore(state => state.toggleFavorite);
     const openTab = useTabStore(state => state.openTab);
     const navigate = useNavigate();
 
     const recentTools = useMemo(() => {
-        const seen = new Set<string>();
         const result: ReturnType<typeof getToolById>[] = [];
-        for (const id of history) {
-            if (seen.has(id)) continue;
-            const tool = getToolById(id);
+        for (const item of history) {
+            const tool = getToolById(item.id);
             if (tool) {
-                seen.add(id);
                 result.push(tool);
             }
             if (result.length >= 6) break;
@@ -59,10 +57,20 @@ export const QuickAccessSection: React.FC = () => {
                             <Clock className="w-3.5 h-3.5" />
                             <span>Recent Tools</span>
                         </div>
+                        {history.length > 0 && (
+                            <button
+                                onClick={clearHistory}
+                                className="text-[10px] text-foreground-muted hover:text-red-400 transition-colors uppercase font-bold tracking-wider"
+                            >
+                                Clear
+                            </button>
+                        )}
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 flex-1">
                         {recentTools.length === 0 ? (
-                            <p className="text-xs text-foreground-muted italic">No recent tools yet. Start by using any tool from the sidebar.</p>
+                            <div className="h-full flex flex-col items-center justify-center text-center py-4">
+                                <p className="text-[11px] text-foreground-muted italic leading-relaxed">No recent tools yet. Start by using any tool from the sidebar.</p>
+                            </div>
                         ) : recentTools.map(tool => {
                             if (!tool) return null;
                             const category = CATEGORIES.find(c => c.id === tool.category);
@@ -72,13 +80,13 @@ export const QuickAccessSection: React.FC = () => {
                                     key={tool.id}
                                     type="button"
                                     onClick={() => handleOpenTool(tool.id)}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/40 hover:bg-[var(--color-glass-input)]/80 border border-transparent hover:border-border-glass/50 transition-all group"
                                 >
                                     <div className="flex items-center gap-2">
                                         {tool.icon && <tool.icon className={cn("w-3.5 h-3.5 opacity-70 group-hover:opacity-100", colorClass)} />}
-                                        <span className="font-medium truncate">{tool.name}</span>
+                                        <span className="font-semibold truncate">{tool.name}</span>
                                     </div>
-                                    <span className="text-[10px] text-foreground-muted truncate max-w-[120px] group-hover:text-foreground-secondary">
+                                    <span className="text-[9px] text-foreground-muted truncate ml-4 group-hover:text-foreground-secondary opacity-60">
                                         {tool.description}
                                     </span>
                                 </button>
@@ -95,23 +103,24 @@ export const QuickAccessSection: React.FC = () => {
                             <span>Favorites</span>
                         </div>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 flex-1">
                         {favoriteTools.length === 0 ? (
-                            <p className="text-xs text-foreground-muted italic">Mark tools as favorites from the sidebar to see them here.</p>
+                            <div className="h-full flex flex-col items-center justify-center text-center py-4">
+                                <p className="text-[11px] text-foreground-muted italic leading-relaxed">Mark tools as favorites from the sidebar to see them here.</p>
+                            </div>
                         ) : favoriteTools.map(tool => {
                             if (!tool) return null;
                             const category = CATEGORIES.find(c => c.id === tool.category);
                             const colorClass = tool.color || category?.color;
                             return (
-                                <button
+                                <div
                                     key={tool.id}
-                                    type="button"
                                     onClick={() => handleOpenTool(tool.id)}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/60 hover:bg-[var(--color-glass-input)] border border-transparent hover:border-border-glass transition-all group"
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs bg-[var(--color-glass-input)]/40 hover:bg-[var(--color-glass-input)]/80 border border-transparent hover:border-border-glass/50 transition-all group cursor-pointer"
                                 >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
                                         {tool.icon && <tool.icon className={cn("w-3.5 h-3.5 opacity-70 group-hover:opacity-100", colorClass)} />}
-                                        <span className="font-medium truncate">{tool.name}</span>
+                                        <span className="font-semibold truncate">{tool.name}</span>
                                     </div>
                                     <button
                                         type="button"
@@ -119,12 +128,12 @@ export const QuickAccessSection: React.FC = () => {
                                             e.stopPropagation();
                                             toggleFavorite(tool.id);
                                         }}
-                                        className="ml-2 text-amber-400 hover:text-amber-300"
+                                        className="ml-2 text-amber-400 hover:text-amber-300 transition-transform hover:scale-110 active:scale-90"
                                         aria-label="Toggle favorite"
                                     >
                                         <Star className="w-3.5 h-3.5 fill-amber-400" />
                                     </button>
-                                </button>
+                                </div>
                             );
                         })}
                     </div>
