@@ -307,7 +307,6 @@ export const VideoTrimmer: React.FC = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [videoSrc, setVideoSrc] = useState<string | null>(null);
 
-    const timelineRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const playbackRef = useRef<number | null>(null);
 

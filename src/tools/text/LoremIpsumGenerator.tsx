@@ -108,12 +108,12 @@ export const LoremIpsumGenerator: React.FC = () => {
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <Hash className="w-4 h-4 text-indigo-400" />
-                            <label className="text-sm font-medium text-white/70">Generation Options</label>
+                            <label className="text-sm font-medium text-foreground/70">Generation Options</label>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs text-white/50">Unit</label>
+                                <label className="text-xs text-foreground/50">Unit</label>
                                 <Select
                                     value={options.unit}
                                     onChange={(val) => handleOptionChange('unit', val)}
@@ -125,7 +125,7 @@ export const LoremIpsumGenerator: React.FC = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs text-white/50">Output Format</label>
+                                <label className="text-xs text-foreground/50">Output Format</label>
                                 <Select
                                     value={options.format}
                                     onChange={(val) => handleOptionChange('format', val)}
@@ -175,20 +175,20 @@ export const LoremIpsumGenerator: React.FC = () => {
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col glass-panel overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
+                <div className="flex items-center justify-between p-4 border-b border-border-glass bg-foreground/5">
                     <div className="flex items-center gap-2">
                         <AlignLeft className="w-4 h-4 text-indigo-400" />
-                        <span className="text-sm font-medium text-white/70">
+                        <span className="text-sm font-medium text-foreground/70">
                             Generated Text
                         </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-white/40">
+                    <div className="flex items-center gap-4 text-xs text-foreground/40">
                         <span>Characters: {output.length}</span>
                         <span>Words: {output.split(/\s+/).filter(Boolean).length}</span>
                     </div>
                 </div>
-                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-black/20">
-                    <div className="text-white/80 leading-relaxed whitespace-pre-wrap font-mono text-sm">
+                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-black/5 dark:bg-black/20">
+                    <div className="text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono text-sm">
                         {output || 'Generating...'}
                     </div>
                 </div>

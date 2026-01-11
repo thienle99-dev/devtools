@@ -1,4 +1,13 @@
-import * as fabric from 'fabric';
+import {
+    Group,
+    Line,
+    Triangle,
+    FabricText as Text,
+    Rect,
+    Circle,
+    Ellipse,
+    Canvas
+} from 'fabric';
 
 export type AnnotationType = 'arrow' | 'text' | 'rectangle' | 'circle' | 'ellipse' | 'line' | 'blur';
 
@@ -25,7 +34,7 @@ export const DEFAULT_ANNOTATION_CONFIG: AnnotationConfig = {
 export function createArrow(
     points: { x1: number; y1: number; x2: number; y2: number },
     config: AnnotationConfig
-): fabric.Group {
+): Group {
     const { x1, y1, x2, y2 } = points;
 
     // Calculate angle for arrowhead
@@ -33,14 +42,14 @@ export function createArrow(
     const headLength = 15;
 
     // Main line
-    const line = new fabric.Line([x1, y1, x2, y2], {
+    const line = new Line([x1, y1, x2, y2], {
         stroke: config.color,
         strokeWidth: config.strokeWidth,
         selectable: false,
     });
 
     // Arrowhead (triangle)
-    const arrowHead = new fabric.Triangle({
+    const arrowHead = new Triangle({
         left: x2,
         top: y2,
         width: headLength,
@@ -53,7 +62,7 @@ export function createArrow(
     });
 
     // Group line and arrowhead
-    const arrow = new fabric.Group([line, arrowHead], {
+    const arrow = new Group([line, arrowHead], {
         selectable: true,
         hasControls: true,
     });
@@ -68,8 +77,8 @@ export function createText(
     position: { x: number; y: number },
     text: string,
     config: AnnotationConfig
-): fabric.Text {
-    const textObj = new fabric.Text(text, {
+): Text {
+    const textObj = new Text(text, {
         left: position.x,
         top: position.y,
         fill: config.color,
@@ -88,8 +97,8 @@ export function createText(
 export function createRectangle(
     bounds: { left: number; top: number; width: number; height: number },
     config: AnnotationConfig
-): fabric.Rect {
-    const rect = new fabric.Rect({
+): Rect {
+    const rect = new Rect({
         left: bounds.left,
         top: bounds.top,
         width: bounds.width,
@@ -111,8 +120,8 @@ export function createCircle(
     center: { x: number; y: number },
     radius: number,
     config: AnnotationConfig
-): fabric.Circle {
-    const circle = new fabric.Circle({
+): Circle {
+    const circle = new Circle({
         left: center.x - radius,
         top: center.y - radius,
         radius: radius,
@@ -132,8 +141,8 @@ export function createCircle(
 export function createEllipse(
     bounds: { left: number; top: number; rx: number; ry: number },
     config: AnnotationConfig
-): fabric.Ellipse {
-    const ellipse = new fabric.Ellipse({
+): Ellipse {
+    const ellipse = new Ellipse({
         left: bounds.left,
         top: bounds.top,
         rx: bounds.rx,
@@ -154,8 +163,8 @@ export function createEllipse(
 export function createLine(
     points: { x1: number; y1: number; x2: number; y2: number },
     config: AnnotationConfig
-): fabric.Line {
-    const line = new fabric.Line([points.x1, points.y1, points.x2, points.y2], {
+): Line {
+    const line = new Line([points.x1, points.y1, points.x2, points.y2], {
         stroke: config.color,
         strokeWidth: config.strokeWidth,
         selectable: true,
@@ -171,8 +180,8 @@ export function createLine(
 export function createBlurArea(
     bounds: { left: number; top: number; width: number; height: number },
     blurAmount: number = 20
-): fabric.Rect {
-    const rect = new fabric.Rect({
+): Rect {
+    const rect = new Rect({
         left: bounds.left,
         top: bounds.top,
         width: bounds.width,
@@ -195,14 +204,14 @@ export function createBlurArea(
 /**
  * Export canvas to data URL with annotations
  */
-export function exportCanvasWithAnnotations(canvas: fabric.Canvas): string {
+export function exportCanvasWithAnnotations(canvas: Canvas): string {
     return canvas.toDataURL({ multiplier: 1 });
 }
 
 /**
  * Clear all annotations from canvas
  */
-export function clearAllAnnotations(canvas: fabric.Canvas): void {
+export function clearAllAnnotations(canvas: Canvas): void {
     const objects = canvas.getObjects();
     objects.forEach((obj: any) => {
         if (obj !== canvas.backgroundImage) {
@@ -215,7 +224,7 @@ export function clearAllAnnotations(canvas: fabric.Canvas): void {
 /**
  * Delete selected annotation
  */
-export function deleteSelectedAnnotation(canvas: fabric.Canvas): void {
+export function deleteSelectedAnnotation(canvas: Canvas): void {
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
         canvas.remove(activeObject);
@@ -226,7 +235,7 @@ export function deleteSelectedAnnotation(canvas: fabric.Canvas): void {
 /**
  * Get annotation count
  */
-export function getAnnotationCount(canvas: fabric.Canvas): number {
+export function getAnnotationCount(canvas: Canvas): number {
     const objects = canvas.getObjects();
     return objects.filter((obj: any) => obj !== canvas.backgroundImage).length;
 }

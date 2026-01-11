@@ -17,7 +17,7 @@ interface SearchAndFilterProps {
     onOpenCategories?: () => void;
     monitoringEnabled?: boolean;
     onToggleMonitoring?: () => void;
-    searchInputRef?: RefObject<HTMLInputElement | null>;
+    searchInputRef?: React.Ref<HTMLInputElement>;
 }
 
 export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
@@ -35,10 +35,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 }) => {
     const [showFilters, setShowFilters] = useState(false);
 
-    const hasActiveFilters = filters.type !== 'all' || 
-                             filters.dateRange !== 'all' || 
-                             filters.pinnedOnly || 
-                             filters.searchMode !== 'contains';
+    const hasActiveFilters = filters.type !== 'all' ||
+        filters.dateRange !== 'all' ||
+        filters.pinnedOnly ||
+        filters.searchMode !== 'contains';
 
     return (
         <div className="space-y-3">
@@ -148,7 +148,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                             <X className="w-3.5 h-3.5" />
                         </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                         {/* Search Mode */}
                         <Select

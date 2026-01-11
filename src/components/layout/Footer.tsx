@@ -1,16 +1,15 @@
 import { useTabStore } from '@store/tabStore';
 import { TOOLS } from '@tools/registry';
-import { useLocation } from 'react-router-dom';
 import { cn } from '@utils/cn';
-import { 
-    Layers, 
-    Settings, 
-    Moon, 
-    Sun, 
-    Bell, 
-    BellOff, 
-    Maximize, 
-    Minimize, 
+import {
+    Layers,
+    Settings,
+    Moon,
+    Sun,
+    Bell,
+    BellOff,
+    Maximize,
+    Minimize,
     Command,
     Terminal,
     Clipboard,
@@ -64,6 +63,25 @@ const TaskMonitor = () => {
     );
 };
 
+const TabMemoryMonitor = () => {
+    const { tabs } = useTabStore();
+    const pausedCount = tabs.length > 1 ? tabs.length - 1 : 0;
+
+    if (pausedCount === 0) return null;
+
+    return (
+        <div className="flex items-center pl-1.5">
+            <div className="w-px h-2 bg-border-glass mr-1.5 opacity-20" />
+            <div className="flex items-center space-x-1 group cursor-help" title={`${pausedCount} background tabs are paused to save memory`}>
+                <div className="w-1 h-1 rounded-full bg-amber-500/50 group-hover:bg-amber-500 animate-pulse transition-colors" />
+                <span className="text-[8px] font-black text-amber-600/60 dark:text-amber-500/60 uppercase tracking-tighter group-hover:text-amber-500 transition-colors">
+                    {pausedCount} Paused
+                </span>
+            </div>
+        </div>
+    );
+};
+
 const ResourcesMonitor = ({ forceShow }: { forceShow?: boolean }) => {
     const [stats, setStats] = useState<{ cpu: number; ram: number }>({ cpu: 0, ram: 0 });
 
@@ -112,7 +130,7 @@ const ResourcesMonitor = ({ forceShow }: { forceShow?: boolean }) => {
                     <span className={getTextColor(stats.cpu)}>{Math.round(stats.cpu)}%</span>
                 </div>
                 <div className="h-1 w-full bg-foreground/10 rounded-full overflow-hidden">
-                    <div 
+                    <div
                         className={`h-full transition-all duration-1000 ${getBarColor(stats.cpu)} shadow-[0_0_8px_inset_rgba(0,0,0,0.1)]`}
                         style={{ width: `${Math.min(100, stats.cpu)}%` }}
                     />
@@ -126,7 +144,7 @@ const ResourcesMonitor = ({ forceShow }: { forceShow?: boolean }) => {
                     <span className={getTextColor(stats.ram)}>{Math.round(stats.ram)}%</span>
                 </div>
                 <div className="h-1 w-full bg-foreground/10 rounded-full overflow-hidden">
-                    <div 
+                    <div
                         className={`h-full transition-all duration-1000 ${getBarColor(stats.ram)} shadow-[0_0_8px_inset_rgba(0,0,0,0.1)]`}
                         style={{ width: `${Math.min(100, stats.ram)}%` }}
                     />
@@ -147,7 +165,7 @@ const DevInfo = ({ forceShow }: { forceShow?: boolean }) => {
 
     return (
         <div className="flex items-center space-x-2 shrink-0">
-            <button 
+            <button
                 onClick={openDevTools}
                 className="flex items-center space-x-1.5 px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-[9px] font-bold text-rose-500 hover:bg-rose-500/20 transition-all group shadow-sm"
                 title={`Chrome: ${versions.chrome || '?'}\nElectron: ${versions.electron || '?'}\nNode: ${versions.node || '?'}`}
@@ -173,7 +191,7 @@ const SessionTimer = ({ forceShow }: { forceShow?: boolean }) => {
     }, []);
 
     const durationSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-    
+
     const formatDuration = (s: number) => {
         const h = Math.floor(s / 3600);
         const m = Math.floor((s % 3600) / 60);
@@ -184,8 +202,8 @@ const SessionTimer = ({ forceShow }: { forceShow?: boolean }) => {
     return (
         <div className="flex items-center space-x-3 shrink-0">
             <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-foreground/[0.03] dark:bg-white/10 border border-border-glass text-[10px] group transition-all hover:bg-foreground/[0.08] dark:hover:bg-white/15">
-                 <Clock size={11} className="text-emerald-500 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-                 <span className="font-mono text-foreground font-medium">{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+                <Clock size={11} className="text-emerald-500 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="font-mono text-foreground font-medium">{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
             </div>
             {(forceShow || true) && (
                 <div className={`${forceShow ? 'flex' : 'hidden xl:flex'} flex items-center space-x-1.5 text-[10px]`}>
@@ -261,7 +279,7 @@ const NetworkMonitor = () => {
                     }), { rx: 0, tx: 0 });
                     setNetStats(prev => ({ ...prev, ...total }));
                 }
-            } catch (e) {}
+            } catch (e) { }
         };
 
         const interval = setInterval(fetchNet, 2000);
@@ -316,7 +334,7 @@ const DiskMonitor = () => {
                         });
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
         };
         fetchDisk();
         const interval = setInterval(fetchDisk, 30000);
@@ -343,7 +361,7 @@ const DiskMonitor = () => {
                         <span className="text-[10px] font-black text-foreground-muted">{Math.round(disk.percentage)}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden">
-                        <div 
+                        <div
                             className={`h-full transition-all duration-1000 ${disk.percentage > 90 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)]' : disk.percentage > 75 ? 'bg-amber-500' : 'bg-sky-500'} shadow-[0_0_8px_inset_rgba(0,0,0,0.1)]`}
                             style={{ width: `${disk.percentage}%` }}
                         />
@@ -362,8 +380,7 @@ export const Footer = () => {
     const { tabs, activeTabId, openTab } = useTabStore();
     const { theme, setTheme, notificationsEnabled, setNotificationsEnabled } = useSettingsStore();
     const { getStatistics } = useClipboardStore();
-    const { updateAvailable, latestVersion, getUnreadCount } = useNotificationStore();
-    const location = useLocation();
+    const { updateAvailable, getUnreadCount } = useNotificationStore();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [stats, setStats] = useState({ totalItems: 0, totalCopies: 0 });
     const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -372,12 +389,11 @@ export const Footer = () => {
 
     // Find the active tab
     const activeTab = tabs.find(t => t.id === activeTabId);
-    
+
     // Find the tool in registry to get the icon (if any)
     const activeTool = activeTab ? TOOLS.find(t => t.id === activeTab.toolId) : null;
-    
+
     // If we're on dashboard but not in a tab
-    const isDashboard = location.pathname === '/dashboard';
 
     // Update stats periodically or when items change
     useEffect(() => {
@@ -408,12 +424,6 @@ export const Footer = () => {
         }
     };
 
-    const openClipboard = () => {
-        const clipboardTool = TOOLS.find(t => t.id === 'clipboard-manager');
-        if (clipboardTool) {
-            openTab(clipboardTool.id, clipboardTool.path, clipboardTool.name, clipboardTool.description, false, false);
-        }
-    };
 
     useEffect(() => {
         const handleFSChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -430,18 +440,19 @@ export const Footer = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-    
+
     return (
         <footer className="h-7 px-2 sm:px-4 grid grid-cols-3 items-center text-[9px] sm:text-[10px] text-foreground-muted border-t border-border-glass bg-[var(--color-glass-input)] shrink-0 z-40 backdrop-blur-xl">
             {/* Left Section: Status & Essential Tool Info */}
             <div className="flex items-center space-x-2 min-w-0 h-full">
-                <div className="flex items-center space-x-1.5 shrink-0">
-                    <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                <div className="flex items-center space-x-1.5 shrink-0 bg-foreground/[0.03] dark:bg-white/5 px-2 py-0.5 rounded-full border border-border-glass/40">
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.3)]" />
                     <span className="font-bold hidden sm:inline text-emerald-600 dark:text-emerald-500/80 tracking-wide uppercase text-[8px]">Ready</span>
+                    <TabMemoryMonitor />
                 </div>
-                
+
                 <div className="w-px h-2.5 bg-border-glass shrink-0 hidden sm:block" />
-                
+
                 <div className="flex items-center space-x-1.5 overflow-hidden shrink-0">
                     {activeTool ? (
                         <div className={`flex items-center space-x-1 ${activeTool.color || 'text-foreground'}`}>
@@ -459,35 +470,35 @@ export const Footer = () => {
             {/* Center Section: Quick Actions Bar (The Core UI) */}
             <div className="flex items-center justify-center h-full">
                 <div className="flex items-center bg-foreground/[0.05] dark:bg-white/5 rounded-full px-1.5 py-0.5 border border-border-glass shadow-sm dark:shadow-inner scale-90 sm:scale-100 backdrop-blur-md">
-                    <button 
+                    <button
                         onClick={toggleTheme}
                         className={`p-1 hover:scale-110 transition-all rounded-full ${theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/20' : 'text-indigo-600 hover:bg-indigo-500/10'}`}
                         title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
                     >
                         {theme === 'dark' ? <Sun size={11} /> : <Moon size={11} />}
                     </button>
-                    
+
                     <div className="w-px h-2.5 bg-border-glass mx-0.5" />
-                    
-                    <button 
+
+                    <button
                         onClick={() => setNotificationsEnabled(!notificationsEnabled)}
                         className={`p-1 transition-all rounded-full hover:scale-110 ${notificationsEnabled ? 'text-emerald-500 hover:bg-emerald-500/20' : 'text-rose-500 hover:bg-rose-500/20'}`}
                     >
                         {notificationsEnabled ? <Bell size={11} /> : <BellOff size={11} />}
                     </button>
-                    
+
                     <div className="w-px h-2.5 bg-border-glass mx-0.5" />
-                    
-                    <button 
+
+                    <button
                         onClick={handleFullscreen}
                         className="p-1 text-violet-500 dark:text-violet-400 hover:scale-110 rounded-full hover:bg-violet-500/20 transition-all"
                     >
                         {isFullscreen ? <Minimize size={11} /> : <Maximize size={11} />}
                     </button>
-                    
+
                     <div className="w-px h-2.5 bg-border-glass mx-0.5 hidden sm:block" />
-                    
-                    <button 
+
+                    <button
                         className="p-1 text-sky-500 dark:text-sky-400 hover:scale-110 rounded-full hover:bg-sky-500/20 transition-all hidden sm:flex items-center space-x-0.5"
                     >
                         <Command size={10} />
@@ -496,7 +507,7 @@ export const Footer = () => {
 
                     <div className="w-px h-2.5 bg-border-glass mx-0.5" />
 
-                    <button 
+                    <button
                         onClick={openSettings}
                         className="p-1 text-foreground-muted hover:text-foreground hover:scale-110 rounded-full hover:bg-foreground/10 transition-all"
                         title="Settings"
@@ -509,7 +520,7 @@ export const Footer = () => {
             {/* Right Section: Compact Info & More Menu */}
             <div className="flex items-center space-x-2 justify-end h-full">
                 {/* Task Activity Indicator */}
-                <div className="hidden sm:block">
+                <div className="hidden sm:flex items-center space-x-2">
                     <TaskMonitor />
                 </div>
 
@@ -520,20 +531,20 @@ export const Footer = () => {
 
                 {/* The "Everything Else" Menu Hub */}
                 <div className="relative" ref={menuRef}>
-                    <button 
+                    <button
                         onClick={(e) => {
                             e.stopPropagation();
                             setShowMoreMenu(!showMoreMenu);
                         }}
                         className={cn(
                             "p-1.5 rounded-lg transition-all relative",
-                            showMoreMenu 
-                                ? "bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30" 
+                            showMoreMenu
+                                ? "bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
                                 : "hover:bg-foreground/10 text-foreground-muted hover:text-foreground"
                         )}
                     >
                         {showMoreMenu ? <ChevronUp size={14} /> : <MoreHorizontal size={14} />}
-                        
+
                         {(updateAvailable || unreadCount > 0) && !showMoreMenu && (
                             <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-bg-glass-panel animate-pulse" />
                         )}
@@ -570,7 +581,7 @@ export const Footer = () => {
 
                                 {/* Tools & Actions */}
                                 <div className="space-y-1.5">
-                                    <button 
+                                    <button
                                         onClick={() => { openSettings(); setShowMoreMenu(false); }}
                                         className="w-full flex items-center justify-between px-3 py-3 hover:bg-foreground/5 dark:hover:bg-white/10 rounded-2xl transition-all group border border-transparent hover:border-border-glass shadow-sm hover:shadow-md"
                                     >
@@ -604,7 +615,7 @@ export const Footer = () => {
                                             <DevInfo forceShow />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="bg-foreground/[0.02] dark:bg-white/[0.02] rounded-2xl p-1.5 border border-border-glass">
                                         <ShortcutHint activeTool={activeTool} forceShow />
                                     </div>

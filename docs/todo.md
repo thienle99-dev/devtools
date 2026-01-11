@@ -166,8 +166,8 @@
 - [x] JSON diff
 - [ ] Device information
 - [ ] Open Graph meta generator
+- [x] MIME types lookup
 - [ ] OTP code generator (TOTP)
-- [ ] MIME types lookup
 - [ ] Keycode info
 - [ ] HTML WYSIWYG editor
 - [ ] Outlook Safelink decoder
@@ -221,9 +221,9 @@
 - [x] Lorem ipsum generator
 - [x] Text statistics
 - [x] Text diff
-- [ ] String obfuscator
+- [x] String obfuscator
 - [x] Case converter (CaseConverter tool in converters)
-- [ ] ASCII Art Text Generator
+- [x] ASCII Art Text Generator
 
 ### 3.6 Network Tools
 
@@ -237,13 +237,13 @@
 - [x] Math evaluator
 - [x] Percentage calculator
 - [x] Temperature converter
-- [ ] Chronometer
+- [x] Chronometer
 
 ### 3.8 Image Tools
 
 - [x] QR Code generator
 - [x] WiFi QR Code generator
-- [ ] SVG placeholder generator
+- [x] SVG placeholder generator
 - [ ] Camera recorder (capture ảnh/video từ webcam)
 - [x] Image Format Converter (PNG, JPG, WebP, AVIF, SVG, etc.)
 - [ ] HEIC to JPG Converter

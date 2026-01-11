@@ -84,7 +84,7 @@ export const MathEvaluator: React.FC = () => {
                 <div className="glass-panel p-6 space-y-6 flex flex-col">
                     <div className="flex items-center gap-2 mb-2">
                         <Calculator className="w-5 h-5 text-indigo-400" />
-                        <h3 className="text-sm font-semibold text-white/70">Expression Evaluator</h3>
+                        <h3 className="text-sm font-semibold text-foreground/70">Expression Evaluator</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -101,9 +101,9 @@ export const MathEvaluator: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center justify-center py-8 glass-panel bg-black/40 border-indigo-500/20">
-                            <span className="text-xs text-white/30 uppercase tracking-widest mb-2">Result</span>
-                            <div className="text-4xl font-bold text-white tracking-tight">
+                        <div className="flex flex-col items-center justify-center py-8 glass-panel bg-foreground/5 dark:bg-black/40 border-indigo-500/20">
+                            <span className="text-xs text-foreground/30 uppercase tracking-widest mb-2">Result</span>
+                            <div className="text-4xl font-bold text-foreground tracking-tight">
                                 {result || '0'}
                             </div>
                         </div>
@@ -131,7 +131,7 @@ export const MathEvaluator: React.FC = () => {
                 </div>
 
                 <div className="glass-panel flex flex-col overflow-hidden h-full">
-                    <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5 text-sm font-semibold text-white/70">
+                    <div className="flex items-center justify-between p-4 border-b border-border-glass bg-foreground/5 text-sm font-semibold text-foreground/70">
                         <div className="flex items-center gap-2">
                             <History className="w-4 h-4 text-indigo-400" />
                             <span>Recent History</span>
@@ -141,13 +141,13 @@ export const MathEvaluator: React.FC = () => {
                     <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-2">
                         {history.length > 0 ? (
                             history.map((item, i) => (
-                                <div key={i} className="p-3 rounded-lg bg-white/5 border border-white/10 flex justify-between items-center group">
-                                    <span className="text-sm font-mono text-white/60 truncate mr-4">{item.split('=')[0]}</span>
-                                    <span className="text-sm font-bold text-indigo-400 shrink-0">={item.split('=')[1]}</span>
+                                <div key={i} className="p-3 rounded-lg bg-foreground/5 border border-border-glass flex justify-between items-center group">
+                                    <span className="text-sm font-mono text-foreground/60 truncate mr-4">{item.split('=')[0]}</span>
+                                    <span className="text-sm font-bold text-indigo-500 dark:text-indigo-400 shrink-0">={item.split('=')[1]}</span>
                                 </div>
                             ))
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-white/20 italic text-sm">
+                            <div className="h-full flex flex-col items-center justify-center text-foreground/20 italic text-sm">
                                 <span>No history yet</span>
                             </div>
                         )}

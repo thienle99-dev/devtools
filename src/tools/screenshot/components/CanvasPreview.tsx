@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-// Phase 2: Lazy load Fabric.js
-import { loadFabric } from '@utils/lazyLoad';
-import type * as fabricTypes from 'fabric';
+import { useEffect, useState, useCallback, useImperativeHandle, forwardRef, useRef } from 'react';
+import {
+    Canvas,
+    FabricImage,
+    Rect,
+    IText,
+    Circle,
+    Ellipse,
+    Line,
+    Object as FabricObject,
+    util
+} from 'fabric';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import {
     createArrow,
@@ -56,7 +64,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
     const canvasContainerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+    const fabricCanvasRef = useRef<Canvas | null>(null);
     const [canvasScale, setCanvasScale] = useState(1);
     const [baseZoom, setBaseZoom] = useState(1); // Zoom level applied on top of fit-to-screen
 
@@ -67,8 +75,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     // Drawing state
     const isDrawingRef = useRef(false);
     const startPointRef = useRef<{ x: number; y: number } | null>(null);
-    const activeObjectRef = useRef<fabric.Object | null>(null);
-    const cropRectRef = useRef<fabric.Rect | null>(null);
+    const activeObjectRef = useRef<FabricObject | null>(null);
+    const cropRectRef = useRef<Rect | null>(null);
 
     const updateHistoryState = useCallback(() => {
         if (onHistoryChange) {
@@ -139,7 +147,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     useEffect(() => {
         if (!canvasRef.current || fabricCanvasRef.current) return;
 
-        const canvas = new fabric.Canvas(canvasRef.current, {
+        const canvas = new Canvas(canvasRef.current, {
             selection: true,
             preserveObjectStacking: true,
             renderOnAddRemove: true,
@@ -162,7 +170,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                 if (fabricCanvasRef.current.getActiveObject()) {
                     // Check if not editing text
                     const active = fabricCanvasRef.current.getActiveObject();
-                    if (!(active instanceof fabric.IText && active.isEditing)) {
+                    if (!(active instanceof IText && active.isEditing)) {
                         deleteSelectedAnnotation(fabricCanvasRef.current);
                         saveState();
                     }
@@ -214,7 +222,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
         const updateScale = () => {
             if (fabricCanvasRef.current && fabricCanvasRef.current.backgroundImage) {
-                const img = fabricCanvasRef.current.backgroundImage as fabric.Image;
+                const img = fabricCanvasRef.current.backgroundImage as FabricImage;
                 if (img.width && img.height && canvasContainerRef.current) {
                     const width = canvasContainerRef.current.clientWidth;
                     const height = canvasContainerRef.current.clientHeight;
@@ -275,18 +283,14 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
             // Handle promise or callback based on Fabric version
             try {
-                // Try promise-based first (v6+)
-                const img = await fabric.FabricImage.fromURL(baseDataUrl, { crossOrigin: 'anonymous' });
+                const img = await FabricImage.fromURL(baseDataUrl, { crossOrigin: 'anonymous' });
                 setupCanvasImage(img);
             } catch (e) {
-                // Fallback
-                fabric.Image.fromURL(baseDataUrl, { crossOrigin: 'anonymous' }).then((img) => {
-                    setupCanvasImage(img);
-                });
+                console.error('Error loading image into fabric:', e);
             }
         };
 
-        const setupCanvasImage = (img: fabric.Image) => {
+        const setupCanvasImage = (img: FabricImage) => {
             const canvas = fabricCanvasRef.current!;
             if (!img.width || !img.height) return;
 
@@ -306,7 +310,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                         const objects = JSON.parse(canvasData);
                         undoStackRef.current.push(canvasData);
 
-                        fabric.util.enlivenObjects(objects, {}).then((enlivenedObjects: any[]) => {
+                        util.enlivenObjects(objects).then((enlivenedObjects: any[]) => {
                             enlivenedObjects.forEach((obj) => {
                                 canvas.add(obj);
                             });
@@ -342,7 +346,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             if (obj !== canvas.backgroundImage) canvas.remove(obj);
         });
 
-        fabric.util.enlivenObjects(objects, {}).then((enlivenedObjects: any[]) => {
+        util.enlivenObjects(objects).then((enlivenedObjects: any[]) => {
             enlivenedObjects.forEach(obj => {
                 canvas.add(obj);
             });
@@ -367,7 +371,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             }
 
             // Create new crop rectangle
-            const cropRect = new fabric.Rect({
+            const cropRect = new Rect({
                 left: pointer.x,
                 top: pointer.y,
                 width: 0,
@@ -416,9 +420,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                 );
                 canvas.add(text);
                 canvas.setActiveObject(text);
-                if (text instanceof fabric.IText) {
+                if (text instanceof IText) {
                     text.enterEditing();
-                    text.selectAll();
+                    // selectAll is not in IText in v6, use selectionStart/End
+                    text.set({
+                        selectionStart: 0,
+                        selectionEnd: text.text.length
+                    });
                 }
                 isDrawingRef.current = false;
                 saveState();
@@ -529,7 +537,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
             case 'circle':
                 const dist = Math.sqrt(Math.pow(pointer.x - start.x, 2) + Math.pow(pointer.y - start.y, 2));
-                (obj as fabric.Circle).set({ radius: dist / 2 });
+                (obj as Circle).set({ radius: dist / 2 });
                 obj.set({
                     left: start.x - dist / 2,
                     top: start.y - dist / 2
@@ -539,11 +547,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             case 'ellipse':
                 const rx = Math.abs(pointer.x - start.x) / 2;
                 const ry = Math.abs(pointer.y - start.y) / 2;
-                (obj as fabric.Ellipse).set({ rx, ry, left: Math.min(start.x, pointer.x), top: Math.min(start.y, pointer.y) });
+                (obj as Ellipse).set({ rx, ry, left: Math.min(start.x, pointer.x), top: Math.min(start.y, pointer.y) });
                 break;
 
             case 'line':
-                (obj as fabric.Line).set({ x2: pointer.x, y2: pointer.y });
+                (obj as Line).set({ x2: pointer.x, y2: pointer.y });
                 break;
         }
 

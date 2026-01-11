@@ -74,7 +74,7 @@ export const TabContent: React.FC = React.memo(() => {
                 if (!toolDef) {
                     // Only show error for active tab
                     if (!isActive) return null;
-                    
+
                     return (
                         <div key={tab.id} className="flex-1 flex items-center justify-center">
                             <div className="text-center px-8">
@@ -124,17 +124,6 @@ export const TabContent: React.FC = React.memo(() => {
                 );
             })}
 
-            {/* Info banner when limit is reached */}
-            {backgroundProcessing && tabs.length > maxBackgroundTabs && activeTab && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 backdrop-blur-xl shadow-lg">
-                        <span className="text-yellow-400 text-sm">⚠️</span>
-                        <p className="text-xs text-foreground">
-                            <span className="font-semibold">{tabs.length - maxBackgroundTabs}</span> background tab{tabs.length - maxBackgroundTabs > 1 ? 's' : ''} paused to save memory
-                        </p>
-                    </div>
-                </div>
-            )}
         </div>
     );
 });

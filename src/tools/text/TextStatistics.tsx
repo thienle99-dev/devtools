@@ -92,10 +92,10 @@ export const TextStatistics: React.FC = () => {
         <div className="flex flex-col h-full gap-6">
             <div className="flex-1 flex flex-col min-h-0 gap-6">
                 <div className="flex-1 flex flex-col glass-panel overflow-hidden">
-                    <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
+                    <div className="flex items-center justify-between p-4 border-b border-border-glass bg-foreground/5">
                         <div className="flex items-center gap-2">
                             <Type className="w-4 h-4 text-indigo-400" />
-                            <span className="text-sm font-medium text-white/70">Input Text</span>
+                            <span className="text-sm font-medium text-foreground/70">Input Text</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Button size="sm" variant="ghost" onClick={handleClear} icon={Trash2}>Clear</Button>
@@ -106,7 +106,7 @@ export const TextStatistics: React.FC = () => {
                         value={input}
                         onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
                         placeholder="Paste or type your text here to analyze..."
-                        className="flex-1 p-6 bg-transparent text-white/80 resize-none font-mono text-sm focus:outline-none custom-scrollbar"
+                        className="flex-1 p-6 bg-transparent text-foreground/80 resize-none font-mono text-sm focus:outline-none custom-scrollbar"
                     />
                 </div>
 
@@ -115,7 +115,7 @@ export const TextStatistics: React.FC = () => {
                     <div className="glass-panel p-5 space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <Hash className="w-4 h-4 text-indigo-400" />
-                            <h3 className="text-sm font-semibold text-white/70">Counts</h3>
+                            <h3 className="text-sm font-semibold text-foreground/70">Counts</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <StatItem label="Characters" value={stats.characters} />
@@ -131,20 +131,20 @@ export const TextStatistics: React.FC = () => {
                     <div className="glass-panel p-5 space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <Clock className="w-4 h-4 text-emerald-400" />
-                            <h3 className="text-sm font-semibold text-white/70">Estimates</h3>
+                            <h3 className="text-sm font-semibold text-foreground/70">Estimates</h3>
                         </div>
                         <div className="space-y-4">
                             <StatItemInline label="Reading Time" value={formatTime(stats.readingTime)} />
                             <StatItemInline label="Speaking Time" value={formatTime(stats.speakingTime)} />
                             <div className="pt-2">
-                                <label className="text-xs text-white/40 mb-1 block uppercase tracking-wider">Breakdown</label>
-                                <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-white/5 border border-white/10">
+                                <label className="text-xs text-foreground/40 mb-1 block uppercase tracking-wider">Breakdown</label>
+                                <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-foreground/5 border border-border-glass">
                                     <div style={{ width: `${(stats.breakdown.uppercase / (stats.characters || 1)) * 100}%` }} className="bg-blue-500" title="Uppercase" />
                                     <div style={{ width: `${(stats.breakdown.lowercase / (stats.characters || 1)) * 100}%` }} className="bg-indigo-500" title="Lowercase" />
                                     <div style={{ width: `${(stats.breakdown.digits / (stats.characters || 1)) * 100}%` }} className="bg-emerald-500" title="Digits" />
                                     <div style={{ width: `${(stats.breakdown.special / (stats.characters || 1)) * 100}%` }} className="bg-rose-500" title="Special" />
                                 </div>
-                                <div className="flex justify-between text-[10px] text-white/40 mt-1">
+                                <div className="flex justify-between text-[10px] text-foreground/40 mt-1">
                                     <span>ABC: {stats.breakdown.uppercase}</span>
                                     <span>abc: {stats.breakdown.lowercase}</span>
                                     <span>123: {stats.breakdown.digits}</span>
@@ -157,21 +157,21 @@ export const TextStatistics: React.FC = () => {
                     <div className="glass-panel p-5 space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <BarChart3 className="w-4 h-4 text-orange-400" />
-                            <h3 className="text-sm font-semibold text-white/70">Top Keywords</h3>
+                            <h3 className="text-sm font-semibold text-foreground/70">Top Keywords</h3>
                         </div>
                         <div className="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-2">
                             {stats.topKeywords.length > 0 ? (
                                 stats.topKeywords.map((item, i) => (
                                     <div key={i} className="flex items-center justify-between group">
-                                        <span className="text-xs text-white/60 truncate max-w-[120px]">{item.word}</span>
+                                        <span className="text-xs text-foreground/60 truncate max-w-[120px]">{item.word}</span>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[10px] text-white/30">{item.count} hits</span>
+                                            <span className="text-[10px] text-foreground/30">{item.count} hits</span>
                                             <span className="text-xs font-medium text-orange-400 w-10 text-right">{item.density}%</span>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-xs text-white/30 italic text-center py-4">No keywords detected</div>
+                                <div className="text-xs text-foreground/30 italic text-center py-4">No keywords detected</div>
                             )}
                         </div>
                     </div>
@@ -183,14 +183,14 @@ export const TextStatistics: React.FC = () => {
 
 const StatItem: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
     <div className="flex flex-col">
-        <span className="text-[10px] uppercase tracking-wider text-white/40">{label}</span>
-        <span className="text-lg font-bold text-white/90">{value}</span>
+        <span className="text-[10px] uppercase tracking-wider text-foreground/40">{label}</span>
+        <span className="text-lg font-bold text-foreground/90">{value}</span>
     </div>
 );
 
 const StatItemInline: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <div className="flex justify-between items-center">
-        <span className="text-xs text-white/60">{label}</span>
-        <span className="text-sm font-semibold text-white/90">{value}</span>
+        <span className="text-xs text-foreground/60">{label}</span>
+        <span className="text-sm font-semibold text-foreground/90">{value}</span>
     </div>
 );
