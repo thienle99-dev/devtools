@@ -109,6 +109,10 @@ let statsMenuData: {
   cpu: number;
   memory: { used: number; total: number; percent: number };
   network: { rx: number; tx: number };
+  sensors?: { cpuTemp: number };
+  gpu?: { load: number; memoryUsed: number; memoryTotal: number };
+  battery?: { level: number; charging: boolean; timeRemaining: number };
+  enabledModules?: string[];
 } | null = null;
 
 // Health monitor data for System Cleaner tray widget
@@ -333,25 +337,103 @@ function updateTrayMenu() {
 
   // === STATS MONITOR ===
   if (statsMenuData) {
+    const isModuleEnabled = (mod: string) => statsMenuData?.enabledModules?.includes(mod) ?? true;
+
     template.push({
       label: '📊 Stats Monitor',
       enabled: false,
     });
+
+    if (isModuleEnabled('cpu')) {
+      const cpuLoad = statsMenuData.cpu ?? 0;
+      const cpuTemp = statsMenuData.sensors?.cpuTemp;
+      template.push({
+        label: `   CPU: ${cpuLoad.toFixed(1)}% ${cpuTemp !== undefined ? `(${cpuTemp.toFixed(1)}°C)` : ''}`,
+        enabled: false,
+      });
+    }
+
+    if (isModuleEnabled('memory')) {
+      const memUsed = statsMenuData.memory?.used ?? 0;
+      const memTotal = statsMenuData.memory?.total ?? 0;
+      const memPercent = statsMenuData.memory?.percent ?? 0;
+      template.push({
+        label: `   RAM: ${formatBytes(memUsed)} / ${formatBytes(memTotal)} (${memPercent.toFixed(1)}%)`,
+        enabled: false,
+      });
+    }
+
+    if (isModuleEnabled('gpu') && statsMenuData.gpu) {
+      const gpuLoad = statsMenuData.gpu.load ?? 0;
+      const gpuMemUsed = statsMenuData.gpu.memoryUsed ?? 0;
+      const gpuMemTotal = statsMenuData.gpu.memoryTotal ?? 0;
+      template.push({
+        label: `   GPU: ${gpuLoad.toFixed(1)}% (${formatBytes(gpuMemUsed)} / ${formatBytes(gpuMemTotal)})`,
+        enabled: false,
+      });
+    }
+
+    if (isModuleEnabled('network')) {
+      const rx = statsMenuData.network?.rx ?? 0;
+      const tx = statsMenuData.network?.tx ?? 0;
+      template.push({
+        label: `   Net: ↑${formatSpeed(rx)} ↓${formatSpeed(tx)}`,
+        enabled: false,
+      });
+    }
+
+    if (isModuleEnabled('battery') && statsMenuData.battery) {
+      const battery = statsMenuData.battery;
+      const batLevel = battery.level ?? 0;
+      template.push({
+        label: `   Bat: ${batLevel}% ${battery.charging ? '(Charging)' : ''}`,
+        enabled: false,
+      });
+    }
+
+    const toggleModule = (mod: string) => {
+      win?.webContents.send('stats-toggle-module', mod);
+    };
+
     template.push({
-      label: `CPU: ${statsMenuData.cpu.toFixed(1)}%`,
-      enabled: false,
+      label: '⚙️ Toggle Modules',
+      submenu: [
+        {
+          label: 'CPU Usage',
+          type: 'checkbox',
+          checked: isModuleEnabled('cpu'),
+          click: () => toggleModule('cpu'),
+        },
+        {
+          label: 'Memory Usage',
+          type: 'checkbox',
+          checked: isModuleEnabled('memory'),
+          click: () => toggleModule('memory'),
+        },
+        {
+          label: 'GPU Usage',
+          type: 'checkbox',
+          checked: isModuleEnabled('gpu'),
+          click: () => toggleModule('gpu'),
+        },
+        {
+          label: 'Network Speed',
+          type: 'checkbox',
+          checked: isModuleEnabled('network'),
+          click: () => toggleModule('network'),
+        },
+        {
+          label: 'Battery Info',
+          type: 'checkbox',
+          checked: isModuleEnabled('battery'),
+          click: () => toggleModule('battery'),
+        },
+      ]
     });
-    template.push({
-      label: `Memory: ${formatBytes(statsMenuData.memory.used)} / ${formatBytes(statsMenuData.memory.total)} (${statsMenuData.memory.percent.toFixed(1)}%)`,
-      enabled: false,
-    });
-    template.push({
-      label: `Network: ↑${formatSpeed(statsMenuData.network.rx)} ↓${formatSpeed(statsMenuData.network.tx)}`,
-      enabled: false,
-    });
+
     template.push({ type: 'separator' });
     template.push({
-      label: 'Open Stats Monitor',
+      label: '▸ Open Stats Monitor',
       click: () => {
         win?.show();
         win?.webContents.send('navigate-to', '/stats-monitor');

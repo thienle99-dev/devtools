@@ -25,6 +25,7 @@ export async function generateFinalImage(
         inset?: number;
         showWindowControls?: boolean;
         watermark?: { text: string; opacity: number; position: string };
+        aspectRatio?: string;
     }
 ): Promise<string> {
     // 1. Generate the base image (Auto-balance + Redactions + Background/Padding) using Native Canvas API
@@ -53,12 +54,20 @@ export async function generateFinalImage(
                 }
             }
 
-            // Apply background if set
-            if (options.background && options.backgroundPadding && options.backgroundPadding > 0) {
-                const finalCanvas = addPaddingToScreenshot(canvas, options.backgroundPadding, options.background);
+            // Apply background/padding/ratio if any are set
+            const hasBackground = !!options.background;
+            const hasPadding = (options.backgroundPadding || 0) > 0;
+            const hasRatio = options.aspectRatio && options.aspectRatio !== 'auto';
 
-                // Handle image background separately
-                if (options.background.type === 'image') {
+            if (hasBackground || hasPadding || hasRatio) {
+                // Ensure we have a background object if we need to pad/ratio
+                const background = options.background || { type: 'solid', color: 'transparent' };
+                const padding = options.backgroundPadding || 0;
+
+                const finalCanvas = addPaddingToScreenshot(canvas, padding, background, options.aspectRatio);
+
+                // Handle image background separately if it's an image
+                if (background.type === 'image') {
                     const bgCanvas = document.createElement('canvas');
                     bgCanvas.width = finalCanvas.width;
                     bgCanvas.height = finalCanvas.height;
@@ -68,46 +77,25 @@ export async function generateFinalImage(
                         bgCtx,
                         bgCanvas.width,
                         bgCanvas.height,
-                        options.background.imageUrl,
-                        options.background.blur,
-                        options.background.opacity
+                        background.imageUrl,
+                        background.blur,
+                        background.opacity
                     );
 
-                    // Draw screenshot on top
+                    // Draw original screenshot (centered)
                     bgCtx.shadowColor = 'rgba(0, 0, 0, 0.3)';
                     bgCtx.shadowBlur = 20;
                     bgCtx.shadowOffsetX = 0;
                     bgCtx.shadowOffsetY = 10;
-                    bgCtx.drawImage(canvas, options.backgroundPadding, options.backgroundPadding);
+
+                    const x = (bgCanvas.width - canvas.width) / 2;
+                    const y = (bgCanvas.height - canvas.height) / 2;
+                    bgCtx.drawImage(canvas, x, y);
 
                     resolve(bgCanvas.toDataURL('image/png'));
                 } else {
                     resolve(finalCanvas.toDataURL('image/png'));
                 }
-            } else if (options.background && (!options.backgroundPadding || options.backgroundPadding === 0)) {
-                // Background without padding
-                const bgCanvas = document.createElement('canvas');
-                bgCanvas.width = canvas.width;
-                bgCanvas.height = canvas.height;
-                const bgCtx = bgCanvas.getContext('2d')!;
-
-                if (options.background.type === 'solid') {
-                    applySolidBackground(bgCtx, bgCanvas.width, bgCanvas.height, options.background.color);
-                } else if ('colors' in options.background) {
-                    applyGradientBackground(bgCtx, bgCanvas.width, bgCanvas.height, options.background);
-                } else if (options.background.type === 'image') {
-                    await applyImageBackground(
-                        bgCtx,
-                        bgCanvas.width,
-                        bgCanvas.height,
-                        options.background.imageUrl,
-                        options.background.blur,
-                        options.background.opacity
-                    );
-                }
-
-                bgCtx.drawImage(canvas, 0, 0);
-                resolve(bgCanvas.toDataURL('image/png'));
             } else {
                 resolve(canvas.toDataURL('image/png'));
             }
@@ -131,7 +119,7 @@ export async function generateFinalImage(
         try {
             // Lazy load Fabric.js
             const fabric = await loadFabric();
-            
+
             // Create a virtual canvas element
             const canvasEl = document.createElement('canvas');
             const fabricCanvas = new fabric.StaticCanvas(canvasEl);

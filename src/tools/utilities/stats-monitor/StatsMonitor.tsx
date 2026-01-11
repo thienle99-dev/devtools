@@ -1,4 +1,4 @@
-import React, { useMemo, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import { useStatsStore } from './store/statsStore';
 import { getModuleColors } from './constants/moduleColors';
@@ -69,14 +69,38 @@ const StatsMonitor: React.FC = () => {
           rx: metrics.network?.stats[0]?.rx_sec || 0,
           tx: metrics.network?.stats[0]?.tx_sec || 0,
         },
+        battery: metrics.battery ? {
+          level: metrics.battery.percent,
+          charging: metrics.battery.isCharging,
+          timeRemaining: metrics.battery.timeRemaining
+        } : undefined,
+        sensors: metrics.sensors && metrics.sensors.cpuTemperature ? {
+          cpuTemp: metrics.sensors.cpuTemperature.main
+        } : undefined,
+        gpu: metrics.gpu && metrics.gpu.controllers.length > 0 ? {
+          load: metrics.gpu.controllers[0].utilizationGpu,
+          memoryUsed: metrics.gpu.controllers[0].vram * (metrics.gpu.controllers[0].utilizationMemory / 100),
+          memoryTotal: metrics.gpu.controllers[0].vram
+        } : undefined,
+        enabledModules // Gửi cả danh sách các module đang bật để hiển thị linh hoạt
       });
     }
-  }, [metrics, hasEnabledModules]);
+  }, [metrics, hasEnabledModules, enabledModules]);
 
   const allModules = React.useMemo(() => ['cpu', 'memory', 'network', 'disk', 'gpu', 'battery', 'sensors', 'bluetooth', 'timezones'], []);
 
   const [showIntervalMenu, setShowIntervalMenu] = React.useState(false);
   const intervalMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Listen for module toggles from the tray
+  React.useEffect(() => {
+    if (window.ipcRenderer) {
+      const cleanup = window.ipcRenderer.on('stats-toggle-module', (_event: any, mod: string) => {
+        toggleModule(mod);
+      });
+      return cleanup;
+    }
+  }, [toggleModule]);
 
   // Close menu when clicking outside
   React.useEffect(() => {
@@ -92,7 +116,7 @@ const StatsMonitor: React.FC = () => {
     }
   }, [showIntervalMenu]);
 
-  const currentIntervalLabel = useMemo(() => {
+  const currentIntervalLabel = React.useMemo(() => {
     const preset = INTERVAL_PRESETS.find(p => p.value === preferences.updateInterval);
     return preset ? preset.label : `${preferences.updateInterval / 1000}s`;
   }, [preferences.updateInterval]);
@@ -110,7 +134,7 @@ const StatsMonitor: React.FC = () => {
             {allModules.map(mod => {
               const isEnabled = enabledModules.includes(mod);
               const colors = getModuleColors(mod);
-              
+
               return (
                 <button
                   key={mod}
@@ -118,16 +142,15 @@ const StatsMonitor: React.FC = () => {
                   className={`
                     px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap
                     flex items-center gap-2 min-w-fit relative
-                    ${isEnabled 
-                      ? `${colors.bg} ${colors.text} shadow-sm border ${colors.border}` 
+                    ${isEnabled
+                      ? `${colors.bg} ${colors.text} shadow-sm border ${colors.border}`
                       : 'bg-transparent text-foreground-muted/60 border border-transparent hover:bg-[var(--color-glass-input)] hover:text-foreground-muted hover:border-[var(--color-glass-border)]'
                     }
                   `}
                 >
-                  <span 
-                    className={`w-2 h-2 rounded-full transition-colors duration-200 shrink-0 ${
-                      isEnabled ? colors.dot : 'bg-foreground-muted/40'
-                    }`} 
+                  <span
+                    className={`w-2 h-2 rounded-full transition-colors duration-200 shrink-0 ${isEnabled ? colors.dot : 'bg-foreground-muted/40'
+                      }`}
                   />
                   <span className="font-semibold">{mod.toUpperCase()}</span>
                 </button>
@@ -160,11 +183,10 @@ const StatsMonitor: React.FC = () => {
                 updatePreferences({ updateInterval: preset.value });
                 setShowIntervalMenu(false);
               }}
-              className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${
-                preferences.updateInterval === preset.value
-                  ? 'bg-[var(--color-glass-button-hover)] text-foreground'
-                  : 'text-foreground-muted hover:bg-[var(--color-glass-input)] hover:text-foreground'
-              }`}
+              className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors ${preferences.updateInterval === preset.value
+                ? 'bg-[var(--color-glass-button-hover)] text-foreground'
+                : 'text-foreground-muted hover:bg-[var(--color-glass-input)] hover:text-foreground'
+                }`}
             >
               {preset.label}
             </button>
@@ -185,7 +207,7 @@ const StatsMonitor: React.FC = () => {
             </h1>
             <p className="text-foreground-muted text-sm mt-1">Real-time performance metrics</p>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {renderIntervalControl()}
             <button className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]">
@@ -219,7 +241,7 @@ const StatsMonitor: React.FC = () => {
             </h1>
             <p className="text-foreground-muted text-sm mt-1">Real-time performance metrics</p>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {renderIntervalControl()}
             <button className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]">
@@ -250,12 +272,12 @@ const StatsMonitor: React.FC = () => {
     <div className="h-full flex flex-col p-6 gap-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-2">
         <div>
-           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
             System Monitor
           </h1>
           <p className="text-foreground-muted text-sm mt-1">Real-time performance metrics</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {renderIntervalControl()}
           <button className="p-2.5 hover:bg-[var(--color-glass-button-hover)] rounded-lg transition-colors text-foreground-muted hover:text-foreground border border-[var(--color-glass-border)]">
@@ -272,7 +294,7 @@ const StatsMonitor: React.FC = () => {
             <CPUModule data={metrics.cpu} />
           </Suspense>
         )}
-        
+
         {enabledModules.includes('memory') && metrics?.memory && (
           <Suspense fallback={<ModuleSkeleton />}>
             <MemoryModule data={metrics.memory} />
@@ -322,8 +344,8 @@ const StatsMonitor: React.FC = () => {
         )}
       </div>
 
-       {/* Debug / Raw Data View (Optional, maybe hidden or collapsible) */}
-       {/* <div className="mt-8 p-4 bg-black/40 rounded-lg overflow-auto max-h-60 text-xs font-mono text-white/30">
+      {/* Debug / Raw Data View (Optional, maybe hidden or collapsible) */}
+      {/* <div className="mt-8 p-4 bg-black/40 rounded-lg overflow-auto max-h-60 text-xs font-mono text-white/30">
         <pre>{JSON.stringify(metrics, null, 2)}</pre>
        </div> */}
     </div>

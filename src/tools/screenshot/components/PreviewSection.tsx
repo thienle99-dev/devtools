@@ -31,6 +31,7 @@ export const PreviewSection: React.FC = () => {
         inset,
         showWindowControls,
         watermark,
+        aspectRatio,
     } = useXnapperStore();
 
     const canvasPreviewRef = useRef<CanvasPreviewHandle>(null);
@@ -69,6 +70,7 @@ export const PreviewSection: React.FC = () => {
                 inset,
                 showWindowControls,
                 watermark,
+                aspectRatio,
             });
 
             // Convert to blob and copy

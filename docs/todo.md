@@ -748,22 +748,22 @@
 
 ### 9.1 Core Monitoring Modules
 
-- [ ] CPU Module (real-time utilization, per-core usage, top processes, temperature, frequency)
-- [ ] GPU Module (utilization, VRAM, temperature, active GPU detection)
-- [ ] Memory Module (RAM usage, memory pressure, swap, breakdown)
-- [ ] Disk Module (disk activity, space, I/O, SMART data)
-- [ ] Network Module (in/out speeds, active connections, interface, data usage)
-- [ ] Battery Module (level, status, time remaining, health)
-- [ ] Sensors Module (temperature, voltage, power, fan speed)
-- [ ] Bluetooth Module (connected devices, status, battery, signal strength)
-- [ ] Time Zones Module (multiple time zones, world clock)
+- [x] CPU Module (real-time utilization, per-core usage, top processes, temperature, frequency)
+- [x] GPU Module (utilization, VRAM, temperature, active GPU detection)
+- [x] Memory Module (RAM usage, memory pressure, swap, breakdown)
+- [x] Disk Module (disk activity, space, I/O, SMART data)
+- [x] Network Module (in/out speeds, active connections, interface, data usage)
+- [x] Battery Module (level, status, time remaining, health)
+- [x] Sensors Module (temperature, voltage, power, fan speed)
+- [x] Bluetooth Module (connected devices, status, battery, signal strength)
+- [x] Time Zones Module (multiple time zones, world clock)
 
 ### 9.2 Menu Bar Integration
 
-- [ ] Native menu bar dropdown
+- [x] Native menu bar dropdown
 - [ ] Menu bar icon states (color-coded, animated)
 - [ ] Real-time graphs in menu
-- [ ] Quick actions (toggle modules)
+- [x] Quick actions (toggle modules)
 - [ ] Settings modal functionality
 - [ ] Module reordering (drag & drop)
 - [ ] Customizable time zones
@@ -780,13 +780,13 @@
 
 ### 9.4 Implementation Tasks
 
-- [ ] Add BluetoothStats, TimeZonesStats types
-- [ ] Implement `get-bluetooth-stats` and `get-timezones-stats` IPC handlers
-- [ ] Add getBluetoothStats and getTimeZonesStats to preload API
-- [ ] Update useSystemMetrics hook
-- [ ] Create BluetoothModule component
-- [ ] Create TimeZonesModule component
-- [ ] Add modules to StatsMonitor
+- [x] Add BluetoothStats, TimeZonesStats types
+- [x] Implement `get-bluetooth-stats` and `get-timezones-stats` IPC handlers
+- [x] Add getBluetoothStats and getTimeZonesStats to preload API
+- [x] Update useSystemMetrics hook
+- [x] Create BluetoothModule component
+- [x] Create TimeZonesModule component
+- [x] Add modules to StatsMonitor
 - [ ] Create statsTray with dynamic icon
 
 ---
@@ -795,26 +795,26 @@
 
 ### 10.1 Core Features
 
-- [ ] Installed Apps Tab (list, search, filter, uninstall)
-- [ ] Running Processes Tab (real-time monitoring, kill process)
-- [ ] App Type Filter (All/User/System)
-- [ ] Process Grouping (by name)
-- [ ] Color-coded CPU/RAM usage
-- [ ] Badge indicators for system vs user apps
-- [ ] Confirmation dialogs for destructive actions
+- [x] Installed Apps Tab (list, search, filter, uninstall)
+- [x] Running Processes Tab (real-time monitoring, kill process)
+- [x] App Type Filter (All/User/System)
+- [x] Process Grouping (by name)
+- [x] Color-coded CPU/RAM usage
+- [x] Badge indicators for system vs user apps
+- [x] Confirmation dialogs for destructive actions
 
 ### 10.2 Implementation Tasks
 
-- [ ] Create TypeScript types for InstalledApp and RunningProcess
-- [ ] Implement backend IPC handlers (get-installed-apps, get-running-processes, uninstall-app, kill-process)
-- [ ] Add appManagerAPI to preload
-- [ ] Create useInstalledApps hook with filter logic
-- [ ] Create useRunningProcesses hook with real-time updates
-- [ ] Create InstalledAppsTab component
-- [ ] Create RunningProcessesTab component
-- [ ] Create UI components (AppCard, ProcessCard, ProcessMetrics, AppTypeFilter)
-- [ ] Create main ApplicationManager component
-- [ ] Register tool in tools registry
+- [x] Create TypeScript types for InstalledApp and RunningProcess
+- [x] Implement backend IPC handlers (get-installed-apps, get-running-processes, uninstall-app, kill-process)
+- [x] Add appManagerAPI to preload
+- [x] Create useInstalledApps hook with filter logic
+- [x] Create useRunningProcesses hook with real-time updates
+- [x] Create InstalledAppsTab component
+- [x] Create RunningProcessesTab component
+- [x] Create UI components (AppCard, ProcessCard, ProcessMetrics, AppTypeFilter)
+- [x] Create main ApplicationManager component
+- [x] Register tool in tools registry
 
 ### 10.3 Safety & Performance
 

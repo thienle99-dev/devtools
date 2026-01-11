@@ -26,6 +26,8 @@ export const XnapperStylePanel: React.FC = () => {
         setWatermark,
         shadowOffsetY,
         setShadowOffsetY,
+        aspectRatio,
+        setAspectRatio,
     } = useXnapperStore();
 
     const [selectedBg, setSelectedBg] = useState('desktop');
@@ -67,7 +69,28 @@ export const XnapperStylePanel: React.FC = () => {
                     </TabsList>
                 </div>
 
-                <TabsContent value="design" className="flex-1 overflow-y-auto p-4 space-y-6">
+                <TabsContent value="design" className="space-y-6 pt-4 mt-0 border-none outline-none">
+                    {/* Aspect Ratio Section */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-foreground-secondary">Canvas Ratio</label>
+                        <div className="flex flex-wrap gap-2">
+                            {ASPECT_RATIO_PRESETS.map((preset) => (
+                                <button
+                                    key={preset.id}
+                                    onClick={() => setAspectRatio(preset.id)}
+                                    className={cn(
+                                        "px-2.5 py-1.5 text-[10px] font-bold rounded border transition-all",
+                                        aspectRatio === preset.id
+                                            ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20"
+                                            : "bg-glass-panel text-foreground-muted border-border-glass hover:text-foreground hover:border-foreground-muted"
+                                    )}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-foreground">Your Preset</h3>

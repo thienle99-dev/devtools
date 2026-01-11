@@ -103,6 +103,10 @@ interface XnapperState {
     setIsAnalyzing: (analyzing: boolean) => void;
     isUploading: boolean;
     setIsUploading: (uploading: boolean) => void;
+    // Aspect Ratio
+    aspectRatio: string; // 'auto', '1:1', '16:9', etc.
+    setAspectRatio: (ratio: string) => void;
+
     lastUploadUrl: string | null;
     setLastUploadUrl: (url: string | null) => void;
 }
@@ -206,6 +210,10 @@ export const useXnapperStore = create<XnapperState>()(
             setIsUploading: (uploading) => set({ isUploading: uploading }),
             lastUploadUrl: null,
             setLastUploadUrl: (url) => set({ lastUploadUrl: url }),
+
+            // Aspect Ratio
+            aspectRatio: 'auto',
+            setAspectRatio: (ratio) => set({ aspectRatio: ratio }),
         }),
         {
             name: 'xnapper-storage',
@@ -214,6 +222,7 @@ export const useXnapperStore = create<XnapperState>()(
                 exportFormat: state.exportFormat,
                 exportQuality: state.exportQuality,
                 autoBalance: state.autoBalance,
+                aspectRatio: state.aspectRatio,
                 backgroundPadding: state.backgroundPadding,
                 borderRadius: state.borderRadius,
                 shadowBlur: state.shadowBlur,

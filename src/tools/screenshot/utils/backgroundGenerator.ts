@@ -231,35 +231,56 @@ export function applySolidBackground(
 }
 
 /**
- * Add padding/margin around screenshot on background
+ * Add padding/margin around screenshot on background, with optional aspect ratio
  */
 export function addPaddingToScreenshot(
     originalCanvas: HTMLCanvasElement,
     padding: number,
-    background: Background
+    background: Background,
+    aspectRatio?: string
 ): HTMLCanvasElement {
-    const newWidth = originalCanvas.width + padding * 2;
-    const newHeight = originalCanvas.height + padding * 2;
+    let newWidth = originalCanvas.width + padding * 2;
+    let newHeight = originalCanvas.height + padding * 2;
+
+    // Apply Aspect Ratio if specified
+    if (aspectRatio && aspectRatio !== 'auto') {
+        const [w, h] = aspectRatio.split(':').map(Number);
+        if (!isNaN(w) && !isNaN(h)) {
+            const targetRatio = w / h;
+            const currentRatio = newWidth / newHeight;
+
+            if (currentRatio < targetRatio) {
+                // Too narrow, increase width
+                newWidth = newHeight * targetRatio;
+            } else if (currentRatio > targetRatio) {
+                // Too wide, increase height
+                newHeight = newWidth / targetRatio;
+            }
+        }
+    }
 
     const canvas = document.createElement('canvas');
-    canvas.width = newWidth;
-    canvas.height = newHeight;
+    canvas.width = Math.round(newWidth);
+    canvas.height = Math.round(newHeight);
     const ctx = canvas.getContext('2d')!;
 
     // Apply background
     if (background.type === 'solid') {
-        applySolidBackground(ctx, newWidth, newHeight, background.color);
+        applySolidBackground(ctx, canvas.width, canvas.height, background.color);
     } else if ('colors' in background) {
-        applyGradientBackground(ctx, newWidth, newHeight, background);
+        applyGradientBackground(ctx, canvas.width, canvas.height, background);
     }
 
-    // Draw original screenshot with shadow
+    // Draw original screenshot with shadow (centered)
     ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
     ctx.shadowBlur = 20;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 10;
 
-    ctx.drawImage(originalCanvas, padding, padding);
+    const x = (canvas.width - originalCanvas.width) / 2;
+    const y = (canvas.height - originalCanvas.height) / 2;
+
+    ctx.drawImage(originalCanvas, x, y);
 
     return canvas;
 }

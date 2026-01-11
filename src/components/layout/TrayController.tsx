@@ -13,8 +13,8 @@ export const TrayController = () => {
     // Sync history to Tray
     useEffect(() => {
         const recentTools = history
-            .map(id => {
-                const tool = TOOLS.find(t => t.id === id);
+            .map(item => {
+                const tool = TOOLS.find(t => t.id === item.id);
                 return tool ? { id: tool.id, name: tool.name } : null;
             })
             .filter((t): t is { id: string; name: string } => t !== null)
