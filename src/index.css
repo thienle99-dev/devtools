@@ -138,6 +138,7 @@ body {
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 
   /* Map theme variables to utility classes */
+  --color-background: var(--color-bg-main);
   --color-foreground: var(--color-text-primary);
   --color-foreground-secondary: var(--color-text-secondary);
   --color-foreground-muted: var(--color-text-muted);

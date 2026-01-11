@@ -27,9 +27,9 @@ export const TrimmingModal: React.FC<TrimmingModalProps> = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-background/80 backdrop-blur-md"
+                    className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-md"
                 >
-                    <div className="w-full max-w-2xl bg-glass-background rounded-3xl border border-border-glass p-8 shadow-2xl relative">
+                    <div className="w-full max-w-2xl glass-panel rounded-3xl border border-border-glass p-8 shadow-2xl relative">
                         <h3 className="text-xl font-black mb-6 flex items-center gap-3">
                             <Scissors className="text-indigo-500" /> Trim Clip: <span className="text-foreground-secondary">{file.path.split(/[\\/]/).pop()}</span>
                         </h3>

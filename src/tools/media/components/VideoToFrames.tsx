@@ -1307,7 +1307,7 @@ export const VideoToFrames: React.FC = () => {
             </div>
             {/* Analytics Modal */}
             {showAnalytics && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="glass-panel border border-border-glass rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] overflow-hidden flex flex-col">
                         <div className="p-4 border-b border-border-glass flex items-center justify-between bg-foreground/[0.02]">
                             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1410,7 +1410,7 @@ export const VideoToFrames: React.FC = () => {
 
             {/* Export Modal Overlay */}
             {showExportOptions && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="glass-panel border border-border-glass rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
                         <div className="p-4 border-b border-border-glass flex items-center justify-between bg-foreground/[0.02]">
                             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
