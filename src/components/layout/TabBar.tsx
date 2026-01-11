@@ -5,6 +5,7 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { TOOLS } from '../../tools/registry';
 import { TabContextMenu } from '../ui/TabContextMenu';
+import { AnimatePresence } from 'framer-motion';
 
 export const TabBar: React.FC = React.memo(() => {
     const tabs = useTabStore(state => state.tabs);
@@ -196,8 +197,8 @@ export const TabBar: React.FC = React.memo(() => {
                                 className={cn(
                                     "tab-item-chrome group flex items-center gap-1.5 h-7 px-3 cursor-pointer transition-all duration-200 rounded-t-lg",
                                     "min-w-[120px] max-w-[200px] relative",
-                                    isActive 
-                                        ? "tab-item-chrome-active bg-[var(--color-glass-panel)]" 
+                                    isActive
+                                        ? "tab-item-chrome-active bg-[var(--color-glass-panel)]"
                                         : "tab-item-chrome-inactive hover:bg-[var(--color-glass-button)]",
                                     isFirst && "tab-item-first",
                                     isLast && "tab-item-last"
@@ -269,33 +270,35 @@ export const TabBar: React.FC = React.memo(() => {
             )}
 
             {/* Context Menu */}
-            {contextMenu && (() => {
-                // Memoize calculations to prevent re-renders
-                const tabIndex = tabs.findIndex(t => t.id === contextMenu.tabId);
-                const isActive = contextMenu.tabId === activeTabId;
-                const canCloseLeft = tabIndex > 0;
-                const canCloseRight = tabIndex < tabs.length - 1;
-                const canCloseOthers = tabs.length > 1;
+            <AnimatePresence>
+                {contextMenu && (() => {
+                    // Memoize calculations to prevent re-renders
+                    const tabIndex = tabs.findIndex(t => t.id === contextMenu.tabId);
+                    const isActive = contextMenu.tabId === activeTabId;
+                    const canCloseLeft = tabIndex > 0;
+                    const canCloseRight = tabIndex < tabs.length - 1;
+                    const canCloseOthers = tabs.length > 1;
 
-                return (
-                    <TabContextMenu
-                        key={contextMenu.tabId} // Key to force remount when tab changes
-                        x={contextMenu.x}
-                        y={contextMenu.y}
-                        tabId={contextMenu.tabId}
-                        isActive={isActive}
-                        canCloseLeft={canCloseLeft}
-                        canCloseRight={canCloseRight}
-                        canCloseOthers={canCloseOthers}
-                        onClose={handleCloseContextMenu}
-                        onCloseTab={() => handleCloseTabFromMenu(contextMenu.tabId)}
-                        onCloseOthers={() => handleCloseOthersFromMenu(contextMenu.tabId)}
-                        onCloseToRight={() => handleCloseToRightFromMenu(contextMenu.tabId)}
-                        onCloseToLeft={() => handleCloseToLeftFromMenu(contextMenu.tabId)}
-                        onCloseAll={handleCloseAllFromMenu}
-                    />
-                );
-            })()}
+                    return (
+                        <TabContextMenu
+                            key={contextMenu.tabId} // Key to force remount when tab changes
+                            x={contextMenu.x}
+                            y={contextMenu.y}
+                            tabId={contextMenu.tabId}
+                            isActive={isActive}
+                            canCloseLeft={canCloseLeft}
+                            canCloseRight={canCloseRight}
+                            canCloseOthers={canCloseOthers}
+                            onClose={handleCloseContextMenu}
+                            onCloseTab={() => handleCloseTabFromMenu(contextMenu.tabId)}
+                            onCloseOthers={() => handleCloseOthersFromMenu(contextMenu.tabId)}
+                            onCloseToRight={() => handleCloseToRightFromMenu(contextMenu.tabId)}
+                            onCloseToLeft={() => handleCloseToLeftFromMenu(contextMenu.tabId)}
+                            onCloseAll={handleCloseAllFromMenu}
+                        />
+                    );
+                })()}
+            </AnimatePresence>
         </div>
     );
 });
