@@ -218,9 +218,9 @@
 
 ### 3.5 Text Tools
 
-- [ ] Lorem ipsum generator
-- [ ] Text statistics
-- [ ] Text diff
+- [x] Lorem ipsum generator
+- [x] Text statistics
+- [x] Text diff
 - [ ] String obfuscator
 - [x] Case converter (CaseConverter tool in converters)
 - [ ] ASCII Art Text Generator
@@ -234,9 +234,9 @@
 
 ### 3.7 Math & Measurement Tools
 
-- [ ] Math evaluator
-- [ ] Percentage calculator
-- [ ] Temperature converter
+- [x] Math evaluator
+- [x] Percentage calculator
+- [x] Temperature converter
 - [ ] Chronometer
 
 ### 3.8 Image Tools

@@ -13,6 +13,7 @@ import {
     Database,
     Binary,
     Braces,
+    Calculator,
     FileImage,
     Image as ImageIcon,
     Settings,
@@ -51,11 +52,14 @@ import {
     Package,
     Film,
     // Youtube,
-    Music
+    Music,
+    AlignLeft,
+    BarChart3,
+    Thermometer
 } from 'lucide-react';
 
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math';
 
 export interface ToolDefinition {
     id: string;
@@ -89,6 +93,8 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'utilities', name: 'Utilities', icon: Box, color: 'text-yellow-400' },
     { id: 'development', name: 'Dev Utils', icon: Code2, color: 'text-pink-400' },
     { id: 'image', name: 'Image Tools', icon: ImageIcon, color: 'text-purple-400' },
+    { id: 'text', name: 'Text Tools', icon: Type, color: 'text-indigo-400' },
+    { id: 'math', name: 'Math Tools', icon: Percent, color: 'text-emerald-400' },
 ];
 
 // Lazy load all tool components for better performance
@@ -159,10 +165,15 @@ const VideoStudio = React.lazy(() => import('@tools/media/VideoStudio'));
 // const TiktokDownloader = React.lazy(() => import('@tools/media/TiktokDownloader'));
 const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
 const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
-const SettingsPage = React.lazy(() => import('@pages/Settings'));
 const QrCodeGenerator = React.lazy(() => import('@tools/image/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));
 const ImageConverter = React.lazy(() => import('@tools/image/ImageConverter').then(m => ({ default: m.ImageConverter })));
 const DataUriGenerator = React.lazy(() => import('@tools/image/DataUriGenerator').then(m => ({ default: m.DataUriGenerator })));
+const LoremIpsumGenerator = React.lazy(() => import('@tools/text/LoremIpsumGenerator').then(m => ({ default: m.LoremIpsumGenerator })));
+const TextStatistics = React.lazy(() => import('@tools/text/TextStatistics').then(m => ({ default: m.TextStatistics })));
+const MathEvaluator = React.lazy(() => import('@tools/math/MathEvaluator').then(m => ({ default: m.MathEvaluator })));
+const PercentageCalculator = React.lazy(() => import('@tools/math/PercentageCalculator').then(m => ({ default: m.PercentageCalculator })));
+const TemperatureConverter = React.lazy(() => import('@tools/math/TemperatureConverter').then(m => ({ default: m.TemperatureConverter })));
+const SettingsPage = React.lazy(() => import('@pages/Settings'));
 
 // Import placeholders for now (we'll replace them as we build them)
 
@@ -911,6 +922,61 @@ export const TOOLS: ToolDefinition[] = [
         color: 'text-amber-400',
         component: DataUriGenerator,
         keywords: ['base64', 'image', 'data-uri', 'css', 'html', 'encode']
+    },
+    {
+        id: 'lorem-ipsum-generator',
+        name: 'Lorem Ipsum',
+        path: '/lorem-ipsum',
+        description: 'Generate placeholder text for layouts',
+        category: 'text',
+        icon: AlignLeft,
+        color: 'text-indigo-400',
+        component: LoremIpsumGenerator,
+        keywords: ['lorem', 'ipsum', 'text', 'placeholder', 'filler', 'generator'],
+    },
+    {
+        id: 'text-statistics',
+        name: 'Text Statistics',
+        path: '/text-stats',
+        description: 'Analyze text statistics and keyword density',
+        category: 'text',
+        icon: BarChart3,
+        color: 'text-indigo-400',
+        component: TextStatistics,
+        keywords: ['text', 'stats', 'word', 'count', 'reading', 'time', 'analysis'],
+    },
+    {
+        id: 'math-evaluator',
+        name: 'Math Evaluator',
+        path: '/math-evaluator',
+        description: 'Evaluate mathematical expressions',
+        category: 'math',
+        icon: Calculator,
+        color: 'text-emerald-400',
+        component: MathEvaluator,
+        keywords: ['math', 'calculator', 'evaluate', 'expression', 'scientific'],
+    },
+    {
+        id: 'percentage-calculator',
+        name: 'Percentage Calculator',
+        path: '/percentage',
+        description: 'Calculate percentages in various scenarios',
+        category: 'math',
+        icon: Percent,
+        color: 'text-emerald-400',
+        component: PercentageCalculator,
+        keywords: ['percent', 'percentage', 'math', 'calculator', 'increase', 'decrease'],
+    },
+    {
+        id: 'temperature-converter',
+        name: 'Temperature Converter',
+        path: '/temperature',
+        description: 'Convert between Celsius, Fahrenheit and Kelvin',
+        category: 'math',
+        icon: Thermometer,
+        color: 'text-emerald-400',
+        component: TemperatureConverter,
+        keywords: ['temperature', 'convert', 'celsius', 'fahrenheit', 'kelvin', 'math'],
     },
 
     // Settings (Special tool - not in any category)
