@@ -4,12 +4,11 @@ import path from 'path';
 import { app } from 'electron';
 import Store from 'electron-store';
 import { randomUUID } from 'crypto';
-import { execSync } from 'child_process';
-import type { 
-    TikTokDownloadOptions, 
-    TikTokVideoInfo, 
-    TikTokHistoryItem, 
-    TikTokDownloadProgress 
+import type {
+    TikTokDownloadOptions,
+    TikTokVideoInfo,
+    TikTokHistoryItem,
+    TikTokDownloadProgress
 } from '../../src/types/tiktok';
 
 const require = createRequire(import.meta.url);
@@ -35,7 +34,7 @@ export class TikTokDownloader {
     private initPromise: Promise<void>;
     private store: Store<StoreSchema>;
     private ffmpegPath: string | null = null;
-    
+
     // Queue System
     private downloadQueue: Array<{
         run: () => Promise<string>;
@@ -81,7 +80,7 @@ export class TikTokDownloader {
             // Check FFmpeg using smart helper
             const { FFmpegHelper } = await import('./ffmpeg-helper');
             const ffmpegPath = FFmpegHelper.getFFmpegPath();
-            
+
             if (ffmpegPath) {
                 this.ffmpegPath = ffmpegPath;
                 console.log('✅ TikTok Downloader: FFmpeg ready');
@@ -104,7 +103,7 @@ export class TikTokDownloader {
         await this.ensureInitialized();
 
         try {
-             const info: any = await this.ytDlp.getVideoInfo([
+            const info: any = await this.ytDlp.getVideoInfo([
                 url,
                 '--skip-download',
                 '--no-playlist',
@@ -178,7 +177,7 @@ export class TikTokDownloader {
             const info = await this.getVideoInfo(url);
             const sanitizedTitle = this.sanitizeFilename(info.title);
             const author = this.sanitizeFilename(info.authorUsername || info.author);
-            
+
             const downloadsPath = outputPath || this.store.get('settings.downloadPath') || app.getPath('downloads');
             const extension = format === 'audio' ? 'mp3' : 'mp4';
             const filename = `${author}_${sanitizedTitle}_${info.id}.${extension}`;
@@ -221,11 +220,11 @@ export class TikTokDownloader {
                 } else if (quality === 'medium') {
                     // Simple heuristic for medium? TikTok usually just has one or two streams via yt-dlp
                     // We'll trust 'best' for now unless specific reqs come up
-                    args.push('-f', 'best'); 
+                    args.push('-f', 'best');
                 } else {
                     args.push('-f', 'best');
                 }
-                
+
                 // Note on Watermark: yt-dlp for TikTok often grabs non-watermarked by default if available aka 'aweme' source
                 // Explicit watermark removal logic strictly depends on yt-dlp support at the time.
             }
@@ -246,10 +245,10 @@ export class TikTokDownloader {
 
                         output.split(/\r?\n/).forEach(line => {
                             if (!line.trim()) return;
-                            
+
                             // [download]  25.0% of 10.00MiB at 2.50MiB/s ETA 00:03
                             const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
-                            
+
                             if (progressMatch) {
                                 percent = parseFloat(progressMatch[1]);
                                 const sizeVal = parseFloat(progressMatch[2]);
@@ -259,7 +258,7 @@ export class TikTokDownloader {
                                 const etaStr = progressMatch[6]; // MM:SS
 
                                 // Approximate conversions for UI
-                                const unitMultipliers: any = { 'B': 1, 'KiB': 1024, 'MiB': 1024*1024, 'GiB': 1024*1024*1024 };
+                                const unitMultipliers: any = { 'B': 1, 'KiB': 1024, 'MiB': 1024 * 1024, 'GiB': 1024 * 1024 * 1024 };
                                 totalBytes = sizeVal * (unitMultipliers[sizeUnit] || 1);
                                 downloadedBytes = (percent / 100) * totalBytes;
                                 const speed = speedVal * (unitMultipliers[speedUnit] || 1);
@@ -292,8 +291,8 @@ export class TikTokDownloader {
                     if (code === 0) {
                         // verify file exists
                         if (fs.existsSync(outputTemplate)) {
-                             // Final callback
-                             if (progressCallback) {
+                            // Final callback
+                            if (progressCallback) {
                                 progressCallback({
                                     id: downloadId,
                                     percent: 100,
@@ -306,7 +305,7 @@ export class TikTokDownloader {
                                     filePath: outputTemplate
                                 });
                             }
-                            
+
                             // History
                             this.addToHistory({
                                 id: downloadId,
@@ -333,8 +332,8 @@ export class TikTokDownloader {
                 });
 
                 process.on('error', (err: Error) => {
-                     this.activeProcesses.delete(downloadId);
-                     reject(err);
+                    this.activeProcesses.delete(downloadId);
+                    reject(err);
                 });
             });
         } catch (error) {

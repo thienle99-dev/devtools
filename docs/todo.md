@@ -241,19 +241,19 @@
 
 ### 3.8 Image Tools
 
-- [ ] QR Code generator
-- [ ] WiFi QR Code generator
+- [x] QR Code generator
+- [x] WiFi QR Code generator
 - [ ] SVG placeholder generator
 - [ ] Camera recorder (capture ảnh/video từ webcam)
-- [ ] Image Format Converter (PNG, JPG, WebP, AVIF, SVG, etc.)
+- [x] Image Format Converter (PNG, JPG, WebP, AVIF, SVG, etc.)
 - [ ] HEIC to JPG Converter
 - [ ] ICO Generator (favicon)
-- [ ] WebP Converter
+- [x] WebP Converter
 - [ ] AVIF Converter
-- [ ] Image Compressor (JPG, PNG, WebP)
+- [x] Image Compressor (JPG, PNG, WebP)
 - [ ] Lossless Image Compressor
 - [ ] Lossy Image Compressor (adjustable quality)
-- [ ] Bulk Image Compressor
+- [x] Bulk Image Compressor
 - [ ] Image Cropper
 - [ ] Image Resizer (with aspect ratio options)
 - [ ] Image Rotator (90°, 180°, 270°)
@@ -269,8 +269,8 @@
 - [ ] Image Dominant Color Extractor
 - [ ] Image Dimension Analyzer
 - [ ] Barcode Generator
-- [ ] Data URI Generator (image to base64)
-- [ ] Base64 Image Encoder/Decoder
+- [x] Data URI Generator (image to base64)
+- [x] Base64 Image Encoder/Decoder
 - [ ] Gradient Generator
 - [ ] Pattern Generator (dots, lines, etc.)
 - [ ] Image Merger (horizontal/vertical)

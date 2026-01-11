@@ -1,16 +1,15 @@
-import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import { randomUUID } from 'crypto';
-import { execSync, spawn } from 'child_process';
-import type { 
-    AudioExtractionOptions, 
-    AudioInfo, 
-    AudioExtractionProgress 
+import { spawn } from 'child_process';
+import type {
+    AudioExtractionOptions,
+    AudioInfo,
+    AudioExtractionProgress
 } from '../../src/types/audio-extractor';
 
-const require = createRequire(import.meta.url);
+// const require = createRequire(import.meta.url);
 
 export class AudioExtractor {
     private ffmpegPath: string | null = null;
@@ -25,7 +24,7 @@ export class AudioExtractor {
         try {
             const { FFmpegHelper } = await import('./ffmpeg-helper');
             const ffmpegPath = FFmpegHelper.getFFmpegPath();
-            
+
             if (ffmpegPath) {
                 this.ffmpegPath = ffmpegPath;
                 console.log('✅ Audio Extractor: FFmpeg ready');
@@ -59,7 +58,7 @@ export class AudioExtractor {
                 try {
                     // Parse duration
                     const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-                    const duration = durationMatch 
+                    const duration = durationMatch
                         ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3])
                         : 0;
 
@@ -114,8 +113,8 @@ export class AudioExtractor {
         // Determine output path
         const inputFilename = path.basename(inputPath, path.extname(inputPath));
         const outputDir = outputPath ? path.dirname(outputPath) : app.getPath('downloads');
-        const outputFilename = outputPath 
-            ? path.basename(outputPath) 
+        const outputFilename = outputPath
+            ? path.basename(outputPath)
             : `${inputFilename}_extracted.${format}`;
         const finalOutputPath = path.join(outputDir, outputFilename);
 
@@ -140,7 +139,7 @@ export class AudioExtractor {
 
         // Audio filters
         const filters: string[] = [];
-        
+
         if (normalize) {
             filters.push('loudnorm');
         }
@@ -210,7 +209,7 @@ export class AudioExtractor {
 
             process.stderr.on('data', (data: Buffer) => {
                 const output = data.toString();
-                
+
                 // Parse progress: time=00:01:23.45
                 const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
                 if (timeMatch && progressCallback) {
@@ -234,7 +233,7 @@ export class AudioExtractor {
 
             process.on('close', (code: number) => {
                 this.activeProcesses.delete(id);
-                
+
                 if (code === 0) {
                     if (progressCallback) {
                         progressCallback({

@@ -1,5 +1,3 @@
-// Phase 2: Lazy load Fabric.js
-import { loadFabric } from '@utils/lazyLoad';
 import { Canvas, FabricImage, filters, IText, Shadow, Point, Rect } from 'fabric';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../components/ui/Button';

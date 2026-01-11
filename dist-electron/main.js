@@ -3667,7 +3667,6 @@ var UniversalDownloader = class {
 	}
 };
 const universalDownloader = new UniversalDownloader();
-createRequire(import.meta.url);
 var AudioExtractor = class {
 	constructor() {
 		this.ffmpegPath = null;
