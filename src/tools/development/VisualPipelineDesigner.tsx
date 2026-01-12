@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
     Background,
     BackgroundVariant,
     Controls,
     MiniMap,
+    MarkerType,
     type Edge,
     type Node,
     useNodesState,
@@ -86,20 +87,17 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {} }: VisualPipelinePr
                 id: step.id,
                 type: 'tool',
                 position: step.metadata?.position || { x: 250, y: index * 150 + 50 },
-                data: { 
-                    tool, 
+                data: {
+                    tool,
                     label: step.label,
                     options: step.options,
                     status: stepResults[step.id]?.status
                 },
-                dragHandle: '.custom-drag-handle', // Optional
+                dragHandle: '.custom-drag-handle',
             };
         });
     }, [workflow, stepResults]);
 
-    // Calculate Edges from linear sequence (for now)
-    // TODO: In a real graph builder, edges would be stored separately or derived logic would be smarter.
-    // For now, we visualize the array order as edges.
     const initialEdges: Edge[] = useMemo(() => {
         const edges: Edge[] = [];
         for (let i = 0; i < steps.length - 1; i++) {
@@ -107,8 +105,13 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {} }: VisualPipelinePr
                 id: `e-${steps[i].id}-${steps[i+1].id}`,
                 source: steps[i].id,
                 target: steps[i+1].id,
+                type: 'smoothstep',
                 animated: true,
-                style: { stroke: 'var(--color-border)' },
+                style: { stroke: 'var(--color-indigo-500)', strokeWidth: 2, opacity: 0.5 },
+                markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: 'var(--color-indigo-500)',
+                },
             });
         }
         return edges;
@@ -117,9 +120,7 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {} }: VisualPipelinePr
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-    // Sync external changes (e.g. from list view add/remove) to local state
-    // Note: this is a bit tricky with ReactFlow internal state. 
-    // Usually you want one source of truth.
+    // Sync external changes
     useEffect(() => {
         setNodes(initialNodes);
         setEdges(initialEdges);
@@ -127,9 +128,55 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {} }: VisualPipelinePr
     
     // Persist node movements
     const handleNodeDragStop = (_: any, node: Node) => {
-        // Save new position to store
         updateStep(workflowId, node.id, {
             metadata: { ...node.data.metadata, position: node.position }
+        });
+    };
+
+    const onConnect = (params: any) => {
+        const { source, target } = params;
+        if (!workflow || source === target) return;
+
+        const sourceIndex = workflow.steps.findIndex(s => s.id === source);
+        const targetIndex = workflow.steps.findIndex(s => s.id === target);
+
+        if (sourceIndex === -1 || targetIndex === -1) return;
+
+        // Reorder: Move target to immediately follow source
+        const newSteps = [...workflow.steps];
+        const [movedStep] = newSteps.splice(targetIndex, 1);
+        
+        // Actually, since we spliced out, let's just find the new index of source
+        const newSourceIndex = newSteps.findIndex(s => s.id === source);
+        newSteps.splice(newSourceIndex + 1, 0, movedStep);
+        
+        useWorkflowStore.getState().reorderSteps(workflowId, newSteps);
+    };
+
+    const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+
+    const onDragOver = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    };
+
+    const onDrop = (event: React.DragEvent) => {
+        event.preventDefault();
+
+        const toolId = event.dataTransfer.getData('application/reactflow');
+        if (!toolId || !reactFlowInstance) return;
+
+        const position = reactFlowInstance.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+        });
+
+        // Add step with this position
+        useWorkflowStore.getState().addStep(workflowId, {
+            toolId,
+            options: {},
+            label: undefined,
+            metadata: { position }
         });
     };
 
@@ -142,8 +189,12 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {} }: VisualPipelinePr
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
                 nodeTypes={nodeTypes}
                 onNodeDragStop={handleNodeDragStop}
+                onInit={setReactFlowInstance}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
                 fitView
                 className="bg-dots-pattern"
             >

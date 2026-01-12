@@ -1104,20 +1104,20 @@
 
 ### 20.5 Smart UX
 
-- [ ] Auto-suggest next tools
-- [ ] Common chain templates
-- [ ] Recent chains
-- [ ] Favorite chains
-- [ ] Tool compatibility hints
+- [x] Auto-suggest next tools
+- [x] Common chain templates
+- [x] Recent chains
+- [x] Favorite chains
+- [x] Tool compatibility hints
 
 ---
 
 ### 20.6 Persistence & Sharing
 
-- [ ] Save chain presets
-- [ ] Export / import chains (JSON)
-- [ ] Duplicate chain
-- [ ] Share chain internally
+- [x] Save chain presets
+- [x] Export / import chains (JSON)
+- [x] Duplicate chain
+- [x] Share chain internally
 
 ---
 

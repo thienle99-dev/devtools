@@ -16,6 +16,7 @@ export interface Workflow {
     steps: WorkflowStep[];
     createdAt: number;
     updatedAt: number;
+    isFavorite?: boolean;
 }
 
 interface WorkflowStore {
@@ -26,6 +27,8 @@ interface WorkflowStore {
     addWorkflow: (workflow: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt'>) => string;
     updateWorkflow: (id: string, workflow: Partial<Workflow>) => void;
     deleteWorkflow: (id: string) => void;
+    duplicateWorkflow: (id: string) => string;
+    toggleFavorite: (id: string) => void;
     setActiveWorkflow: (id: string | null) => void;
 
     // Step management for active workflow
@@ -65,6 +68,31 @@ export const useWorkflowStore = create<WorkflowStore>()(
             deleteWorkflow: (id) => set((state) => ({
                 workflows: state.workflows.filter((wf) => wf.id !== id),
                 activeWorkflowId: state.activeWorkflowId === id ? null : state.activeWorkflowId
+            })),
+
+            duplicateWorkflow: (id) => {
+                let newId = crypto.randomUUID();
+                set((state) => {
+                    const original = state.workflows.find(w => w.id === id);
+                    if (!original) return {};
+                    const newWorkflow: Workflow = {
+                        ...original,
+                        id: newId,
+                        name: `${original.name} (Copy)`,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        // Regenerate step IDs to avoid conflicts
+                        steps: original.steps.map(s => ({ ...s, id: crypto.randomUUID() }))
+                    };
+                    return { workflows: [...state.workflows, newWorkflow] };
+                });
+                return newId;
+            },
+
+            toggleFavorite: (id) => set((state) => ({
+                workflows: state.workflows.map((wf) =>
+                    wf.id === id ? { ...wf, isFavorite: !wf.isFavorite, updatedAt: Date.now() } : wf
+                )
             })),
 
             setActiveWorkflow: (id) => set({ activeWorkflowId: id }),

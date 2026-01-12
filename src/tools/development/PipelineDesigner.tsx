@@ -1,6 +1,6 @@
 import React, { useState, useMemo, Suspense } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
-import { ArrowRight, Plus, Trash2, Play, Package, Download, Copy, CheckCircle, XCircle, Loader2, RotateCcw, Layout, List } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Play, Package, Download, Copy, CheckCircle, XCircle, Loader2, RotateCcw, Layout, List, Star, Sparkles, BookTemplate, Upload, Share2 } from 'lucide-react';
 import { useWorkflowStore, type WorkflowStep } from '@store/workflowStore';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
@@ -8,12 +8,14 @@ import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 import { TOOLS } from '@tools/registry';
 import { ConfirmationModal } from '@components/ui/ConfirmationModal';
+import { TemplateSelector } from './TemplateSelector';
+import type { ChainTemplate } from '@store/chainTemplates';
 
 // Lazy load the visual designer to avoid loading ReactFlow heavy chunk when not needed
 const VisualPipelineDesigner = React.lazy(() => import('./VisualPipelineDesigner'));
 
 const PipelineDesigner: React.FC = () => {
-    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, addStep, removeStep } = useWorkflowStore();
+    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, duplicateWorkflow, addStep, removeStep, toggleFavorite } = useWorkflowStore();
     const removeWorkflow = deleteWorkflow; // Alias for cleaner usage
     const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'visual'>('list');
@@ -21,6 +23,10 @@ const PipelineDesigner: React.FC = () => {
     const [stepResults, setStepResults] = useState<Record<string, { status: 'pending' | 'running' | 'success' | 'error', output: any, error?: string, duration?: number }>>({});
     const [isRunning, setIsRunning] = useState(false);
     const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+    
+    // UI State
+    const [showTemplates, setShowTemplates] = useState(false);
+    const [filterFavorites, setFilterFavorites] = useState(false);
 
     const activeWorkflow = useMemo(() =>
         workflows.find(w => w.id === activeWorkflowId),
@@ -31,12 +37,104 @@ const PipelineDesigner: React.FC = () => {
         TOOLS.filter((t: any) => t.inputTypes && t.outputTypes),
         []);
 
-    const handleCreateWorkflow = () => {
+    // Smart Suggestions Logic
+    const suggestedTools = useMemo(() => {
+        if (!activeWorkflow || activeWorkflow.steps.length === 0) return [];
+        
+        const lastStep = activeWorkflow.steps[activeWorkflow.steps.length - 1];
+        const lastTool = TOOLS.find((t: any) => t.id === lastStep.toolId);
+        
+        if (!lastTool || !lastTool.outputTypes) return [];
+
+        const outputType = lastTool.outputTypes[0]; // Assuming primary output type for now
+        
+        return pipelineTools.filter((t: any) => 
+            t.inputTypes?.includes(outputType) || t.inputTypes?.includes('text') || t.inputTypes?.includes('any')
+        ).slice(0, 3); // Top 3 suggestions
+    }, [activeWorkflow, pipelineTools]);
+
+    const handleCreateWorkflow = (template: ChainTemplate) => {
         const id = addWorkflow({
-            name: 'New Pipeline',
-            steps: []
+            name: template.id === 'blank' ? 'New Pipeline' : template.name,
+            steps: template.steps.map(s => ({ ...s, id: crypto.randomUUID() })) // New IDs for cleanup
         });
         setActiveWorkflowId(id);
+        setShowTemplates(false);
+        if (template.steps.length > 0) {
+            toast.success(`Created workflow from "${template.name}" template`);
+        }
+    };
+
+
+    // File input ref for import
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleExport = () => {
+        if (!activeWorkflow) return;
+        
+        const exportData = {
+            version: '1.0',
+            ...activeWorkflow
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${activeWorkflow.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Pipeline exported');
+    };
+
+    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const data = JSON.parse(content);
+                
+                // Basic validation
+                if (!data.steps || !Array.isArray(data.steps)) {
+                    throw new Error('Invalid pipeline format');
+                }
+
+                // Create new workflow from imported data
+                const newId = addWorkflow({
+                    name: `${data.name} (Imported)`,
+                    steps: data.steps.map((s: any) => ({
+                        ...s,
+                        id: crypto.randomUUID() // Regenerate step IDs
+                    })),
+                    description: data.description,
+                    isFavorite: !!data.isFavorite
+                });
+                
+                setActiveWorkflowId(newId);
+                toast.success('Pipeline imported');
+            } catch (error) {
+                toast.error('Failed to import pipeline: Invalid file format');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+        // Reset input
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleShare = () => {
+        if (!activeWorkflow) return;
+        
+        const exportData = {
+            version: '1.0',
+            ...activeWorkflow
+        };
+        
+        navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+        toast.success('Pipeline configuration copied to clipboard');
     };
 
     const runStep = async (stepIndex: number, startData: any) => {
@@ -174,45 +272,99 @@ const PipelineDesigner: React.FC = () => {
         );
     };
 
+    const sortedWorkflows = useMemo(() => {
+        let list = [...workflows].sort((a, b) => b.updatedAt - a.updatedAt);
+        if (filterFavorites) {
+            list = list.filter(w => w.isFavorite);
+        }
+        return list;
+    }, [workflows, filterFavorites]);
+
     return (
         <ToolPane
             title="Pipeline Mode (Tool Chain)"
             description="Chain multiple tools together to automate complex workflows"
         >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                {/* File Input for Import */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImport}
+                    accept=".json"
+                    className="hidden"
+                />
+
                 {/* Left side: Workflow List & Tool Picker */}
                 <div className="lg:col-span-4 flex flex-col gap-6 overflow-hidden">
                     <div className="flex-none glass-panel p-4 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground-muted">My Pipelines</h3>
-                            <Button variant="primary" size="xs" icon={Plus} onClick={handleCreateWorkflow}>New</Button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setFilterFavorites(!filterFavorites)}
+                                    className={cn(
+                                        "p-1.5 rounded-lg transition-colors", 
+                                        filterFavorites ? "bg-amber-500/20 text-amber-500" : "hover:bg-glass-button text-foreground-muted"
+                                    )}
+                                    title="Show Favorites Only"
+                                >
+                                    <Star className={cn("w-4 h-4", filterFavorites && "fill-current")} />
+                                </button>
+                                <Button variant="secondary" size="xs" icon={Upload} onClick={() => fileInputRef.current?.click()}>Import</Button>
+                                <Button variant="primary" size="xs" icon={Plus} onClick={() => setShowTemplates(true)}>New</Button>
+                            </div>
                         </div>
                         <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
-                            {workflows.length === 0 && (
-                                <p className="text-[10px] text-foreground-muted text-center py-4 italic">No pipelines yet</p>
+                            {sortedWorkflows.length === 0 && (
+                                <p className="text-[10px] text-foreground-muted text-center py-4 italic">
+                                    {filterFavorites ? 'No favorite pipelines' : 'No pipelines yet'}
+                                </p>
                             )}
-                            {workflows.map(w => (
+                            {sortedWorkflows.map(w => (
                                 <div key={w.id} className="relative group">
                                     <button
                                         onClick={() => setActiveWorkflowId(w.id)}
                                         className={cn(
-                                            "w-full px-3 py-2 rounded-lg text-left text-xs transition-all border pr-8",
+                                            "w-full px-3 py-2 rounded-lg text-left text-xs transition-all border pr-14 flex items-center justify-between",
                                             activeWorkflowId === w.id
                                                 ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400 font-medium"
                                                 : "border-transparent hover:bg-glass-button text-foreground-muted"
                                         )}
                                     >
-                                        {w.name}
+                                        <span className="truncate">{w.name}</span>
+                                        {w.isFavorite && <Star className="w-3 h-3 text-amber-500 fill-current shrink-0" />}
                                     </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setWorkflowToDelete(w.id);
-                                        }}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-foreground-muted hover:text-rose-400 transition-all"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center bg-[var(--color-glass-panel)] rounded-md shadow-sm">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); toggleFavorite(w.id); }}
+                                            className="p-1.5 text-foreground-muted hover:text-amber-500 transition-colors"
+                                            title="Favorite"
+                                        >
+                                            <Star className={cn("w-3 h-3", w.isFavorite && "fill-current text-amber-500")} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                duplicateWorkflow(w.id);
+                                                toast.success('Pipeline duplicated');
+                                            }}
+                                            className="p-1.5 text-foreground-muted hover:text-indigo-400 transition-colors"
+                                            title="Duplicate"
+                                        >
+                                            <Copy className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setWorkflowToDelete(w.id);
+                                            }}
+                                            className="p-1.5 text-foreground-muted hover:text-rose-400 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -220,13 +372,40 @@ const PipelineDesigner: React.FC = () => {
 
                     {activeWorkflowId && (
                         <div className="flex-1 glass-panel p-4 flex flex-col gap-4 overflow-hidden">
+                            {/* Smart Suggestions */}
+                            {suggestedTools.length > 0 && (
+                                <div className="space-y-2 pb-4 border-b border-border-glass">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                                        <Sparkles className="w-3 h-3" />
+                                        Suggested Next
+                                    </h3>
+                                    <div className="space-y-1">
+                                    {suggestedTools.map((t: any) => (
+                                         <button
+                                            key={t.id}
+                                            onClick={() => addStep(activeWorkflowId, { toolId: t.id, options: {} })}
+                                            className="w-full px-3 py-2 rounded-lg bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 text-left transition-all flex items-center gap-3 group"
+                                        >
+                                            <t.icon className="w-3 h-3 text-indigo-400" />
+                                            <span className="text-xs font-medium text-foreground">{t.name}</span>
+                                        </button>
+                                    ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground-muted">Available Tools</h3>
                             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                                 {pipelineTools.map((t: any) => (
                                     <button
                                         key={t.id}
+                                        draggable
+                                        onDragStart={(event) => {
+                                            event.dataTransfer.setData('application/reactflow', t.id);
+                                            event.dataTransfer.effectAllowed = 'move';
+                                        }}
                                         onClick={() => addStep(activeWorkflowId, { toolId: t.id, options: {} })}
-                                        className="w-full p-3 rounded-xl bg-glass-button hover:bg-glass-button-hover border border-transparent hover:border-indigo-500/30 text-left transition-all group"
+                                        className="w-full p-3 rounded-xl bg-glass-button hover:bg-glass-button-hover border border-transparent hover:border-indigo-500/30 text-left transition-all group cursor-move"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={cn("p-1.5 rounded-lg bg-foreground/5", t.color)}>
@@ -247,7 +426,7 @@ const PipelineDesigner: React.FC = () => {
 
                 {/* Right side: Designer & Execution */}
                 <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
-                    {!activeWorkflowId ? (
+                    {!activeWorkflow ? (
                         <div className="flex-1 glass-panel flex flex-col items-center justify-center text-center p-12 space-y-6">
                             <div className="p-6 rounded-full bg-indigo-500/10 text-indigo-400">
                                 <Plus className="w-12 h-12" />
@@ -258,7 +437,7 @@ const PipelineDesigner: React.FC = () => {
                                     Start building your automation by creating a new pipeline and adding your favorite tools.
                                 </p>
                             </div>
-                            <Button variant="primary" size="lg" icon={Plus} onClick={handleCreateWorkflow}>
+                            <Button variant="primary" size="lg" icon={Plus} onClick={() => setShowTemplates(true)}>
                                 Create New Pipeline
                             </Button>
                         </div>
@@ -266,6 +445,9 @@ const PipelineDesigner: React.FC = () => {
                         <div className="flex-1 flex flex-col gap-6 overflow-hidden">
                             {/* Workflow Header */}
                             <div className="glass-panel p-4 flex items-center gap-4">
+                                <button onClick={() => toggleFavorite(activeWorkflow.id)}>
+                                    <Star className={cn("w-5 h-5 transition-colors", activeWorkflow.isFavorite ? "fill-amber-400 text-amber-400" : "text-foreground-muted hover:text-amber-400")} />
+                                </button>
                                 <Input
                                     value={activeWorkflow?.name || ''}
                                     onChange={(e) => updateWorkflow(activeWorkflowId!, { name: e.target.value })}
@@ -294,6 +476,24 @@ const PipelineDesigner: React.FC = () => {
                                             <Layout className="w-4 h-4" />
                                         </button>
                                     </div>
+
+                                    <div className="flex items-center gap-1 mr-2">
+                                        <Button
+                                            variant="ghost" 
+                                            size="sm"
+                                            icon={Share2}
+                                            onClick={handleShare}
+                                            title="Share Configuration"
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={Download}
+                                            onClick={handleExport}
+                                            title="Export Pipeline"
+                                        />
+                                    </div>
+
                                     <div className="h-6 w-px bg-border-glass mx-2" />
                                 
                                     <Button
@@ -341,15 +541,13 @@ const PipelineDesigner: React.FC = () => {
                                     /* Visual Designer */
                                     <div className="col-span-full h-full min-h-[400px]">
                                         <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-indigo-400" /></div>}>
-                                            <VisualPipelineDesigner workflowId={activeWorkflowId} stepResults={stepResults} />
+                                            <VisualPipelineDesigner workflowId={activeWorkflowId!} stepResults={stepResults} />
                                         </Suspense>
                                     </div>
                                 )}
                                 
                                 {viewMode === 'list' && (
-                                    /* Testing Area - Only show in list mode or specific visual mode panel? 
-                                       Let's keep it hidden in visual mode for now as it takes full width 
-                                    */
+                                    /* Testing Area */
                                     <div className="flex flex-col gap-4 overflow-hidden">
                                         <div className="flex flex-col gap-2 flex-1 overflow-hidden">
                                             <label className="text-[10px] font-bold uppercase opacity-50 ml-1 text-foreground-muted">Initial Input</label>
@@ -424,6 +622,13 @@ const PipelineDesigner: React.FC = () => {
                     confirmText="Delete"
                     variant="danger"
                 />
+
+                {showTemplates && (
+                    <TemplateSelector
+                        onSelect={handleCreateWorkflow}
+                        onCancel={() => setShowTemplates(false)}
+                    />
+                )}
             </div>
         </ToolPane>
     );
