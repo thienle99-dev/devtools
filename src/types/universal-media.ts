@@ -42,6 +42,7 @@ export interface UniversalDownloadOptions {
     embedSubs?: boolean; // New: Support for subtitles
     isPlaylist?: boolean; // New: Support for playlist mode
     playlistItems?: string; // New: Specific indices or IDs to download from playlist
+    audioFormat?: 'mp3' | 'm4a' | 'wav' | 'flac'; // New: Output audio format
 }
 
 export interface UniversalDownloadProgress {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, type JSX } from 'react';
 import { Check, X, Copy, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
@@ -102,29 +102,29 @@ export const PreviewSection = ({
                     <div className="relative inline-block">
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl blur-3xl opacity-20 animate-pulse" />
                         <div className="relative w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/30 flex items-center justify-center backdrop-blur-sm">
-                            <ImageIcon 
+                            <ImageIcon
                                 className="w-12 h-12"
                                 style={{ color: '#818cf8' }}
                             />
                         </div>
                     </div>
-                    
+
                     {/* Text */}
                     <div className="space-y-2">
-                        <h3 
+                        <h3
                             className="text-2xl font-bold"
                             style={{ color: 'var(--color-text-primary)' }}
                         >
                             No Screenshot Yet
                         </h3>
-                        <p 
+                        <p
                             className="text-sm"
                             style={{ color: 'var(--color-text-muted)' }}
                         >
                             Capture a screenshot to start editing and enhancing
                         </p>
                     </div>
-                    
+
                     {/* Hint badges */}
                     <div className="flex items-center justify-center gap-2 flex-wrap">
                         <span className="px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400">
@@ -174,7 +174,7 @@ export const PreviewSection = ({
     };
 
     return (
-        <div 
+        <div
             style={{
                 width: '100%',
                 height: '100%',
@@ -186,7 +186,7 @@ export const PreviewSection = ({
             {/* Canvas Preview Area - Full height */}
             <div
                 onDoubleClick={handleDoubleClickCopy}
-                style={{ 
+                style={{
                     width: '100%',
                     height: '100%',
                     position: 'relative',
@@ -208,13 +208,13 @@ export const PreviewSection = ({
                     <>
                         {/* Flash overlay */}
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 pointer-events-none animate-pulse z-50" />
-                        
+
                         {/* Success badge */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 animate-in zoom-in-95 duration-300">
                             <div className="relative">
                                 {/* Glow effect */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl blur-2xl opacity-50 animate-pulse" />
-                                
+
                                 {/* Badge content */}
                                 <div className="relative px-8 py-6 rounded-3xl bg-glass-panel border-2 border-indigo-500 backdrop-blur-xl shadow-2xl shadow-indigo-500/50">
                                     <div className="flex flex-col items-center gap-3">
@@ -233,7 +233,7 @@ export const PreviewSection = ({
 
                 {/* Double-Click Hint (show when not cropping and not copying) */}
                 {!isCropping && !isCopying && (
-                    <div 
+                    <div
                         className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 backdrop-blur-xl text-sm rounded-2xl pointer-events-none opacity-70 hover:opacity-100 transition-all duration-300 border-2"
                         style={{
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -254,7 +254,7 @@ export const PreviewSection = ({
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 animate-in slide-in-from-bottom-4 duration-300">
                         {/* Background with blur and glow */}
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl blur-xl" />
-                        
+
                         <div className="relative flex gap-3 bg-glass-panel p-4 rounded-2xl border-2 border-border-glass backdrop-blur-xl shadow-2xl shadow-indigo-500/30">
                             <Button
                                 variant="primary"

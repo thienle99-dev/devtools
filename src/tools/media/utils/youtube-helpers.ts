@@ -1,15 +1,15 @@
-import { 
-    formatBytes as coreFormatBytes, 
-    formatDuration as coreFormatDuration, 
-    formatSpeed as coreFormatSpeed 
-} from '../../../utils/format';
-import { 
-    isValidYoutubeUrl as coreIsValidYoutubeUrl, 
-    extractVideoId as coreExtractVideoId, 
-    extractPlaylistId as coreExtractPlaylistId, 
+import {
+    formatBytes as coreFormatBytes,
+    formatDuration as coreFormatDuration,
+    formatSpeed as coreFormatSpeed
+} from '@utils/format';
+import {
+    isValidYoutubeUrl as coreIsValidYoutubeUrl,
+    extractVideoId as coreExtractVideoId,
+    extractPlaylistId as coreExtractPlaylistId,
     isPlaylistUrl as coreIsPlaylistUrl,
     sanitizeFilename as coreSanitizeFilename
-} from '../../../utils/validation';
+} from '@utils/validation';
 
 /**
  * YouTube Helper Utilities
@@ -54,7 +54,7 @@ export const formatQualityLabel = (quality: string): string => {
         '2160p': '2160p (4K)',
         'best': 'Best Quality Available',
     };
-    
+
     return qualityMap[quality] || quality;
 };
 
@@ -63,9 +63,9 @@ export const formatQualityLabel = (quality: string): string => {
  */
 export const estimateDownloadTime = (totalBytes: number, bytesPerSecond: number): string => {
     if (bytesPerSecond === 0) return 'Calculating...';
-    
+
     const seconds = Math.ceil(totalBytes / bytesPerSecond);
-    
+
     if (seconds < 60) {
         return `${seconds}s`;
     } else if (seconds < 3600) {

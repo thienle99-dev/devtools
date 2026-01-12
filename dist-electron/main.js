@@ -3457,14 +3457,14 @@ var UniversalDownloader = class {
 	}
 	async executeDownload(options, progressCallback) {
 		await this.ensureInitialized();
-		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems } = options;
+		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems, audioFormat } = options;
 		const downloadId = id || randomUUID$1();
 		try {
 			const info = await this.getMediaInfo(url);
 			const sanitizedTitle = this.sanitizeFilename(info.title);
 			const author = this.sanitizeFilename(info.author || "unknown");
 			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
-			const extension = format === "audio" ? "mp3" : "mp4";
+			const extension = format === "audio" ? audioFormat || "mp3" : "mp4";
 			let outputTemplate;
 			let displayFilename;
 			const shouldDownloadPlaylist = isPlaylist === true;
@@ -3500,7 +3500,7 @@ var UniversalDownloader = class {
 			const browserForCookies = cookiesBrowser || settings.useBrowserCookies;
 			if (browserForCookies) args.push("--cookies-from-browser", browserForCookies);
 			if (format === "audio") {
-				args.push("-x", "--audio-format", "mp3");
+				args.push("-x", "--audio-format", audioFormat || "mp3");
 				const audioQuality = quality || "0";
 				args.push("--audio-quality", audioQuality);
 			} else {

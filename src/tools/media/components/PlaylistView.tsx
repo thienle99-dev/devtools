@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckSquare, Square, Play, Clock } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { formatDuration } from '../../../utils/format';
+import { formatDuration } from '@utils/format';
 
 interface PlaylistViewProps {
     playlistInfo: {
@@ -94,11 +94,10 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
                         <div
                             key={video.id}
                             onClick={() => onToggleVideo(video.id)}
-                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                isSelected
+                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isSelected
                                     ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15'
                                     : 'bg-background-secondary/30 border-border-glass hover:bg-background-secondary/50'
-                            }`}
+                                }`}
                         >
                             {/* Checkbox */}
                             <div className="flex-shrink-0">

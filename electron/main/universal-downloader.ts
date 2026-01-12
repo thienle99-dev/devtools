@@ -393,7 +393,7 @@ export class UniversalDownloader {
     ): Promise<string> {
         await this.ensureInitialized();
 
-        const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems } = options;
+        const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems, audioFormat } = options;
         const downloadId = id || randomUUID();
 
         try {
@@ -405,7 +405,7 @@ export class UniversalDownloader {
             const author = this.sanitizeFilename(info.author || 'unknown');
 
             const downloadsPath = outputPath || this.store.get('settings.downloadPath') || app.getPath('downloads');
-            const extension = format === 'audio' ? 'mp3' : 'mp4';
+            const extension = format === 'audio' ? (audioFormat || 'mp3') : 'mp4';
 
             // Output template and display name
             let outputTemplate: string;
@@ -470,7 +470,7 @@ export class UniversalDownloader {
             if (format === 'audio') {
                 args.push(
                     '-x',
-                    '--audio-format', 'mp3'
+                    '--audio-format', audioFormat || 'mp3'
                 );
 
                 // Audio quality: 0 (best), 5 (192kbps), 9 (128kbps)

@@ -2,39 +2,45 @@
  * Clipboard Manager Type Definitions
  */
 
+export type ClipboardItemType = 'text' | 'image' | 'link' | 'file';
+export type SearchMode = 'contains' | 'exact' | 'startsWith' | 'fuzzy';
+
 export interface ClipboardItem {
     id: string;
     content: string;
-    type: 'text' | 'image' | 'link' | 'file';
+    type: ClipboardItemType;
     timestamp: number;
     pinned: boolean;
-    copyCount: number;
-    sourceApp?: string;
-    categories?: string[];
+    copyCount: number; // Số lần copy
+    sourceApp?: string; // App nguồn (từ Electron)
+    categories?: string[]; // Categories/tags
     metadata?: {
         length?: number;
         mimeType?: string;
         preview?: string;
-        url?: string;
-        filePath?: string;
+        url?: string; // Cho links
+        filePath?: string; // Cho files
     };
-}
-
-export type SearchMode = 'contains' | 'exact' | 'startsWith' | 'fuzzy';
-
-export interface FilterOptions {
-    type: 'all' | 'text' | 'image' | 'link' | 'file';
-    dateRange: 'all' | 'today' | 'week' | 'month';
-    pinnedOnly: boolean;
-    searchMode: SearchMode;
+    isPinned?: boolean; // Optional alias for pinned
+    favorite?: boolean;
 }
 
 export interface ClipboardSettings {
     autoClearDays: number;
     excludeDuplicates: boolean;
     enableMonitoring: boolean;
-    ignoredApps: string[];
-    clearOnQuit: boolean;
+    ignoredApps: string[]; // Danh sách apps để ignore
+    clearOnQuit: boolean; // Xóa clipboard khi quit
+    maxItems?: number;
+    enableSync?: boolean;
+    autoClean?: boolean;
+}
+
+export interface FilterOptions {
+    type: 'all' | ClipboardItemType;
+    dateRange: 'all' | 'today' | 'week' | 'month';
+    pinnedOnly: boolean;
+    searchMode: SearchMode;
 }
 
 export interface ClipboardStatistics {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { PlayCircle, User, Clock, Eye, Calendar } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
-import { formatDuration } from '../../../utils/format';
+import { formatDuration, formatCompactNumber, formatDate } from '@utils/format';
 
 interface VideoInfoProps {
     videoId: string;
@@ -23,26 +23,7 @@ export const VideoInfo: React.FC<VideoInfoProps> = ({
     uploadDate,
 }) => {
 
-    const formatViewCount = (count: number): string => {
-        if (count >= 1000000000) {
-            return `${(count / 1000000000).toFixed(1)}B views`;
-        } else if (count >= 1000000) {
-            return `${(count / 1000000).toFixed(1)}M views`;
-        } else if (count >= 1000) {
-            return `${(count / 1000).toFixed(1)}K views`;
-        }
-        return `${count} views`;
-    };
 
-    const formatDate = (dateStr?: string): string => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        });
-    };
 
     return (
         <Card className="p-4 bg-gradient-to-br from-red-500/5 to-pink-500/5 border-red-500/20">
@@ -51,8 +32,8 @@ export const VideoInfo: React.FC<VideoInfoProps> = ({
                 <div className="relative flex-shrink-0 w-40 h-24 rounded-lg overflow-hidden bg-background-tertiary border border-border-glass">
                     {thumbnailUrl ? (
                         <>
-                            <img 
-                                src={thumbnailUrl} 
+                            <img
+                                src={thumbnailUrl}
                                 alt={title}
                                 className="w-full h-full object-cover"
                             />
@@ -72,7 +53,7 @@ export const VideoInfo: React.FC<VideoInfoProps> = ({
                     <h3 className="text-base font-semibold text-foreground-primary mb-2 line-clamp-2">
                         {title}
                     </h3>
-                    
+
                     <div className="space-y-1.5">
                         {/* Author */}
                         <div className="flex items-center gap-2 text-sm text-foreground-secondary">
@@ -90,7 +71,7 @@ export const VideoInfo: React.FC<VideoInfoProps> = ({
                         {viewCount !== undefined && (
                             <div className="flex items-center gap-2 text-sm text-foreground-secondary">
                                 <Eye className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span>{formatViewCount(viewCount)}</span>
+                                <span>{formatCompactNumber(viewCount)} views</span>
                             </div>
                         )}
 

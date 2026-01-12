@@ -7,7 +7,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { useSmartScan } from '../hooks/useSmartScan';
-import { formatBytes as formatSize } from '../../../../utils/format';
+import { formatBytes as formatSize } from '@utils/format';
 import { processBatchWithRecovery } from '../utils/errorRecovery';
 import { toast } from 'sonner';
 
@@ -25,7 +25,7 @@ export const JunkCleanupView: React.FC = () => {
 
     const handleCleanup = async () => {
         if (selectedItems.length === 0) return;
-        
+
         // Safety check
         try {
             const safetyCheck = await (window as any).cleanerAPI.checkSafety(selectedItems);
@@ -42,7 +42,7 @@ export const JunkCleanupView: React.FC = () => {
         } catch (e) {
             console.warn('Safety check failed:', e);
         }
-        
+
         // Create backup before deletion
         try {
             const backupResult = await (window as any).cleanerAPI.createBackup(selectedItems);
@@ -53,7 +53,7 @@ export const JunkCleanupView: React.FC = () => {
             const proceed = confirm('Failed to create backup. Continue with deletion?');
             if (!proceed) return;
         }
-        
+
         setIsCleaning(true);
         try {
             // Use batch processing with error recovery for better reliability
@@ -78,7 +78,7 @@ export const JunkCleanupView: React.FC = () => {
             if (result.success) {
                 const totalFreed = result.data?.reduce((sum, r) => sum + (r.freedSize || 0), 0) || 0;
                 toast.success(`Cleaned ${formatSize(totalFreed)} successfully!`);
-                runSmartScan(); 
+                runSmartScan();
             } else if (result.partialData) {
                 const successCount = result.partialData.length;
                 const failCount = result.errors?.length || 0;
@@ -97,12 +97,12 @@ export const JunkCleanupView: React.FC = () => {
 
     if (!results && !isScanning) {
         return (
-            <ScanPlaceholder 
-                title="System Junk" 
-                icon={Trash2} 
-                description="Find and remove hidden junk files taking up valuable disk space." 
-                onScan={runSmartScan} 
-                isScanning={isScanning} 
+            <ScanPlaceholder
+                title="System Junk"
+                icon={Trash2}
+                description="Find and remove hidden junk files taking up valuable disk space."
+                onScan={runSmartScan}
+                isScanning={isScanning}
                 progress={scanProgress}
                 tips={[
                     'Junk files include cache, logs, and temporary files',
@@ -117,10 +117,10 @@ export const JunkCleanupView: React.FC = () => {
     return (
         <div className="space-y-6 h-full flex flex-col relative">
             {(isScanning || isCleaning) && (
-                <LoadingOverlay 
-                    progress={isScanning ? scanProgress : 100} 
-                    title={isScanning ? "System Junk" : "Cleaning"} 
-                    status={isScanning ? "Scanning for junk files..." : "Cleaning selected files..."} 
+                <LoadingOverlay
+                    progress={isScanning ? scanProgress : 100}
+                    title={isScanning ? "System Junk" : "Cleaning"}
+                    status={isScanning ? "Scanning for junk files..." : "Cleaning selected files..."}
                 />
             )}
             <div className="flex items-center justify-between">
@@ -139,7 +139,7 @@ export const JunkCleanupView: React.FC = () => {
                 {results?.junkFiles?.items.map((item, i) => (
                     <Card key={i} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
                         <div className="flex items-center gap-4">
-                            <Checkbox 
+                            <Checkbox
                                 checked={selectedItems.includes(item.path)}
                                 onChange={(checked) => {
                                     if (checked) setSelectedItems([...selectedItems, item.path]);

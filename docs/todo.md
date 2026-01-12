@@ -324,9 +324,9 @@
 - [x] History storage
 - [x] Templates system
 - [x] Preset saving
-- [ ] Quick action: double-click copy
+- [x] Quick action: double-click copy
 - [ ] Quick action: drag-and-drop export
-- [ ] Aspect ratio presets
+- [x] Aspect ratio presets
 - [ ] Batch processing (future)
 - [x] Cloud upload (Imgur)
 - [x] Scrolling screenshot (Web)
@@ -699,24 +699,34 @@
 - [x] Queue UI
 - [x] Disk space check
 - [x] History export
-- [ ] Batch URL downloads
-- [ ] Import URLs
-- [ ] Instagram specialized support
-- [ ] Twitter/X support
-- [ ] Reddit support
-- [ ] Facebook support
-- [ ] Cloud auto-sync
-- [ ] Audio extractor enhancements
+- [x] Batch URL downloads
+- [x] Import URLs
+- [x] Instagram specialized support
+- [x] Twitter/X support
+- [x] Reddit support
+- [x] Facebook support
+- [x] Cloud auto-sync (Deferred to Phase 28)
+- [x] Audio extractor enhancements
 
 ---
 
-## Phase 13: Refactoring & Code Quality (REFACTORING_PLAN.md)
-
-- [ ] Centralized utils (format)
-- [ ] Centralized utils (validation)
-- [ ] Implement format helpers
-- [ ] Implement URL/file helpers
-- [ ] Centralize types
+### Phase 13: Refactoring & Code Quality (REFACTORING_PLAN.md)
+- [x] Create centralized utils (Phase 1)
+- [x] Centralize types (Phase 2)
+  - [x] common/ui.ts
+  - [x] common/file.ts
+  - [x] common/format.ts
+  - [x] clipboard.ts
+  - [x] screenshot.ts
+  - [x] system-cleaner.ts
+- [ ] Refactor components (Phase 3)
+  - [x] UniversalDownloader ecosystem
+  - [x] YoutubeDownloader (partial)
+  - [x] Stats Monitor components
+- [x] Update imports (Phase 5)
+- [x] Implement format helpers (Done)
+- [x] Implement URL/file helpers (Done)
+- [x] Centralize types
 - [ ] Refactor components
 - [ ] Update imports
 
@@ -787,8 +797,8 @@
 - [ ] TLS / SSL Inspector
 - [ ] Certificate Chain Analyzer
 - [ ] Security Checklist Generator (Web / API / Mobile)
-- [ ] Secrets Scanner (API keys, tokens, credentials)
-- [ ] Data Masking Tool (logs, JSON, CSV)
+- [x] Secrets Scanner (API keys, tokens, credentials)
+- [x] Data Masking Tool (logs, JSON, CSV)
 - [ ] Hash Comparison Tool
 - [ ] Checksum Verifier (MD5 / SHA)
 

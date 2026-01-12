@@ -1,6 +1,4 @@
-/**
- * System Cleaner Type Definitions
- */
+// Type definitions for System Cleaner
 
 export type Platform = 'windows' | 'macos' | 'linux';
 
@@ -264,6 +262,39 @@ export interface HealthAlert {
     action?: string;
 }
 
+// Error types
+export class CleanerError extends Error {
+    code: string;
+    details?: unknown;
+    constructor(
+        message: string,
+        code: string,
+        details?: unknown
+    ) {
+        super(message);
+        this.name = 'CleanerError';
+        this.code = code;
+        this.details = details;
+    }
+}
+
+export class SafetyError extends CleanerError {
+    blockedFiles: string[];
+    constructor(message: string, blockedFiles: string[]) {
+        super(message, 'SAFETY_ERROR');
+        this.name = 'SafetyError';
+        this.blockedFiles = blockedFiles;
+    }
+}
+
+export class PermissionError extends CleanerError {
+    constructor(message: string) {
+        super(message, 'PERMISSION_ERROR');
+        this.name = 'PermissionError';
+    }
+}
+
+// IPC API Types
 export interface CleanerAPI {
     getPlatform: () => Promise<PlatformInfo>;
     scanJunk: () => Promise<{ success: boolean; result?: JunkFileResult; error?: string }>;
@@ -284,7 +315,7 @@ export interface CleanerAPI {
     cleanBrowserData: (options: { browsers: string[]; types: string[] }) => Promise<{ success: boolean; cleanedItems?: number; freedSizeFormatted?: string; errors?: string[] }>;
     getWifiNetworks: () => Promise<{ success: boolean; networks?: WifiNetwork[]; error?: string }>;
     removeWifiNetwork: (networkName: string) => Promise<{ success: boolean; error?: string }>;
-    onSpaceLensProgress: (callback: (progress: any) => void) => () => void;
+    onSpaceLensProgress: (callback: (progress: { currentPath: string; progress: number; status: string; item?: SpaceLensNode }) => void) => () => void;
     runMaintenance: (task: MaintenanceTask) => Promise<MaintenanceResult>;
     getHealthStatus: () => Promise<HealthStatus>;
     checkSafety: (files: string[]) => Promise<SafetyCheckResult>;
@@ -297,3 +328,10 @@ export interface CleanerAPI {
     stopHealthMonitoring: () => Promise<void>;
     updateHealthTray: (data: HealthStatus) => void;
 }
+
+declare global {
+    interface Window {
+        cleanerAPI?: CleanerAPI;
+    }
+}
+

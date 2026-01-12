@@ -2,32 +2,10 @@ import React from 'react';
 import { Card } from '@components/ui/Card';
 import { Calendar, Eye, ThumbsUp, User, ExternalLink, Play, HardDrive, Check } from 'lucide-react';
 import { Button } from '@components/ui/Button';
-import { formatBytes } from '@utils/format';
+import { formatBytes, formatDuration, formatCompactNumber, formatYYYYMMDD } from '@utils/format';
 import { cn } from '@utils/cn';
 import type { UniversalMediaInfo } from '@/types/universal-media';
 import { getPlatformName, getPlatformColor } from '../utils/platform-detector';
-
-// Inline formatters if missing (safer)
-const formatDuration = (seconds?: number) => {
-    if (!seconds) return '--:--';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-};
-
-const formatCount = (num?: number) => {
-    if (num === undefined) return null;
-    return new Intl.NumberFormat('en-US', { notation: 'compact' }).format(num);
-};
-
-const formatDate = (dateStr?: string) => {
-    // YYYYMMDD
-    if (!dateStr || dateStr.length !== 8) return dateStr;
-    const y = dateStr.substring(0, 4);
-    const m = dateStr.substring(4, 6);
-    const d = dateStr.substring(6, 8);
-    return `${d}/${m}/${y}`;
-};
 
 interface UniversalVideoInfoProps {
     info: UniversalMediaInfo;
@@ -66,7 +44,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
                     {/* Duration Badge */}
                     {info.duration && (
                         <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-1.5 py-0.5 rounded backdrop-blur-sm">
-                            {formatDuration(info.duration)}
+                            {formatDuration(info.duration || 0)}
                         </div>
                     )}
 
@@ -89,7 +67,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
                             {info.uploadDate && (
                                 <span className="text-xs text-foreground-muted flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    {formatDate(info.uploadDate)}
+                                    {formatYYYYMMDD(info.uploadDate)}
                                 </span>
                             )}
                         </div>
@@ -118,16 +96,16 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
 
                     {/* Stats */}
                     <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
-                        {formatCount(info.viewCount) && (
+                        {formatCompactNumber(info.viewCount) && (
                             <div className="flex items-center gap-1.5 text-xs text-foreground-muted" title={`${info.viewCount} views`}>
                                 <Eye className="w-4 h-4" />
-                                <span>{formatCount(info.viewCount)}</span>
+                                <span>{formatCompactNumber(info.viewCount)}</span>
                             </div>
                         )}
-                        {formatCount(info.likeCount) && (
+                        {formatCompactNumber(info.likeCount) && (
                             <div className="flex items-center gap-1.5 text-xs text-foreground-muted" title={`${info.likeCount} likes`}>
                                 <ThumbsUp className="w-4 h-4" />
-                                <span>{formatCount(info.likeCount)}</span>
+                                <span>{formatCompactNumber(info.likeCount)}</span>
                             </div>
                         )}
                         {info.size && (

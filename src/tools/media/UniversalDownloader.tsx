@@ -34,6 +34,11 @@ export default function UniversalDownloader() {
     const [url, setUrl] = useState('');
     const [format, setFormat] = useState<'video' | 'audio'>('video');
     const [quality, setQuality] = useState<string>('1080p');
+    const [audioFormat, setAudioFormat] = useState<'mp3' | 'm4a' | 'wav' | 'flac'>('mp3');
+
+    // Batch Mode State
+    const [inputMode, setInputMode] = useState<'single' | 'batch'>('single');
+    const [batchUrls, setBatchUrls] = useState('');
 
     const [mediaInfo, setMediaInfo] = useState<UniversalMediaInfo | null>(null);
     const [fetchingInfo, setFetchingInfo] = useState(false);
@@ -51,7 +56,9 @@ export default function UniversalDownloader() {
     const [settings, setSettings] = useState({
         downloadPath: '',
         defaultFormat: 'video' as 'video' | 'audio',
-        defaultQuality: '1080p'
+        defaultQuality: '1080p',
+        maxConcurrentDownloads: 3,
+        useBrowserCookies: null as 'chrome' | 'firefox' | 'edge' | 'safari' | 'brave' | null
     });
     const [historySearch, setHistorySearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState<SupportedPlatform | 'all'>('all');
@@ -191,6 +198,57 @@ export default function UniversalDownloader() {
             return;
         }
 
+        setView('downloads');
+        info('Added to Queue', 'Download started in background');
+        await queueDownloadInput(url, overrideQuality);
+    };
+
+    const handleImportFile = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.csv,.json';
+        input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target?.result as string;
+                if (text) {
+                    // Extract URLs
+                    const urls = text.match(/https?:\/\/[^\s"',]+/g);
+                    if (urls && urls.length > 0) {
+                        const newUrls = urls.join('\n');
+                        setBatchUrls(prev => prev ? prev + '\n' + newUrls : newUrls);
+                        success('Imported', `Found ${urls.length} URLs in file`);
+                    } else {
+                        error('No URLs found', 'Could not find any valid URLs in the file');
+                    }
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+
+    const handleBatchDownload = async () => {
+        const lines = batchUrls.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+        if (lines.length === 0) {
+            error('No URLs', 'Please paste at least one valid URL');
+            return;
+        }
+
+        info('Batch Started', `Queueing ${lines.length} downloads...`);
+        setView('downloads');
+
+        for (const line of lines) {
+            await queueDownloadInput(line);
+            // Small delay to prevent UI freezing if many items
+            await new Promise(r => setTimeout(r, 100));
+        }
+    };
+
+    const queueDownloadInput = async (downloadUrl: string, overrideQuality?: string) => {
         // Check disk space before starting
         const space = await window.universalAPI.checkDiskSpace(downloadPath);
         if (space.available < 500 * 1024 * 1024) { // Less than 500MB
@@ -198,13 +256,7 @@ export default function UniversalDownloader() {
             return;
         }
 
-        if (space.warning) {
-            info('Low Space Warning', `You have only ${formatBytes(space.available)} left.`);
-        }
-
         const downloadId = crypto.randomUUID();
-
-        info('Added to Queue', 'Download started in background');
 
         // Optimistically add to active downloads
         setActiveDownloads(prev => {
@@ -218,22 +270,25 @@ export default function UniversalDownloader() {
                 eta: 0,
                 state: 'processing',
                 filename: 'Waiting for metadata...',
-                platform: detectedPlatform
+                platform: detectPlatform(downloadUrl)
             });
             return newMap;
         });
 
-        setView('downloads');
+        // Use 'batch' view is only set in the batch handler, or let the user decide?
+        // For single download, we might want to stay or switch.
+        // Let's rely on the caller to switch active view if needed.
 
         try {
             const downloadOptions: any = {
-                url,
+                url: downloadUrl,
                 format,
                 quality: overrideQuality || quality,
                 outputPath: downloadPath || undefined,
                 id: downloadId,
                 embedSubs: embedSubs,
-                isPlaylist: downloadEntirePlaylist,
+                audioFormat: format === 'audio' ? audioFormat : undefined,
+                isPlaylist: downloadEntirePlaylist, // Only relevant for single URL usually, but can apply to batch if they are playlists
                 playlistItems: downloadEntirePlaylist ? Array.from(selectedPlaylistItems).join(',') : undefined
             };
 
@@ -351,20 +406,78 @@ export default function UniversalDownloader() {
                         </div>
                     </div>
 
-                    <Input
-                        placeholder="Paste any video or audio URL here..."
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        icon={Link}
-                        fullWidth
-                        className="h-12 text-base bg-background/50 border-input"
-                        autoFocus
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && url) {
-                                handleDownload();
-                            }
-                        }}
-                    />
+                    {/* Input Mode Toggle */}
+                    <div className="flex items-center gap-2 p-1 bg-white/5 w-fit rounded-lg border border-white/10">
+                        <button
+                            onClick={() => setInputMode('single')}
+                            className={cn(
+                                "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                inputMode === 'single' ? "bg-indigo-500/20 text-indigo-300 shadow-sm" : "text-foreground-secondary hover:text-foreground"
+                            )}
+                        >
+                            Single URL
+                        </button>
+                        <button
+                            onClick={() => setInputMode('batch')}
+                            className={cn(
+                                "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                inputMode === 'batch' ? "bg-indigo-500/20 text-indigo-300 shadow-sm" : "text-foreground-secondary hover:text-foreground"
+                            )}
+                        >
+                            Batch Mode
+                        </button>
+                    </div>
+
+                    {inputMode === 'single' ? (
+                        <Input
+                            placeholder="Paste any video or audio URL here..."
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            icon={Link}
+                            fullWidth
+                            className="h-12 text-base bg-background/50 border-input"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && url) {
+                                    handleDownload();
+                                }
+                            }}
+                        />
+                    ) : (
+                        <div className="space-y-2">
+                            <textarea
+                                placeholder={`Paste multiple URLs here (one per line)...\nhttps://youtube.com/watch?v=...\nhttps://tiktok.com/@user/video/...`}
+                                value={batchUrls}
+                                onChange={(e) => setBatchUrls(e.target.value)}
+                                className="w-full min-h-[150px] p-4 rounded-xl bg-background/50 border border-input focus:ring-2 focus:ring-primary/50 outline-none font-mono text-sm resize-y"
+                            />
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-foreground-secondary">
+                                    {batchUrls.split('\n').filter(u => u.trim().startsWith('http')).length} valid URLs found
+                                </span>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleImportFile}
+                                        className="border-white/10 hover:bg-white/5"
+                                    >
+                                        <FolderOpen className="w-4 h-4 mr-2" />
+                                        Import
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleBatchDownload}
+                                        disabled={!batchUrls.trim()}
+                                        className="bg-indigo-600 hover:bg-indigo-700"
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Download All
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2 text-xs">
@@ -441,6 +554,8 @@ export default function UniversalDownloader() {
                                 <UniversalFormatSelector
                                     format={format}
                                     onFormatChange={setFormat}
+                                    audioFormat={audioFormat}
+                                    onAudioFormatChange={setAudioFormat}
                                     downloadPath={downloadPath}
                                     onDownload={handleDownload}
                                     onChooseFolder={handleChooseFolder}
@@ -842,6 +957,44 @@ export default function UniversalDownloader() {
                             <option value="best">Best Quality</option>
                             <option value="medium">Medium Quality</option>
                             <option value="low">Low Quality</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-foreground-secondary">
+                            Browser Cookies Source
+                            <span className="block text-[10px] text-foreground-muted font-normal mt-0.5">Use if downloads fail (e.g. valid premium account)</span>
+                        </label>
+                        <select
+                            className="w-full bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                            value={settings.useBrowserCookies || ''}
+                            onChange={(e) => handleSaveSettings({ ...settings, useBrowserCookies: e.target.value as any || null })}
+                        >
+                            <option value="">None (Public Access)</option>
+                            <option value="chrome">Google Chrome</option>
+                            <option value="firefox">Mozilla Firefox</option>
+                            <option value="edge">Microsoft Edge</option>
+                            <option value="safari">Safari</option>
+                            <option value="brave">Brave</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-foreground-secondary">
+                            Max Concurrent Downloads
+                        </label>
+                        <select
+                            className="w-full bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                            value={settings.maxConcurrentDownloads || 3}
+                            onChange={(e) => handleSaveSettings({ ...settings, maxConcurrentDownloads: parseInt(e.target.value) })}
+                        >
+                            <option value={1}>1</option>
+                            <option value={2}>2</option>
+                            <option value={3}>3 (Default)</option>
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
                         </select>
                     </div>
                 </div>

@@ -1,48 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export interface ClipboardItem {
-    id: string;
-    content: string;
-    type: 'text' | 'image' | 'link' | 'file';
-    timestamp: number;
-    pinned: boolean;
-    copyCount: number; // Số lần copy
-    sourceApp?: string; // App nguồn (từ Electron)
-    categories?: string[]; // Categories/tags
-    metadata?: {
-        length?: number;
-        mimeType?: string;
-        preview?: string;
-        url?: string; // Cho links
-        filePath?: string; // Cho files
-    };
-}
+import type {
+    ClipboardItem,
+    SearchMode,
+    FilterOptions,
+    ClipboardSettings,
+    ClipboardStatistics
+} from '@/types/clipboard';
 
-export type SearchMode = 'contains' | 'exact' | 'startsWith' | 'fuzzy';
-
-export interface FilterOptions {
-    type: 'all' | 'text' | 'image' | 'link' | 'file';
-    dateRange: 'all' | 'today' | 'week' | 'month';
-    pinnedOnly: boolean;
-    searchMode: SearchMode; // Thêm search mode
-}
-
-interface ClipboardSettings {
-    autoClearDays: number;
-    excludeDuplicates: boolean;
-    enableMonitoring: boolean;
-    ignoredApps: string[]; // Danh sách apps để ignore
-    clearOnQuit: boolean; // Xóa clipboard khi quit
-}
-
-interface ClipboardStatistics {
-    totalItems: number;
-    totalCopies: number;
-    mostCopiedItems: ClipboardItem[];
-    itemsByType: Record<string, number>;
-    itemsByDay: Record<string, number>;
-}
+export type { ClipboardItem, SearchMode, FilterOptions };
 
 interface ClipboardStore {
     items: ClipboardItem[];
@@ -126,9 +93,9 @@ export const useClipboardStore = create<ClipboardStore>()(
                         const updatedItems = state.items.filter(item => item.id !== existingItem.id);
                         return {
                             items: [
-                                { 
-                                    ...existingItem, 
-                                    copyCount: existingItem.copyCount + 1, 
+                                {
+                                    ...existingItem,
+                                    copyCount: existingItem.copyCount + 1,
                                     timestamp: Date.now(),
                                     // Update metadata if provided
                                     ...(metadata?.sourceApp && { sourceApp: metadata.sourceApp }),
@@ -150,9 +117,9 @@ export const useClipboardStore = create<ClipboardStore>()(
                         return {
                             items: state.items.map(item =>
                                 item.id === existingItem.id
-                                    ? { 
-                                        ...item, 
-                                        copyCount: item.copyCount + 1, 
+                                    ? {
+                                        ...item,
+                                        copyCount: item.copyCount + 1,
                                         timestamp: Date.now(),
                                         // Update metadata if provided
                                         ...(metadata?.sourceApp && { sourceApp: metadata.sourceApp }),
@@ -363,17 +330,17 @@ export const useClipboardStore = create<ClipboardStore>()(
             importData: (jsonData: string) => {
                 try {
                     const parsed = JSON.parse(jsonData);
-                    
+
                     // Validate structure
                     if (!parsed.items || !Array.isArray(parsed.items)) {
                         return { success: false, error: 'Invalid export format: missing items array' };
                     }
 
                     // Validate items structure
-                    const validItems = parsed.items.filter((item: any) => 
-                        item.id && 
-                        item.content !== undefined && 
-                        item.type && 
+                    const validItems = parsed.items.filter((item: any) =>
+                        item.id &&
+                        item.content !== undefined &&
+                        item.type &&
                         typeof item.timestamp === 'number'
                     );
 
@@ -384,13 +351,13 @@ export const useClipboardStore = create<ClipboardStore>()(
                     // Merge with existing items (avoid duplicates by content)
                     set((state) => {
                         const existingContents = new Set(state.items.map(i => i.content));
-                        const newItems = validItems.filter((item: ClipboardItem) => 
+                        const newItems = validItems.filter((item: ClipboardItem) =>
                             !existingContents.has(item.content)
                         );
-                        
+
                         // Combine and limit to maxItems
                         const combinedItems = [...newItems, ...state.items].slice(0, state.maxItems);
-                        
+
                         return {
                             items: combinedItems,
                             // Optionally import settings and categories if provided

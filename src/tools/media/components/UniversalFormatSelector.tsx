@@ -8,6 +8,8 @@ import { Switch } from '@components/ui/Switch';
 interface UniversalFormatSelectorProps {
     format: 'video' | 'audio';
     onFormatChange: (f: 'video' | 'audio') => void;
+    audioFormat?: 'mp3' | 'm4a' | 'wav' | 'flac';
+    onAudioFormatChange?: (f: 'mp3' | 'm4a' | 'wav' | 'flac') => void;
     downloadPath: string;
     onDownload: (quality: string) => void;
     onChooseFolder: () => void;
@@ -29,6 +31,8 @@ interface UniversalFormatSelectorProps {
 export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = ({
     format,
     onFormatChange,
+    audioFormat,
+    onAudioFormatChange,
     downloadPath,
     onDownload,
     onChooseFolder,
@@ -77,7 +81,12 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                 '5': 1.5, // 192k
                 '9': 1.0  // 128k
             };
-            sizeEst = lengthMB * (bitrateMapApi[q] || 1);
+            // Adjust for format (wav is huge)
+            let multiplier = 1;
+            if (audioFormat === 'wav') multiplier = 10;
+            if (audioFormat === 'flac') multiplier = 3;
+
+            sizeEst = lengthMB * (bitrateMapApi[q] || 1) * multiplier;
         }
 
         if (downloadEntirePlaylist && isPlaylist) {
@@ -148,6 +157,31 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                     Audio
                 </button>
             </div>
+
+            {/* Audio Format Selection */}
+            {format === 'audio' && onAudioFormatChange && (
+                <div className="bg-background/30 rounded-xl border border-border-glass p-3 space-y-2">
+                    <span className="text-[10px] text-foreground-secondary uppercase tracking-wider font-bold px-1">
+                        Audio Format
+                    </span>
+                    <div className="flex gap-2">
+                        {(['mp3', 'm4a', 'flac', 'wav'] as const).map(fmt => (
+                            <button
+                                key={fmt}
+                                onClick={() => onAudioFormatChange(fmt)}
+                                className={cn(
+                                    "flex-1 py-1.5 rounded-lg text-xs font-medium uppercase transition-colors border",
+                                    audioFormat === fmt
+                                        ? "bg-pink-500/10 text-pink-400 border-pink-500/30"
+                                        : "bg-white/5 text-foreground-secondary border-transparent hover:bg-white/10 hover:text-foreground"
+                                )}
+                            >
+                                {fmt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Extra Options */}
             {(isPlaylist || platform === 'youtube') && (
