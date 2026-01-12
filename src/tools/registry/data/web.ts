@@ -267,5 +267,38 @@ export const webTools: ToolDefinition[] = [
         component: Lazy.ServiceWorkerGenerator,
         keywords: ['service', 'worker', 'pwa', 'offline', 'cache', 'workbox']
     },
+    {
+        id: 'set-cookie-generator',
+        name: 'Set-Cookie Gen',
+        path: '/set-cookie-generator',
+        description: 'Generate Set-Cookie headers',
+        category: 'web',
+        icon: Cookie,
+        color: 'text-amber-500',
+        component: Lazy.SetCookieGenerator,
+        keywords: ['cookie', 'set-cookie', 'header', 'http']
+    },
+    {
+        id: 'canonical-url',
+        name: 'Canonical URL',
+        path: '/canonical-url',
+        description: 'Generate canonical link tags',
+        category: 'web',
+        icon: Link,
+        color: 'text-green-500',
+        component: Lazy.CanonicalUrlGenerator,
+        keywords: ['canonical', 'url', 'seo', 'link']
+    },
+    {
+        id: 'content-type-parser',
+        name: 'Content-Type Parser',
+        path: '/content-type-parser',
+        description: 'Parse Content-Type headers',
+        category: 'web',
+        icon: FileCode,
+        color: 'text-blue-500',
+        component: Lazy.ContentTypeParser,
+        keywords: ['content-type', 'mime', 'header', 'parser']
+    },
 ];
 

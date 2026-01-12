@@ -183,7 +183,7 @@
 - [x] Robots.txt generator
 - [x] Sitemap generator
 - [x] Structured Data (JSON-LD) generator
-- [ ] Canonical URL generator
+- [x] Canonical URL generator
 - [x] Bearer token generator
 - [x] API key generator
 - [ ] Security headers checker
@@ -191,8 +191,8 @@
 - [ ] Percent encoding
 - [ ] Unicode encoder/decoder
 - [x] Cookie parser
-- [ ] Set-Cookie header generator
-- [ ] Content-Type parser
+- [x] Set-Cookie header generator
+- [x] Content-Type parser
 - [ ] Accept header builder
 - [ ] User-Agent switcher
 - [ ] Referrer Policy generator
@@ -756,7 +756,7 @@
 
 ### 17.1 Dev / Engineering Tools
 
-#### API & Backend
+#### API & Backend (Not do)
 
 - [ ] API Tester (Postman-lite)
 - [ ] GraphQL Explorer
@@ -892,3 +892,170 @@
 - [ ] Offline-first Mode
 - [ ] Enterprise Profiles
 - [ ] Policy-based Tool Access
+
+## Phase 18: UI / UX Improvements & Product Polish
+
+### 18.1 Global UX Improvements
+
+- [ ] Global Command Palette (Tool + Action + Settings)
+- [ ] Tool Quick Switcher (recent / favorite)
+- [ ] Inline Tool Search (inside Sidebar)
+- [ ] Tool Usage Analytics (local-only)
+- [ ] Smart Empty States (tips + shortcuts)
+- [ ] Contextual Help per Tool
+- [ ] Tool Description & Examples Panel
+- [ ] First-time Tool Walkthrough (tooltip-based)
+- [ ] Undo / Redo (global level)
+- [ ] Better Loading & Skeleton States
+
+---
+
+### 18.2 Tool UX Enhancements
+
+- [ ] Tool Presets (Save / Load / Share)
+- [ ] Tool History Replay
+- [ ] Compare Mode (before / after)
+- [ ] Side-by-side Input / Output
+- [ ] Multi-input Tabs
+- [ ] Drag & Drop Input Everywhere
+- [ ] Inline Validation & Warnings
+- [ ] Error Explanation Panel (human-readable)
+- [ ] Output Highlighting (diff / syntax)
+- [ ] Output Export Menu (copy / save / share)
+
+---
+
+### 18.3 UI Customization
+
+- [ ] Compact / Comfortable / Dense Layout Modes
+- [ ] Sidebar Collapsible Sections
+- [ ] Custom Sidebar Ordering
+- [ ] Per-tool UI Preferences
+- [ ] Font Size & Editor Zoom Controls
+- [ ] Accent Color Picker
+- [ ] Glass Intensity Control
+- [ ] Blur Performance Toggle (low-end devices)
+
+---
+
+### 18.4 Accessibility (a11y)
+
+- [ ] Full Keyboard Navigation
+- [ ] Focus Ring Improvements
+- [ ] Screen Reader Labels
+- [ ] High Contrast Mode
+- [ ] Reduced Motion Mode
+- [ ] Color Blind Safe Palette
+- [ ] Shortcut Conflict Detector
+
+---
+
+### 18.5 Onboarding & Guidance
+
+- [ ] Welcome Tour
+- [ ] Tool Discovery Suggestions
+- [ ] “You might also need…” Tool Suggestions
+- [ ] Built-in Documentation Viewer
+- [ ] Example Gallery per Tool
+- [ ] Reset Onboarding Flow
+
+---
+
+### 18.6 Performance UX
+
+- [ ] Progressive Rendering for Large Outputs
+- [ ] Background Processing Indicator
+- [ ] Task Queue UI
+- [ ] Cancel Long-running Tasks
+- [ ] Performance Warning Toasts
+- [ ] Memory Usage Indicator (per tool)
+
+---
+
+## Phase 19: Advanced & Missing Tools
+
+### 19.1 Developer Productivity
+
+- [ ] API Scenario Runner (multi-step requests)
+- [ ] HTTP Response Visualizer (timing, waterfall)
+- [ ] Code Snippet Generator (curl / fetch / axios)
+- [ ] Environment Switcher (dev / staging / prod)
+- [ ] JSON Schema Builder (UI-based)
+- [ ] Mock Data Generator (faker-style)
+- [ ] Feature Flag Simulator
+- [ ] Config Diff Tool (.env / yaml / json)
+
+---
+
+### 19.2 Security / Privacy Advanced
+
+- [ ] Redaction Preview Mode
+- [ ] Secrets Scanner for Entire Project Folder
+- [ ] Compliance Checklist Generator (GDPR, SOC2)
+- [ ] Threat Modeling Canvas (STRIDE)
+- [ ] Secure Random Test Tool
+- [ ] Password Policy Tester
+- [ ] Encryption Strength Analyzer
+
+---
+
+### 19.3 Data & File Power Tools
+
+- [ ] CSV Join / Merge Tool
+- [ ] CSV Diff Tool
+- [ ] Data Sampling Tool
+- [ ] JSON Stream Viewer
+- [ ] File Chunk Viewer
+- [ ] Binary File Inspector (hex view)
+- [ ] Base64 File Compare
+- [ ] Directory Snapshot & Diff
+
+---
+
+### 19.4 Web & Frontend Advanced
+
+- [ ] CSS Specificity Calculator
+- [ ] Flexbox / Grid Visual Playground
+- [ ] HTML Minifier + Beautifier
+- [ ] JS Minifier / Obfuscator
+- [ ] JS AST Viewer
+- [ ] Bundle Size Analyzer
+- [ ] Web Font Inspector
+- [ ] Cookie Permission Simulator
+
+---
+
+### 19.5 Image / Media Pro
+
+- [ ] Image Pipeline Builder (resize → compress → format)
+- [ ] Screenshot Automation Rules
+- [ ] Batch Watermark Tool
+- [ ] Image EXIF Editor
+- [ ] Video Bitrate Analyzer
+- [ ] Audio Silence Trimmer
+- [ ] Frame-by-frame Video Inspector
+- [ ] Thumbnail Generator
+
+---
+
+### 19.6 System & Power User
+
+- [ ] Process Timeline Viewer
+- [ ] Disk I/O Visualizer
+- [ ] Network Traffic Snapshot
+- [ ] System Health Score
+- [ ] Scheduled Maintenance Rules
+- [ ] App Permission Inspector
+- [ ] Log File Viewer (system/app)
+
+---
+
+### 19.7 Power Features (Differentiators)
+
+- [ ] Tool-to-Tool Piping (Output → Input)
+- [ ] Workflow Automation (No-code)
+- [ ] Tool Templates Marketplace (local / community)
+- [ ] CLI ↔ GUI Sync
+- [ ] Headless Mode (scriptable)
+- [ ] Portable Workspace Profiles
+- [ ] Multi-window Tool Instances
