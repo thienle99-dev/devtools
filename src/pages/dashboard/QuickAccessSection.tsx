@@ -4,7 +4,7 @@ import { useTabStore } from '../../store/tabStore';
 import { getToolById, CATEGORIES } from '../../tools/registry';
 import { useNavigate } from 'react-router-dom';
 import { Star, Clock, Plus, Settings } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 export const QuickAccessSection: React.FC = () => {
     const history = useToolStore(state => state.history);

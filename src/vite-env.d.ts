@@ -67,4 +67,18 @@ interface Window {
         openFile: (path: string) => Promise<void>;
         showInFolder: (path: string) => Promise<void>;
     };
+    videoMergerAPI: {
+        getVideoInfo: (filePath: string) => Promise<any>;
+        generateThumbnail: (filePath: string, time: number) => Promise<string>;
+        generateFilmstrip: (filePath: string, duration: number, count?: number) => Promise<string[]>;
+        extractWaveform: (filePath: string) => Promise<number[]>;
+        merge: (options: any) => Promise<string>;
+        createFromImages: (options: any) => Promise<string>;
+        cancel: (id: string) => Promise<void>;
+        chooseInputFiles: () => Promise<string[] | null>;
+        onProgress: (callback: (progress: any) => void) => () => void;
+        onFilmstripProgress: (callback: (progress: any) => void) => () => void;
+        openFile: (path: string) => Promise<void>;
+        showInFolder: (path: string) => Promise<void>;
+    };
 }

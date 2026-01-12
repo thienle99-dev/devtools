@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@utils/cn';
+import { formatDuration } from '@utils/format';
 import type { AudioLayer, AudioManagerOptions, AudioProgress } from '../../../types/audio-manager';
 
 export const AudioManager: React.FC = () => {
@@ -97,12 +98,7 @@ export const AudioManager: React.FC = () => {
         }
     };
 
-    const formatDuration = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        const ms = Math.floor((seconds % 1) * 100);
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-    };
+
 
     const totalDuration = videoInfo?.duration || 0;
     const pxPerSecond = 20;
@@ -118,19 +114,19 @@ export const AudioManager: React.FC = () => {
                     </div>
                     {videoInfo && (
                         <div className="text-[10px] font-bold text-foreground-secondary uppercase tracking-widest">
-                            Video Duration: <span className="text-foreground">{formatDuration(totalDuration)}</span>
+                            Video Duration: <span className="text-foreground">{formatDuration(totalDuration, { showMs: true })}</span>
                         </div>
                     )}
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button 
+                    <button
                         onClick={handleExport}
                         disabled={!videoPath || isProcessing}
                         className={cn(
                             "flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all shadow-lg",
-                            videoPath && !isProcessing 
-                                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20" 
+                            videoPath && !isProcessing
+                                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20"
                                 : "bg-white/5 text-gray-500 cursor-not-allowed"
                         )}
                     >
@@ -145,7 +141,7 @@ export const AudioManager: React.FC = () => {
                 {/* Left Panel - Assets */}
                 <div className="w-72 border-r border-border-glass bg-foreground/[0.01] flex flex-col">
                     <div className="p-4 space-y-4">
-                        <button 
+                        <button
                             onClick={handleSelectVideo}
                             className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-foreground/[0.05] hover:bg-foreground/[0.08] border border-dashed border-border-glass rounded-2xl text-xs font-bold transition-all"
                         >
@@ -153,7 +149,7 @@ export const AudioManager: React.FC = () => {
                             <span>{videoPath ? 'Change Video' : 'Select Video'}</span>
                         </button>
 
-                        <button 
+                        <button
                             onClick={handleAddAudioLayer}
                             disabled={!videoPath}
                             className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-2xl text-xs font-black transition-all disabled:opacity-30"
@@ -180,7 +176,7 @@ export const AudioManager: React.FC = () => {
                                     </div>
                                     {keepOriginalAudio && (
                                         <div className="flex items-center gap-3">
-                                            <input 
+                                            <input
                                                 type="range" min="0" max="2" step="0.1" value={originalVolume}
                                                 onChange={(e) => setOriginalVolume(Number(e.target.value))}
                                                 className="flex-1 h-1 bg-foreground/[0.1] rounded-full accent-indigo-500"
@@ -209,7 +205,7 @@ export const AudioManager: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <input 
+                                        <input
                                             type="range" min="0" max="2" step="0.1" value={layer.volume}
                                             onChange={(e) => updateLayer(layer.id, { volume: Number(e.target.value) })}
                                             className="flex-1 h-1 bg-foreground/[0.1] rounded-full accent-emerald-500"
@@ -235,10 +231,10 @@ export const AudioManager: React.FC = () => {
                                     <p className="text-xs font-bold uppercase tracking-widest">No Video Selected</p>
                                 </div>
                             )}
-                            
+
                             {videoPath && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
+                                    <button
                                         onClick={() => setIsPlaying(!isPlaying)}
                                         className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-transform"
                                     >
@@ -256,10 +252,10 @@ export const AudioManager: React.FC = () => {
                                 <Clock size={12} />
                                 <span>Audio Timeline</span>
                             </div>
-                            <div className="text-[10px] font-mono font-bold text-indigo-400">{formatDuration(currentTime)}</div>
+                            <div className="text-[10px] font-mono font-bold text-indigo-400">{formatDuration(currentTime, { showMs: true })}</div>
                         </div>
 
-                        <div 
+                        <div
                             ref={timelineRef}
                             className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar-h relative select-none"
                         >
@@ -292,9 +288,9 @@ export const AudioManager: React.FC = () => {
                                 {audioLayers.map((layer) => (
                                     <div key={layer.id} className="flex items-center gap-4">
                                         <div className="w-12 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-500 shrink-0"><Music size={16} /></div>
-                                        <div 
+                                        <div
                                             className="h-10 bg-emerald-500/20 rounded-xl border border-emerald-500/30 relative cursor-grab active:cursor-grabbing hover:bg-emerald-500/30 transition-colors"
-                                            style={{ 
+                                            style={{
                                                 width: (layer.clipEnd - layer.clipStart) * pxPerSecond,
                                                 marginLeft: layer.startTime * pxPerSecond
                                             }}
@@ -326,7 +322,7 @@ export const AudioManager: React.FC = () => {
                             </div>
 
                             {/* Playhead */}
-                            <motion.div 
+                            <motion.div
                                 className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-20 pointer-events-none"
                                 style={{ left: currentTime * pxPerSecond + 48 }}
                                 transition={{ type: 'spring', bounce: 0, duration: 0.1 }}

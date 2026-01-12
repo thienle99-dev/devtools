@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { CodeEditor } from '../ui/CodeEditor';
 
 export const ToolPlaceholder: React.FC<{ name: string }> = ({ name }) => {

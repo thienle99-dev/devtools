@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/Button';
 import { Slider } from '../../../components/ui/Slider';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { PRESET_GRADIENTS, generateGradientCSS } from '../utils/backgroundGenerator';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 export const BackgroundPanel: React.FC = () => {

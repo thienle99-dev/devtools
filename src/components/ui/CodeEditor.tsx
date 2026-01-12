@@ -8,7 +8,7 @@ import { sql } from '@codemirror/lang-sql';
 import { yaml } from '@codemirror/lang-yaml';
 import { EditorView } from '@codemirror/view';
 import { useSettingsStore } from '../../store/settingsStore';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface CodeEditorProps extends ReactCodeMirrorProps {
     language?: 'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'sql' | 'yaml' | 'markdown' | 'text' | 'diff';

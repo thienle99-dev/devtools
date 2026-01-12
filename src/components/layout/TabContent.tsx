@@ -3,7 +3,7 @@ import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { getToolById } from '../../tools/registry';
 import { DashboardPage } from '../../tools/registry/lazy-tools';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { ToolSkeleton } from '../ui/Skeleton';
 
 export const TabContent: React.FC = React.memo(() => {

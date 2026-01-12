@@ -719,26 +719,24 @@
   - [x] clipboard.ts
   - [x] screenshot.ts
   - [x] system-cleaner.ts
-- [ ] Refactor components (Phase 3)
+- [x] Refactor components (Phase 3)
   - [x] UniversalDownloader ecosystem
-  - [x] YoutubeDownloader (partial)
+  - [x] YoutubeDownloader
   - [x] Stats Monitor components
+  - [x] Media Tools (Voice, Recorder, Merger)
 - [x] Update imports (Phase 5)
-- [x] Implement format helpers (Done)
-- [x] Implement URL/file helpers (Done)
-- [x] Centralize types
-- [ ] Refactor components
-- [ ] Update imports
+- [x] Implement format helpers
+- [x] Implement URL/file helpers
 
 ---
 
 ## Phase 14: Video Frame Tools Enhancements (VIDEOFRAMES_COMPLETION.md)
 
-- [ ] FFmpeg.wasm integration
-- [ ] MP4/H.265 export
-- [ ] GIF creation tool
-- [ ] Frame selection/trimming
-- [ ] Batch processing
+- [x] FFmpeg integration (Backend)
+- [x] MP4/H.264 export
+- [x] GIF creation tool (Backend optimized)
+- [x] Frame selection/trimming
+- [x] Batch processing support
 - [ ] Effects/filters
 - [ ] Watermarking
 - [ ] Compression settings

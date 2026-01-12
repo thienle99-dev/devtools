@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { useTabStore } from '../../store/tabStore';
 import { useToolStore } from '../../store/toolStore';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { TOOLS } from '../../tools/registry';
 import { TabContextMenu } from '../ui/TabContextMenu';
 import { AnimatePresence } from 'framer-motion';

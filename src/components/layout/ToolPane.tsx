@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import type { ReactNode, DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Copy, Download, Upload, Clipboard, ExternalLink, ArrowRight, Link as LinkIcon, HelpCircle, X, Bookmark, History as HistoryIcon, Save, Share2, Columns, AlertTriangle, Info, GitCompare } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { TOOLS } from '../../tools/registry/tools';
 import { useToolState, useToolStore } from '../../store/toolStore';
 import { toast } from 'sonner';

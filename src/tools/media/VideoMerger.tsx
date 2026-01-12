@@ -12,6 +12,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { cn } from '@utils/cn';
+import { formatDuration } from '@utils/format';
 import { CapCutTimeline } from './components/CapCutTimeline';
 import type { VideoMergeOptions, VideoMergeProgress, ExtendedVideoInfo } from '../../types/video-merger';
 import { useTimelineHistory } from './hooks/useTimelineHistory';
@@ -267,13 +268,7 @@ export const VideoMerger: React.FC = () => {
     const [activeClipSrc, setActiveClipSrc] = useState<string | null>(null);
     const [previewError, setPreviewError] = useState<string | null>(null);
 
-    const formatDuration = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        const ms = Math.floor((seconds % 1) * 100);
-        return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-    };
+
 
     useEffect(() => {
         if (isPlaying) {
@@ -720,7 +715,7 @@ export const VideoMerger: React.FC = () => {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-xs font-bold text-foreground-secondary">
                         <Clock size={14} className="text-indigo-500" />
-                        <span>Timeline Duration: <span className="text-foreground">{formatDuration(totalDuration)}</span></span>
+                        <span>Timeline Duration: <span className="text-foreground">{formatDuration(totalDuration, { showMs: true })}</span></span>
                     </div>
                 </div>
 
@@ -817,10 +812,10 @@ export const VideoMerger: React.FC = () => {
                                     <div className="absolute top-4 left-4 flex items-center gap-3">
                                         <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-xl border border-border-glass">
                                             <div className="text-2xl font-mono font-black text-foreground tabular-nums">
-                                                {formatDuration(currentTime)}
+                                                {formatDuration(currentTime, { showMs: true })}
                                             </div>
                                             <div className="text-[10px] font-mono text-foreground-secondary text-center">
-                                                / {formatDuration(totalDuration)}
+                                                / {formatDuration(totalDuration, { showMs: true })}
                                             </div>
                                         </div>
 
@@ -959,7 +954,7 @@ export const VideoMerger: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs text-foreground-secondary font-medium">Duration</span>
-                                    <span className="text-xs font-black text-foreground">{formatDuration(files[previewIndex].duration)}</span>
+                                    <span className="text-xs font-black text-foreground">{formatDuration(files[previewIndex].duration, { showMs: true })}</span>
                                 </div>
                             </div>
                         )}
@@ -988,7 +983,7 @@ export const VideoMerger: React.FC = () => {
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-foreground-secondary font-medium">Total Duration</span>
-                                <span className="text-xs font-black text-foreground">{formatDuration(totalDuration)}</span>
+                                <span className="text-xs font-black text-foreground">{formatDuration(totalDuration, { showMs: true })}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-foreground-secondary font-medium">Export Format</span>
@@ -1033,7 +1028,7 @@ export const VideoMerger: React.FC = () => {
                 onRemoveFile={handleRemoveFile}
                 onUpdateTrim={updateTrim}
                 onClipMove={handleClipMove}
-                formatDuration={formatDuration}
+                formatDuration={(s) => formatDuration(s, { showMs: true })}
                 showLabels={showLabels}
                 onToggleLabels={() => setShowLabels(prev => !prev)}
             />
@@ -1045,7 +1040,7 @@ export const VideoMerger: React.FC = () => {
                 onClose={() => setTrimmingIdx(null)}
                 onUpdateTrim={updateTrim}
                 onFinalizeTrim={finalizeTrim}
-                formatDuration={formatDuration}
+                formatDuration={(s) => formatDuration(s, { showMs: true })}
             />
 
             {/* Export Progress Progress */}

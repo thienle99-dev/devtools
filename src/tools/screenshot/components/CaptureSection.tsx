@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Monitor, Square, MousePointer2, Camera, Clock, Globe } from 'lucide-react';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { CaptureMode, CaptureSource } from '../types';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@utils/cn';
+import { formatDuration } from '@utils/format';
 import type { TrimRange, VideoTrimmerOptions, VideoTrimmerProgress } from '../../../types/video-trimmer';
 
 // macOS-style Timeline Component
@@ -458,13 +459,7 @@ export const VideoTrimmer: React.FC = () => {
         }
     };
 
-    const formatTime = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        const ms = Math.floor((seconds % 1) * 100);
-        return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-    };
+
 
     return (
         <div className="flex flex-col h-full bg-background text-foreground overflow-hidden font-sans">
@@ -561,7 +556,7 @@ export const VideoTrimmer: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="text-[9px] font-bold text-foreground-secondary/70">
-                                    Duration: <span className="text-foreground">{formatTime(range.end - range.start)}</span>
+                                    Duration: <span className="text-foreground">{formatDuration(range.end - range.start, { showMs: true })}</span>
                                 </div>
                             </div>
                         ))}
@@ -608,7 +603,7 @@ export const VideoTrimmer: React.FC = () => {
 
                             {/* Timecode Display */}
                             <div className="absolute bottom-10 left-10 px-6 py-2 bg-black/80 backdrop-blur-xl rounded-2xl border border-white/20 font-mono text-xl font-black text-white shadow-2xl">
-                                {formatTime(currentTime)}
+                                {formatDuration(currentTime, { showMs: true })}
                             </div>
 
                             {/* Video Info Overlay */}
@@ -657,7 +652,7 @@ export const VideoTrimmer: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="text-[10px] font-mono font-bold text-indigo-400">Total: {formatTime(totalDuration)}</div>
+                            <div className="text-[10px] font-mono font-bold text-indigo-400">Total: {formatDuration(totalDuration, { showMs: true })}</div>
                         </div>
 
                         <MacOSStyleTimeline
@@ -667,7 +662,7 @@ export const VideoTrimmer: React.FC = () => {
                             onRangeChange={(rangeId, start, end) => updateRange(rangeId, start, end)}
                             onTimeChange={setCurrentTime}
                             onPlayingChange={setIsPlaying}
-                            formatTime={formatTime}
+                            formatTime={(s) => formatDuration(s, { showMs: true })}
                         />
                     </div>
                 </div>

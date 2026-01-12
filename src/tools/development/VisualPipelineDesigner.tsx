@@ -18,7 +18,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { TOOLS } from '../registry';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { Package, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 // --- Custom Node Component ---

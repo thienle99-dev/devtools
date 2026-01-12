@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, Sparkles, Lightbulb, ArrowRight } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
-import { cn } from '../../../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface ScanPlaceholderProps {
     title: string;

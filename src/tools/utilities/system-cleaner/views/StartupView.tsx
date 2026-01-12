@@ -5,7 +5,7 @@ import { Button } from '../../../../components/ui/Button';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { ScanPlaceholder } from '../components/ScanPlaceholder';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
-import { cn } from '../../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 export const StartupView: React.FC = () => {

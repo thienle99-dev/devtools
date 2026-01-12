@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { AppCard } from './AppCard';
 import { AppTypeFilter } from './AppTypeFilter';
 import { useInstalledApps } from '../hooks/useInstalledApps';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 import type { InstalledApp } from '../../../types/application-manager';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';

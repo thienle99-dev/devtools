@@ -224,6 +224,7 @@ contextBridge.exposeInMainWorld('videoMergerAPI', {
   generateFilmstrip: (filePath: string, duration: number, count?: number) => ipcRenderer.invoke('video-filmstrip:generate', filePath, duration, count),
   extractWaveform: (filePath: string) => ipcRenderer.invoke('video-merger:extract-waveform', filePath),
   merge: (options: any) => ipcRenderer.invoke('video-merger:merge', options),
+  createFromImages: (options: any) => ipcRenderer.invoke('video-merger:create-from-images', options),
   cancel: (id: string) => ipcRenderer.invoke('video-merger:cancel', id),
   chooseInputFiles: () => ipcRenderer.invoke('video-merger:choose-files'),
   onProgress: (callback: (progress: any) => void) => {

@@ -1,5 +1,5 @@
 import React, { type InputHTMLAttributes } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { motion } from 'framer-motion';
 
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {

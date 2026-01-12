@@ -1,6 +1,6 @@
-import React, { type ButtonHTMLAttributes } from 'react';
+import React, { type ButtonHTMLAttributes, type JSX } from 'react';
 import { Loader2 } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'glass' | 'ghost' | 'danger' | 'warning' | 'success' | 'outline';
@@ -20,7 +20,6 @@ export const Button = ({
     ...props
 }: ButtonProps): JSX.Element => {
     return (
-        // @ts-expect-error - React 19 types conflict with formAction and other props
         <button
             className={cn(
                 // Base styles - macOS style
@@ -28,7 +27,7 @@ export const Button = ({
                 "transition-all duration-200 select-none overflow-hidden",
                 "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed",
-                
+
                 // Focus ring colors by variant (macOS blue focus ring)
                 variant === 'primary' && "focus:ring-blue-500 focus:ring-offset-1",
                 variant === 'secondary' && "focus:ring-blue-500 focus:ring-offset-1",
@@ -92,7 +91,6 @@ export const Button = ({
             {...props}
         >
             {loading && (
-                // @ts-expect-error - Lucide icon type mismatch
                 <Loader2 className="w-4 h-4 mr-2 animate-spin absolute" />
             )}
 
@@ -100,7 +98,6 @@ export const Button = ({
                 "flex items-center gap-2 transition-opacity",
                 loading && "opacity-0" // Hide content but keep size when loading
             )}>
-                {/* @ts-expect-error - Icon type mismatch */}
                 {Icon && <Icon className="w-4 h-4" />}
                 {children as any}
             </div>

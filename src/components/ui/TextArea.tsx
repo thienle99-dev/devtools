@@ -1,5 +1,5 @@
 import React, { type TextareaHTMLAttributes } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { motion } from 'framer-motion';
 
 export interface TextAreaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {

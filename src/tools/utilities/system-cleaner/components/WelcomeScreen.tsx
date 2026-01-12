@@ -5,7 +5,7 @@ import { Button } from '../../../../components/ui/Button';
 import { Card } from '../../../../components/ui/Card';
 import { useSystemCleanerStore } from '../store/systemCleanerStore';
 import { useSettingsStore } from '../store/settingsStore';
-import { cn } from '../../../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface WelcomeScreenProps {
     onComplete: () => void;

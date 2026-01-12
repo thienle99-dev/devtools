@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, Users, Shield } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import type { AppFilterType } from '../../../types/application-manager';
 
 interface AppTypeFilterProps {

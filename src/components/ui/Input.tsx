@@ -1,5 +1,5 @@
 import React, { type InputHTMLAttributes, forwardRef } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { motion } from 'framer-motion';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {

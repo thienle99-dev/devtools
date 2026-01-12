@@ -6,7 +6,8 @@ import { spawn } from 'child_process';
 import type {
     VideoMergeOptions,
     VideoMergeProgress,
-    VideoInfo
+    VideoInfo,
+    VideoFromImagesOptions
 } from '../../src/types/video-merger';
 
 
@@ -277,6 +278,138 @@ export class VideoMerger {
 
             process.on('error', reject);
         });
+    }
+
+    async createVideoFromImages(
+        options: VideoFromImagesOptions,
+        progressCallback?: (progress: VideoMergeProgress) => void
+    ): Promise<string> {
+        if (!this.ffmpegPath) {
+            throw new Error('FFmpeg not available');
+        }
+
+        const id = randomUUID();
+        const { imagePaths, fps, outputPath, format, quality } = options;
+
+        if (!imagePaths || imagePaths.length === 0) {
+            throw new Error('No images provided');
+        }
+
+        const outputDir = outputPath ? path.dirname(outputPath) : app.getPath('downloads');
+        const outputFilename = outputPath
+            ? path.basename(outputPath)
+            : `video_from_frames_${Date.now()}.${format}`;
+        const finalOutputPath = path.join(outputDir, outputFilename);
+
+        // Temp text file
+        const tempId = randomUUID();
+        const tempDir = path.join(app.getPath('temp'), 'devtools-video-frames', tempId);
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const listPath = path.join(tempDir, 'inputs.txt');
+
+        try {
+            // Generate concat list
+            // Each image duration = 1/fps
+            const duration = 1 / fps;
+            const content = imagePaths.map(p => {
+                // Normalize path for FFmpeg (forward slashes, safe escaping)
+                const safePath = p.replace(/\\/g, '/').replace(/'/g, "'\\''");
+                return `file '${safePath}'\nduration ${duration}`;
+            }).join('\n');
+
+            // Append last file again to ensure last frame is shown (standard FFmpeg concat quirk)
+            const safeLastPath = imagePaths[imagePaths.length - 1].replace(/\\/g, '/').replace(/'/g, "'\\''");
+            const finalContent = content + `\nfile '${safeLastPath}'`;
+
+            fs.writeFileSync(listPath, finalContent);
+
+            const args = [
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', listPath
+            ];
+
+            // Filters and codecs
+            if (format === 'gif') {
+                // High quality palette generation for GIF
+                // fps filter to enforce output rate
+                args.push('-vf', `fps=${fps},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`);
+            } else {
+                // MP4 / WebM
+                // Enforce frame rate and scaling
+                const scaleFilter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+                // We use vsync vfr to respect timestamps from concat, but we might want to enforce fps
+                // actually the timestamps from concat are correct.
+
+                args.push('-vf', `${scaleFilter},fps=${fps}`); // Ensure uniform output fps
+
+                if (format === 'mp4') {
+                    args.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p');
+                    // Quality
+                    if (quality === 'low') args.push('-crf', '28');
+                    else if (quality === 'high') args.push('-crf', '18');
+                    else args.push('-crf', '23'); // Medium
+                } else if (format === 'webm') {
+                    args.push('-c:v', 'libvpx-vp9', '-b:v', '0');
+                    if (quality === 'low') args.push('-crf', '40');
+                    else if (quality === 'high') args.push('-crf', '20');
+                    else args.push('-crf', '30');
+                }
+            }
+
+            args.push('-y', finalOutputPath);
+
+            console.log(`[VideoMerger] Creating video from images (concat): ${args.join(' ')}`);
+
+            return new Promise((resolve, reject) => {
+                const process = spawn(this.ffmpegPath as string, args);
+                this.activeProcesses.set(id, process);
+
+                // For concat, we can't easily guess progress by frame count because concat input isn't frame-based in log the same way
+                // But we can estimate time?
+                // Or just use the duration calculated: totalDuration = imagePaths.length * duration
+                const totalDuration = imagePaths.length / fps;
+
+                process.stderr.on('data', (data: Buffer) => {
+                    const output = data.toString();
+                    if (progressCallback) {
+                        const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+                        if (timeMatch) {
+                            const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+                            const percent = Math.min((currentTime / totalDuration) * 100, 99);
+                            progressCallback({ id, percent, state: 'processing' });
+                        }
+                    }
+                });
+
+                process.on('close', (code: number) => {
+                    this.activeProcesses.delete(id);
+                    // Cleanup temp
+                    try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {
+                        console.warn('Failed to cleanup temp dir', e);
+                    }
+
+                    if (code === 0) {
+                        if (progressCallback) progressCallback({ id, percent: 100, state: 'complete', outputPath: finalOutputPath });
+                        resolve(finalOutputPath);
+                    } else {
+                        reject(new Error(`FFmpeg failed with code ${code}`));
+                    }
+                });
+
+                process.on('error', (err) => {
+                    this.activeProcesses.delete(id);
+                    try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) { }
+                    reject(err);
+                });
+            });
+
+        } catch (error) {
+            // Cleanup temp on error
+            try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) { }
+            throw error;
+        }
     }
 
     async mergeVideos(

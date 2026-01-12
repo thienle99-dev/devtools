@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTaskStore } from '../../store/taskStore';
 import { Loader2, CheckCircle2, XCircle, Trash2, X, ChevronUp, ChevronDown, Activity } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 export const TaskQueue = () => {
     const { tasks, removeTask } = useTaskStore();

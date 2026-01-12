@@ -10,7 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Monitor, WrapText, Sun, Moon, Laptop, Shield, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Bell, Download, Upload, RotateCcw, Info, Github, Zap, Trash2, Settings as SettingsIcon, Database, FileText, Palette, Droplets, ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '../utils/cn';
+import { cn } from '@utils/cn';
 import { CATEGORIES } from '../tools/registry';
 
 interface SettingsPageProps {
@@ -174,7 +174,7 @@ const GeneralTab: React.FC<any> = ({ fontSize, setFontSize, wordWrap, setWordWra
                         <p className="text-sm font-semibold text-foreground">Welcome Tour</p>
                         <p className="text-xs text-foreground-muted">Restart the onboarding experience to learn about key features and shortcuts.</p>
                         <div className="pt-4 flex gap-3">
-                            <Button 
+                            <Button
                                 onClick={() => {
                                     startTour();
                                     toast.success('Restarting welcome tour...');
@@ -184,7 +184,7 @@ const GeneralTab: React.FC<any> = ({ fontSize, setFontSize, wordWrap, setWordWra
                                 <RotateCcw className="w-3.5 h-3.5 mr-2" />
                                 Restart Tour
                             </Button>
-                            <Button 
+                            <Button
                                 onClick={() => {
                                     resetTour();
                                     toast.success('Onboarding status reset');
@@ -207,25 +207,25 @@ const GeneralTab: React.FC<any> = ({ fontSize, setFontSize, wordWrap, setWordWra
 };
 
 // Appearance Tab
-const AppearanceTab: React.FC<any> = ({ 
-    theme, setTheme, 
-    layoutMode, setLayoutMode, 
-    accentColor, setAccentColor, 
-    glassIntensity, setGlassIntensity, 
+const AppearanceTab: React.FC<any> = ({
+    theme, setTheme,
+    layoutMode, setLayoutMode,
+    accentColor, setAccentColor,
+    glassIntensity, setGlassIntensity,
     blurEnabled, setBlurEnabled,
     categoryOrder, setCategoryOrder
 }) => {
     const currentOrder = categoryOrder.length > 0 ? categoryOrder : CATEGORIES.map(c => c.id);
-    
+
     const moveCategory = (id: string, direction: 'up' | 'down') => {
         const index = currentOrder.indexOf(id);
         if (index === -1) return;
-        
+
         const newOrder = [...currentOrder];
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        
+
         if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-        
+
         [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
         setCategoryOrder(newOrder);
         toast.success(`Moved category ${direction}`);
@@ -372,14 +372,14 @@ const AppearanceTab: React.FC<any> = ({
                                         <span className="text-sm font-medium text-foreground">{category.name}</span>
                                     </div>
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             onClick={() => moveCategory(catId, 'up')}
                                             disabled={idx === 0}
                                             className="p-1.5 rounded-lg hover:bg-white/10 text-foreground-muted disabled:opacity-30"
                                         >
                                             <ChevronUp className="w-4 h-4" />
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => moveCategory(catId, 'down')}
                                             disabled={idx === currentOrder.length - 1}
                                             className="p-1.5 rounded-lg hover:bg-white/10 text-foreground-muted disabled:opacity-30"
@@ -391,9 +391,9 @@ const AppearanceTab: React.FC<any> = ({
                             );
                         })}
                     </div>
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setCategoryOrder([])}
                         className="mt-4 text-[10px] uppercase tracking-widest text-foreground-muted hover:text-foreground"
                     >
@@ -800,7 +800,7 @@ const PerformanceTab: React.FC<any> = ({ enableAnimations, setEnableAnimations, 
                     <p className="text-xs text-foreground-muted">Limit number of tabs running in background (1-50)</p>
                     <div className="flex items-center gap-2 mt-2">
                         <div className="flex-1 h-1 bg-glass-panel rounded-full overflow-hidden">
-                            <div 
+                            <div
                                 className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all"
                                 style={{ width: `${(maxBackgroundTabs / 50) * 100}%` }}
                             />
@@ -825,14 +825,14 @@ const PerformanceTab: React.FC<any> = ({ enableAnimations, setEnableAnimations, 
                 </div>
             </div>
         </Card>
-        
+
         <Card className="p-4 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border-cyan-500/20">
             <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
                 <div className="space-y-2">
                     <p className="text-sm font-semibold text-foreground">About Background Tabs</p>
                     <p className="text-xs text-foreground-muted leading-relaxed">
-                        When you have more tabs open than this limit, the oldest inactive tabs will be automatically closed to maintain performance. 
+                        When you have more tabs open than this limit, the oldest inactive tabs will be automatically closed to maintain performance.
                         Active downloads, conversions, and other background processes will continue uninterrupted.
                     </p>
                     <p className="text-xs text-cyan-400 font-medium">

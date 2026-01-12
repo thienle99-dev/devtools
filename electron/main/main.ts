@@ -1988,6 +1988,16 @@ app.whenReady().then(() => {
     });
   });
 
+  ipcMain.handle('video-merger:create-from-images', async (_, options) => {
+    return new Promise((resolve, reject) => {
+      videoMerger.createVideoFromImages(options, (progress) => {
+        win?.webContents.send('video-merger:progress', progress);
+      })
+        .then(resolve)
+        .catch(reject);
+    });
+  });
+
   ipcMain.handle('video-merger:cancel', async (_, id: string) => {
     videoMerger.cancelMerge(id);
   });

@@ -5,7 +5,7 @@ import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Checkbox } from '../../components/ui/Checkbox';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 import { formatJson, minifyJson } from '../json/logic';
 import xmlFormatter from 'xml-formatter';
 import yaml from 'js-yaml';

@@ -13,6 +13,7 @@ import {
     Hash
 } from 'lucide-react';
 import { cn } from '@utils/cn';
+import { formatBytes } from '@utils/format';
 
 const TOOL_ID = 'device-info';
 
@@ -109,12 +110,7 @@ export const DeviceInfo: React.FC<{ tabId?: string }> = ({ tabId }) => {
         </div>
     );
 
-    const formatBytes = (bytes: number) => {
-        if (!bytes) return 'N/A';
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
-    };
+
 
     if (loading) return (
         <ToolPane title="Device Information" description="Detailed insights about your system and environment">
@@ -151,10 +147,10 @@ export const DeviceInfo: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
                 {/* Memory */}
                 <InfoSection title="Memory (RAM)" icon={HardDrive} color="bg-purple-600">
-                    <KeyValue label="Total" value={formatBytes(systemInfo?.memory.total)} mono />
-                    <KeyValue label="Used" value={formatBytes(systemInfo?.memory.used)} mono />
-                    <KeyValue label="Free" value={formatBytes(systemInfo?.memory.free)} mono />
-                    <KeyValue label="Active" value={formatBytes(systemInfo?.memory.active)} mono />
+                    <KeyValue label="Total" value={formatBytes(systemInfo?.memory.total ?? 0)} mono />
+                    <KeyValue label="Used" value={formatBytes(systemInfo?.memory.used ?? 0)} mono />
+                    <KeyValue label="Free" value={formatBytes(systemInfo?.memory.free ?? 0)} mono />
+                    <KeyValue label="Active" value={formatBytes(systemInfo?.memory.active ?? 0)} mono />
                     <div className="w-full h-1.5 bg-foreground/[0.05] rounded-full overflow-hidden mt-4">
                         <div
                             className="h-full bg-purple-500 transition-all duration-1000"

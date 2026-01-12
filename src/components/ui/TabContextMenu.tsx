@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronRight, ChevronLeft, Layers, MinusCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface TabContextMenuProps {
     x: number;

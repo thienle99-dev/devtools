@@ -3,6 +3,7 @@ import { Video, Disc, StopCircle, MonitorPlay, Download, Share2 } from 'lucide-r
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { logger } from '../../../utils/logger';
+import { formatDuration, formatBytes } from '@utils/format';
 
 export const ScreenRecorder: React.FC = () => {
     const [isRecording, setIsRecording] = useState(false);
@@ -117,11 +118,7 @@ export const ScreenRecorder: React.FC = () => {
         document.body.removeChild(a);
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
+
 
     return (
         <div className="h-full flex flex-col overflow-y-auto p-1">
@@ -150,7 +147,7 @@ export const ScreenRecorder: React.FC = () => {
                         <div className="flex flex-col items-center gap-4">
                             <div className="bg-red-500/10 border border-red-500/20 px-6 py-3 rounded-full flex items-center gap-3 animate-pulse">
                                 <div className="w-3 h-3 bg-red-500 rounded-full" />
-                                <span className="font-mono text-xl text-red-400 font-bold">{formatTime(recordingTime)}</span>
+                                <span className="font-mono text-xl text-red-400 font-bold">{formatDuration(recordingTime)}</span>
                             </div>
                             <Button
                                 variant="danger"
@@ -184,9 +181,9 @@ export const ScreenRecorder: React.FC = () => {
                                 <div className="text-sm text-foreground-secondary">
                                     <span className="font-semibold text-foreground">Recording Complete</span>
                                     <span className="mx-2">•</span>
-                                    {formatTime(recordingTime)}
+                                    {formatDuration(recordingTime)}
                                     <span className="mx-2">•</span>
-                                    {((recordedChunks.reduce((a, b) => a + b.size, 0)) / (1024 * 1024)).toFixed(2)} MB
+                                    {formatBytes(recordedChunks.reduce((a, b) => a + b.size, 0))}
                                 </div>
                                 <div className="flex gap-2">
                                     <Button

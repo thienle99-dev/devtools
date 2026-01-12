@@ -7,6 +7,7 @@ import { Slider } from '@components/ui/Slider';
 import { FileImage, Download, Trash2, RefreshCcw, FileType, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
+import { formatBytes } from '@utils/format';
 
 const TOOL_ID = 'image-converter';
 
@@ -66,13 +67,7 @@ export const ImageConverter: React.FC = () => {
         });
     };
 
-    const formatBytes = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
+
 
     const processAll = async () => {
         setGlobalIsProcessing(true);

@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { analyzeSensitiveInfo } from '../utils/ocrDetection';
 import type { RedactionType } from '../utils/redaction';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
 export const RedactionPanel: React.FC = () => {

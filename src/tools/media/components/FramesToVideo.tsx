@@ -4,6 +4,7 @@ import { Slider } from '../../../components/ui/Slider';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { logger } from '../../../utils/logger';
+import { toast } from 'sonner';
 
 export const FramesToVideo: React.FC = () => {
     const [frames, setFrames] = useState<File[]>([]);
@@ -12,7 +13,7 @@ export const FramesToVideo: React.FC = () => {
     const [processingStatus, setProcessingStatus] = useState<string>('');
     const [videoSettings, setVideoSettings] = useState({
         fps: 24,
-        codec: 'libx264' as 'libx264' | 'libvpx',
+        format: 'webm' as 'webm' | 'mp4' | 'gif',
         quality: 'high' as 'low' | 'medium' | 'high',
         transition: 'none' as 'none' | 'crossfade',
         transitionDuration: 0.5
@@ -38,7 +39,7 @@ export const FramesToVideo: React.FC = () => {
         setFrames(prev => prev.filter((_, i) => i !== index));
     };
 
-    const createVideo = async () => {
+    const createVideoBrowser = async () => {
         if (frames.length < 2) {
             alert('Please add at least 2 frames');
             return;
@@ -131,7 +132,7 @@ export const FramesToVideo: React.FC = () => {
             mediaRecorder.start();
 
             // Render Loop
-            
+
             // Duration per image in ms
             const imageDuration = 1000 / videoSettings.fps;
             const transDuration = videoSettings.transitionDuration * 1000;
@@ -141,11 +142,11 @@ export const FramesToVideo: React.FC = () => {
             const drawFrame = () => {
                 const now = Date.now();
                 const elapsed = now - startTime;
-                
+
                 // Calculate which image index we are at
                 // Logic: index = floor(elapsed / imageDuration)
                 const currentIndex = Math.floor(elapsed / imageDuration);
-                
+
                 if (currentIndex >= images.length) {
                     setProcessingStatus('Finalizing video file...');
                     mediaRecorder.stop();
@@ -154,14 +155,14 @@ export const FramesToVideo: React.FC = () => {
 
                 // Calculate local time within the current image slot
                 const localTime = elapsed % imageDuration;
-                
+
                 // Clear
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 // Draw Current Image
                 const currentImg = images[currentIndex];
-                
+
                 // Scaling logic (fit containment)
                 const drawImageFit = (img: HTMLImageElement, alpha: number = 1.0) => {
                     ctx.globalAlpha = alpha;
@@ -174,18 +175,18 @@ export const FramesToVideo: React.FC = () => {
 
                 // Transition Logic
                 // If we are near the end of the slide, and have a next slide, blend
-                if (videoSettings.transition === 'crossfade' && 
-                    currentIndex < images.length - 1 && 
+                if (videoSettings.transition === 'crossfade' &&
+                    currentIndex < images.length - 1 &&
                     localTime > (imageDuration - transDuration)) {
-                    
+
                     // We are in transition zone
                     const transProgress = (localTime - (imageDuration - transDuration)) / transDuration;
-                    
+
                     // Draw Current (fading out? or just staying behind?)
                     // Cross dissolve usually: A fades out, B fades in. Or A stays 1, B fades 0->1 on top.
                     // Let's do B fades in on top of A.
                     drawImageFit(currentImg, 1.0);
-                    
+
                     const nextImg = images[currentIndex + 1];
                     drawImageFit(nextImg, transProgress);
 
@@ -212,6 +213,72 @@ export const FramesToVideo: React.FC = () => {
             logger.error('Video creation error:', error);
             alert('Failed to create video. Check console for details.');
             setIsProcessing(false);
+        }
+    };
+
+    const createVideoBackend = async () => {
+        setIsProcessing(true);
+        setProgress(0);
+        setProcessingStatus('Initializing backend process...');
+
+        const imagePaths = frames.map(f => (f as any).path).filter((p: any) => typeof p === 'string' && p.length > 0);
+
+        if (imagePaths.length < frames.length) {
+            toast.error('Some images are missing file paths. Saved images are required for this format.');
+            setIsProcessing(false);
+            return;
+        }
+
+        let cleanup: (() => void) | undefined;
+
+        try {
+            cleanup = (window as any).videoMergerAPI?.onProgress((p: any) => {
+                if (p.state === 'processing') {
+                    setProgress(Math.round(p.percent));
+                    setProcessingStatus(`Rendering: ${Math.round(p.percent)}%`);
+                }
+            });
+
+            const resultPath = await (window as any).videoMergerAPI?.createFromImages({
+                imagePaths,
+                fps: videoSettings.fps,
+                format: videoSettings.format,
+                quality: videoSettings.quality,
+                transition: videoSettings.transition,
+                transitionDuration: videoSettings.transitionDuration
+            });
+
+            setProcessingStatus('Complete!');
+            setProgress(100);
+
+            toast.success(`Video exported: ${videoSettings.format.toUpperCase()}`, {
+                action: {
+                    label: 'Open',
+                    onClick: () => (window as any).videoMergerAPI?.openFile(resultPath)
+                }
+            });
+
+            (window as any).videoMergerAPI?.showInFolder(resultPath);
+
+        } catch (e: any) {
+            console.error(e);
+            toast.error(`Export failed: ${e.message}`);
+        } finally {
+            if (cleanup) cleanup();
+            setIsProcessing(false);
+        }
+    };
+
+    const createVideo = async () => {
+        if (frames.length < 2) {
+            toast.error('Please add at least 2 frames');
+            return;
+        }
+
+        if (videoSettings.format === 'mp4' || videoSettings.format === 'gif') {
+            await createVideoBackend();
+        } else {
+            await createVideoBrowser();
         }
     };
 
@@ -263,6 +330,23 @@ export const FramesToVideo: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-foreground-secondary">Output Format</label>
+                                        <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
+                                            {['webm', 'mp4', 'gif'].map(fmt => (
+                                                <button
+                                                    key={fmt}
+                                                    onClick={() => setVideoSettings(prev => ({ ...prev, format: fmt as any }))}
+                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all uppercase ${videoSettings.format === fmt
+                                                        ? 'bg-indigo-500/20 text-indigo-400'
+                                                        : 'text-foreground-secondary hover:text-foreground'
+                                                        }`}
+                                                >
+                                                    {fmt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <Slider
                                         label="Frame Rate"
                                         value={videoSettings.fps}
@@ -286,21 +370,19 @@ export const FramesToVideo: React.FC = () => {
                                             <div className="flex bg-glass-panel rounded-lg p-1 border border-border-glass">
                                                 <button
                                                     onClick={() => setVideoSettings(prev => ({ ...prev, transition: 'none' }))}
-                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
-                                                        videoSettings.transition === 'none' 
-                                                            ? 'bg-indigo-500/20 text-indigo-400' 
-                                                            : 'text-foreground-secondary hover:text-foreground'
-                                                    }`}
+                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${videoSettings.transition === 'none'
+                                                        ? 'bg-indigo-500/20 text-indigo-400'
+                                                        : 'text-foreground-secondary hover:text-foreground'
+                                                        }`}
                                                 >
                                                     None
                                                 </button>
                                                 <button
                                                     onClick={() => setVideoSettings(prev => ({ ...prev, transition: 'crossfade' }))}
-                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
-                                                        videoSettings.transition === 'crossfade' 
-                                                            ? 'bg-indigo-500/20 text-indigo-400' 
-                                                            : 'text-foreground-secondary hover:text-foreground'
-                                                    }`}
+                                                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${videoSettings.transition === 'crossfade'
+                                                        ? 'bg-indigo-500/20 text-indigo-400'
+                                                        : 'text-foreground-secondary hover:text-foreground'
+                                                        }`}
                                                 >
                                                     Crossfade
                                                 </button>
@@ -312,7 +394,7 @@ export const FramesToVideo: React.FC = () => {
                                                 label="Transition Duration"
                                                 value={videoSettings.transitionDuration}
                                                 min={0.1}
-                                                max={Math.max(0.1, (1 / videoSettings.fps) - 0.1)} 
+                                                max={Math.max(0.1, (1 / videoSettings.fps) - 0.1)}
                                                 // Max duration must be less than total Image Duration (1/FPS)
                                                 // Wait, if 1/FPS is small (e.g. 0.1s), transition can't be 0.5s.
                                                 // We should probably clamp or warn. 

@@ -4095,6 +4095,108 @@ var VideoMerger = class {
 			process$1.on("error", reject);
 		});
 	}
+	async createVideoFromImages(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = randomUUID$1();
+		const { imagePaths, fps, outputPath, format, quality } = options;
+		if (!imagePaths || imagePaths.length === 0) throw new Error("No images provided");
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `video_from_frames_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		const tempId = randomUUID$1();
+		const tempDir = path$1.join(app.getPath("temp"), "devtools-video-frames", tempId);
+		if (!fs$1.existsSync(tempDir)) fs$1.mkdirSync(tempDir, { recursive: true });
+		const listPath = path$1.join(tempDir, "inputs.txt");
+		try {
+			const duration = 1 / fps;
+			const finalContent = imagePaths.map((p) => {
+				return `file '${p.replace(/\\/g, "/").replace(/'/g, "'\\''")}'\nduration ${duration}`;
+			}).join("\n") + `\nfile '${imagePaths[imagePaths.length - 1].replace(/\\/g, "/").replace(/'/g, "'\\''")}'`;
+			fs$1.writeFileSync(listPath, finalContent);
+			const args = [
+				"-f",
+				"concat",
+				"-safe",
+				"0",
+				"-i",
+				listPath
+			];
+			if (format === "gif") args.push("-vf", `fps=${fps},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`);
+			else {
+				args.push("-vf", `scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=${fps}`);
+				if (format === "mp4") {
+					args.push("-c:v", "libx264", "-pix_fmt", "yuv420p");
+					if (quality === "low") args.push("-crf", "28");
+					else if (quality === "high") args.push("-crf", "18");
+					else args.push("-crf", "23");
+				} else if (format === "webm") {
+					args.push("-c:v", "libvpx-vp9", "-b:v", "0");
+					if (quality === "low") args.push("-crf", "40");
+					else if (quality === "high") args.push("-crf", "20");
+					else args.push("-crf", "30");
+				}
+			}
+			args.push("-y", finalOutputPath);
+			console.log(`[VideoMerger] Creating video from images (concat): ${args.join(" ")}`);
+			return new Promise((resolve, reject) => {
+				const process$1 = spawn(this.ffmpegPath, args);
+				this.activeProcesses.set(id, process$1);
+				const totalDuration = imagePaths.length / fps;
+				process$1.stderr.on("data", (data) => {
+					const output = data.toString();
+					if (progressCallback) {
+						const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+						if (timeMatch) {
+							const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+							progressCallback({
+								id,
+								percent: Math.min(currentTime / totalDuration * 100, 99),
+								state: "processing"
+							});
+						}
+					}
+				});
+				process$1.on("close", (code) => {
+					this.activeProcesses.delete(id);
+					try {
+						fs$1.rmSync(tempDir, {
+							recursive: true,
+							force: true
+						});
+					} catch (e) {
+						console.warn("Failed to cleanup temp dir", e);
+					}
+					if (code === 0) {
+						if (progressCallback) progressCallback({
+							id,
+							percent: 100,
+							state: "complete",
+							outputPath: finalOutputPath
+						});
+						resolve(finalOutputPath);
+					} else reject(/* @__PURE__ */ new Error(`FFmpeg failed with code ${code}`));
+				});
+				process$1.on("error", (err) => {
+					this.activeProcesses.delete(id);
+					try {
+						fs$1.rmSync(tempDir, {
+							recursive: true,
+							force: true
+						});
+					} catch (e) {}
+					reject(err);
+				});
+			});
+		} catch (error) {
+			try {
+				fs$1.rmSync(tempDir, {
+					recursive: true,
+					force: true
+				});
+			} catch (e) {}
+			throw error;
+		}
+	}
 	async mergeVideos(options, progressCallback) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
 		const id = options.id || randomUUID$1();
@@ -6176,6 +6278,13 @@ app.whenReady().then(() => {
 	ipcMain.handle("video-merger:merge", async (_, options) => {
 		return new Promise((resolve, reject) => {
 			videoMerger.mergeVideos(options, (progress) => {
+				win?.webContents.send("video-merger:progress", progress);
+			}).then(resolve).catch(reject);
+		});
+	});
+	ipcMain.handle("video-merger:create-from-images", async (_, options) => {
+		return new Promise((resolve, reject) => {
+			videoMerger.createVideoFromImages(options, (progress) => {
 				win?.webContents.send("video-merger:progress", progress);
 			}).then(resolve).catch(reject);
 		});

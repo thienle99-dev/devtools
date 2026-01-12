@@ -203,6 +203,7 @@ electron.contextBridge.exposeInMainWorld("videoMergerAPI", {
 	generateFilmstrip: (filePath, duration, count) => electron.ipcRenderer.invoke("video-filmstrip:generate", filePath, duration, count),
 	extractWaveform: (filePath) => electron.ipcRenderer.invoke("video-merger:extract-waveform", filePath),
 	merge: (options) => electron.ipcRenderer.invoke("video-merger:merge", options),
+	createFromImages: (options) => electron.ipcRenderer.invoke("video-merger:create-from-images", options),
 	cancel: (id) => electron.ipcRenderer.invoke("video-merger:cancel", id),
 	chooseInputFiles: () => electron.ipcRenderer.invoke("video-merger:choose-files"),
 	onProgress: (callback) => {

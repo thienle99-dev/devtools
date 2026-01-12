@@ -48,3 +48,13 @@ export interface ExtendedVideoInfo extends VideoInfo {
     filmstrip?: string[];
     waveform?: number[];
 }
+
+export interface VideoFromImagesOptions {
+    imagePaths: string[];
+    fps: number;
+    outputPath?: string;
+    format: 'mp4' | 'webm' | 'gif';
+    quality?: 'low' | 'medium' | 'high';
+    transition?: 'none' | 'crossfade';
+    transitionDuration?: number;
+}

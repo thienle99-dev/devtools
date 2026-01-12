@@ -3,7 +3,7 @@ import { Download, Copy, FileImage, CloudUpload, Link } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { ExportFormat } from '../../../store/xnapperStore';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 import { generateFinalImage, SOCIAL_PRESETS, type SocialPreset, type OutputConfig } from '../utils/exportUtils';
 import { uploadToImgur } from '../utils/uploadUtils';

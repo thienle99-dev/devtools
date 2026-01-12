@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { Switch } from '../../../components/ui/Switch';
 import { ProcessCard, ProcessGroupCard } from './ProcessCard';
 import { useRunningProcesses } from '../hooks/useRunningProcesses';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Virtuoso } from 'react-virtuoso';

@@ -14,7 +14,7 @@ import {
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { AnnotationType } from '../utils/annotations';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface AnnotationToolbarProps {
     onUndo?: () => void;

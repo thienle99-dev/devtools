@@ -3,7 +3,7 @@ import { CATEGORIES, getToolsByCategory } from '../../tools/registry';
 import { useTabStore } from '../../store/tabStore';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardStore } from '../../store/dashboardStore';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 export const ToolDiscoverySection: React.FC = () => {
     const openTab = useTabStore(state => state.openTab);

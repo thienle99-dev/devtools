@@ -5,6 +5,7 @@ import { Mic, Square, Play, Pause, Download, Trash2, Volume2, Activity } from 'l
 import { Button } from '@components/ui/Button';
 import { toast } from 'sonner';
 import { cn } from '@utils/cn';
+import { formatDuration } from '@utils/format';
 
 const TOOL_ID = 'voice-recorder';
 
@@ -118,11 +119,7 @@ export const VoiceRecorder: React.FC<{ tabId?: string }> = ({ tabId }) => {
         }
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
+
 
     const onClear = () => {
         if (audioURL) URL.revokeObjectURL(audioURL);
@@ -155,7 +152,7 @@ export const VoiceRecorder: React.FC<{ tabId?: string }> = ({ tabId }) => {
                     ) : audioURL ? (
                         <div className="flex flex-col items-center gap-4">
                             <audio src={audioURL} controls className="w-80 h-10 accent-primary" />
-                            <p className="text-xs text-foreground-muted font-mono">Length: {formatTime(duration)}</p>
+                            <p className="text-xs text-foreground-muted font-mono">Length: {formatDuration(duration)}</p>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center gap-4 text-foreground-muted/30">
@@ -171,7 +168,7 @@ export const VoiceRecorder: React.FC<{ tabId?: string }> = ({ tabId }) => {
                                 {isPaused ? 'Paused' : 'Recording'}
                             </div>
                         )}
-                        <span className="text-xl font-mono font-bold text-foreground/80">{formatTime(duration)}</span>
+                        <span className="text-xl font-mono font-bold text-foreground/80">{formatDuration(duration)}</span>
                     </div>
                 </div>
 

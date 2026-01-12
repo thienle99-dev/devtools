@@ -1,6 +1,6 @@
 import React from 'react';
 import { Virtuoso } from 'react-virtuoso';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface VirtualizedOutputProps {
     content: string;

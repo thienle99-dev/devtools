@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Slider } from '../../../components/ui/Slider';
 import { RotateCw, Type, X, Check, Maximize, Minus, Plus, Settings2, SlidersHorizontal, ChevronRight, Crop as CropIcon, FlipHorizontal, FlipVertical, Droplet } from 'lucide-react';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 
 interface FrameEditorProps {
     imageUrl: string;

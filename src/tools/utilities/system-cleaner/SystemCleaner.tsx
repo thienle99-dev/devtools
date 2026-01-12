@@ -15,7 +15,7 @@ import {
     Database,
     Settings
 } from 'lucide-react';
-import { cn } from '../../../utils/cn';
+import { cn } from '@utils/cn';
 import { useSystemCleanerStore } from './store/systemCleanerStore';
 import { useSettingsStore } from './store/settingsStore';
 import { AnimatePresence, motion } from 'framer-motion';

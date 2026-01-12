@@ -3,6 +3,7 @@ import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { Copy, Trash2, Hash, Clock, BarChart3, Type } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatETA } from '@utils/format';
 
 const TOOL_ID = 'text-statistics';
 
@@ -70,12 +71,7 @@ export const TextStatistics: React.FC = () => {
         };
     }, [input]);
 
-    const formatTime = (seconds: number) => {
-        if (seconds < 60) return `${seconds}s`;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}m ${secs}s`;
-    };
+
 
     const handleClear = () => {
         setToolData(TOOL_ID, { input: '' });
@@ -134,8 +130,8 @@ export const TextStatistics: React.FC = () => {
                             <h3 className="text-sm font-semibold text-foreground/70">Estimates</h3>
                         </div>
                         <div className="space-y-4">
-                            <StatItemInline label="Reading Time" value={formatTime(stats.readingTime)} />
-                            <StatItemInline label="Speaking Time" value={formatTime(stats.speakingTime)} />
+                            <StatItemInline label="Reading Time" value={formatETA(stats.readingTime)} />
+                            <StatItemInline label="Speaking Time" value={formatETA(stats.speakingTime)} />
                             <div className="pt-2">
                                 <label className="text-xs text-foreground/40 mb-1 block uppercase tracking-wider">Breakdown</label>
                                 <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-foreground/5 border border-border-glass">
