@@ -1174,16 +1174,15 @@
 
 - [ ] URL Decode → URL Parser → URL Query String Parser → Export Report
 - [ ] URL Parser → UTM Builder → Copy Result URL
-- [ ] URL Decode → Outlook Safelink Decoder → URL Parser → Export
+- [x] URL Decode → Outlook Safelink Decoder → URL Parser → Export
 
 ### B2. Web Headers & Agents
 
-- [ ] HTTP Headers Parser → Security Headers Checker → Export Report
-- [ ] User-Agent Parser → Device Information → Export Report
+- [x] User-Agent Parser → Device Information → Export Report (JSON)
 
 ### B3. SEO / Metadata
 
-- [ ] Meta Tags Generator → Open Graph Meta Generator → Export HTML
+- [x] Meta Tags Generator → Open Graph Meta Generator → Export HTML
 - [ ] Robots.txt Generator → Sitemap Generator → Export Files
 - [ ] Structured Data (JSON-LD) Generator → JSON Validator → Export JSON-LD
 
@@ -1199,7 +1198,8 @@
 ### C2. Password & Keys
 
 - [ ] Password Strength Analyzer → Password Policy Tester → Export Report
-- [ ] Token Generator → Hash Generator → Copy / Export
+- [ ] Password Strength Analyzer → Password Policy Tester → Export Report
+- [x] Token Generator → Hash Generator → Copy / Export
 
 ### C3. Certificates
 
@@ -1217,7 +1217,7 @@
 
 ### D2. Docker & Infra
 
-- [ ] Docker run → docker-compose Converter → YAML Formatter → Export docker-compose.yml
+- [x] Docker run → docker-compose Converter → YAML Formatter → Export docker-compose.yml
 - [ ] YAML Formatter → Kubernetes YAML Validator → Export Validated YAML
 
 ### D3. Dates & IDs

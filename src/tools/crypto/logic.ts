@@ -3,6 +3,60 @@ import { ulid } from 'ulid';
 import CryptoJS from 'crypto-js';
 import bcrypt from 'bcryptjs';
 
+export const CHAR_SETS = {
+    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lowercase: 'abcdefghijklmnopqrstuvwxyz',
+    numbers: '0123456789',
+    symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-='
+};
+
+export const generateTokens = (options?: { 
+    length?: number, 
+    uppercase?: boolean, 
+    lowercase?: boolean, 
+    numbers?: boolean, 
+    symbols?: boolean, 
+    excludeSimilar?: boolean,
+    quantity?: number 
+}): string => {
+    const { 
+        length = 16, 
+        uppercase = true, 
+        lowercase = true, 
+        numbers = true, 
+        symbols = false, 
+        excludeSimilar = false,
+        quantity = 1 
+    } = options || {};
+
+    let chars = '';
+    if (uppercase) chars += CHAR_SETS.uppercase;
+    if (lowercase) chars += CHAR_SETS.lowercase;
+    if (numbers) chars += CHAR_SETS.numbers;
+    if (symbols) chars += CHAR_SETS.symbols;
+
+    if (excludeSimilar) {
+        chars = chars.replace(/[ilLI|10Oo]/g, '');
+    }
+
+    if (!chars) return '';
+
+    const tokens: string[] = [];
+    const len = Math.max(1, length);
+
+    for (let q = 0; q < quantity; q++) {
+        let token = '';
+        const array = new Uint32Array(len);
+        crypto.getRandomValues(array);
+        for (let i = 0; i < len; i++) {
+            token += chars[array[i] % chars.length];
+        }
+        tokens.push(token);
+    }
+
+    return tokens.join('\n');
+};
+
 export const generateIds = (options?: { type?: 'v1' | 'v4' | 'ulid', count?: number, hyphens?: boolean, uppercase?: boolean }): string => {
     const { type = 'v4', count = 1, hyphens = true, uppercase = false } = options || {};
     const ids: string[] = [];

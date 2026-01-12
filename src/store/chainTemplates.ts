@@ -92,5 +92,107 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
                 label: 'Convert to XML'
             }
         ]
+    },
+    {
+        id: 'jwt-claims-flow',
+        name: 'JWT Debugger Flow',
+        description: 'JWT Parser → JSON Formatter (Inspect Claims)',
+        steps: [
+            {
+                toolId: 'jwt',
+                options: {},
+                label: 'Parse JWT'
+            },
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format Claims'
+            }
+        ]
+    },
+    {
+        id: 'safelink-inspect-flow',
+        name: 'Safelink → URL Parser',
+        description: 'Decode Outlook Safelink → URL Parameter Parser',
+        steps: [
+            {
+                toolId: 'safelink',
+                options: {},
+                label: 'Decode Safelink'
+            },
+            {
+                toolId: 'url-parser',
+                options: {},
+                label: 'Parse Parameters'
+            }
+        ]
+    },
+    {
+        id: 'ua-inspect-flow',
+        name: 'UA Parser → JSON',
+        description: 'User-Agent Parser → JSON Formatter',
+        steps: [
+            {
+                toolId: 'user-agent',
+                options: {},
+                label: 'Parse UA String'
+            },
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format Info'
+            }
+        ]
+    },
+    {
+        id: 'docker-compose-flow',
+        name: 'Docker → Compose → Prep',
+        description: 'Docker run → docker-compose Converter → YAML Formatter',
+        steps: [
+            {
+                toolId: 'docker-convert',
+                options: {},
+                label: 'Convert to Compose'
+            },
+            {
+                toolId: 'code-formatter',
+                options: { language: 'yaml', indent: 2 },
+                label: 'Format YAML'
+            }
+        ]
+    },
+    {
+        id: 'secure-token-flow',
+        name: 'Secure Token → Hash',
+        description: 'Generate Token → Create SHA256 Hash',
+        steps: [
+            {
+                toolId: 'token-generator',
+                options: { length: 32, uppercase: true, lowercase: true, numbers: true, symbols: true },
+                label: 'Generate Secret'
+            },
+            {
+                toolId: 'hash',
+                options: { algorithm: 'sha256' },
+                label: 'Create SHA256'
+            }
+        ]
+    },
+    {
+        id: 'seo-meta-flow',
+        name: 'SEO & Social Meta Flow',
+        description: 'Standard Meta Tags + Open Graph Tag Generator',
+        steps: [
+            {
+                toolId: 'meta-tags',
+                options: { charset: 'UTF-8', viewport: 'width=device-width, initial-scale=1' },
+                label: 'Generate Base Meta'
+            },
+            {
+                toolId: 'open-graph',
+                options: { type: 'website' },
+                label: 'Generate OG Tags'
+            }
+        ]
     }
 ];

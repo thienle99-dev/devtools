@@ -151,7 +151,10 @@ export const webTools: ToolDefinition[] = [
         icon: Tag,
         color: 'text-orange-400',
         component: Lazy.MetaTagsGenerator,
-        keywords: ['meta', 'seo', 'tags', 'html']
+        keywords: ['meta', 'seo', 'tags', 'html'],
+        inputTypes: ['json'],
+        outputTypes: ['text'],
+        process: (_, options) => Logic.generateMetaTags(options)
     },
     {
         id: 'open-graph',
@@ -162,7 +165,10 @@ export const webTools: ToolDefinition[] = [
         icon: Activity,
         color: 'text-blue-500',
         component: Lazy.OpenGraphGenerator,
-        keywords: ['og', 'facebook', 'twitter', 'social']
+        keywords: ['og', 'facebook', 'twitter', 'social'],
+        inputTypes: ['json'],
+        outputTypes: ['text'],
+        process: (_, options) => Logic.generateOpenGraph(options)
     },
     {
         id: 'utm-builder',

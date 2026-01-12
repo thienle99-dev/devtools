@@ -1,7 +1,7 @@
 import { Fingerprint, ShieldCheck, Shield, ScanLine, Key, Lock } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import { generateHash, generateHmac, bcryptHash, generateIds } from '../../crypto/logic';
+import { generateHash, generateHmac, bcryptHash, generateIds, generateTokens } from '../../crypto/logic';
 import { process as aesProcess } from '../../crypto/AesEncryptor';
 
 export const cryptoTools: ToolDefinition[] = [
@@ -70,7 +70,9 @@ export const cryptoTools: ToolDefinition[] = [
         icon: Key,
         color: 'text-indigo-400',
         component: Lazy.TokenGenerator,
-        keywords: ['token', 'password', 'random', 'secure', 'bearer', 'api', 'key']
+        keywords: ['token', 'password', 'random', 'secure', 'bearer', 'api', 'key'],
+        outputTypes: ['text'],
+        process: (_, options) => generateTokens(options)
     },
     {
         id: 'symmetric-encryptor',

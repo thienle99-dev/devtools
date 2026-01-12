@@ -80,3 +80,25 @@ export const parseHttpHeaders = (headers: string) => {
     });
     return result;
 };
+
+export const generateMetaTags = (options: { title?: string, description?: string, keywords?: string, author?: string, viewport?: string, charset?: string }) => {
+    const tags: string[] = [];
+    if (options.charset) tags.push(`<meta charset="${options.charset}">`);
+    if (options.viewport) tags.push(`<meta name="viewport" content="${options.viewport}">`);
+    if (options.title) tags.push(`<title>${options.title}</title>`);
+    if (options.description) tags.push(`<meta name="description" content="${options.description}">`);
+    if (options.keywords) tags.push(`<meta name="keywords" content="${options.keywords}">`);
+    if (options.author) tags.push(`<meta name="author" content="${options.author}">`);
+    return tags.join('\n');
+};
+
+export const generateOpenGraph = (options: { title?: string, description?: string, url?: string, image?: string, type?: string, site_name?: string }) => {
+    const tags: string[] = [];
+    if (options.title) tags.push(`<meta property="og:title" content="${options.title}">`);
+    if (options.description) tags.push(`<meta property="og:description" content="${options.description}">`);
+    if (options.url) tags.push(`<meta property="og:url" content="${options.url}">`);
+    if (options.image) tags.push(`<meta property="og:image" content="${options.image}">`);
+    if (options.type) tags.push(`<meta property="og:type" content="${options.type || 'website'}">`);
+    if (options.site_name) tags.push(`<meta property="og:site_name" content="${options.site_name}">`);
+    return tags.join('\n');
+};

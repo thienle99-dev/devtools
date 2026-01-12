@@ -1,4 +1,5 @@
 import { Percent, Clock, Lock, Container, Settings, GitBranch, Database, Code } from 'lucide-react';
+import composerize from 'composerize';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
@@ -56,7 +57,16 @@ export const developmentTools: ToolDefinition[] = [
         icon: Container,
         color: 'text-sky-500',
         component: Lazy.DockerConverter,
-        keywords: ['docker', 'compose', 'convert', 'container']
+        keywords: ['docker', 'compose', 'convert', 'container'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input) => {
+            try {
+                return composerize(input.trim());
+            } catch (e) {
+                throw new Error(`Docker conversion failed: ${(e as Error).message}`);
+            }
+        }
     },
     {
         id: 'mock-data-generator',
