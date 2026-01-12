@@ -19,6 +19,7 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { AssetLoadingModal } from './components/AssetLoadingModal';
 import { ExportResultModal } from './components/ExportResultModal';
 import { TrimmingModal } from './components/TrimmingModal';
+import { useTask } from '../../hooks/useTask';
 
 const FORMATS = ['mp4', 'mkv', 'avi', 'mov', 'webm'];
 
@@ -203,27 +204,63 @@ export const VideoMerger: React.FC = () => {
         });
     };
 
+    const { runTask } = useTask('video-merger');
+
     const handleMerge = async () => {
         if (files.length < 2) return;
-        setIsProcessing(true);
         setOutputPath(null);
-        setProgress({ id: 'merging', percent: 0, state: 'analyzing' });
 
-        try {
-            const options: VideoMergeOptions = {
-                clips: files.map(f => ({
-                    path: f.path,
-                    startTime: f.startTime,
-                    endTime: f.endTime
-                })),
-                format: selectedFormat
-            };
-            await (window as any).videoMergerAPI?.merge(options);
-        } catch (error) {
-            console.error('Merge failed:', error);
+        await runTask('Exporting Video Project', async (updateProgress, checkCancelled) => {
+            setIsProcessing(true);
+            setProgress({ id: 'merging', percent: 0, state: 'analyzing' });
+
+            // Create a promise wrapper to handle the event-based API
+            return new Promise<void>((resolve, reject) => {
+                let cleanup: (() => void) | undefined;
+
+                const onProgress = (p: VideoMergeProgress) => {
+                    if (checkCancelled()) {
+                        cleanup?.();
+                        reject(new Error('Cancelled'));
+                        return;
+                    }
+
+                    setProgress(p);
+                    updateProgress(p.percent, p.state === 'complete' ? 'Export complete' : p.state);
+
+                    if (p.state === 'complete') {
+                        setOutputPath(p.outputPath || null);
+                        setIsProcessing(false);
+                        cleanup?.();
+                        resolve();
+                    } else if (p.state === 'error') {
+                        setIsProcessing(false);
+                        cleanup?.();
+                        reject(new Error(p.error || 'Unknown error'));
+                    }
+                };
+
+                cleanup = (window as any).videoMergerAPI?.onProgress(onProgress);
+
+                const options: VideoMergeOptions = {
+                    clips: files.map(f => ({
+                        path: f.path,
+                        startTime: f.startTime,
+                        endTime: f.endTime
+                    })),
+                    format: selectedFormat
+                };
+
+                (window as any).videoMergerAPI?.merge(options).catch((e: any) => {
+                    cleanup?.();
+                    setIsProcessing(false);
+                    reject(e);
+                });
+            });
+        }, { cancelable: true }).catch(e => {
+            console.error('Task failed or cancelled:', e);
             setIsProcessing(false);
-            setProgress(prev => prev ? { ...prev, state: 'error', error: 'Failed to merge videos' } : null);
-        }
+        });
     };
 
     const playbackRef = useRef<number | null>(null);

@@ -18,6 +18,7 @@ import { preloadHeavyModules } from '@utils/lazyLoad';
 import { motion } from 'framer-motion';
 import { useOnboardingStore } from '@store/onboardingStore';
 import { WelcomeTour } from '@components/onboarding/WelcomeTour';
+import { TaskQueue } from '@components/layout/TaskQueue';
 
 // Loading fallback component
 const PageLoader = () => (
@@ -296,6 +297,7 @@ function App() {
       <TrayController />
       <CommandPalette />
       <WelcomeTour />
+      <TaskQueue />
       <AppErrorBoundary>
         <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
           <WindowControls />

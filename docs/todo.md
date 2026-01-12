@@ -964,9 +964,9 @@
 ### 18.6 Performance UX
 
 - [ ] Progressive Rendering for Large Outputs
-- [ ] Background Processing Indicator
-- [ ] Task Queue UI
-- [ ] Cancel Long-running Tasks
+- [x] Background Processing Indicator
+- [x] Task Queue UI
+- [x] Cancel Long-running Tasks
 - [ ] Performance Warning Toasts
 - [ ] Memory Usage Indicator (per tool)
 
@@ -1807,3 +1807,112 @@
 - [ ] Audit log for file writes
 - [ ] Crash recovery (restore running workflow state)
 - [ ] Safe mode (disable all workflows)
+
+## Phase 31: Performance Optimization (App-wide)
+
+### 31.1 Measure First (Profiling)
+
+- [ ] Add perf marks (tool run start/end, render times)
+- [ ] Add FPS + memory overlay (dev-only)
+- [ ] React Profiler pass (identify top re-render components)
+- [ ] Electron performance tracing baseline
+- [ ] Bundle analyzer baseline (Vite)
+
+---
+
+### 31.2 React Rendering Optimizations
+
+- [ ] Add React.memo for heavy components (Sidebar lists, ToolPane, OutputView)
+- [ ] Memoize derived values (useMemo) + stable callbacks (useCallback)
+- [ ] Split large components into smaller memoized blocks
+- [ ] Avoid passing new object/array props each render
+- [ ] Replace expensive effects with event-driven updates
+
+---
+
+### 31.3 Zustand Optimizations
+
+- [ ] Use minimal selectors everywhere (no large object selects)
+- [ ] Use shallow compare for multi-field selects
+- [ ] Normalize store state (maps by id)
+- [ ] Avoid storing large derived data in store (compute in view layer)
+- [ ] Persist middleware: debounce writes + store only necessary keys
+
+---
+
+### 31.4 Output & Large Data Handling
+
+- [ ] Virtualize output text (line-based)
+- [ ] Virtualize JSON viewer (expand-based + windowing)
+- [ ] Virtualize tables (rows; columns if needed)
+- [ ] Progressive render for huge outputs (chunk append)
+- [ ] Add output size guards (warn + “show more”)
+- [ ] Add “copy/export without rendering” for huge payloads
+
+---
+
+### 31.5 IPC & Realtime Streams
+
+- [ ] Throttle IPC updates (500–1000ms UI)
+- [ ] Visible-only updates (active tool/module only)
+- [ ] Pause updates when minimized/blurred
+- [ ] Send diffs instead of full payloads when possible
+- [ ] Batch IPC messages (coalesce)
+
+---
+
+### 31.6 Heavy Work Off Main Thread
+
+- [ ] Move CPU-heavy tasks to worker threads / child process
+- [ ] Use Web Workers in renderer for parsing/formatting large text
+- [ ] Avoid blocking UI with JSON parse/pretty print (chunked)
+- [ ] Stream file processing for batch tools
+
+---
+
+### 31.7 CodeMirror Performance
+
+- [ ] Debounce editor onChange (e.g. 150–300ms)
+- [ ] Avoid controlled editor for huge text (use internal state)
+- [ ] Disable expensive extensions for large docs
+- [ ] Use viewport-only rendering settings where possible
+
+---
+
+### 31.8 Fabric / Canvas (Xnapper) Performance
+
+- [ ] Limit canvas re-render frequency (requestAnimationFrame batching)
+- [ ] Cache objects where possible (fabric objectCaching)
+- [ ] Downscale preview while editing, full-res on export
+- [ ] Avoid huge blurred backgrounds in-canvas; pre-render background
+- [ ] Release canvas resources on tool switch
+
+---
+
+### 31.9 Styling & GPU (Glassmorphism)
+
+- [ ] Reduce backdrop-filter usage (count + area)
+- [ ] Prefer transform/opacity animations over blur/shadow
+- [ ] Add Low Graphics Mode toggle
+- [ ] Reduce box-shadow layers
+- [ ] Use will-change carefully (only during animations)
+
+---
+
+### 31.10 Bundle & Startup
+
+- [ ] Route-level code splitting for all tools
+- [ ] Lazy load heavy deps (tesseract, fabric, crypto libs)
+- [ ] Preload only critical routes/components
+- [ ] Cache tool modules after first load
+- [ ] Optimize asset loading (icons, fonts)
+
+---
+
+### 31.11 Memory & Cleanup
+
+- [ ] Cap history sizes (per tool + total)
+- [ ] Use LRU cache for large outputs
+- [ ] Release large buffers after export
+- [ ] Prevent image blob leaks (revokeObjectURL)
+- [ ] Add memory leak checks for canvas/editor mounts
