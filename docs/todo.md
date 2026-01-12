@@ -818,16 +818,16 @@
 
 ### 10.3 Safety & Performance
 
-- [ ] Confirm before uninstall/kill actions
-- [ ] Show warning for system processes/apps
-- [ ] Require admin/elevated permissions where needed
-- [ ] Log all destructive actions
-- [ ] Prevent uninstall system critical apps
-- [ ] Lazy load process list
-- [ ] Virtual scrolling for large lists
-- [ ] Debounce search input
-- [ ] Cache installed apps
-- [ ] Throttle process updates
+- [x] Confirm before uninstall/kill actions
+- [x] Show warning for system processes/apps
+- [x] Require admin/elevated permissions where needed
+- [x] Log all destructive actions
+- [x] Prevent uninstall system critical apps
+- [x] Lazy load process list
+- [x] Virtual scrolling for large lists
+- [x] Debounce search input
+- [x] Cache installed apps
+- [x] Throttle process updates
 
 ---
 

@@ -4,17 +4,18 @@ import type { RunningProcess, ProcessGroup } from '../../../types/application-ma
 export const useRunningProcesses = (interval: number = 3000, groupBy: boolean = true) => {
     const [processes, setProcesses] = useState<RunningProcess[]>([]);
     const [groups, setGroups] = useState<ProcessGroup[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const fetchProcesses = useCallback(async () => {
+    const fetchProcesses = useCallback(async (isInitial = false) => {
         if (!window.appManagerAPI) {
             setError('Application Manager API not available');
+            setLoading(false);
             return;
         }
 
-        setLoading(true);
+        if (isInitial) setLoading(true);
         setError(null);
         try {
             const data = await window.appManagerAPI.getRunningProcesses();
@@ -50,15 +51,15 @@ export const useRunningProcesses = (interval: number = 3000, groupBy: boolean = 
         } catch (err) {
             setError((err as Error).message);
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
     }, [groupBy]);
 
     useEffect(() => {
-        fetchProcesses();
+        fetchProcesses(true);
 
         if (interval > 0) {
-            intervalRef.current = setInterval(fetchProcesses, interval);
+            intervalRef.current = setInterval(() => fetchProcesses(false), interval);
         }
 
         return () => {
@@ -73,7 +74,7 @@ export const useRunningProcesses = (interval: number = 3000, groupBy: boolean = 
         groups,
         loading,
         error,
-        refresh: fetchProcesses,
+        refresh: () => fetchProcesses(true),
     };
 };
 

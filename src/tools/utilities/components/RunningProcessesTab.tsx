@@ -7,8 +7,10 @@ import { ProcessCard, ProcessGroupCard } from './ProcessCard';
 import { useRunningProcesses } from '../hooks/useRunningProcesses';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
-
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
+import { Virtuoso } from 'react-virtuoso';
+import { useDebounce } from '../../../hooks/useDebounce';
+import type { RunningProcess, ProcessGroup } from '../../../types/application-manager';
 
 interface RunningProcessesTabProps {
     onKill: (pid: number) => Promise<void>;
@@ -27,29 +29,31 @@ const isSystemProcess = (name: string): boolean => {
 export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill }) => {
     const [groupBy, setGroupBy] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
     const [killing, setKilling] = useState<Set<number>>(new Set());
     const [confirmKill, setConfirmKill] = useState<{ pid: number; name: string } | null>(null);
     const [confirmKillGroup, setConfirmKillGroup] = useState<{ pids: number[]; name: string; count: number } | null>(null);
     const { processes, groups, loading, error, refresh } = useRunningProcesses(3000, groupBy);
 
     const filteredProcesses = useMemo(() => {
-        if (!searchQuery.trim()) return processes;
-        const query = searchQuery.toLowerCase();
+        if (!debouncedSearchQuery.trim()) return processes;
+        const query = debouncedSearchQuery.toLowerCase();
         return processes.filter(p =>
             p.name.toLowerCase().includes(query) ||
             p.command?.toLowerCase().includes(query) ||
             p.user?.toLowerCase().includes(query)
         );
-    }, [processes, searchQuery]);
+    }, [processes, debouncedSearchQuery]);
 
     const filteredGroups = useMemo(() => {
-        if (!searchQuery.trim()) return groups;
-        const query = searchQuery.toLowerCase();
+        if (!debouncedSearchQuery.trim()) return groups;
+        const query = debouncedSearchQuery.toLowerCase();
         return groups.filter(g =>
             g.name.toLowerCase().includes(query) ||
             g.processes.some(p => p.command?.toLowerCase().includes(query))
         );
-    }, [groups, searchQuery]);
+    }, [groups, debouncedSearchQuery]);
 
     const handleKill = async (pid: number) => {
         const process = processes.find(p => p.pid === pid);
@@ -124,7 +128,7 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex flex-col items-center justify-center py-12 text-center h-full">
                 <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Processes</h3>
                 <p className="text-sm text-foreground-muted mb-4">{error}</p>
@@ -136,10 +140,13 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
         );
     }
 
+    const data = groupBy ? filteredGroups : filteredProcesses;
+    const isEmpty = data.length === 0;
+
     return (
-        <div className="space-y-4">
+        <div className="flex flex-col h-full gap-4">
             {/* Search and Options Bar */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
                 <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
                     <Input
@@ -169,67 +176,54 @@ export const RunningProcessesTab: React.FC<RunningProcessesTabProps> = ({ onKill
                 </Button>
             </div>
 
-            {/* Loading State */}
-            {loading && processes.length === 0 && (
-                <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-                </div>
-            )}
-
-            {/* Processes List */}
-            {!loading && (
-                <>
-                    {groupBy ? (
-                        <>
-                            {filteredGroups.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <Activity className="w-12 h-12 text-foreground-muted mb-4" />
-                                    <h3 className="text-lg font-semibold text-foreground mb-2">No Processes Found</h3>
-                                    <p className="text-sm text-foreground-muted">
-                                        {searchQuery ? 'Try adjusting your search query' : 'No processes running'}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {filteredGroups.map((group) => (
-                                        <ProcessGroupCard
-                                            key={group.name}
-                                            group={group}
-                                            onKill={handleKillGroup}
-                                            disabled={group.processes.some(p => killing.has(p.pid))}
-                                            isSystemProcess={isSystemProcess(group.name)}
-                                        />
-                                    ))}
+            {/* Content Area */}
+            <div className="flex-1 min-h-0 relative">
+                {loading && isEmpty ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                    </div>
+                ) : isEmpty ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <Activity className="w-12 h-12 text-foreground-muted mb-4" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">No Processes Found</h3>
+                        <p className="text-sm text-foreground-muted">
+                            {searchQuery ? 'Try adjusting your search query' : 'No processes running'}
+                        </p>
+                    </div>
+                ) : (
+                    groupBy ? (
+                        <Virtuoso
+                            style={{ height: '100%' }}
+                            data={filteredGroups}
+                            itemContent={(_index, group) => (
+                                <div className="pb-3">
+                                    <ProcessGroupCard
+                                        group={group}
+                                        onKill={handleKillGroup}
+                                        disabled={group.processes.some(p => killing.has(p.pid))}
+                                        isSystemProcess={isSystemProcess(group.name)}
+                                    />
                                 </div>
                             )}
-                        </>
+                        />
                     ) : (
-                        <>
-                            {filteredProcesses.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <Activity className="w-12 h-12 text-foreground-muted mb-4" />
-                                    <h3 className="text-lg font-semibold text-foreground mb-2">No Processes Found</h3>
-                                    <p className="text-sm text-foreground-muted">
-                                        {searchQuery ? 'Try adjusting your search query' : 'No processes running'}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {filteredProcesses.map((process) => (
-                                        <ProcessCard
-                                            key={process.pid}
-                                            process={process}
-                                            onKill={handleKill}
-                                            disabled={killing.has(process.pid)}
-                                            isSystemProcess={isSystemProcess(process.name)}
-                                        />
-                                    ))}
+                        <Virtuoso
+                            style={{ height: '100%' }}
+                            data={filteredProcesses}
+                            itemContent={(_index, process) => (
+                                <div className="pb-3">
+                                    <ProcessCard
+                                        process={process}
+                                        onKill={handleKill}
+                                        disabled={killing.has(process.pid)}
+                                        isSystemProcess={isSystemProcess(process.name)}
+                                    />
                                 </div>
                             )}
-                        </>
-                    )}
-                </>
-            )}
+                        />
+                    )
+                )}
+            </div>
 
             <ConfirmationModal
                 isOpen={!!confirmKill}
