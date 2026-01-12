@@ -3,11 +3,12 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useToolStore } from '../store/toolStore';
 import { usePermissionsStore } from '../store/permissionsStore';
 import { ToolPane } from '../components/layout/ToolPane';
+import { useOnboardingStore } from '../store/onboardingStore';
 import { Input } from '../components/ui/Input';
 import { Switch } from '../components/ui/Switch';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Monitor, WrapText, Sun, Moon, Laptop, Shield, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Bell, Download, Upload, RotateCcw, Info, Github, Zap, Trash2, Settings as SettingsIcon, Database, FileText, Palette, Droplets, ChevronUp, ChevronDown } from 'lucide-react';
+import { Monitor, WrapText, Sun, Moon, Laptop, Shield, CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Bell, Download, Upload, RotateCcw, Info, Github, Zap, Trash2, Settings as SettingsIcon, Database, FileText, Palette, Droplets, ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { CATEGORIES } from '../tools/registry';
@@ -124,46 +125,86 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
 };
 
 // General Tab
-const GeneralTab: React.FC<any> = ({ fontSize, setFontSize, wordWrap, setWordWrap }) => (
-    <div className="space-y-6">
-        <h2 className="text-lg font-bold text-foreground">General Settings</h2>
+const GeneralTab: React.FC<any> = ({ fontSize, setFontSize, wordWrap, setWordWrap }) => {
+    const { resetTour, startTour } = useOnboardingStore();
 
-        <Card className="p-1">
-            <div className="flex items-center justify-between p-4 border-b border-border-glass">
-                <div>
-                    <p className="text-sm font-semibold text-foreground">Font Size</p>
-                    <p className="text-xs text-foreground-muted">Adjust the editor text size</p>
-                </div>
-                <div className="flex items-center space-x-4">
-                    <Input
-                        type="number"
-                        min="10"
-                        max="24"
-                        value={fontSize}
-                        onChange={(e) => setFontSize(parseInt(e.target.value) || 14)}
-                        className="w-24 font-mono text-center"
-                    />
-                    <span className="text-xs font-mono text-foreground-muted">px</span>
-                </div>
-            </div>
-            <div className="flex items-center justify-between p-4">
-                <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-500/10 rounded-lg">
-                        <WrapText className="w-4 h-4 text-indigo-400" />
-                    </div>
+    return (
+        <div className="space-y-6">
+            <h2 className="text-lg font-bold text-foreground">General Settings</h2>
+
+            <Card className="p-1">
+                <div className="flex items-center justify-between p-4 border-b border-border-glass">
                     <div>
-                        <p className="text-sm font-semibold text-foreground">Word Wrap</p>
-                        <p className="text-xs text-foreground-muted">Wrap long lines in the editor panes</p>
+                        <p className="text-sm font-semibold text-foreground">Font Size</p>
+                        <p className="text-xs text-foreground-muted">Adjust the editor text size</p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                        <Input
+                            type="number"
+                            min="10"
+                            max="24"
+                            value={fontSize}
+                            onChange={(e) => setFontSize(parseInt(e.target.value) || 14)}
+                            className="w-24 font-mono text-center"
+                        />
+                        <span className="text-xs font-mono text-foreground-muted">px</span>
                     </div>
                 </div>
-                <Switch
-                    checked={wordWrap}
-                    onChange={(e) => setWordWrap(e.target.checked)}
-                />
-            </div>
-        </Card>
-    </div>
-);
+                <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-indigo-500/10 rounded-lg">
+                            <WrapText className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-foreground">Word Wrap</p>
+                            <p className="text-xs text-foreground-muted">Wrap long lines in the editor panes</p>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={wordWrap}
+                        onChange={(e) => setWordWrap(e.target.checked)}
+                    />
+                </div>
+            </Card>
+
+            <h2 className="text-lg font-bold text-foreground pt-4">Guidance & Onboarding</h2>
+            <Card className="p-6">
+                <div className="flex items-start justify-between gap-6">
+                    <div className="space-y-1">
+                        <p className="text-sm font-semibold text-foreground">Welcome Tour</p>
+                        <p className="text-xs text-foreground-muted">Restart the onboarding experience to learn about key features and shortcuts.</p>
+                        <div className="pt-4 flex gap-3">
+                            <Button 
+                                onClick={() => {
+                                    startTour();
+                                    toast.success('Restarting welcome tour...');
+                                }}
+                                className="h-9 px-4 text-xs font-bold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                                Restart Tour
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    resetTour();
+                                    toast.success('Onboarding status reset');
+                                }}
+                                variant="ghost"
+                                className="h-9 px-4 text-xs font-semibold text-foreground-muted hover:text-foreground hover:bg-white/5"
+                            >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Reset Status
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="w-24 h-24 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-10 h-10 text-indigo-500/40" />
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+};
 
 // Appearance Tab
 const AppearanceTab: React.FC<any> = ({ 

@@ -952,12 +952,12 @@
 
 ### 18.5 Onboarding & Guidance
 
-- [ ] Welcome Tour
+- [x] Welcome Tour
 - [ ] Tool Discovery Suggestions
 - [ ] “You might also need…” Tool Suggestions
 - [ ] Built-in Documentation Viewer
 - [ ] Example Gallery per Tool
-- [ ] Reset Onboarding Flow
+- [x] Reset Onboarding Flow
 
 ---
 
@@ -1059,3 +1059,80 @@
 - [ ] Headless Mode (scriptable)
 - [ ] Portable Workspace Profiles
 - [ ] Multi-window Tool Instances
+
+## Phase 20: Tool Chaining System
+
+### 20.1 Core Architecture
+
+- [ ] Define ToolDataType (text, json, image, file, etc.)
+- [ ] Extend ToolDefinition with accepts / produces
+- [ ] Standardize Tool input/output contract
+- [ ] Add chainable flag to tools
+- [ ] Validate tool compatibility (A → B)
+
+---
+
+### 20.2 Quick Chain (MVP)
+
+- [ ] Add "Send to..." action in Tool output
+- [ ] Show compatible tools only
+- [ ] Auto-fill input of next tool
+- [ ] Preserve tool state during chaining
+- [ ] Save chained actions to history
+
+---
+
+### 20.3 Chain Store & Execution
+
+- [ ] Create toolChainStore (Zustand)
+- [ ] Implement sequential execution
+- [ ] Cache output per step
+- [ ] Allow re-run single step
+- [ ] Allow reset chain
+
+---
+
+### 20.4 Visual Chain Builder (Advanced)
+
+- [ ] Chain canvas UI
+- [ ] Drag & drop tool nodes
+- [ ] Connect compatible nodes only
+- [ ] Step-by-step execution view
+- [ ] Inline output preview per node
+
+---
+
+### 20.5 Smart UX
+
+- [ ] Auto-suggest next tools
+- [ ] Common chain templates
+- [ ] Recent chains
+- [ ] Favorite chains
+- [ ] Tool compatibility hints
+
+---
+
+### 20.6 Persistence & Sharing
+
+- [ ] Save chain presets
+- [ ] Export / import chains (JSON)
+- [ ] Duplicate chain
+- [ ] Share chain internally
+
+---
+
+### 20.7 Error Handling
+
+- [ ] Per-step error isolation
+- [ ] Human-readable error messages
+- [ ] Retry failed step
+- [ ] Skip step option
+
+---
+
+### 20.8 Performance
+
+- [ ] Lazy execution
+- [ ] Background execution
+- [ ] Progress indicator per step
+- [ ] Cancel running chain

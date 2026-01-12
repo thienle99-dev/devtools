@@ -16,6 +16,8 @@ import { useResponsive } from '@hooks/useResponsive';
 import { Footer } from '@components/layout/Footer';
 import { preloadHeavyModules } from '@utils/lazyLoad';
 import { motion } from 'framer-motion';
+import { useOnboardingStore } from '@store/onboardingStore';
+import { WelcomeTour } from '@components/onboarding/WelcomeTour';
 
 // Loading fallback component
 const PageLoader = () => (
@@ -136,6 +138,14 @@ function App() {
   useEffect(() => {
     preloadHeavyModules();
   }, []);
+
+  const { hasCompletedOnboarding, startTour } = useOnboardingStore();
+
+  useEffect(() => {
+     if (!hasCompletedOnboarding) {
+        startTour();
+     }
+  }, [hasCompletedOnboarding, startTour]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -285,6 +295,7 @@ function App() {
       <GlobalClipboardMonitor />
       <TrayController />
       <CommandPalette />
+      <WelcomeTour />
       <AppErrorBoundary>
         <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
           <WindowControls />
