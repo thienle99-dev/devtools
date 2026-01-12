@@ -963,12 +963,12 @@
 
 ### 18.6 Performance UX
 
-- [ ] Progressive Rendering for Large Outputs
+- [x] Progressive Rendering for Large Outputs
 - [x] Background Processing Indicator
 - [x] Task Queue UI
 - [x] Cancel Long-running Tasks
-- [ ] Performance Warning Toasts
-- [ ] Memory Usage Indicator (per tool)
+- [x] Performance Warning Toasts
+- [x] Memory Usage Indicator (per tool)
 
 ---
 
@@ -978,10 +978,10 @@
 
 - [ ] API Scenario Runner (multi-step requests)
 - [ ] HTTP Response Visualizer (timing, waterfall)
-- [ ] Code Snippet Generator (curl / fetch / axios)
+- [x] Code Snippet Generator (curl / fetch / axios)
 - [ ] Environment Switcher (dev / staging / prod)
 - [ ] JSON Schema Builder (UI-based)
-- [ ] Mock Data Generator (faker-style)
+- [x] Mock Data Generator (faker-style)
 - [ ] Feature Flag Simulator
 - [ ] Config Diff Tool (.env / yaml / json)
 

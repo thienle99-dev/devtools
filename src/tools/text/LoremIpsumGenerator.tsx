@@ -6,6 +6,7 @@ import { Checkbox } from '@components/ui/Checkbox';
 import { Select } from '@components/ui/Select';
 import { Copy, RefreshCw, AlignLeft, Hash } from 'lucide-react';
 import { toast } from 'sonner';
+import { VirtualizedOutput } from '@components/ui/VirtualizedOutput';
 
 const TOOL_ID = 'lorem-ipsum-generator';
 
@@ -187,10 +188,8 @@ export const LoremIpsumGenerator: React.FC = () => {
                         <span>Words: {output.split(/\s+/).filter(Boolean).length}</span>
                     </div>
                 </div>
-                <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-black/5 dark:bg-black/20">
-                    <div className="text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono text-sm">
-                        {output || 'Generating...'}
-                    </div>
+                <div className="flex-1 p-4 overflow-hidden bg-black/5 dark:bg-black/20">
+                    <VirtualizedOutput content={output || 'Generating...'} />
                 </div>
             </div>
         </div>

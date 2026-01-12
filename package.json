@@ -27,6 +27,7 @@
     "@codemirror/lang-xml": "^6.1.0",
     "@codemirror/lang-yaml": "^6.1.2",
     "@codemirror/view": "^6.39.8",
+    "@faker-js/faker": "^10.2.0",
     "@types/diff": "^8.0.0",
     "@types/he": "^1.2.3",
     "@types/jszip": "^3.4.1",

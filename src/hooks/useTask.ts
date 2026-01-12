@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useTaskStore } from '../store/taskStore';
+import { toast } from 'sonner';
 
 export const useTask = (toolId: string) => {
     const { addTask, updateTask, completeTask, failTask, removeTask } = useTaskStore();
@@ -11,7 +12,7 @@ export const useTask = (toolId: string) => {
             updateProgress: (progress: number, message?: string) => void,
             checkCancelled: () => boolean
         ) => Promise<T>,
-        options: { cancelable?: boolean; removeOnComplete?: boolean } = {}
+        options: { cancelable?: boolean; removeOnComplete?: boolean; warningThresholdMs?: number } = {}
     ): Promise<T | undefined> => {
         const taskId = addTask({
             toolId,
@@ -21,8 +22,9 @@ export const useTask = (toolId: string) => {
         taskIdRef.current = taskId;
         
         let cancelled = false;
-        
-        // Register cancel handler in the store item itself so the UI can call it
+        const warningThreshold = options.warningThresholdMs || 10000; // Default 10s
+
+        // Register cancel handler
         if (options.cancelable) {
             updateTask(taskId, {
                 onCancel: () => {
@@ -32,6 +34,16 @@ export const useTask = (toolId: string) => {
                 }
             });
         }
+
+        // Performance warning timer
+        const warningTimer = setTimeout(() => {
+            if (!cancelled && taskIdRef.current === taskId) {
+                toast.warning(`Task "${name}" is taking longer than expected.`, {
+                    description: "It's still running in the background.",
+                    duration: 5000,
+                });
+            }
+        }, warningThreshold);
 
         try {
             const result = await taskFn((progress, message) => {
@@ -53,6 +65,7 @@ export const useTask = (toolId: string) => {
             }
             throw e;
         } finally {
+            clearTimeout(warningTimer);
             taskIdRef.current = null;
         }
     }, [addTask, toolId, updateTask, completeTask, failTask, removeTask]);

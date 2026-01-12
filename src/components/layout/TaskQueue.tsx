@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTaskStore } from '../../store/taskStore';
 import { Loader2, CheckCircle2, XCircle, Trash2, X, ChevronUp, ChevronDown, Activity } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -6,6 +6,24 @@ import { cn } from '../../utils/cn';
 export const TaskQueue = () => {
     const { tasks, removeTask } = useTaskStore();
     const [expanded, setExpanded] = useState(false);
+    const [memory, setMemory] = useState(0);
+
+    // Update memory usage every second when expanded
+    useEffect(() => {
+        if (!expanded) return;
+        
+        // Initial set
+        if ((performance as any).memory) {
+            setMemory((performance as any).memory.usedJSHeapSize);
+        }
+
+        const interval = setInterval(() => {
+            if ((performance as any).memory) {
+                setMemory((performance as any).memory.usedJSHeapSize);
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [expanded]);
 
     if (tasks.length === 0) return null;
 
@@ -27,9 +45,16 @@ export const TaskQueue = () => {
                 <div className="w-80 bg-background/95 backdrop-blur-lg border border-border rounded-lg shadow-2xl overflow-hidden mb-2 animate-in slide-in-from-bottom-5">
                     <div className="p-3 border-b border-border bg-muted/50 flex justify-between items-center">
                         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Background Tasks</span>
-                        <button onClick={() => setExpanded(false)} className="text-muted-foreground hover:text-foreground">
-                            <ChevronDown className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                             { memory > 0 && (
+                                <span className="text-[10px] font-mono text-muted-foreground" title="JS Heap Size">
+                                    {Math.round(memory / 1024 / 1024)} MB
+                                </span>
+                            )}
+                            <button onClick={() => setExpanded(false)} className="text-muted-foreground hover:text-foreground">
+                                <ChevronDown className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                     <div className="max-h-60 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                         {tasks.map(task => (

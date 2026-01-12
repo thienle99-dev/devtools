@@ -80,6 +80,9 @@ export const CrontabGenerator = React.lazy(() => import('@tools/development/Cron
 export const ChmodCalculator = React.lazy(() => import('@tools/development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
 export const DockerConverter = React.lazy(() => import('@tools/development/DockerConverter').then(m => ({ default: m.DockerConverter })));
 export const PipelineDesigner = React.lazy(() => import('@tools/development/PipelineDesigner').then(m => ({ default: m.default })));
+export const MockDataGenerator = React.lazy(() => import('@tools/development/MockDataGenerator').then(m => ({ default: m.MockDataGenerator })));
+
+export const CodeSnippetGenerator = React.lazy(() => import('@tools/development/CodeSnippetGenerator').then(m => ({ default: m.CodeSnippetGenerator })));
 
 // Utilities
 export const ClipboardManager = React.lazy(() => import('@tools/utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));

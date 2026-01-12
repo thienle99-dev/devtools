@@ -1,4 +1,4 @@
-import { Percent, Clock, Lock, Container, Settings, GitBranch } from 'lucide-react';
+import { Percent, Clock, Lock, Container, Settings, GitBranch, Database, Code } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
@@ -57,6 +57,28 @@ export const developmentTools: ToolDefinition[] = [
         color: 'text-sky-500',
         component: Lazy.DockerConverter,
         keywords: ['docker', 'compose', 'convert', 'container']
+    },
+    {
+        id: 'mock-data-generator',
+        name: 'Mock Data Generator',
+        path: '/mock-data',
+        description: 'Generate realistic test data',
+        category: 'development',
+        icon: Database,
+        color: 'text-emerald-400',
+        component: Lazy.MockDataGenerator,
+        keywords: ['mock', 'data', 'fake', 'generate', 'json', 'csv']
+    },
+    {
+        id: 'code-snippet-generator',
+        name: 'Code Snippet Gen',
+        path: '/code-snippets',
+        description: 'Generate HTTP code for curl, fetch, axios, etc.',
+        category: 'development',
+        icon: Code,
+        color: 'text-orange-400',
+        component: Lazy.CodeSnippetGenerator,
+        keywords: ['http', 'curl', 'fetch', 'axios', 'request', 'api']
     },
     {
         id: 'settings',
