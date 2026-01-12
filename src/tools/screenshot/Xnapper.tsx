@@ -4,9 +4,25 @@ import { useXnapperStore } from '../../store/xnapperStore';
 import { CaptureSection } from './components/CaptureSection';
 import { PreviewSection } from './components/PreviewSection';
 import { XnapperStylePanel } from './components/XnapperStylePanel';
+import type { CanvasPreviewHandle } from './components/CanvasPreview';
 
 export const Xnapper: React.FC = () => {
     const { currentScreenshot } = useXnapperStore();
+    const canvasRef = React.useRef<CanvasPreviewHandle>(null);
+    const [historyState, setHistoryState] = React.useState({
+        canUndo: false,
+        canRedo: false,
+        count: 0
+    });
+    const [zoom, setZoom] = React.useState(1);
+
+    const handleHistoryChange = React.useCallback((canUndo: boolean, canRedo: boolean, count: number) => {
+        setHistoryState({ canUndo, canRedo, count });
+    }, []);
+
+    const handleZoomChange = React.useCallback((newZoom: number) => {
+        setZoom(newZoom);
+    }, []);
 
     return (
         <div className="h-full flex flex-col bg-background/50">
@@ -39,11 +55,19 @@ export const Xnapper: React.FC = () => {
                     <div className="h-full flex flex-row gap-0">
                         {/* Preview - Full height on left */}
                         <div className="flex-1 overflow-hidden bg-black/20 relative">
-                            <PreviewSection />
+                            <PreviewSection
+                                canvasRef={canvasRef}
+                                onHistoryChange={handleHistoryChange}
+                            />
                         </div>
 
                         {/* Xnapper Style Panel - Fixed width on right */}
-                        <XnapperStylePanel />
+                        <XnapperStylePanel
+                            canvasRef={canvasRef}
+                            historyState={historyState}
+                            zoom={zoom}
+                            onZoomChange={handleZoomChange}
+                        />
                     </div>
                 )}
             </div>

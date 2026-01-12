@@ -1943,9 +1943,15 @@ function setupScreenshotHandlers(win$1) {
 	});
 	ipcMain.handle("screenshot:capture-screen", async () => {
 		try {
+			const display = screen.getPrimaryDisplay();
+			const scaleFactor = display.scaleFactor || 1;
+			const size = {
+				width: Math.ceil(display.size.width * scaleFactor),
+				height: Math.ceil(display.size.height * scaleFactor)
+			};
 			const sources = await desktopCapturer.getSources({
 				types: ["screen"],
-				thumbnailSize: screen.getPrimaryDisplay().size
+				thumbnailSize: size
 			});
 			if (sources.length === 0) throw new Error("No screens available");
 			const image = sources[0].thumbnail;
@@ -1983,9 +1989,15 @@ function setupScreenshotHandlers(win$1) {
 	ipcMain.handle("screenshot:capture-area", async () => {
 		try {
 			console.log("Capturing screen for area selection...");
+			const display = screen.getPrimaryDisplay();
+			const scaleFactor = display.scaleFactor || 1;
+			const size = {
+				width: Math.ceil(display.size.width * scaleFactor),
+				height: Math.ceil(display.size.height * scaleFactor)
+			};
 			const sources = await desktopCapturer.getSources({
 				types: ["screen"],
-				thumbnailSize: screen.getPrimaryDisplay().size
+				thumbnailSize: size
 			});
 			console.log(`Found ${sources.length} sources.`);
 			if (sources.length === 0) {
@@ -1993,7 +2005,6 @@ function setupScreenshotHandlers(win$1) {
 				throw new Error("No screens available");
 			}
 			const fullScreenImage = sources[0].thumbnail;
-			const display = screen.getPrimaryDisplay();
 			console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
 			console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
 			return new Promise((resolve, reject) => {
@@ -2005,12 +2016,12 @@ function setupScreenshotHandlers(win$1) {
 				};
 				ipcMain.handle("screenshot:area-selected", async (_event, bounds) => {
 					cleanup();
-					const scaleFactor = display.scaleFactor;
+					const scaleFactor$1 = display.scaleFactor;
 					const croppedImage = fullScreenImage.crop({
-						x: Math.round(bounds.x * scaleFactor),
-						y: Math.round(bounds.y * scaleFactor),
-						width: Math.round(bounds.width * scaleFactor),
-						height: Math.round(bounds.height * scaleFactor)
+						x: Math.round(bounds.x * scaleFactor$1),
+						y: Math.round(bounds.y * scaleFactor$1),
+						width: Math.round(bounds.width * scaleFactor$1),
+						height: Math.round(bounds.height * scaleFactor$1)
 					});
 					resolve({
 						dataUrl: croppedImage.toDataURL(),

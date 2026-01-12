@@ -212,7 +212,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         // Calculate fit scale
         const scaleX = containerWidth / imgWidth;
         const scaleY = containerHeight / imgHeight;
-        const fitScale = Math.min(scaleX, scaleY, 1);
+        // Allow upscaling for small images to fit container
+        const fitScale = Math.min(scaleX, scaleY);
 
         setCanvasScale(fitScale);
     }, []);
@@ -590,13 +591,15 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     if (!currentScreenshot) return null;
 
     return (
-        <div ref={canvasContainerRef} className="w-full h-full flex items-center justify-center bg-[#1a1a1a] overflow-hidden p-6 relative">
+        <div ref={canvasContainerRef} className="w-full h-full grid place-items-center bg-transparent overflow-hidden relative p-8">
             <div
                 style={{
-                    // Apply both fit-scale and user-zoom
+                    // Use standard transform scaling
                     transform: `scale(${canvasScale * baseZoom})`,
                     transformOrigin: 'center center',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                    // Ensure it doesn't collapse
+                    display: 'inline-block',
                 }}
             >
                 <canvas ref={canvasRef} />

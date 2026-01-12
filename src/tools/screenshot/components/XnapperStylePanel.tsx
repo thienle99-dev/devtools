@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
-import { Settings, Trash2 } from 'lucide-react';
+import { Settings, Trash2, ZoomIn, ZoomOut, RotateCcw, Sparkles } from 'lucide-react';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { XNAPPER_BG_PRESETS, ASPECT_RATIO_PRESETS, SOCIAL_PRESETS, generateGradientCSS } from '../utils/xnapperPresets';
 import { cn } from '../../../utils/cn';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
 import { ExportPanel } from './ExportPanel';
+import { AnnotationToolbar } from './AnnotationToolbar';
+import type { CanvasPreviewHandle } from './CanvasPreview';
+import { Button } from '../../../components/ui/Button';
 
-export const XnapperStylePanel: React.FC = () => {
+interface XnapperStylePanelProps {
+    canvasRef?: React.RefObject<CanvasPreviewHandle | null>;
+    historyState?: {
+        canUndo: boolean;
+        canRedo: boolean;
+        count: number;
+    };
+    zoom?: number;
+    onZoomChange?: (zoom: number) => void;
+}
+
+export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
+    canvasRef,
+    historyState = { canUndo: false, canRedo: false, count: 0 },
+    zoom = 1,
+    onZoomChange
+}) => {
     const {
         backgroundPadding,
         setBackgroundPadding,
@@ -32,7 +51,7 @@ export const XnapperStylePanel: React.FC = () => {
 
     const [selectedBg, setSelectedBg] = useState('desktop');
     const [showShadow, setShowShadow] = useState(true);
-    const [activeTab, setActiveTab] = useState('design');
+    const [activeTab, setActiveTab] = useState('annotate');
 
     const handleBgSelect = (preset: typeof XNAPPER_BG_PRESETS[number]) => {
         setSelectedBg(preset.id);
@@ -40,7 +59,7 @@ export const XnapperStylePanel: React.FC = () => {
             setBackground({
                 type: preset.gradient.type,
                 colors: [...preset.gradient.colors],
-                direction: 'to-bottom-right', // Use GradientDirection type
+                direction: 'to-bottom-right',
             });
         } else if (preset.id === 'none') {
             setBackground(null);
@@ -61,15 +80,85 @@ export const XnapperStylePanel: React.FC = () => {
 
     return (
         <div className="w-[320px] bg-glass-panel border-l border-border-glass h-full flex flex-col overflow-hidden">
+            {/* Header Controls */}
+            <div className="p-4 border-b border-border-glass space-y-3 bg-glass-panel">
+                <div className="flex items-center justify-between">
+                    <Button
+                        variant={autoBalance ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => setAutoBalance(!autoBalance)}
+                        className="flex-1 mr-2 gap-2 text-xs"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Auto-balance
+                    </Button>
+                    <div className="flex items-center gap-1 border border-border-glass rounded-lg p-0.5 bg-background/20">
+                        <button
+                            className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                            onClick={() => {
+                                canvasRef?.current?.zoomOut();
+                                onZoomChange?.(canvasRef?.current?.getZoom() || 1);
+                            }}
+                            title="Zoom Out"
+                        >
+                            <ZoomOut className="w-3.5 h-3.5 text-foreground-secondary" />
+                        </button>
+                        <span className="text-[10px] w-8 text-center tabular-nums text-foreground-muted">
+                            {Math.round(zoom * 100)}%
+                        </span>
+                        <button
+                            className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                            onClick={() => {
+                                canvasRef?.current?.zoomIn();
+                                onZoomChange?.(canvasRef?.current?.getZoom() || 1);
+                            }}
+                            title="Zoom In"
+                        >
+                            <ZoomIn className="w-3.5 h-3.5 text-foreground-secondary" />
+                        </button>
+                        <button
+                            className="p-1.5 hover:bg-white/10 rounded transition-colors border-l border-border-glass ml-0.5"
+                            onClick={() => {
+                                canvasRef?.current?.resetZoom();
+                                onZoomChange?.(1);
+                            }}
+                            title="Reset Zoom"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5 text-foreground-secondary" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full min-h-0">
-                <div className="px-4 pt-4 pb-2">
-                    <TabsList className="w-full grid grid-cols-2">
+                <div className="px-4 pb-2 pt-2">
+                    <TabsList className="w-full grid grid-cols-3">
+                        <TabsTrigger value="annotate">Annotate</TabsTrigger>
                         <TabsTrigger value="design">Design</TabsTrigger>
                         <TabsTrigger value="export">Export</TabsTrigger>
                     </TabsList>
                 </div>
 
-                <TabsContent value="design" className="space-y-6 pt-4 mt-0 border-none outline-none">
+                <TabsContent value="annotate" className="flex-1 overflow-y-auto outline-none">
+                    <div className="p-4 pt-0">
+                        <div className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                            <h4 className="text-xs font-semibold text-indigo-300 mb-1">Annotation Mode</h4>
+                            <p className="text-[10px] text-indigo-400/80">
+                                Select tools below to draw on your screenshot.
+                            </p>
+                        </div>
+                        <AnnotationToolbar
+                            onUndo={() => canvasRef?.current?.undo()}
+                            onRedo={() => canvasRef?.current?.redo()}
+                            onClear={() => canvasRef?.current?.clear()}
+                            canUndo={historyState.canUndo}
+                            canRedo={historyState.canRedo}
+                            annotationCount={historyState.count}
+                        />
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="design" className="space-y-6 pt-2 mt-0 border-none outline-none overflow-y-auto px-4 pb-4">
                     {/* Aspect Ratio Section */}
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-foreground-secondary">Canvas Ratio</label>
@@ -190,24 +279,6 @@ export const XnapperStylePanel: React.FC = () => {
 
                     {/* Balance & Shadow Toggles */}
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setAutoBalance(!autoBalance)}
-                            className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                                autoBalance
-                                    ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-                                    : "bg-glass-panel text-foreground-secondary border border-border-glass"
-                            )}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={autoBalance}
-                                onChange={() => setAutoBalance(!autoBalance)}
-                                className="w-3 h-3 rounded accent-indigo-500"
-                            />
-                            Balance
-                        </button>
-
                         <button
                             onClick={handleShadowToggle}
                             className={cn(

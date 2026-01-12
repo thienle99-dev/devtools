@@ -31,9 +31,16 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
     // Capture full screen
     ipcMain.handle('screenshot:capture-screen', async () => {
         try {
+            const display = screen.getPrimaryDisplay();
+            const scaleFactor = display.scaleFactor || 1;
+            const size = {
+                width: Math.ceil(display.size.width * scaleFactor),
+                height: Math.ceil(display.size.height * scaleFactor)
+            };
+
             const sources = await desktopCapturer.getSources({
                 types: ['screen'],
-                thumbnailSize: screen.getPrimaryDisplay().size
+                thumbnailSize: size
             });
 
             if (sources.length === 0) {
@@ -85,9 +92,16 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
         try {
             // First, capture the full screen
             console.log('Capturing screen for area selection...');
+            const display = screen.getPrimaryDisplay();
+            const scaleFactor = display.scaleFactor || 1;
+            const size = {
+                width: Math.ceil(display.size.width * scaleFactor),
+                height: Math.ceil(display.size.height * scaleFactor)
+            };
+
             const sources = await desktopCapturer.getSources({
                 types: ['screen'],
-                thumbnailSize: screen.getPrimaryDisplay().size
+                thumbnailSize: size
             });
 
             console.log(`Found ${sources.length} sources.`);
@@ -99,7 +113,7 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
 
             const primaryScreen = sources[0];
             const fullScreenImage = primaryScreen.thumbnail;
-            const display = screen.getPrimaryDisplay();
+            // display variable already declared above
 
             console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
             console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
