@@ -53,6 +53,10 @@ export const OpenGraphGenerator = React.lazy(() => import('@tools/web/OpenGraphG
 export const UtmBuilder = React.lazy(() => import('@tools/web/UtmBuilder').then(m => ({ default: m.UtmBuilder })));
 export const KeycodeInfo = React.lazy(() => import('@tools/web/KeycodeInfo').then(m => ({ default: m.KeycodeInfo })));
 export const RobotsTxtGenerator = React.lazy(() => import('@tools/web/RobotsTxtGenerator').then(m => ({ default: m.RobotsTxtGenerator })));
+export const OtpGenerator = React.lazy(() => import('@tools/web/OtpGenerator').then(m => ({ default: m.OtpGenerator })));
+export const HtmlWysiwyg = React.lazy(() => import('@tools/web/HtmlWysiwyg').then(m => ({ default: m.HtmlWysiwyg })));
+export const SafelinkDecoder = React.lazy(() => import('@tools/web/SafelinkDecoder').then(m => ({ default: m.SafelinkDecoder })));
+export const Base64UrlConverter = React.lazy(() => import('@tools/web/Base64UrlConverter').then(m => ({ default: m.Base64UrlConverter })));
 
 // Network
 export const Ipv4SubnetCalculator = React.lazy(() => import('@tools/network/Ipv4SubnetCalculator').then(m => ({ default: m.Ipv4SubnetCalculator })));

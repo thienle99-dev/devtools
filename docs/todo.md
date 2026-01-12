@@ -167,13 +167,13 @@
 - [x] Device information
 - [x] Open Graph meta generator
 - [x] MIME types lookup
-- [ ] OTP code generator (TOTP)
+- [x] OTP code generator (TOTP)
 - [x] Keycode info
-- [ ] HTML WYSIWYG editor
-- [ ] Outlook Safelink decoder
+- [x] HTML WYSIWYG editor
+- [x] Outlook Safelink decoder
 - [ ] URL shortener/expander
 - [x] UTM parameter builder
-- [ ] URL query string parser
+- [x] URL query string parser
 - [ ] HTTP headers parser
 - [ ] HTTP request builder
 - [ ] CORS checker
@@ -184,10 +184,10 @@
 - [ ] Sitemap generator
 - [ ] Structured Data (JSON-LD) generator
 - [ ] Canonical URL generator
-- [ ] Bearer token generator
-- [ ] API key generator
+- [x] Bearer token generator
+- [x] API key generator
 - [ ] Security headers checker
-- [ ] Base64 URL encoder/decoder
+- [x] Base64 URL encoder/decoder
 - [ ] Percent encoding
 - [ ] Unicode encoder/decoder
 - [ ] Cookie parser

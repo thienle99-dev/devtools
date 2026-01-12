@@ -62,7 +62,7 @@ export const cryptoTools: ToolDefinition[] = [
         icon: Key,
         color: 'text-indigo-400',
         component: Lazy.TokenGenerator,
-        keywords: ['token', 'password', 'random', 'secure']
+        keywords: ['token', 'password', 'random', 'secure', 'bearer', 'api', 'key']
     },
     {
         id: 'symmetric-encryptor',

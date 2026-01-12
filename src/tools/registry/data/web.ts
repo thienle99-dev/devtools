@@ -1,8 +1,30 @@
-import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot } from 'lucide-react';
+import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot, KeyRound, Edit3 } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
 export const webTools: ToolDefinition[] = [
+    {
+        id: 'otp',
+        name: 'OTP Generator',
+        path: '/otp',
+        description: 'Generate TOTP codes (2FA)',
+        category: 'web',
+        icon: KeyRound,
+        color: 'text-indigo-500',
+        component: Lazy.OtpGenerator,
+        keywords: ['otp', 'totp', '2fa', 'authenticator']
+    },
+    {
+        id: 'html-wysiwyg',
+        name: 'HTML Editor',
+        path: '/html-wysiwyg',
+        description: 'Visual HTML editor',
+        category: 'web',
+        icon: Edit3,
+        color: 'text-cyan-500',
+        component: Lazy.HtmlWysiwyg,
+        keywords: ['html', 'editor', 'wysiwyg', 'visual']
+    },
     {
         id: 'url-parser',
         name: 'URL Parser',
@@ -145,5 +167,27 @@ export const webTools: ToolDefinition[] = [
         color: 'text-green-500',
         component: Lazy.RobotsTxtGenerator,
         keywords: ['robots', 'seo', 'crawler', 'bot']
+    },
+    {
+        id: 'safelink',
+        name: 'Safelink Decoder',
+        path: '/safelink',
+        description: 'Decode Outlook Safe Links',
+        category: 'web',
+        icon: ShieldCheck,
+        color: 'text-blue-400',
+        component: Lazy.SafelinkDecoder,
+        keywords: ['outlook', 'safelink', 'microsoft', 'decode', 'url']
+    },
+    {
+        id: 'base64-url',
+        name: 'Base64 URL',
+        path: '/base64-url',
+        description: 'Base64 URL-safe encode/decode',
+        category: 'web',
+        icon: ArrowRightLeft,
+        color: 'text-yellow-500',
+        component: Lazy.Base64UrlConverter,
+        keywords: ['base64', 'url', 'encode', 'decode', 'rfc4648']
     },
 ];
