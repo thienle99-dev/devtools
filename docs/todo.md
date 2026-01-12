@@ -133,25 +133,25 @@
 - [x] Encrypt/decrypt text (AES)
 - [x] Bcrypt hasher
 - [x] Encrypt/decrypt text (TripleDES, Rabbit, RC4)
-- [ ] BIP39 passphrase generator
+- [x] BIP39 passphrase generator
 - [x] RSA key pair generator
 - [x] RSA encryption/decryption
 - [x] RSA signature generator/verifier
-- [ ] PBKDF2 key derivation
-- [ ] Argon2 password hashing (Argon2id, Argon2i, Argon2d)
-- [ ] Scrypt key derivation
-- [ ] ECDSA key pair generator
-- [ ] ECDSA signature generator/verifier
-- [ ] Ed25519 key pair generator
-- [ ] Ed25519 signature generator/verifier
-- [ ] X25519 key exchange generator
-- [ ] X.509 certificate parser/validator
-- [ ] CSR (Certificate Signing Request) generator
-- [ ] PEM/DER format converter
-- [ ] ChaCha20 encryption
-- [ ] Twofish encryption
-- [ ] Blowfish encryption
-- [ ] Fernet encryption
+- [x] PBKDF2 key derivation
+- [x] Argon2 password hashing (Argon2id, Argon2i, Argon2d)
+- [x] Scrypt key derivation
+- [x] ECDSA key pair generator
+- [x] ECDSA signature generator/verifier
+- [x] Ed25519 key pair generator
+- [x] Ed25519 signature generator/verifier
+- [x] X25519 key exchange generator
+- [x] X.509 certificate parser/validator
+- [x] CSR (Certificate Signing Request) generator
+- [x] PEM/DER format converter
+- [x] ChaCha20 encryption
+- [x] Twofish encryption
+- [x] Blowfish encryption
+- [x] Fernet encryption
 
 ### 3.3 Web Tools
 
@@ -165,22 +165,22 @@
 - [x] HTTP status codes list
 - [x] JSON diff
 - [x] Device information
-- [ ] Open Graph meta generator
+- [x] Open Graph meta generator
 - [x] MIME types lookup
 - [ ] OTP code generator (TOTP)
-- [ ] Keycode info
+- [x] Keycode info
 - [ ] HTML WYSIWYG editor
 - [ ] Outlook Safelink decoder
 - [ ] URL shortener/expander
-- [ ] UTM parameter builder
+- [x] UTM parameter builder
 - [ ] URL query string parser
 - [ ] HTTP headers parser
 - [ ] HTTP request builder
 - [ ] CORS checker
 - [ ] Content Security Policy (CSP) generator
 - [ ] HSTS checker
-- [ ] Meta tags generator
-- [ ] Robots.txt generator
+- [x] Meta tags generator
+- [x] Robots.txt generator
 - [ ] Sitemap generator
 - [ ] Structured Data (JSON-LD) generator
 - [ ] Canonical URL generator

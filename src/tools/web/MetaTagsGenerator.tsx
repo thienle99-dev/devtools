@@ -1,0 +1,172 @@
+import { useState, useEffect } from 'react';
+import { ToolPane } from '../../components/layout/ToolPane';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Copy, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+
+export const MetaTagsGenerator = () => {
+  const [values, setValues] = useState({
+    title: '',
+    description: '',
+    keywords: '',
+    author: '',
+    viewport: 'width=device-width, initial-scale=1.0',
+    charset: 'UTF-8',
+    robots: 'index, follow'
+  });
+
+  const [output, setOutput] = useState('');
+
+  const handleChange = (key: string, value: string) => {
+    setValues(prev => ({ ...prev, [key]: value }));
+  };
+
+  useEffect(() => {
+    const lines = [
+      `<!-- Primary Meta Tags -->`,
+      `<title>${values.title}</title>`,
+      `<meta name="title" content="${values.title}">`,
+      `<meta name="description" content="${values.description}">`,
+      `<meta name="keywords" content="${values.keywords}">`,
+      `<meta name="robots" content="${values.robots}">`,
+      `<meta name="viewport" content="${values.viewport}">`,
+      `<meta charset="${values.charset}">`,
+      values.author ? `<meta name="author" content="${values.author}">` : '',
+    ].filter(Boolean).join('\n');
+    
+    setOutput(lines);
+  }, [values]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(output);
+    toast.success('Copied to clipboard');
+  };
+
+  const handleReset = () => {
+    setValues({
+      title: '',
+      description: '',
+      keywords: '',
+      author: '',
+      viewport: 'width=device-width, initial-scale=1.0',
+      charset: 'UTF-8',
+      robots: 'index, follow'
+    });
+  };
+
+  return (
+    <ToolPane
+      title="Meta Tags Generator"
+      description="Generate standard SEO meta tags for your website"
+    >
+      <div className="h-full flex flex-col md:flex-row gap-6 p-4">
+        {/* Inputs */}
+        <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+          <Card className="p-4 space-y-4">
+            <h3 className="font-semibold text-lg text-white">Basic Information</h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-400">Page Title</label>
+              <Input
+                value={values.title}
+                onChange={(e) => handleChange('title', e.target.value)}
+                placeholder="e.g. My Awesome Website"
+                className="bg-gray-800/50 border-gray-700"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-400">Description</label>
+              <textarea
+                value={values.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Brief description of your page content..."
+                className="w-full h-24 p-3 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-400">Keywords (comma separated)</label>
+              <Input
+                value={values.keywords}
+                onChange={(e) => handleChange('keywords', e.target.value)}
+                placeholder="e.g. react, tools, generator"
+                className="bg-gray-800/50 border-gray-700"
+              />
+            </div>
+             <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-400">Author</label>
+              <Input
+                value={values.author}
+                onChange={(e) => handleChange('author', e.target.value)}
+                placeholder="e.g. John Doe"
+                className="bg-gray-800/50 border-gray-700"
+              />
+            </div>
+          </Card>
+
+          <Card className="p-4 space-y-4">
+             <h3 className="font-semibold text-lg text-white">Advanced</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-400">Viewport</label>
+                  <Input
+                    value={values.viewport}
+                    onChange={(e) => handleChange('viewport', e.target.value)}
+                    className="bg-gray-800/50 border-gray-700"
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-400">Charset</label>
+                  <select
+                    value={values.charset}
+                    onChange={(e) => handleChange('charset', e.target.value)}
+                    className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                  >
+                    <option value="UTF-8">UTF-8</option>
+                    <option value="ISO-8859-1">ISO-8859-1</option>
+                  </select>
+                </div>
+                 <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-400">Robots</label>
+                  <select
+                    value={values.robots}
+                    onChange={(e) => handleChange('robots', e.target.value)}
+                    className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                  >
+                    <option value="index, follow">Index, Follow</option>
+                    <option value="index, nofollow">Index, No Follow</option>
+                    <option value="noindex, follow">No Index, Follow</option>
+                    <option value="noindex, nofollow">No Index, No Follow</option>
+                  </select>
+                </div>
+             </div>
+          </Card>
+        </div>
+
+        {/* Output */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+           <div className="flex items-center justify-between p-4 border-b border-gray-800/50 bg-gray-900/20 rounded-t-lg">
+            <h3 className="text-sm font-medium text-gray-400">Generated HTML</h3>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={handleReset}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reset
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleCopy}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 p-0 overflow-hidden">
+             <Card className="h-full p-0 overflow-hidden bg-gray-950 border-gray-800 rounded-b-lg rounded-t-none">
+               <pre className="p-4 text-sm font-mono text-gray-300 whitespace-pre-wrap overflow-auto h-full language-html">
+                  {output}
+               </pre>
+             </Card>
+          </div>
+        </div>
+      </div>
+    </ToolPane>
+  );
+};

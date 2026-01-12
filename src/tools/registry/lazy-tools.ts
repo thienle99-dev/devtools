@@ -48,6 +48,11 @@ export const UserAgentParser = React.lazy(() => import('@tools/web/UserAgentPars
 export const JwtParser = React.lazy(() => import('@tools/web/JwtParser').then(m => ({ default: m.JwtParser })));
 export const HttpStatusCode = React.lazy(() => import('@tools/web/HttpStatusCode').then(m => ({ default: m.HttpStatusCode })));
 export const JsonDiff = React.lazy(() => import('@tools/web/JsonDiff').then(m => ({ default: m.JsonDiff })));
+export const MetaTagsGenerator = React.lazy(() => import('@tools/web/MetaTagsGenerator').then(m => ({ default: m.MetaTagsGenerator })));
+export const OpenGraphGenerator = React.lazy(() => import('@tools/web/OpenGraphGenerator').then(m => ({ default: m.OpenGraphGenerator })));
+export const UtmBuilder = React.lazy(() => import('@tools/web/UtmBuilder').then(m => ({ default: m.UtmBuilder })));
+export const KeycodeInfo = React.lazy(() => import('@tools/web/KeycodeInfo').then(m => ({ default: m.KeycodeInfo })));
+export const RobotsTxtGenerator = React.lazy(() => import('@tools/web/RobotsTxtGenerator').then(m => ({ default: m.RobotsTxtGenerator })));
 
 // Network
 export const Ipv4SubnetCalculator = React.lazy(() => import('@tools/network/Ipv4SubnetCalculator').then(m => ({ default: m.Ipv4SubnetCalculator })));

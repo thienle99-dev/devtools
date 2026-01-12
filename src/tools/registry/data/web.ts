@@ -1,9 +1,8 @@
-import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft } from 'lucide-react';
+import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
 export const webTools: ToolDefinition[] = [
-
     {
         id: 'url-parser',
         name: 'URL Parser',
@@ -91,5 +90,60 @@ export const webTools: ToolDefinition[] = [
         color: 'text-amber-500',
         component: Lazy.JsonDiff,
         keywords: ['diff', 'compare', 'json', 'text']
+    },
+    {
+        id: 'meta-tags',
+        name: 'Meta Tags',
+        path: '/meta-tags',
+        description: 'Generate standard SEO meta tags',
+        category: 'web',
+        icon: Tag,
+        color: 'text-orange-400',
+        component: Lazy.MetaTagsGenerator,
+        keywords: ['meta', 'seo', 'tags', 'html']
+    },
+    {
+        id: 'open-graph',
+        name: 'Open Graph',
+        path: '/open-graph',
+        description: 'Generate Open Graph meta tags',
+        category: 'web',
+        icon: Activity,
+        color: 'text-blue-500',
+        component: Lazy.OpenGraphGenerator,
+        keywords: ['og', 'facebook', 'twitter', 'social']
+    },
+    {
+        id: 'utm-builder',
+        name: 'UTM Builder',
+        path: '/utm-builder',
+        description: 'Build UTM tracking URLs',
+        category: 'web',
+        icon: Hash,
+        color: 'text-pink-500',
+        component: Lazy.UtmBuilder,
+        keywords: ['utm', 'analytics', 'tracking', 'url']
+    },
+    {
+        id: 'keycode',
+        name: 'Keycode Info',
+        path: '/keycode',
+        description: 'Javascript keyboard event info',
+        category: 'web',
+        icon: Keyboard,
+        color: 'text-gray-200',
+        component: Lazy.KeycodeInfo,
+        keywords: ['key', 'code', 'keyboard', 'event']
+    },
+    {
+        id: 'robots-txt',
+        name: 'Robots.txt',
+        path: '/robots-txt',
+        description: 'Generate robots.txt file',
+        category: 'web',
+        icon: Bot,
+        color: 'text-green-500',
+        component: Lazy.RobotsTxtGenerator,
+        keywords: ['robots', 'seo', 'crawler', 'bot']
     },
 ];
