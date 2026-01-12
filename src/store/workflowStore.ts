@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface WorkflowStep {
@@ -6,6 +6,7 @@ export interface WorkflowStep {
     toolId: string;
     options: Record<string, any>;
     label?: string;
+    metadata?: Record<string, any>; // For visual builder (position, etc)
 }
 
 export interface Workflow {
@@ -35,7 +36,7 @@ interface WorkflowStore {
 }
 
 export const useWorkflowStore = create<WorkflowStore>()(
-    persist(
+    persist<WorkflowStore>(
         (set) => ({
             workflows: [],
             activeWorkflowId: null,
@@ -114,5 +115,5 @@ export const useWorkflowStore = create<WorkflowStore>()(
         {
             name: 'antigravity-workflows',
         }
-    )
+    ) as unknown as StateCreator<WorkflowStore>
 );

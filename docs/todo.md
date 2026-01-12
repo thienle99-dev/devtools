@@ -1078,27 +1078,27 @@
 - [x] Show compatible tools only
 - [x] Auto-fill input of next tool
 - [x] Preserve tool state during chaining
-- [ ] Save chained actions to history
+- [x] Save chained actions to history
 
 ---
 
 ### 20.3 Chain Store & Execution
 
-- [ ] Create toolChainStore (Zustand)
-- [ ] Implement sequential execution
-- [ ] Cache output per step
-- [ ] Allow re-run single step
-- [ ] Allow reset chain
+- [x] Create toolChainStore (Zustand)
+- [x] Implement sequential execution
+- [x] Cache output per step
+- [x] Allow re-run single step
+- [x] Allow reset chain
 
 ---
 
 ### 20.4 Visual Chain Builder (Advanced)
 
-- [ ] Chain canvas UI
-- [ ] Drag & drop tool nodes
-- [ ] Connect compatible nodes only
-- [ ] Step-by-step execution view
-- [ ] Inline output preview per node
+- [x] Chain canvas UI
+- [x] Drag & drop tool nodes
+- [x] Connect compatible nodes only
+- [x] Step-by-step execution view
+- [x] Inline output preview per node
 
 ---
 
