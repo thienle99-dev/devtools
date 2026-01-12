@@ -6,7 +6,7 @@ interface ToolHistoryEntry {
     id: string;
     timestamp: number;
     input: string;
-    output: string;
+    output: any;
     options: Record<string, any>;
 }
 
@@ -20,7 +20,7 @@ interface Preset {
 interface ToolData {
     id: string;
     input: string;
-    output: string;
+    output: any;
     options: Record<string, any>;
     history: ToolHistoryEntry[];
     layout?: 'vertical' | 'horizontal';

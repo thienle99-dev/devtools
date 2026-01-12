@@ -1150,7 +1150,7 @@
 
 - [x] JSON Formatter → JSON Validator → JSON to CSV → Export CSV
 - [x] JSON Formatter → JSON Minifier → Copy to Clipboard
-- [ ] JSON Formatter → Data Masking (JSON) → Export JSON
+- [x] JSON Formatter → Data Masking (JSON) → Export JSON
 - [ ] JSON Diff → Export Report (TXT/MD)
 
 ### A2. JSON ↔ Other Formats
@@ -1158,12 +1158,12 @@
 - [x] JSON Formatter → JSON ⇄ YAML (to YAML) → Export YAML
 - [x] JSON Formatter → JSON ⇄ XML (to XML) → Export XML
 - [x] YAML ⇄ JSON (to JSON) → JSON Validator → Export JSON
-- [ ] XML ⇄ JSON (to JSON) → JSON Formatter → Export JSON
+- [x] XML ⇄ JSON (to JSON) → JSON Formatter → Export JSON
 
 ### A3. Token / JWT Workflows
 
 - [x] JWT Parser → JSON Formatter → Copy Claims
-- [ ] JWT Parser → Data Masking (JSON) → Export JSON
+- [x] JWT Parser → Data Masking (JSON) → Export JSON
 - [ ] Bearer Token Generator → Copy to Clipboard
 
 ---
@@ -1192,8 +1192,8 @@
 
 ### C1. Secrets & Redaction
 
-- [ ] Secrets Scanner (Text/JSON) → Data Masking → Export Sanitized Output
-- [ ] Text Input → Regex Replace → Data Masking → Export TXT/MD
+- [x] Secrets Scanner (Text/JSON) → Data Masking → Export Sanitized Output
+- [x] Text Input → Regex Replace → Data Masking → Export TXT/MD
 
 ### C2. Password & Keys
 

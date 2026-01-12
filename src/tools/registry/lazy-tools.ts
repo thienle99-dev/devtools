@@ -38,6 +38,9 @@ export const HmacGenerator = React.lazy(() => import('@tools/crypto/HmacGenerato
 export const SymmetricEncryptor = React.lazy(() => import('@tools/crypto/SymmetricEncryptor').then(m => ({ default: m.SymmetricEncryptor })));
 export const RsaGenerator = React.lazy(() => import('@tools/crypto/RsaGenerator').then(m => ({ default: m.RsaGenerator })));
 export const BcryptGenerator = React.lazy(() => import('@tools/crypto/BcryptGenerator').then(m => ({ default: m.BcryptGenerator })));
+export const SecretsScanner = React.lazy(() => import('@tools/security/SecretsScanner').then(m => ({ default: m.SecretsScanner })));
+export const DataMasking = React.lazy(() => import('@tools/security/DataMasking').then(m => ({ default: m.DataMasking })));
+export const CertificateTools = React.lazy(() => import('@tools/security/CertificateTools').then(m => ({ default: m.CertificateTools })));
 
 // Web
 export const UrlParser = React.lazy(() => import('@tools/web/UrlParser').then(m => ({ default: m.UrlParser })));

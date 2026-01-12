@@ -342,5 +342,85 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
                 label: 'Generate Slug'
             }
         ]
+    },
+    {
+        id: 'secrets-sanitization-flow',
+        name: 'Security Audit & Masking',
+        description: 'Scan for Secrets → Redact PII/Keys',
+        steps: [
+            {
+                toolId: 'secrets-scanner',
+                options: {},
+                label: 'Scan for Vulnerabilities'
+            },
+            {
+                toolId: 'data-masking',
+                options: { fields: 'password,api_key,token,secret', visibleStart: 4 },
+                label: 'Mask Sensitive Data'
+            }
+        ]
+    },
+    {
+        id: 'regex-masking-flow',
+        name: 'Smart Redaction Flow',
+        description: 'Regex Replace Pattern → Apply Masking',
+        steps: [
+            {
+                toolId: 'regex-replace',
+                options: { pattern: '[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}', replacement: '[CARD_NUMBER]' },
+                label: 'Redact Credit Cards'
+            },
+            {
+                toolId: 'data-masking',
+                options: { maskChar: 'X', visibleStart: 0, visibleEnd: 0 },
+                label: 'Final Pass Masking'
+            }
+        ]
+    },
+    {
+        id: 'xml-json-flow',
+        name: 'XML → Clean JSON Flow',
+        description: 'Convert XML → Format JSON Output',
+        steps: [
+            {
+                toolId: 'converter',
+                options: { mode: 'xml-json' },
+                label: 'Parse XML'
+            },
+            {
+                toolId: 'universal-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format JSON'
+            }
+        ]
+    },
+    {
+        id: 'json-masking-flow',
+        name: 'JSON Privacy Flow',
+        description: 'Format JSON → Mask Sensitive Fields',
+        steps: [
+            {
+                toolId: 'universal-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Pre-format'
+            },
+            {
+                toolId: 'data-masking',
+                options: { fields: 'email,password,api_key' },
+                label: 'Apply PII Mask'
+            }
+        ]
+    },
+    {
+        id: 'sql-format-flow',
+        name: 'SQL Cleanup Flow',
+        description: 'Format SQL Queries → Export Clean SQL',
+        steps: [
+            {
+                toolId: 'universal-formatter',
+                options: { language: 'sql', uppercase: true },
+                label: 'Format SQL'
+            }
+        ]
     }
 ];
