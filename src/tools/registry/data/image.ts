@@ -1,6 +1,7 @@
 import { Image as ImageIcon, FileImage, Info, Code, Type } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { getImageMetadata, generateQrCode } from '../../image/logic';
 
 export const imageTools: ToolDefinition[] = [
     {
@@ -13,6 +14,9 @@ export const imageTools: ToolDefinition[] = [
         color: 'text-indigo-400',
         component: Lazy.QrCodeGenerator,
         keywords: ['qr', 'code', 'generator', 'scan', 'wifi'],
+        inputTypes: ['text'],
+        outputTypes: ['image'],
+        process: (input, options) => generateQrCode(input, options)
     },
     {
         id: 'image-converter',
@@ -34,7 +38,10 @@ export const imageTools: ToolDefinition[] = [
         icon: Info,
         color: 'text-blue-400',
         component: Lazy.ImageMetadata,
-        keywords: ['image', 'metadata', 'exif', 'gps', 'privacy', 'strip']
+        keywords: ['image', 'metadata', 'exif', 'gps', 'privacy', 'strip'],
+        inputTypes: ['image', 'file'],
+        outputTypes: ['json'],
+        process: (input) => getImageMetadata(input)
     },
     {
         id: 'data-uri',
@@ -45,7 +52,19 @@ export const imageTools: ToolDefinition[] = [
         icon: Code,
         color: 'text-amber-400',
         component: Lazy.DataUriGenerator,
-        keywords: ['base64', 'image', 'data-uri', 'css', 'html', 'encode']
+        keywords: ['base64', 'image', 'data-uri', 'css', 'html', 'encode'],
+        inputTypes: ['image', 'file'],
+        outputTypes: ['text'],
+        process: async (input) => {
+            if (input instanceof Blob) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(input);
+                });
+            }
+            return input;
+        }
     },
     {
         id: 'svg-placeholder-generator',

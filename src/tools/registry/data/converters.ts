@@ -1,6 +1,7 @@
 import { ArrowRightLeft } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import * as Logic from '../../converters/logic';
 
 export const converters: ToolDefinition[] = [
     {
@@ -21,7 +22,22 @@ export const converters: ToolDefinition[] = [
             'csv', 'excel', 'export',
             'markdown', 'html', 'parse',
             'url', 'uri', 'encode', 'decode', 'entity', 'escape', 'unescape'
-        ]
+        ],
+        inputTypes: ['text', 'json', 'yaml', 'xml', 'csv'],
+        outputTypes: ['text', 'json', 'yaml', 'xml', 'csv'],
+        process: (input, options) => {
+            const mode = options?.mode || 'json-yaml';
+            switch (mode) {
+                case 'json-yaml': return Logic.jsonToYaml(input);
+                case 'yaml-json': return Logic.yamlToJson(input);
+                case 'json-xml': return Logic.jsonToXml(input);
+                case 'xml-json': return Logic.xmlToJson(input);
+                case 'json-csv': return Logic.jsonToCsv(input);
+                case 'csv-json': return Logic.csvToJson(input);
+                case 'case': return Logic.convertCase(input, options?.caseType || 'upper');
+                default: return input;
+            }
+        }
     },
 
     {
@@ -44,7 +60,10 @@ export const converters: ToolDefinition[] = [
         icon: ArrowRightLeft,
         color: 'text-pink-400',
         component: Lazy.ColorConverter,
-        keywords: ['color', 'hex', 'rgb', 'hsl', 'cmyk', 'convert']
+        keywords: ['color', 'hex', 'rgb', 'hsl', 'cmyk', 'convert'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => Logic.convertColor(input, options?.format || 'hex')
     },
     {
         id: 'date-converter',
@@ -55,7 +74,10 @@ export const converters: ToolDefinition[] = [
         icon: ArrowRightLeft,
         color: 'text-orange-400',
         component: Lazy.DateConverter,
-        keywords: ['date', 'time', 'timestamp', 'iso', 'convert', 'format']
+        keywords: ['date', 'time', 'timestamp', 'iso', 'convert', 'format'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => Logic.convertDate(input, options?.format || 'iso')
     },
     {
         id: 'csv-excel',
@@ -66,6 +88,13 @@ export const converters: ToolDefinition[] = [
         icon: ArrowRightLeft,
         color: 'text-emerald-400',
         component: Lazy.CsvExcelConverter,
-        keywords: ['csv', 'excel', 'spreadsheet', 'convert', 'parse']
+        keywords: ['csv', 'excel', 'spreadsheet', 'convert', 'parse'],
+        inputTypes: ['csv', 'excel', 'json'],
+        outputTypes: ['csv', 'excel', 'json'],
+        process: (input, options) => {
+            if (options?.mode === 'csv-json') return Logic.csvToJson(input);
+            if (options?.mode === 'json-csv') return Logic.jsonToCsv(input);
+            return input;
+        }
     }
 ];

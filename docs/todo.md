@@ -1136,3 +1136,674 @@
 - [ ] Background execution
 - [ ] Progress indicator per step
 - [ ] Cancel running chain
+
+## Phase 20.9: Built-in Chain Templates (Flows)
+
+> Ready-to-use chaining presets (one-click).  
+> Format: `Tool A → Tool B → Tool C ...`
+
+---
+
+## A. JSON / Data Flows
+
+### A1. JSON Cleanup & Export
+
+- [ ] JSON Formatter → JSON Validator → JSON to CSV → Export CSV
+- [ ] JSON Formatter → JSON Minifier → Copy to Clipboard
+- [ ] JSON Formatter → Data Masking (JSON) → Export JSON
+- [ ] JSON Diff → Export Report (TXT/MD)
+
+### A2. JSON ↔ Other Formats
+
+- [ ] JSON Formatter → JSON ⇄ YAML (to YAML) → Export YAML
+- [ ] JSON Formatter → JSON ⇄ XML (to XML) → Export XML
+- [ ] YAML ⇄ JSON (to JSON) → JSON Validator → Export JSON
+- [ ] XML ⇄ JSON (to JSON) → JSON Formatter → Export JSON
+
+### A3. Token / JWT Workflows
+
+- [ ] JWT Parser → JSON Formatter → Copy Claims
+- [ ] JWT Parser → Data Masking (JSON) → Export JSON
+- [ ] Bearer Token Generator → Copy to Clipboard
+
+---
+
+## B. URL / Web Flows
+
+### B1. URL Inspection
+
+- [ ] URL Decode → URL Parser → URL Query String Parser → Export Report
+- [ ] URL Parser → UTM Builder → Copy Result URL
+- [ ] URL Decode → Outlook Safelink Decoder → URL Parser → Export
+
+### B2. Web Headers & Agents
+
+- [ ] HTTP Headers Parser → Security Headers Checker → Export Report
+- [ ] User-Agent Parser → Device Information → Export Report
+
+### B3. SEO / Metadata
+
+- [ ] Meta Tags Generator → Open Graph Meta Generator → Export HTML
+- [ ] Robots.txt Generator → Sitemap Generator → Export Files
+- [ ] Structured Data (JSON-LD) Generator → JSON Validator → Export JSON-LD
+
+---
+
+## C. Security / Privacy Flows
+
+### C1. Secrets & Redaction
+
+- [ ] Secrets Scanner (Text/JSON) → Data Masking → Export Sanitized Output
+- [ ] Text Input → Regex Replace → Data Masking → Export TXT/MD
+
+### C2. Password & Keys
+
+- [ ] Password Strength Analyzer → Password Policy Tester → Export Report
+- [ ] Token Generator → Hash Generator → Copy / Export
+
+### C3. Certificates
+
+- [ ] PEM/DER Converter → X.509 Certificate Parser → Export Report
+- [ ] CSR Generator → Export CSR + Private Key
+
+---
+
+## D. Dev / Code Flows
+
+### D1. Logs & Debug
+
+- [ ] Log Text → Data Masking → Error Log Analyzer → Export Report
+- [ ] Log Text → Regex Tester → Export Patterns
+
+### D2. Docker & Infra
+
+- [ ] Docker run → docker-compose Converter → YAML Formatter → Export docker-compose.yml
+- [ ] YAML Formatter → Kubernetes YAML Validator → Export Validated YAML
+
+### D3. Dates & IDs
+
+- [ ] Date-time Converter → Export ISO8601
+- [ ] UUID Generator → Copy
+- [ ] ULID Generator → Copy
+
+---
+
+## E. Image Flows
+
+### E1. Optimize & Convert
+
+- [ ] Image Import → Image Compressor → Image Format Converter → Export Image
+- [ ] Image Import → Image Resize → Image Compressor → Export
+
+### E2. Privacy & Metadata
+
+- [ ] Image Import → Image Metadata Viewer → Image Metadata Remover → Export Clean Image
+
+### E3. Sharing
+
+- [ ] Image Import → Watermark → Resize for Social Preset → Export
+
+### E4. Visual Transform
+
+- [ ] Image Import → Image to ASCII Art → Export TXT/MD
+- [ ] Image Import → Base64 Image Encoder → Copy Data URI
+
+---
+
+## F. Screenshot (Xnapper) Flows
+
+### F1. Quick Redaction
+
+- [ ] Screenshot Capture → OCR Detection → Regex Redaction → Export PNG
+- [ ] Screenshot Capture → Manual Redaction → Export PNG
+
+### F2. Social Share
+
+- [ ] Screenshot Capture → Background Generator (blur/gradient) → Annotation → Export Social Preset
+- [ ] Screenshot Capture → Auto Balance → Resize Preset → Copy to Clipboard
+
+### F3. Documentation
+
+- [ ] Screenshot Capture → Annotation → Watermark → Export PNG
+- [ ] Screenshot Capture → OCR → Export Text (TXT/MD)
+
+---
+
+## G. PDF Flows
+
+### G1. Split / Merge
+
+- [ ] PDF Import → Page Extractor → Export PDF
+- [ ] PDF Import → Splitter → Export PDFs
+- [ ] PDF Merger → Compressor → Export PDF
+
+### G2. Cleanup & Privacy
+
+- [ ] PDF Import → Metadata Viewer → Metadata Remover → Export Clean PDF
+- [ ] PDF Import → Watermarker → Page Numbering → Export PDF
+
+### G3. Convert
+
+- [ ] PDF Import → PDF to Images → Export Images
+- [ ] Images to PDF → Compressor → Export PDF
+
+---
+
+## H. Universal Export End-Nodes
+
+- [ ] Copy to Clipboard
+- [ ] Save to File
+- [ ] Export TXT / MD
+- [ ] Export JSON / YAML / XML / CSV
+- [ ] Export PNG / JPG / WebP
+- [ ] Export PDF
+- [ ] Share (OS)
+
+## Phase 21: Workflow, Automation & Power User Features
+
+### 21.1 Workflow Engine (No-code)
+
+- [ ] Workflow definition schema (steps, conditions)
+- [ ] Conditional branching (if / else)
+- [ ] Parallel steps support
+- [ ] Delay / wait step
+- [ ] Reusable sub-workflows
+- [ ] Workflow execution history
+- [ ] Workflow error recovery
+- [ ] Workflow versioning
+
+---
+
+### 21.2 Tool Chaining Enhancements
+
+- [ ] Chain variables (store intermediate results)
+- [ ] Named outputs (output.json, output.csv)
+- [ ] Partial chain execution (run from step X)
+- [ ] Chain input parameters
+- [ ] Chain validation before run
+- [ ] Chain dry-run mode
+- [ ] Chain performance profiling
+
+---
+
+### 21.3 Presets, Templates & Sharing
+
+- [ ] Global presets system (tool + chain)
+- [ ] Preset tagging & search
+- [ ] Duplicate / fork preset
+- [ ] Export / import presets
+- [ ] Share preset via file / link
+- [ ] Preset permissions (read-only / editable)
+- [ ] Preset marketplace (local/community)
+
+---
+
+## Phase 22: Project / Workspace Mode
+
+### 22.1 Project Context
+
+- [ ] Project workspace (folder-based)
+- [ ] Project-level environment variables
+- [ ] Project secrets vault (local encrypted)
+- [ ] Project-specific tool history
+- [ ] Project presets & workflows
+- [ ] Switch project quickly
+
+---
+
+### 22.2 File-Aware Tools
+
+- [ ] Run tools on entire folder
+- [ ] Batch processing for chains
+- [ ] Folder watch (auto-run workflow)
+- [ ] Ignore rules (.gitignore-like)
+- [ ] Output folder management
+
+---
+
+## Phase 23: CLI, Automation & Headless Mode
+
+### 23.1 CLI Companion
+
+- [ ] CLI binary (devtools-cli)
+- [ ] Run tool from CLI
+- [ ] Run chain from CLI
+- [ ] Run workflow from CLI
+- [ ] Pipe stdin → tool → stdout
+- [ ] Export CLI results
+- [ ] CLI config & profiles
+
+---
+
+### 23.2 Headless / Script Mode
+
+- [ ] Headless execution engine
+- [ ] JSON-based execution API
+- [ ] Scriptable chains
+- [ ] Background execution
+- [ ] Exit codes & error mapping
+
+---
+
+## Phase 24: Developer Platform / Extensibility
+
+### 24.1 Plugin System
+
+- [ ] Plugin SDK (tool / chain / UI)
+- [ ] Plugin lifecycle (install, update, remove)
+- [ ] Plugin permission model
+- [ ] Plugin sandboxing
+- [ ] Plugin version compatibility
+- [ ] Plugin registry (local / remote)
+
+---
+
+### 24.2 Tool SDK
+
+- [ ] Tool authoring template
+- [ ] Tool IO contract validator
+- [ ] Tool test harness
+- [ ] Tool documentation generator
+- [ ] Tool schema linting
+
+---
+
+## Phase 25: Intelligence & Smart UX (Non-AI-heavy)
+
+### 25.1 Smart Suggestions
+
+- [ ] Suggest next tool in chain
+- [ ] Suggest workflow from history
+- [ ] Detect repeated manual actions
+- [ ] Recommend automation
+- [ ] Tool misuse warnings
+
+---
+
+### 25.2 Insight & Feedback
+
+- [ ] Local usage analytics (privacy-first)
+- [ ] Tool performance metrics
+- [ ] Slow
+
+## Phase 21: Workflow, Automation & Power User Features
+
+### 21.1 Workflow Engine (No-code)
+
+- [ ] Workflow definition schema (steps, conditions)
+- [ ] Conditional branching (if / else)
+- [ ] Parallel steps support
+- [ ] Delay / wait step
+- [ ] Reusable sub-workflows
+- [ ] Workflow execution history
+- [ ] Workflow error recovery
+- [ ] Workflow versioning
+
+---
+
+### 21.2 Tool Chaining Enhancements
+
+- [ ] Chain variables (store intermediate results)
+- [ ] Named outputs (output.json, output.csv)
+- [ ] Partial chain execution (run from step X)
+- [ ] Chain input parameters
+- [ ] Chain validation before run
+- [ ] Chain dry-run mode
+- [ ] Chain performance profiling
+
+---
+
+### 21.3 Presets, Templates & Sharing
+
+- [ ] Global presets system (tool + chain)
+- [ ] Preset tagging & search
+- [ ] Duplicate / fork preset
+- [ ] Export / import presets
+- [ ] Share preset via file / link
+- [ ] Preset permissions (read-only / editable)
+- [ ] Preset marketplace (local/community)
+
+---
+
+## Phase 22: Project / Workspace Mode
+
+### 22.1 Project Context
+
+- [ ] Project workspace (folder-based)
+- [ ] Project-level environment variables
+- [ ] Project secrets vault (local encrypted)
+- [ ] Project-specific tool history
+- [ ] Project presets & workflows
+- [ ] Switch project quickly
+
+---
+
+### 22.2 File-Aware Tools
+
+- [ ] Run tools on entire folder
+- [ ] Batch processing for chains
+- [ ] Folder watch (auto-run workflow)
+- [ ] Ignore rules (.gitignore-like)
+- [ ] Output folder management
+
+---
+
+## Phase 23: CLI, Automation & Headless Mode
+
+### 23.1 CLI Companion
+
+- [ ] CLI binary (devtools-cli)
+- [ ] Run tool from CLI
+- [ ] Run chain from CLI
+- [ ] Run workflow from CLI
+- [ ] Pipe stdin → tool → stdout
+- [ ] Export CLI results
+- [ ] CLI config & profiles
+
+---
+
+### 23.2 Headless / Script Mode
+
+- [ ] Headless execution engine
+- [ ] JSON-based execution API
+- [ ] Scriptable chains
+- [ ] Background execution
+- [ ] Exit codes & error mapping
+
+---
+
+## Phase 24: Developer Platform / Extensibility
+
+### 24.1 Plugin System
+
+- [ ] Plugin SDK (tool / chain / UI)
+- [ ] Plugin lifecycle (install, update, remove)
+- [ ] Plugin permission model
+- [ ] Plugin sandboxing
+- [ ] Plugin version compatibility
+- [ ] Plugin registry (local / remote)
+
+---
+
+### 24.2 Tool SDK
+
+- [ ] Tool authoring template
+- [ ] Tool IO contract validator
+- [ ] Tool test harness
+- [ ] Tool documentation generator
+- [ ] Tool schema linting
+
+---
+
+## Phase 25: Intelligence & Smart UX (Non-AI-heavy)
+
+### 25.1 Smart Suggestions
+
+- [ ] Suggest next tool in chain
+- [ ] Suggest workflow from history
+- [ ] Detect repeated manual actions
+- [ ] Recommend automation
+- [ ] Tool misuse warnings
+
+---
+
+### 25.2 Insight & Feedback
+
+- [ ] Local usage analytics (privacy-first)
+- [ ] Tool performance metrics
+- [ ] Slow tool detection
+- [ ] UX friction detection
+- [ ] Debug insights panel
+
+---
+
+## Phase 26: Collaboration & Sharing (Optional)
+
+- [ ] Share workflow/preset files
+- [ ] Team workspace (local sync)
+- [ ] Read-only shared tools
+- [ ] Audit log for shared actions
+- [ ] Export reports for team use
+
+---
+
+## Phase 27: Product-Grade UX & Trust
+
+### 27.1 Reliability
+
+- [ ] Crash recovery (restore state)
+- [ ] Safe mode startup
+- [ ] Tool isolation (one tool crash ≠ app crash)
+- [ ] Background task recovery
+
+---
+
+### 27.2 Trust & Transparency
+
+- [ ] Privacy dashboard
+- [ ] Offline guarantee mode
+- [ ] Permission inspector (filesystem, network)
+- [ ] Tool capability manifest
+- [ ] User-facing security model docs
+
+## Phase 28: Folder-aware Batch Tools (Project Mode + Batch Pipeline)
+
+### 28.1 Core Concepts & Data Model
+
+- [ ] Define Workspace concept (root folder + config)
+- [ ] Define FileTarget (path, type, size, hash, metadata)
+- [ ] Define BatchJob (id, tool/chain/workflow, inputs, outputs, status)
+- [ ] Define BatchResult (per-file output + errors + timings)
+- [ ] Define Ignore Rules (.devtoolsignore + .gitignore support)
+
+---
+
+### 28.2 File Discovery & Indexing
+
+- [ ] Folder picker integration (Electron)
+- [ ] Recursive scan with filters (extension, size, depth)
+- [ ] Fast file indexing cache (mtime + size + hash optional)
+- [ ] Incremental rescan (only changed files)
+- [ ] File type detection (by ext + magic bytes where needed)
+- [ ] “Dry scan” preview (show what will be processed)
+
+---
+
+### 28.3 Batch Execution Engine
+
+- [ ] BatchRunner (queue + concurrency limit)
+- [ ] Per-file task execution (tool.run / chain.run)
+- [ ] Concurrency controls (CPU-bound vs IO-bound)
+- [ ] Cancellation (job-level + per-file)
+- [ ] Pause / resume
+- [ ] Retry policy (N retries, backoff)
+- [ ] Timeout guard for long operations
+- [ ] Progress model (processed/total, ETA, speed)
+
+---
+
+### 28.4 Output Management
+
+- [ ] Output folder strategy (mirror structure / flat / custom)
+- [ ] Collision strategy (overwrite / rename / skip)
+- [ ] Deterministic naming (sanitize + suffix)
+- [ ] Generate report (JSON/CSV/MD summary)
+- [ ] “Open output folder” quick action
+- [ ] Output preview for first N items
+
+---
+
+### 28.5 Watch Mode (Optional but powerful)
+
+- [ ] Folder watcher (chokidar in main process)
+- [ ] Debounced change events
+- [ ] Auto-run workflow/chain on changes
+- [ ] Safe guards (ignore output folder to avoid loops)
+- [ ] Notification + activity log
+
+---
+
+### 28.6 UI / UX for Batch
+
+- [ ] Batch Mode toggle per tool/chain
+- [ ] “Select Folder” + filter bar (ext, size, modified time)
+- [ ] File list preview (virtualized)
+- [ ] “Run” + “Dry-run” buttons
+- [ ] Batch progress panel (overall + per-file)
+- [ ] Error panel (group by error type)
+- [ ] “Re-run failed only”
+- [ ] “Export report” (JSON/CSV/MD)
+
+---
+
+### 28.7 Safety & Permissions
+
+- [ ] Read-only mode by default
+- [ ] Confirm destructive operations (delete/overwrite)
+- [ ] Safe path checks (prevent processing system folders)
+- [ ] Sandboxed temp directory for intermediate files
+- [ ] Audit log of file operations
+- [ ] Optional encryption for stored batch history
+
+---
+
+### 28.8 Batch-ready Tool Adapters
+
+- [ ] Define Tool IO contract supports file inputs/outputs
+- [ ] Add adapters for common groups:
+- [ ] Images: convert/compress/resize/metadata-remove (batch)
+- [ ] PDFs: merge/split/compress/watermark (batch)
+- [ ] Text/JSON: format/mask/convert/export (batch)
+- [ ] Universal downloader: batch URL list support
+
+## Phase 29: Plugin System (Implementation Plan)
+
+### 29.1 Manifest & Validation
+
+- [ ] Define plugin.json schema (zod)
+- [ ] Define ToolDefinition vNext (accepts/produces/batch)
+- [ ] Add apiVersion compatibility checks
+- [ ] Add toolId namespacing policy
+
+### 29.2 Install / Uninstall
+
+- [ ] Install from .devtools-plugin (zip)
+- [ ] Verify checksum / integrity
+- [ ] Versioned install directories
+- [ ] Uninstall flow (remove files + state option)
+
+### 29.3 Registry Integration
+
+- [ ] Merge plugin tools into tool registry
+- [ ] Merge chain templates and workflows
+- [ ] Plugin tools appear in search/sidebar/favorites
+- [ ] Tool chaining compatibility computed from accepts/produces
+
+### 29.4 Runtime Sandbox
+
+- [ ] Spawn isolated runtime process per plugin (lazy)
+- [ ] Define IPC message contract + zod validation
+- [ ] Implement permissioned host APIs (fs/network/clipboard)
+- [ ] Crash isolation + auto-disable on repeated crashes
+
+### 29.5 UI Rendering (Schema-driven)
+
+- [ ] Define UI schema format (ui.json)
+- [ ] Build schema renderer components
+- [ ] Map UI actions → tool.run calls
+- [ ] Output renderer (text/json/table/file)
+
+### 29.6 Plugin Manager UI
+
+- [ ] Installed plugins list
+- [ ] Enable/disable toggle
+- [ ] Permissions viewer
+- [ ] Plugin logs viewer
+- [ ] Safe mode actions (disable all / disable last)
+
+### 29.7 Developer Mode
+
+- [ ] Load plugin from folder
+- [ ] Hot reload (restart runtime)
+- [ ] Validate manifest & UI schema
+- [ ] Example plugin templates (hello-tool)
+
+### 29.8 Stability & Security
+
+- [ ] Path allowlist enforcement
+- [ ] Network allowlist enforcement
+- [ ] Rate limit host APIs (optional)
+- [ ] Audit log for plugin actions
+
+## Phase 30: Workflow System (No-code Automation)
+
+### 30.1 Workflow Schema & Validation
+
+- [ ] Define Workflow schema (id, name, triggers, inputs, steps, variables)
+- [ ] Define Step schema (tool.run, chain.run, condition.if, batch.\*)
+- [ ] Add schema validation (zod)
+- [ ] Add versioning + migration strategy
+
+---
+
+### 30.2 Workflow Runner (Engine)
+
+- [ ] Implement step executor interface
+- [ ] Implement variable resolver (${vars}, ${inputs}, ${workspace})
+- [ ] Step status model (pending/running/success/failed/skipped)
+- [ ] Logs + timings + artifacts per step
+- [ ] Cancellation support
+- [ ] Retry policy (per-step)
+- [ ] “Continue on error” mode
+
+---
+
+### 30.3 Triggers (MVP)
+
+- [ ] Manual trigger (Run button)
+- [ ] Folder watch trigger (debounce + ignore output folder)
+- [ ] Schedule trigger (optional for MVP)
+
+---
+
+### 30.4 Batch Integration
+
+- [ ] batch.scan (folder scan + filters)
+- [ ] batch.runTool (apply tool to items + concurrency)
+- [ ] batch.export (output folder + collision strategy)
+- [ ] “Re-run failed only”
+
+---
+
+### 30.5 UI: Workflow Manager
+
+- [ ] Workflow list (create/duplicate/delete)
+- [ ] Enable/disable workflows
+- [ ] Import/export workflow JSON
+- [ ] Workflow run history
+
+---
+
+### 30.6 UI: Workflow Editor (MVP list-based)
+
+- [ ] Add step menu (Tool / Chain / Condition / Batch)
+- [ ] Step config panels
+- [ ] Validation errors inline
+- [ ] Test run (run selected step / run all)
+
+---
+
+### 30.7 Templates
+
+- [ ] Ship built-in workflow templates
+- [ ] “Create from template” UX
+- [ ] Tag + search templates
+
+---
+
+### 30.8 Safety & Reliability
+
+- [ ] Safe path rules (avoid system folders)
+- [ ] Audit log for file writes
+- [ ] Crash recovery (restore running workflow state)
+- [ ] Safe mode (disable all workflows)

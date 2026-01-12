@@ -110,6 +110,8 @@ export const TextStatistics = React.lazy(() => import('@tools/text/TextStatistic
 export const TextDiff = React.lazy(() => import('@tools/text/TextDiff').then(m => ({ default: m.TextDiff })));
 export const StringObfuscator = React.lazy(() => import('@tools/text/StringObfuscator').then(m => ({ default: m.StringObfuscator })));
 export const AsciiArtGenerator = React.lazy(() => import('@tools/text/AsciiArtGenerator').then(m => ({ default: m.AsciiArtGenerator })));
+export const Slugify = React.lazy(() => import('@tools/text/Slugify').then(m => ({ default: m.Slugify })));
+export const RegexReplace = React.lazy(() => import('@tools/text/RegexReplace').then(m => ({ default: m.RegexReplace })));
 
 // Math
 export const MathEvaluator = React.lazy(() => import('@tools/math/MathEvaluator').then(m => ({ default: m.MathEvaluator })));

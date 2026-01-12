@@ -1,6 +1,7 @@
 import { Calculator, Percent, Thermometer, Timer } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { evaluateExpression, convertTemperature } from '../../math/logic';
 
 export const mathTools: ToolDefinition[] = [
     {
@@ -13,6 +14,9 @@ export const mathTools: ToolDefinition[] = [
         color: 'text-emerald-400',
         component: Lazy.MathEvaluator,
         keywords: ['math', 'calculator', 'evaluate', 'expression', 'scientific'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input) => evaluateExpression(input)
     },
     {
         id: 'percentage-calculator',
@@ -35,6 +39,13 @@ export const mathTools: ToolDefinition[] = [
         color: 'text-emerald-400',
         component: Lazy.TemperatureConverter,
         keywords: ['temperature', 'convert', 'celsius', 'fahrenheit', 'kelvin', 'math'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input, options) => {
+            const val = parseFloat(input);
+            if (isNaN(val)) return { error: 'Invalid number' };
+            return convertTemperature(val, options?.unit || 'C');
+        }
     },
     {
         id: 'chronometer',

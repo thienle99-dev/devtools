@@ -1,6 +1,7 @@
 import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot, KeyRound, Edit3, Map, Zap, Cookie } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import * as Logic from '../../web/logic';
 
 export const webTools: ToolDefinition[] = [
     {
@@ -12,7 +13,10 @@ export const webTools: ToolDefinition[] = [
         icon: Cookie,
         color: 'text-amber-600',
         component: Lazy.CookieParser,
-        keywords: ['cookie', 'parser', 'http', 'header', 'session']
+        keywords: ['cookie', 'parser', 'http', 'header', 'session'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input) => Logic.parseCookies(input)
     },
     {
         id: 'otp',
@@ -45,7 +49,10 @@ export const webTools: ToolDefinition[] = [
         icon: Globe,
         color: 'text-blue-400',
         component: Lazy.UrlParser,
-        keywords: ['url', 'parser', 'params', 'query']
+        keywords: ['url', 'parser', 'params', 'query'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input) => Logic.parseUrl(input)
     },
     {
         id: 'jwt',
@@ -56,7 +63,10 @@ export const webTools: ToolDefinition[] = [
         icon: ShieldCheck,
         color: 'text-violet-500',
         component: Lazy.JwtParser,
-        keywords: ['jwt', 'token', 'decode', 'jose']
+        keywords: ['jwt', 'token', 'decode', 'jose'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input) => Logic.parseJwt(input)
     },
     {
         id: 'user-agent',
@@ -67,7 +77,10 @@ export const webTools: ToolDefinition[] = [
         icon: Smartphone,
         color: 'text-emerald-500',
         component: Lazy.UserAgentParser,
-        keywords: ['user', 'agent', 'browser', 'os', 'device']
+        keywords: ['user', 'agent', 'browser', 'os', 'device'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input) => Logic.parseUserAgent(input)
     },
     {
         id: 'basic-auth',
@@ -89,7 +102,10 @@ export const webTools: ToolDefinition[] = [
         icon: Link,
         color: 'text-teal-400',
         component: Lazy.SlugGenerator,
-        keywords: ['slug', 'url', 'seo', 'string']
+        keywords: ['slug', 'url', 'seo', 'string'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input) => input.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
     },
     {
         id: 'http-status',
@@ -122,7 +138,9 @@ export const webTools: ToolDefinition[] = [
         icon: ArrowRightLeft,
         color: 'text-amber-500',
         component: Lazy.JsonDiff,
-        keywords: ['diff', 'compare', 'json', 'text']
+        keywords: ['diff', 'compare', 'json', 'text'],
+        inputTypes: ['json', 'text'],
+        outputTypes: ['json']
     },
     {
         id: 'meta-tags',
@@ -188,7 +206,18 @@ export const webTools: ToolDefinition[] = [
         icon: ShieldCheck,
         color: 'text-blue-400',
         component: Lazy.SafelinkDecoder,
-        keywords: ['outlook', 'safelink', 'microsoft', 'decode', 'url']
+        keywords: ['outlook', 'safelink', 'microsoft', 'decode', 'url'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input) => {
+            try {
+                const url = new URL(input);
+                if (url.hostname.includes('safelinks.protection.outlook.com')) {
+                    return url.searchParams.get('url') || input;
+                }
+            } catch {}
+            return input;
+        }
     },
     {
         id: 'base64-url',
@@ -199,7 +228,13 @@ export const webTools: ToolDefinition[] = [
         icon: ArrowRightLeft,
         color: 'text-yellow-500',
         component: Lazy.Base64UrlConverter,
-        keywords: ['base64', 'url', 'encode', 'decode', 'rfc4648']
+        keywords: ['base64', 'url', 'encode', 'decode', 'rfc4648'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => {
+            if (options?.mode === 'decode') return Logic.base64UrlDecode(input);
+            return Logic.base64UrlEncode(input);
+        }
     },
     {
         id: 'http-headers',
@@ -210,7 +245,10 @@ export const webTools: ToolDefinition[] = [
         icon: Server,
         color: 'text-indigo-500',
         component: Lazy.HttpHeaderParser,
-        keywords: ['http', 'header', 'parser', 'request', 'response']
+        keywords: ['http', 'header', 'parser', 'request', 'response'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input) => Logic.parseHttpHeaders(input)
     },
     {
         id: 'csp-generator',

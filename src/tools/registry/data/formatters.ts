@@ -1,7 +1,7 @@
 import { Braces } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import { formatJson } from '../../json/logic';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 export const formatters: ToolDefinition[] = [
     {
@@ -17,9 +17,46 @@ export const formatters: ToolDefinition[] = [
         inputTypes: ['json', 'text', 'xml', 'yaml', 'sql'],
         outputTypes: ['json', 'text', 'xml', 'yaml', 'sql'],
         shortcut: 'Ctrl+Shift+F',
-        process: (input: any, _options: any) => {
-            // Basic default: try to format as JSON
-            try { return formatJson(input); } catch { return input; }
+        process: (input: any, options: any) => {
+            const format = options?.language || 'json';
+            const minify = options?.minify || false;
+            try {
+                if (format === 'json') {
+                    const parsed = JSON.parse(input);
+                    return JSON.stringify(parsed, null, minify ? 0 : (options?.indent || 2));
+                }
+                if (format === 'sql') {
+                    // Very basic SQL formatting mockup for now
+                    return input.replace(/\s+SELECT\s+/gi, '\nSELECT ')
+                                .replace(/\s+FROM\s+/gi, '\nFROM ')
+                                .replace(/\s+WHERE\s+/gi, '\nWHERE ');
+                }
+                if (format === 'xml') {
+                    const builder = new XMLBuilder({ ignoreAttributes: false, format: !minify, indentBy: "  " });
+                    const parser = new XMLParser({ ignoreAttributes: false });
+                    return builder.build(parser.parse(input));
+                }
+                return input;
+            } catch {
+                return input;
+            }
+        }
+    },
+    {
+        id: 'json-minifier',
+        name: 'JSON Minifier',
+        path: '/json-minifier',
+        description: 'Compress JSON for production',
+        category: 'formatters',
+        icon: Braces,
+        color: 'text-yellow-400',
+        component: Lazy.UniversalFormatter,
+        props: { initialMode: 'json' },
+        keywords: ['json', 'minify', 'compress'],
+        inputTypes: ['json'],
+        outputTypes: ['json'],
+        process: (input) => {
+            try { return JSON.stringify(JSON.parse(input)); } catch { return input; }
         }
     },
 ];

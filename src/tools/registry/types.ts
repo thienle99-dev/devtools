@@ -2,7 +2,7 @@ import React from 'react';
 
 export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math' | 'media';
 
-export type ToolDataType = 'text' | 'json' | 'image' | 'file' | 'clipboard' | 'hex' | 'binary' | 'any' | 'xml' | 'yaml' | 'sql';
+export type ToolDataType = 'text' | 'json' | 'image' | 'file' | 'clipboard' | 'hex' | 'binary' | 'any' | 'xml' | 'yaml' | 'sql' | 'csv' | 'excel' | 'table';
 
 export interface ToolDefinition {
     id: string;

@@ -1,7 +1,7 @@
 import { Fingerprint, ShieldCheck, Shield, ScanLine, Key, Lock } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import { generateHash } from '../../crypto/logic';
+import { generateHash, generateHmac, bcryptHash, generateIds } from '../../crypto/logic';
 import { process as aesProcess } from '../../crypto/AesEncryptor';
 
 export const cryptoTools: ToolDefinition[] = [
@@ -28,7 +28,10 @@ export const cryptoTools: ToolDefinition[] = [
         icon: ShieldCheck,
         color: 'text-fuchsia-400',
         component: Lazy.HmacGenerator,
-        keywords: ['hmac', 'key', 'hash', 'security']
+        keywords: ['hmac', 'key', 'hash', 'security'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => generateHmac(input, options?.key || '', options?.algorithm || 'sha256')
     },
     {
         id: 'bcrypt',
@@ -39,7 +42,10 @@ export const cryptoTools: ToolDefinition[] = [
         icon: Shield,
         color: 'text-pink-500',
         component: Lazy.BcryptGenerator,
-        keywords: ['bcrypt', 'password', 'hash', 'salt']
+        keywords: ['bcrypt', 'password', 'hash', 'salt'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => bcryptHash(input, options?.rounds || 10)
     },
     {
         id: 'uuid',
@@ -51,7 +57,9 @@ export const cryptoTools: ToolDefinition[] = [
         color: 'text-blue-400',
         component: Lazy.UuidGenerator,
         keywords: ['uuid', 'ulid', 'guid', 'id'],
-        shortcut: 'Ctrl+Shift+U'
+        shortcut: 'Ctrl+Shift+U',
+        outputTypes: ['text'],
+        process: (_, options) => generateIds(options)
     },
     {
         id: 'token-generator',

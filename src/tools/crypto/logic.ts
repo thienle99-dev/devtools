@@ -1,4 +1,36 @@
+import { v1 as uuidv1, v4 as uuidv4 } from 'uuid';
+import { ulid } from 'ulid';
 import CryptoJS from 'crypto-js';
+import bcrypt from 'bcryptjs';
+
+export const generateIds = (options?: { type?: 'v1' | 'v4' | 'ulid', count?: number, hyphens?: boolean, uppercase?: boolean }): string => {
+    const { type = 'v4', count = 1, hyphens = true, uppercase = false } = options || {};
+    const ids: string[] = [];
+
+    for (let i = 0; i < count; i++) {
+        let id = '';
+        if (type === 'v1') id = uuidv1();
+        else if (type === 'ulid') id = ulid();
+        else id = uuidv4();
+
+        if (!hyphens && type !== 'ulid') {
+            id = id.replace(/-/g, '');
+        }
+        if (uppercase) {
+            id = id.toUpperCase();
+        }
+        ids.push(id);
+    }
+    return ids.join('\n');
+};
+
+export const bcryptHash = (input: string, rounds: number = 10) => {
+    return bcrypt.hashSync(input, rounds);
+};
+
+export const bcryptVerify = (input: string, hash: string) => {
+    return bcrypt.compareSync(input, hash);
+};
 
 export const aesEncrypt = (input: string, key: string) => {
     if (!input || !key) return '';
@@ -62,5 +94,15 @@ export const generateHash = (input: string, algorithm: 'md5' | 'sha1' | 'sha256'
         case 'ripemd160': return CryptoJS.RIPEMD160(input).toString();
         case 'sha3': return CryptoJS.SHA3(input).toString();
         default: return CryptoJS.SHA256(input).toString();
+    }
+};
+export const generateHmac = (input: string, key: string, algorithm: 'md5' | 'sha1' | 'sha256' | 'sha512' = 'sha256') => {
+    if (!input || !key) return '';
+    switch (algorithm) {
+        case 'md5': return CryptoJS.HmacMD5(input, key).toString();
+        case 'sha1': return CryptoJS.HmacSHA1(input, key).toString();
+        case 'sha256': return CryptoJS.HmacSHA256(input, key).toString();
+        case 'sha512': return CryptoJS.HmacSHA512(input, key).toString();
+        default: return CryptoJS.HmacSHA256(input, key).toString();
     }
 };
