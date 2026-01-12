@@ -3,7 +3,7 @@ import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { FileKey, Download, RefreshCw, CheckCircle2, Copy } from 'lucide-react';
+import { FileKey, Download, RefreshCw, Copy } from 'lucide-react';
 import { generateCsr } from './logic';
 import { toast } from 'sonner';
 
@@ -151,9 +151,9 @@ export const CsrGenerator: React.FC = () => {
     );
 };
 
-const ResultSection = ({ label, content, onDownload, variant = 'default' }: { 
-    label: string, 
-    content: string, 
+const ResultSection = ({ label, content, onDownload, variant = 'default' }: {
+    label: string,
+    content: string,
     onDownload: () => void,
     variant?: 'default' | 'warning'
 }) => (

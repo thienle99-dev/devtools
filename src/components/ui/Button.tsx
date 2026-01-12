@@ -7,6 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     size?: 'xs' | 'sm' | 'md' | 'lg';
     loading?: boolean;
     icon?: React.ElementType;
+    fullWidth?: boolean;
 }
 
 export const Button = ({
@@ -14,6 +15,7 @@ export const Button = ({
     variant = 'glass',
     size = 'md',
     loading = false,
+    fullWidth = false,
     disabled,
     children,
     icon: Icon,
@@ -24,6 +26,7 @@ export const Button = ({
             className={cn(
                 // Base styles - macOS style
                 "relative inline-flex items-center justify-center font-semibold",
+                fullWidth ? "w-full" : "",
                 "transition-all duration-200 select-none overflow-hidden",
                 "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2",
                 "disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed",

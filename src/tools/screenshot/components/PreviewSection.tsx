@@ -198,7 +198,7 @@ export const PreviewSection = ({
                 }}
             >
                 <CanvasPreview
-                    ref={canvasRef}
+                    ref={canvasRef as any}
                     onHistoryChange={onHistoryChange}
                     onZoomChange={onZoomChange}
                 />

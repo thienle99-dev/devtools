@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
-import { Search, AlertCircle, Info, CheckCircle, FileText } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { analyzeLogs, highlightLogs } from './logic';
 
 const TOOL_ID = 'log-analyzer';
@@ -74,8 +74,8 @@ export const LogAnalyzer: React.FC = () => {
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Highlighted output</label>
                         <div className="glass-panel p-3 max-h-[400px] overflow-auto font-mono text-[11px] space-y-0.5 whitespace-pre bg-black/40">
                             {highlighted.map((line: any, i: number) => (
-                                <div 
-                                    key={i} 
+                                <div
+                                    key={i}
                                     className={cn(
                                         "px-2 rounded",
                                         line.type === 'error' && "bg-rose-500/10 text-rose-400 border-l-2 border-rose-500",

@@ -3,7 +3,7 @@ import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { FileDiff, Braces, RefreshCw, Trash2, Copy, FileText } from 'lucide-react';
+import { FileDiff, Braces, RefreshCw, Copy, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPatch } from 'diff';
 import { jsonDiff } from './logic';
@@ -60,7 +60,7 @@ export const JsonDiff: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[40%] min-h-[250px]">
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                             <Braces className="w-3 h-3" /> Original JSON
+                            <Braces className="w-3 h-3" /> Original JSON
                         </label>
                         <CodeEditor
                             value={leftJson}
@@ -72,7 +72,7 @@ export const JsonDiff: React.FC = () => {
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                             <Braces className="w-3 h-3" /> Modified JSON
+                            <Braces className="w-3 h-3" /> Modified JSON
                         </label>
                         <CodeEditor
                             value={rightJson}

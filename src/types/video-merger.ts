@@ -49,6 +49,18 @@ export interface ExtendedVideoInfo extends VideoInfo {
     waveform?: number[];
 }
 
+export type VideoFilter = 'none' | 'grayscale' | 'sepia' | 'invert' | 'warm' | 'cool' | 'vintage';
+
+export interface WatermarkOptions {
+    text?: string;
+    imagePath?: string;
+    position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+    opacity?: number; // 0.1 - 1.0
+    scale?: number;   // 0.1 - 1.0 relative to video size
+    color?: string;   // For text (hex or name)
+    fontSize?: number; // For text
+}
+
 export interface VideoFromImagesOptions {
     imagePaths: string[];
     fps: number;
@@ -57,4 +69,6 @@ export interface VideoFromImagesOptions {
     quality?: 'low' | 'medium' | 'high';
     transition?: 'none' | 'crossfade';
     transitionDuration?: number;
+    filter?: VideoFilter;
+    watermark?: WatermarkOptions;
 }

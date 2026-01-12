@@ -6,6 +6,8 @@ import { Card } from '../../../components/ui/Card';
 import { logger } from '../../../utils/logger';
 import { toast } from 'sonner';
 
+import type { VideoFilter } from '../../../types/video-merger';
+
 export const FramesToVideo: React.FC = () => {
     const [frames, setFrames] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -16,7 +18,16 @@ export const FramesToVideo: React.FC = () => {
         format: 'webm' as 'webm' | 'mp4' | 'gif',
         quality: 'high' as 'low' | 'medium' | 'high',
         transition: 'none' as 'none' | 'crossfade',
-        transitionDuration: 0.5
+        transitionDuration: 0.5,
+        filter: 'none' as VideoFilter,
+        watermark: {
+            enabled: false,
+            text: '',
+            position: 'bottom-right' as const,
+            opacity: 0.8,
+            fontSize: 24,
+            color: 'white'
+        }
     });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,7 +256,9 @@ export const FramesToVideo: React.FC = () => {
                 format: videoSettings.format,
                 quality: videoSettings.quality,
                 transition: videoSettings.transition,
-                transitionDuration: videoSettings.transitionDuration
+                transitionDuration: videoSettings.transitionDuration,
+                filter: videoSettings.filter,
+                watermark: videoSettings.watermark.enabled ? videoSettings.watermark : undefined
             });
 
             setProcessingStatus('Complete!');
@@ -425,6 +438,86 @@ export const FramesToVideo: React.FC = () => {
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+
+                                    {/* Effects Section */}
+                                    <div className="space-y-2 pt-4 border-t border-border-glass">
+                                        <label className="text-xs font-medium text-foreground-secondary">Filter Effect</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['none', 'grayscale', 'sepia', 'vintage', 'warm', 'cool', 'invert'].map(f => (
+                                                <button
+                                                    key={f}
+                                                    onClick={() => setVideoSettings(prev => ({ ...prev, filter: f as any }))}
+                                                    className={`py-1.5 px-2 rounded-md text-[10px] font-medium transition-all capitalize ${videoSettings.filter === f
+                                                        ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                                                        : 'bg-glass-panel border border-border-glass text-foreground-secondary hover:text-foreground'
+                                                        }`}
+                                                >
+                                                    {f}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Watermark Section */}
+                                    <div className="space-y-3 pt-4 border-t border-border-glass">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-medium text-foreground-secondary">Watermark</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-foreground-muted">{videoSettings.watermark.enabled ? 'On' : 'Off'}</span>
+                                                <button
+                                                    onClick={() => setVideoSettings(prev => ({
+                                                        ...prev,
+                                                        watermark: { ...prev.watermark, enabled: !prev.watermark.enabled }
+                                                    }))}
+                                                    className={`w-8 h-4 rounded-full transition-colors relative ${videoSettings.watermark.enabled ? 'bg-indigo-500' : 'bg-glass-panel border border-border-glass'}`}
+                                                >
+                                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${videoSettings.watermark.enabled ? 'left-4.5' : 'left-0.5'}`} style={{ left: videoSettings.watermark.enabled ? '18px' : '2px' }} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {videoSettings.watermark.enabled && (
+                                            <div className="space-y-3 p-3 bg-glass-background/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Watermark Text"
+                                                    value={videoSettings.watermark.text}
+                                                    onChange={e => setVideoSettings(prev => ({
+                                                        ...prev,
+                                                        watermark: { ...prev.watermark, text: e.target.value }
+                                                    }))}
+                                                    className="w-full bg-glass-panel border border-border-glass rounded-md px-2 py-1.5 text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-indigo-500/50"
+                                                />
+                                                <div className="flex gap-2">
+                                                    <select
+                                                        value={videoSettings.watermark.position}
+                                                        onChange={e => setVideoSettings(prev => ({
+                                                            ...prev,
+                                                            watermark: { ...prev.watermark, position: e.target.value as any }
+                                                        }))}
+                                                        className="flex-1 bg-glass-panel border border-border-glass rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none"
+                                                    >
+                                                        <option value="bottom-right">Bottom Right</option>
+                                                        <option value="bottom-left">Bottom Left</option>
+                                                        <option value="top-right">Top Right</option>
+                                                        <option value="top-left">Top Left</option>
+                                                        <option value="center">Center</option>
+                                                    </select>
+                                                </div>
+                                                <Slider
+                                                    label="Opacity"
+                                                    value={videoSettings.watermark.opacity}
+                                                    min={0.1}
+                                                    max={1.0}
+                                                    step={0.1}
+                                                    onChange={val => setVideoSettings(prev => ({
+                                                        ...prev,
+                                                        watermark: { ...prev.watermark, opacity: val }
+                                                    }))}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="pt-2 space-y-3">

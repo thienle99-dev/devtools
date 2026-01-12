@@ -331,18 +331,62 @@ export class VideoMerger {
             ];
 
             // Filters and codecs
+            const filters: string[] = [];
+
+            // 1. Initial Scale & FPS
+            if (format !== 'gif') {
+                filters.push('scale=trunc(iw/2)*2:trunc(ih/2)*2');
+            }
+            filters.push(`fps=${fps}`);
+
+            // 2. Visual Effects
+            if (options.filter) {
+                switch (options.filter) {
+                    case 'grayscale': filters.push('hue=s=0'); break;
+                    case 'sepia': filters.push('colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131'); break;
+                    case 'invert': filters.push('negate'); break;
+                    case 'warm': filters.push('eq=gamma_r=1.2:gamma_g=1.0:gamma_b=0.9'); break;
+                    case 'cool': filters.push('eq=gamma_r=0.9:gamma_g=1.0:gamma_b=1.2'); break;
+                    case 'vintage': filters.push('curves=vintage'); break;
+                }
+            }
+
+            // 3. Watermark
+            // Only Text Watermark supported for now for simplicity via drawtext
+            if (options.watermark && options.watermark.text) {
+                const w = options.watermark;
+                const safeText = (w.text || '').replace(/:/g, '\\:').replace(/'/g, '');
+
+                // Position logic
+                let x = '(w-text_w)/2';
+                let y = '(h-text_h)/2';
+                const padding = 20;
+
+                switch (w.position) {
+                    case 'top-left': x = `${padding}`; y = `${padding}`; break;
+                    case 'top-right': x = `w-text_w-${padding}`; y = `${padding}`; break;
+                    case 'bottom-left': x = `${padding}`; y = `h-text_h-${padding}`; break;
+                    case 'bottom-right': x = `w-text_w-${padding}`; y = `h-text_h-${padding}`; break;
+                }
+
+                const fontSize = w.fontSize || 24;
+                const fontColor = w.color || 'white';
+                const alpha = w.opacity || 0.8;
+
+                filters.push(`drawtext=text='${safeText}':x=${x}:y=${y}:fontsize=${fontSize}:fontcolor=${fontColor}:alpha=${alpha}`);
+            }
+
+
             if (format === 'gif') {
-                // High quality palette generation for GIF
-                // fps filter to enforce output rate
-                args.push('-vf', `fps=${fps},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`);
+                // GIF Palette Gen - Needs to be last
+                const filterString = filters.join(',');
+                args.push('-vf', `${filterString},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`);
             } else {
                 // MP4 / WebM
-                // Enforce frame rate and scaling
-                const scaleFilter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
-                // We use vsync vfr to respect timestamps from concat, but we might want to enforce fps
-                // actually the timestamps from concat are correct.
-
-                args.push('-vf', `${scaleFilter},fps=${fps}`); // Ensure uniform output fps
+                const filterString = filters.join(',');
+                if (filterString) {
+                    args.push('-vf', filterString);
+                }
 
                 if (format === 'mp4') {
                     args.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p');

@@ -737,9 +737,9 @@
 - [x] GIF creation tool (Backend optimized)
 - [x] Frame selection/trimming
 - [x] Batch processing support
-- [ ] Effects/filters
-- [ ] Watermarking
-- [ ] Compression settings
+- [x] Effects/filters
+- [x] Watermarking
+- [ ] Compression settings (Advanced bitrate control)
 - [ ] Worker/concurrency support
 
 ---

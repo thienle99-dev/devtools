@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    X, 
-    ChevronRight, 
-    ChevronLeft, 
-    Zap, 
-    Search, 
-    Cpu, 
-    Shield, 
-    LayoutGrid, 
+import {
+    X,
+    ChevronRight,
+    ChevronLeft,
+    Zap,
+    Cpu,
+    Shield,
     Command,
     Sparkles
 } from 'lucide-react';
@@ -58,13 +56,13 @@ const steps: Step[] = [
 ];
 
 export const WelcomeTour: React.FC = () => {
-    const { 
-        isTourActive, 
-        currentStepIndex, 
-        nextStep, 
-        prevStep, 
-        completeTour, 
-        skipTour 
+    const {
+        isTourActive,
+        currentStepIndex,
+        nextStep,
+        prevStep,
+        completeTour,
+        skipTour
     } = useOnboardingStore();
 
     if (!isTourActive) return null;
@@ -75,7 +73,7 @@ export const WelcomeTour: React.FC = () => {
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md overflow-hidden">
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -83,7 +81,7 @@ export const WelcomeTour: React.FC = () => {
                 style={{ borderRadius: '32px' }}
             >
                 {/* Close/Skip button */}
-                <button 
+                <button
                     onClick={skipTour}
                     className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-foreground-muted hover:text-foreground transition-all z-10"
                 >
@@ -93,7 +91,7 @@ export const WelcomeTour: React.FC = () => {
                 {/* Progress bar */}
                 <div className="absolute top-0 left-0 w-full h-1 flex gap-1 px-4 pt-4">
                     {steps.map((_, i) => (
-                        <div 
+                        <div
                             key={i}
                             className={cn(
                                 "flex-1 h-full rounded-full transition-all duration-500",
@@ -106,7 +104,7 @@ export const WelcomeTour: React.FC = () => {
                 {/* Content */}
                 <div className="p-10 pt-16 flex flex-col items-center text-center">
                     <AnimatePresence mode="wait">
-                        <motion.div 
+                        <motion.div
                             key={currentStepIndex}
                             initial={{ opacity: 0, scale: 0.8, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -135,7 +133,7 @@ export const WelcomeTour: React.FC = () => {
                 <div className="p-8 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {!isFirstStep && (
-                            <button 
+                            <button
                                 onClick={prevStep}
                                 className="h-10 px-4 rounded-xl hover:bg-white/5 text-foreground-muted hover:text-foreground transition-all flex items-center gap-2 text-sm font-semibold"
                             >
@@ -147,14 +145,14 @@ export const WelcomeTour: React.FC = () => {
 
                     <div className="flex items-center gap-3">
                         {isLastStep ? (
-                            <Button 
+                            <Button
                                 onClick={completeTour}
                                 className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 font-bold"
                             >
                                 Get Started
                             </Button>
                         ) : (
-                            <Button 
+                            <Button
                                 onClick={nextStep}
                                 className="h-12 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 font-bold flex items-center gap-2"
                             >
