@@ -174,15 +174,15 @@
 - [ ] URL shortener/expander
 - [x] UTM parameter builder
 - [x] URL query string parser
-- [ ] HTTP headers parser
+- [x] HTTP headers parser
 - [ ] HTTP request builder
 - [ ] CORS checker
-- [ ] Content Security Policy (CSP) generator
+- [x] Content Security Policy (CSP) generator
 - [ ] HSTS checker
 - [x] Meta tags generator
 - [x] Robots.txt generator
 - [ ] Sitemap generator
-- [ ] Structured Data (JSON-LD) generator
+- [x] Structured Data (JSON-LD) generator
 - [ ] Canonical URL generator
 - [x] Bearer token generator
 - [x] API key generator
@@ -198,7 +198,7 @@
 - [ ] Referrer Policy generator
 - [ ] Feature Policy generator
 - [ ] Favicon generator
-- [ ] Manifest.json generator
+- [x] Manifest.json generator
 - [ ] Service Worker generator
 - [ ] PWA checklist
 

@@ -190,4 +190,49 @@ export const webTools: ToolDefinition[] = [
         component: Lazy.Base64UrlConverter,
         keywords: ['base64', 'url', 'encode', 'decode', 'rfc4648']
     },
+    {
+        id: 'http-headers',
+        name: 'Header Parser',
+        path: '/http-headers',
+        description: 'Parse HTTP headers key-value pairs',
+        category: 'web',
+        icon: Server,
+        color: 'text-indigo-500',
+        component: Lazy.HttpHeaderParser,
+        keywords: ['http', 'header', 'parser', 'request', 'response']
+    },
+    {
+        id: 'csp-generator',
+        name: 'CSP Generator',
+        path: '/csp-generator',
+        description: 'Generate Content Security Policy headers',
+        category: 'web',
+        icon: ShieldCheck,
+        color: 'text-purple-500',
+        component: Lazy.CspGenerator,
+        keywords: ['csp', 'security', 'header', 'policy', 'content']
+    },
+    {
+        id: 'structured-data',
+        name: 'Structured Data',
+        path: '/structured-data',
+        description: 'Generate JSON-LD structured data',
+        category: 'web',
+        icon: FileCode,
+        color: 'text-yellow-500',
+        component: Lazy.StructuredDataGenerator,
+        keywords: ['seo', 'json-ld', 'schema', 'google', 'rich']
+    },
+    {
+        id: 'manifest-generator',
+        name: 'Manifest Generator',
+        path: '/manifest-generator',
+        description: 'Generate Web App Manifest.json (PWA)',
+        category: 'web',
+        icon: Smartphone,
+        color: 'text-cyan-500',
+        component: Lazy.ManifestGenerator,
+        keywords: ['pwa', 'manifest', 'json', 'web', 'app']
+    },
 ];
+
