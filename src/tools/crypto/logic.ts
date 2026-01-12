@@ -15,6 +15,43 @@ export const aesDecrypt = (input: string, key: string) => {
     return originalText;
 };
 
+export const symmetricEncrypt = (input: string, key: string, algo: 'AES' | 'TripleDES' | 'Rabbit' | 'RC4') => {
+    if (!input || !key) return '';
+    switch (algo) {
+        case 'TripleDES': return CryptoJS.TripleDES.encrypt(input, key).toString();
+        case 'Rabbit': return CryptoJS.Rabbit.encrypt(input, key).toString();
+        case 'RC4': return CryptoJS.RC4.encrypt(input, key).toString();
+        case 'AES':
+        default: return CryptoJS.AES.encrypt(input, key).toString();
+    }
+};
+
+export const symmetricDecrypt = (input: string, key: string, algo: 'AES' | 'TripleDES' | 'Rabbit' | 'RC4') => {
+    if (!input || !key) return '';
+    let bytes;
+    switch (algo) {
+        case 'TripleDES': bytes = CryptoJS.TripleDES.decrypt(input, key); break;
+        case 'Rabbit': bytes = CryptoJS.Rabbit.decrypt(input, key); break;
+        case 'RC4': bytes = CryptoJS.RC4.decrypt(input, key); break;
+        case 'AES':
+        default: bytes = CryptoJS.AES.decrypt(input, key); break;
+    }
+    
+    try {
+        const originalText = bytes.toString(CryptoJS.enc.Utf8);
+        if (!originalText) {
+             // For RC4/Rabbit sometimes it doesn't throw but returns empty string if key is wrong, 
+             // but usually Malformed UTF-8 data will cause issues or empty string.
+             // We can just return it if it's what we got, but usually we want to warn.
+             // However, strictly checking !originalText is fine for now.
+             throw new Error('Could not decrypt.');
+        }
+        return originalText;
+    } catch (e) {
+        throw new Error('Could not decrypt. Wrong key or invalid ciphertext.');
+    }
+};
+
 export const generateHash = (input: string, algorithm: 'md5' | 'sha1' | 'sha256' | 'sha512' | 'ripemd160' | 'sha3' = 'sha256') => {
     if (!input) return '';
     switch (algorithm) {

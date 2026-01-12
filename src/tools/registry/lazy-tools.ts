@@ -35,7 +35,8 @@ export const HashGenerator = React.lazy(() => import('@tools/crypto/HashGenerato
 export const UuidGenerator = React.lazy(() => import('@tools/crypto/UuidGenerator').then(m => ({ default: m.UuidGenerator })));
 export const TokenGenerator = React.lazy(() => import('@tools/crypto/TokenGenerator').then(m => ({ default: m.TokenGenerator })));
 export const HmacGenerator = React.lazy(() => import('@tools/crypto/HmacGenerator').then(m => ({ default: m.HmacGenerator })));
-export const AesEncryptor = React.lazy(() => import('@tools/crypto/AesEncryptor').then(m => ({ default: m.AesEncryptor })));
+export const SymmetricEncryptor = React.lazy(() => import('@tools/crypto/SymmetricEncryptor').then(m => ({ default: m.SymmetricEncryptor })));
+export const RsaGenerator = React.lazy(() => import('@tools/crypto/RsaGenerator').then(m => ({ default: m.RsaGenerator })));
 export const BcryptGenerator = React.lazy(() => import('@tools/crypto/BcryptGenerator').then(m => ({ default: m.BcryptGenerator })));
 
 // Web

@@ -132,11 +132,11 @@
 - [x] HMAC generator
 - [x] Encrypt/decrypt text (AES)
 - [x] Bcrypt hasher
-- [ ] Encrypt/decrypt text (TripleDES, Rabbit, RC4)
+- [x] Encrypt/decrypt text (TripleDES, Rabbit, RC4)
 - [ ] BIP39 passphrase generator
-- [ ] RSA key pair generator
-- [ ] RSA encryption/decryption
-- [ ] RSA signature generator/verifier
+- [x] RSA key pair generator
+- [x] RSA encryption/decryption
+- [x] RSA signature generator/verifier
 - [ ] PBKDF2 key derivation
 - [ ] Argon2 password hashing (Argon2id, Argon2i, Argon2d)
 - [ ] Scrypt key derivation
@@ -633,6 +633,7 @@
 ### 7.2 Platform-Specific Features
 
 #### Windows-Specific
+
 - [ ] Windows Update Cleanup (remove old Windows Update files)
 - [ ] System Restore Points management and cleanup
 - [ ] Windows.old Cleanup (remove old Windows installation files)
@@ -643,6 +644,7 @@
 - [ ] Windows Search Optimization (rebuild and optimize Windows Search index)
 
 #### macOS-Specific
+
 - [x] Time Machine Management (clean up Time Machine snapshots)
 - [x] Spotlight Optimization (rebuild Spotlight index)
 - [x] Disk Permissions repair (if supported)
@@ -850,6 +852,7 @@
 ## Phase 12: Universal Media Downloader Implementation (UNIVERSAL_DOWNLOADER_PLAN.md)
 
 ### 12.1 Backend Service
+
 - [x] Create `electron/main/universal-downloader.ts`
 - [x] Implement `UniversalDownloader` class with generic `getVideoInfo` and `downloadMedia`
 - [x] Implement platform-specific arguments system (cookies, user-agent)
@@ -857,6 +860,7 @@
 - [x] Expose `window.universalAPI` in preload script
 
 ### 12.2 React Components
+
 - [x] Create `utils/platform-detector.ts` for URL type identification
 - [x] Create `UniversalDownloader.tsx` main container
 - [x] Implement `PlatformDetector.tsx` for visual feedback
@@ -865,6 +869,7 @@
 - [x] Implement `PlatformBadge.tsx` for platform indication
 
 ### 12.3 Advanced Media Features
+
 - [ ] Batch URL Download capability (paste multiple links) (Phase 3.1)
 - [ ] Import URLs from file/clipboard
 - [ ] Instagram Stories/Reels/Posts specialized support
@@ -875,6 +880,7 @@
 - [ ] Audio Extractor tool enhancements (AUDIO_EXTRACTOR_PLAN.md)
 
 ### 12.4 Advanced Tooling (UNIVERSAL_DOWNLOADER_IMPROVEMENTS.md)
+
 - [x] Queue Management UI (Visualization, Cancel, Clear)
 - [x] Disk Space Check (Pre-download, Warning, Auto-pause)
 - [x] Enhanced History (Search, Filter, Sort, Export CSV/JSON)
@@ -884,18 +890,21 @@
 ## Phase 13: Refactoring & Code Quality (REFACTORING_PLAN.md)
 
 ### 13.1 Centralized Utilities
+
 - [ ] Create `src/utils/format/` (bytes, time, speed, index)
 - [ ] Create `src/utils/validation/` (url, file, index)
 - [ ] Implement `formatBytes`, `formatDuration`, `formatETA`, `formatSpeed`
 - [ ] Implement `isValidYoutubeUrl`, `extractVideoId`, `sanitizeFilename`
 
 ### 13.2 Type Centralization
+
 - [ ] Create `src/types/clipboard.ts` (extract from store)
 - [ ] Create `src/types/screenshot.ts` (move from tool folder)
 - [ ] Create `src/types/system-cleaner.ts` (move from tool folder)
 - [ ] Create `src/types/common/ui.ts` (shared UI types)
 
 ### 13.3 Component Refactoring
+
 - [ ] Refactor `YoutubeDownloader.tsx` to use centralized utils
 - [ ] Refactor Stats Monitor components (`DiskModule`, `MemoryModule`, etc.)
 - [ ] Refactor `VideoToFrames.tsx` and `FramesToVideo.tsx`
@@ -906,6 +915,7 @@
 ## Phase 14: Video Frame Tools Enhancements (VIDEOFRAMES_COMPLETION.md)
 
 ### 14.1 Phase 2: Advanced Processing
+
 - [ ] FFmpeg.wasm integration for client-side processing
 - [ ] MP4 and H.265 export support
 - [ ] GIF creation tool
@@ -913,6 +923,7 @@
 - [ ] Batch processing for multiple videos
 
 ### 14.2 Phase 3: Effects & Optimization
+
 - [ ] Video effects and filters
 - [ ] Watermarking capabilities
 - [ ] Advanced compression settings
@@ -923,11 +934,13 @@
 ## Phase 15: Stats Monitor Additional Modules (stats-monitor-additional-modules-plan.md)
 
 ### 15.1 New Monitoring Modules
+
 - [ ] Bluetooth Module (connected devices, battery, icons)
 - [ ] Time Zones Module (multiple clocks, date, offset)
 - [ ] Performance Metrics Export (JSON/CSV)
 
 ### 15.2 Menu Bar (Tray) Integration
+
 - [ ] Create `statsTray` with dynamic icon (CPU usage based)
 - [ ] Implement Tray Context Menu with quick stats
 - [ ] Frontend integration for real-time tray updates

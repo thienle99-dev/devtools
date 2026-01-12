@@ -4,23 +4,24 @@ import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
-import { aesEncrypt, aesDecrypt } from './logic';
+import { symmetricEncrypt, symmetricDecrypt } from './logic';
 
-const TOOL_ID = 'aes-encryptor';
+const TOOL_ID = 'symmetric-encryptor';
 
 // Export for pipeline support
-export const process = async (input: string, options: { key: string; action?: 'encrypt' | 'decrypt' }) => {
-    if (!options.key) throw new Error('Secret key is required for AES.');
+export const process = async (input: string, options: { key: string; action?: 'encrypt' | 'decrypt'; algorithm?: 'AES' | 'TripleDES' | 'Rabbit' | 'RC4' }) => {
+    if (!options.key) throw new Error('Secret key is required.');
     const action = options.action || 'encrypt';
-    if (action === 'decrypt') return aesDecrypt(input, options.key);
-    return aesEncrypt(input, options.key);
+    const algo = options.algorithm || 'AES';
+    if (action === 'decrypt') return symmetricDecrypt(input, options.key, algo);
+    return symmetricEncrypt(input, options.key, algo);
 };
 
-interface AesEncryptorProps {
+interface SymmetricEncryptorProps {
     tabId?: string;
 }
 
-export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
+export const SymmetricEncryptor: React.FC<SymmetricEncryptorProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
@@ -31,10 +32,16 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
         output: '',
         options: {
             key: '',
+            algorithm: 'AES' as const
         }
     };
 
     const { input, output, options } = data;
+
+    // Ensure algorithm is set in case of old state
+    if (!options.algorithm) {
+        options.algorithm = 'AES';
+    }
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -48,7 +55,11 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
         setToolData(effectiveId, { options: { ...options, key: e.target.value } });
     };
 
-    const runAction = async (action: 'Encrypt' | 'Decrypt', fn: (i: string, k: string) => string) => {
+    const handleAlgorithmChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+         setToolData(effectiveId, { options: { ...options, algorithm: e.target.value as any } });
+    };
+
+    const runAction = async (action: 'Encrypt' | 'Decrypt', fn: (i: string, k: string, a: any) => string) => {
         setLoadingAction(action);
         await new Promise(resolve => setTimeout(resolve, 300));
         try {
@@ -56,7 +67,7 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
                 setToolData(effectiveId, { output: 'Please enter both text and a secret key.' });
                 return;
             }
-            const result = fn(input, options.key);
+            const result = fn(input, options.key, options.algorithm);
             setToolData(effectiveId, { output: result });
         } catch (e) {
             setToolData(effectiveId, { output: (e as Error).message });
@@ -65,24 +76,38 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
         }
     };
 
-    const handleEncrypt = () => runAction('Encrypt', aesEncrypt);
-    const handleDecrypt = () => runAction('Decrypt', aesDecrypt);
+    const handleEncrypt = () => runAction('Encrypt', symmetricEncrypt);
+    const handleDecrypt = () => runAction('Decrypt', symmetricDecrypt);
 
     const handleClear = () => clearToolData(effectiveId);
     const handleCopy = () => { if (output) navigator.clipboard.writeText(output); };
 
     return (
         <ToolPane
-            title="AES Encryptor"
-            description="Encrypt/Decrypt text using AES encryption"
+            title="Symmetric Encryptor"
+            description="Encrypt/Decrypt text using AES, TripleDES, Rabbit, RC4"
             onClear={handleClear}
             onCopy={handleCopy}
+            actions={
+                <div className="flex bg-muted/50 rounded-lg p-1">
+                    <select
+                        className="bg-transparent border-0 text-xs font-medium focus:ring-0 cursor-pointer text-foreground"
+                        value={options.algorithm}
+                        onChange={handleAlgorithmChange}
+                    >
+                        <option value="AES">AES</option>
+                        <option value="TripleDES">TripleDES</option>
+                        <option value="Rabbit">Rabbit</option>
+                        <option value="RC4">RC4</option>
+                    </select>
+                </div>
+            }
         >
             <div className="space-y-6 h-full flex flex-col">
                 <div className="flex-none">
                     <Input
                         label="Secret Key"
-                        type="text" // Or password if we want to hide it, but tools usually show it
+                        type="text"
                         value={options.key}
                         onChange={handleKeyChange}
                         className="font-mono"
@@ -122,7 +147,7 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
                         loading={loadingAction === 'Encrypt'}
                         className="uppercase tracking-widest"
                     >
-                        Encrypt
+                        Encrypt ({options.algorithm})
                     </Button>
                     <Button
                         variant="secondary"
@@ -130,7 +155,7 @@ export const AesEncryptor: React.FC<AesEncryptorProps> = ({ tabId }) => {
                         loading={loadingAction === 'Decrypt'}
                         className="uppercase tracking-widest"
                     >
-                        Decrypt
+                        Decrypt ({options.algorithm})
                     </Button>
                 </div>
             </div>

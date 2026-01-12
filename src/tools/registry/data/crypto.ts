@@ -65,17 +65,28 @@ export const cryptoTools: ToolDefinition[] = [
         keywords: ['token', 'password', 'random', 'secure']
     },
     {
-        id: 'aes',
-        name: 'AES Encryptor',
-        path: '/aes',
-        description: 'Encrypt/Decrypt text with AES',
+        id: 'symmetric-encryptor',
+        name: 'Symmetric Encryptor',
+        path: '/symmetric-encryptor',
+        description: 'Encrypt/Decrypt using AES, TripleDES, Rabbit, RC4',
         category: 'crypto',
         icon: Lock,
         color: 'text-emerald-500',
-        component: Lazy.AesEncryptor,
-        keywords: ['aes', 'encrypt', 'decrypt', 'cipher'],
+        component: Lazy.SymmetricEncryptor,
+        keywords: ['aes', 'des', 'rabbit', 'rc4', 'encrypt', 'decrypt', 'cipher'],
         inputTypes: ['text', 'json'],
         outputTypes: ['text'],
         process: (input, options) => aesProcess(input, options)
+    },
+    {
+        id: 'rsa-generator',
+        name: 'RSA Tools',
+        path: '/rsa-generator',
+        description: 'Generate RSA keys, encrypt, decrypt, sign, verify',
+        category: 'crypto',
+        icon: Key,
+        color: 'text-orange-500',
+        component: Lazy.RsaGenerator,
+        keywords: ['rsa', 'key', 'pair', 'encrypt', 'decrypt', 'sign', 'verify', 'crypto']
     },
 ];
