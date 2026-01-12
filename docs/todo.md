@@ -1162,7 +1162,7 @@
 
 ### A3. Token / JWT Workflows
 
-- [ ] JWT Parser → JSON Formatter → Copy Claims
+- [x] JWT Parser → JSON Formatter → Copy Claims
 - [ ] JWT Parser → Data Masking (JSON) → Export JSON
 - [ ] Bearer Token Generator → Copy to Clipboard
 
@@ -1173,7 +1173,7 @@
 ### B1. URL Inspection
 
 - [ ] URL Decode → URL Parser → URL Query String Parser → Export Report
-- [ ] URL Parser → UTM Builder → Copy Result URL
+- [x] URL Parser → UTM Builder → Copy Result URL
 - [x] URL Decode → Outlook Safelink Decoder → URL Parser → Export
 
 ### B2. Web Headers & Agents

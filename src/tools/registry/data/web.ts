@@ -91,7 +91,9 @@ export const webTools: ToolDefinition[] = [
         icon: Lock,
         color: 'text-rose-400',
         component: Lazy.BasicAuthGenerator,
-        keywords: ['auth', 'basic', 'header', 'http']
+        keywords: ['auth', 'basic', 'header', 'http'],
+        outputTypes: ['text'],
+        process: (_, options) => Logic.generateBasicAuth(options?.username || '', options?.password || '')
     },
     {
         id: 'slug',
@@ -102,10 +104,10 @@ export const webTools: ToolDefinition[] = [
         icon: Link,
         color: 'text-teal-400',
         component: Lazy.SlugGenerator,
-        keywords: ['slug', 'url', 'seo', 'string'],
+        keywords: ['slug', 'url', 'seo', 'format'],
         inputTypes: ['text'],
         outputTypes: ['text'],
-        process: (input) => input.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
+        process: (input, options) => Logic.generateSlug(input, options)
     },
     {
         id: 'http-status',
@@ -179,7 +181,10 @@ export const webTools: ToolDefinition[] = [
         icon: Hash,
         color: 'text-pink-500',
         component: Lazy.UtmBuilder,
-        keywords: ['utm', 'analytics', 'tracking', 'url']
+        keywords: ['utm', 'url', 'marketing', 'tracking'],
+        inputTypes: ['text'],
+        outputTypes: ['text'],
+        process: (input, options) => Logic.generateUtmUrl(input, options)
     },
     {
         id: 'keycode',

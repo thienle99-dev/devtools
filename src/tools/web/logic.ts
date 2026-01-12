@@ -138,3 +138,39 @@ export const generateJsonLd = (options: { type: string, data: Record<string, any
     };
     return JSON.stringify(jsonLd, null, 2);
 };
+
+export const generateBasicAuth = (user: string, pass: string) => {
+    try {
+        const credentials = btoa(`${user}:${pass}`);
+        return `Authorization: Basic ${credentials}`;
+    } catch { return ''; }
+};
+
+export const generateSlug = (input: string, options: { separator?: string, lowercase?: boolean } = {}) => {
+    let slug = input;
+    if (options.lowercase !== false) slug = slug.toLowerCase();
+    
+    const sep = options.separator || '-';
+    return slug
+        .replace(/[^a-z0-9]/g, sep)
+        .replace(new RegExp(`${sep}+`, 'g'), sep)
+        .replace(new RegExp(`^${sep}|${sep}$`, 'g'), '');
+};
+
+export const generateUtmUrl = (url: string, options: { 
+    source?: string, 
+    medium?: string, 
+    campaign?: string, 
+    term?: string, 
+    content?: string 
+}) => {
+    try {
+        const parsed = new URL(url);
+        if (options.source) parsed.searchParams.set('utm_source', options.source);
+        if (options.medium) parsed.searchParams.set('utm_medium', options.medium);
+        if (options.campaign) parsed.searchParams.set('utm_campaign', options.campaign);
+        if (options.term) parsed.searchParams.set('utm_term', options.term);
+        if (options.content) parsed.searchParams.set('utm_content', options.content);
+        return parsed.toString();
+    } catch { return url; }
+};

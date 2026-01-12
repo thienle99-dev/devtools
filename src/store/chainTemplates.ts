@@ -296,5 +296,51 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
                 label: 'Generate URI'
             }
         ]
+    },
+    {
+        id: 'jwt-inspect-flow',
+        name: 'JWT Insights Flow',
+        description: 'Parse JWT → Format Claims → Highlight Payload',
+        steps: [
+            {
+                toolId: 'jwt',
+                options: {},
+                label: 'Parse JWT'
+            },
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format Claims'
+            }
+        ]
+    },
+    {
+        id: 'utm-campaign-flow',
+        name: 'Marketing URL Flow',
+        description: 'Build UTM URL → Generate QR Code',
+        steps: [
+            {
+                toolId: 'utm-builder',
+                options: { source: 'google', medium: 'social' },
+                label: 'Build UTM Link'
+            },
+            {
+                toolId: 'qr-code',
+                options: { size: 400 },
+                label: 'Generate QR'
+            }
+        ]
+    },
+    {
+        id: 'post-slug-flow',
+        name: 'SEO URL Prep Flow',
+        description: 'Clean Text → Generate Slug → Copy URL',
+        steps: [
+            {
+                toolId: 'slug',
+                options: { separator: '-', lowercase: true },
+                label: 'Generate Slug'
+            }
+        ]
     }
 ];
