@@ -22,7 +22,7 @@ interface ToolPaneProps {
     contentClassName?: string;
 }
 
-export const ToolPane: React.FC<ToolPaneProps> = ({
+export const ToolPane = ({
     title,
     description,
     children,
@@ -32,7 +32,7 @@ export const ToolPane: React.FC<ToolPaneProps> = ({
     onDownload,
     onClear,
     contentClassName
-}) => {
+}: ToolPaneProps): JSX.Element => {
     const navigate = useNavigate();
 
     // Connect to store unconditionally (safe even if toolId is empty)

@@ -9,14 +9,14 @@ import { generateFinalImage } from '../utils/exportUtils';
 import { toast } from 'sonner';
 
 interface PreviewSectionProps {
-    canvasRef: React.RefObject<CanvasPreviewHandle | null>;
+    canvasRef: React.RefObject<CanvasPreviewHandle>;
     onHistoryChange: (undo: boolean, redo: boolean, count: number) => void;
 }
 
-export const PreviewSection: React.FC<PreviewSectionProps> = ({
+export const PreviewSection = ({
     canvasRef,
     onHistoryChange
-}) => {
+}: PreviewSectionProps): JSX.Element => {
     const {
         currentScreenshot,
         autoBalance,

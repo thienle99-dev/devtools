@@ -23,7 +23,7 @@ interface SymmetricEncryptorProps {
     tabId?: string;
 }
 
-export const SymmetricEncryptor: React.FC<SymmetricEncryptorProps> = ({ tabId }) => {
+export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Element => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
@@ -181,7 +181,7 @@ export const SymmetricEncryptor: React.FC<SymmetricEncryptorProps> = ({ tabId })
                             onClick={handleEncrypt}
                             loading={loadingAction === 'Encrypt'}
                             className="w-full md:w-32 h-10 shadow-lg shadow-primary/20"
-                            leftIcon={<Lock className="w-4 h-4" />}
+                            icon={Lock}
                         >
                             Encrypt
                         </Button>
@@ -200,7 +200,7 @@ export const SymmetricEncryptor: React.FC<SymmetricEncryptorProps> = ({ tabId })
                             className="w-full md:w-32 h-10 bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-indigo-600"
                             onClick={handleDecrypt}
                             loading={loadingAction === 'Decrypt'}
-                            leftIcon={<Unlock className="w-4 h-4" />}
+                            icon={Unlock}
                         >
                             Decrypt
                         </Button>

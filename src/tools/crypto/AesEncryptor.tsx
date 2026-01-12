@@ -21,7 +21,7 @@ interface SymmetricEncryptorProps {
     tabId?: string;
 }
 
-export const SymmetricEncryptor: React.FC<SymmetricEncryptorProps> = ({ tabId }) => {
+export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Element => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
