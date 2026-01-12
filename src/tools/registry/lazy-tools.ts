@@ -61,6 +61,9 @@ export const HttpHeaderParser = React.lazy(() => import('@tools/web/HttpHeaderPa
 export const CspGenerator = React.lazy(() => import('@tools/web/CspGenerator').then(m => ({ default: m.CspGenerator })));
 export const StructuredDataGenerator = React.lazy(() => import('@tools/web/StructuredDataGenerator').then(m => ({ default: m.StructuredDataGenerator })));
 export const ManifestGenerator = React.lazy(() => import('@tools/web/ManifestGenerator').then(m => ({ default: m.ManifestGenerator })));
+export const SitemapGenerator = React.lazy(() => import('@tools/web/SitemapGenerator').then(m => ({ default: m.SitemapGenerator })));
+export const ServiceWorkerGenerator = React.lazy(() => import('@tools/web/ServiceWorkerGenerator').then(m => ({ default: m.ServiceWorkerGenerator })));
+export const CookieParser = React.lazy(() => import('@tools/web/CookieParser').then(m => ({ default: m.CookieParser })));
 
 // Network
 export const Ipv4SubnetCalculator = React.lazy(() => import('@tools/network/Ipv4SubnetCalculator').then(m => ({ default: m.Ipv4SubnetCalculator })));

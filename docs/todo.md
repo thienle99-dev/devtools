@@ -181,7 +181,7 @@
 - [ ] HSTS checker
 - [x] Meta tags generator
 - [x] Robots.txt generator
-- [ ] Sitemap generator
+- [x] Sitemap generator
 - [x] Structured Data (JSON-LD) generator
 - [ ] Canonical URL generator
 - [x] Bearer token generator
@@ -190,7 +190,7 @@
 - [x] Base64 URL encoder/decoder
 - [ ] Percent encoding
 - [ ] Unicode encoder/decoder
-- [ ] Cookie parser
+- [x] Cookie parser
 - [ ] Set-Cookie header generator
 - [ ] Content-Type parser
 - [ ] Accept header builder
@@ -199,13 +199,13 @@
 - [ ] Feature Policy generator
 - [ ] Favicon generator
 - [x] Manifest.json generator
-- [ ] Service Worker generator
+- [x] Service Worker generator
 - [ ] PWA checklist
 
 ### 3.4 Development Tools
 
-- [x] JSON prettify and format (JsonFormatter tool)
-- [x] JSON minify (JsonFormatter tool)
+- [x] JSON prettify and format
+- [x] JSON minify
 - [x] JSON to CSV
 - [x] SQL prettify and format
 - [x] YAML prettify and format
@@ -222,7 +222,6 @@
 - [x] Text statistics
 - [x] Text diff
 - [x] String obfuscator
-- [x] Case converter (CaseConverter tool in converters)
 - [x] ASCII Art Text Generator
 
 ### 3.6 Network Tools
@@ -245,120 +244,106 @@
 - [x] WiFi QR Code generator
 - [x] SVG placeholder generator
 - [ ] Camera recorder (capture ảnh/video từ webcam)
-- [x] Image Format Converter (PNG, JPG, WebP, AVIF, SVG, etc.)
+- [x] Image Format Converter
 - [ ] HEIC to JPG Converter
 - [ ] ICO Generator (favicon)
 - [x] WebP Converter
 - [ ] AVIF Converter
-- [x] Image Compressor (JPG, PNG, WebP)
-- [ ] Lossless Image Compressor
-- [ ] Lossy Image Compressor (adjustable quality)
+- [x] Image Compressor
 - [x] Bulk Image Compressor
 - [ ] Image Cropper
-- [ ] Image Resizer (with aspect ratio options)
-- [ ] Image Rotator (90°, 180°, 270°)
-- [ ] Image Flipper (horizontal/vertical)
-- [ ] Image Cropper with Aspect Ratio (16:9, 4:3, 1:1, etc.)
-- [ ] Image Filter Applier (blur, sharpen, grayscale, sepia, etc.)
+- [ ] Image Resizer
+- [ ] Image Rotator
+- [ ] Image Flipper
+- [ ] Image Filter Applier
 - [ ] Image Brightness/Contrast Adjuster
-- [ ] Image Color Adjuster (saturation, hue, etc.)
-- [ ] Image Watermarker (text/image watermark)
-- [x] Image Metadata Viewer (EXIF, metadata)
-- [x] Image Metadata Remover (privacy)
+- [ ] Image Color Adjuster
+- [ ] Image Watermarker
+- [x] Image Metadata Viewer
+- [x] Image Metadata Remover
 - [ ] Image Color Palette Extractor
 - [ ] Image Dominant Color Extractor
 - [ ] Image Dimension Analyzer
 - [ ] Barcode Generator
-- [x] Data URI Generator (image to base64)
+- [x] Data URI Generator
 - [x] Base64 Image Encoder/Decoder
 - [ ] Gradient Generator
-- [ ] Pattern Generator (dots, lines, etc.)
-- [ ] Image Merger (horizontal/vertical)
+- [ ] Pattern Generator
+- [ ] Image Merger
 - [ ] Image Splitter
-- [ ] Image Comparator (side-by-side, diff)
-- [ ] Image Optimizer (auto format, compression)
-- [ ] Responsive Image Generator (multiple sizes)
-- [ ] Image OCR (text recognition)
+- [ ] Image Comparator
+- [ ] Image Optimizer
+- [ ] Responsive Image Generator
+- [ ] Image OCR
 - [x] Image to ASCII Art Converter
-- [ ] Image to SVG Converter (vectorization)
+- [ ] Image to SVG Converter
 - [ ] Image Background Remover
-- [ ] Image Upscaler (AI-based)
+- [ ] Image Upscaler
 - [ ] Video to GIF Converter
 - [ ] GIF Optimizer
 - [ ] Video Frame Extractor
 
 ### 3.9 Screenshot Tools (Xnapper Clone)
 
-#### Phase 1: Core Capture & Basic Processing
-
-- [x] Setup Xnapper tool structure (`src/tools/screenshot/`)
-- [x] Install dependencies (fabric, tesseract.js)
-- [x] Create Xnapper store (`src/store/xnapperStore.ts`)
-- [x] Implement Electron screen capture API integration
-- [x] Create CaptureSection component (full screen, window, area selection)
-- [x] Implement basic image preview
-- [x] Implement auto-balance enhancement
-- [x] Implement simple export (PNG/JPG)
-- [x] Implement save to file functionality
-- [x] Add to tools registry and sidebar
-
-#### Phase 2: Redaction & Background
-
-- [x] Integrate Tesseract.js for OCR
-- [x] Implement regex pattern detection (email, IP, API keys)
-- [x] Create RedactionPanel component
-- [x] Implement redaction tools (blur, pixelate, solid overlay)
-- [x] Implement manual redaction area selection
-- [x] Create BackgroundPanel component
-- [x] Implement gradient background generator
-- [x] Implement image background support with blur effect
-- [x] Add background preview thumbnails
-
-#### Phase 3: Annotations
-
-- [x] Integrate Fabric.js for canvas manipulation
-- [x] Create PreviewSection with Fabric.js canvas
-- [x] Implement arrow tool (straight, curved)
-- [x] Implement text tool with font selection
-- [x] Implement shape tools (rectangle, circle, ellipse)
-- [x] Implement blur tool for selective blur
-- [x] Implement crop tool for manual adjustment
-- [x] Create AnnotationToolbar component
-- [x] Implement undo/redo functionality
-- [x] Add color picker and size controls
-
-#### Phase 4: Export & Share
-
-- [x] Create ExportPanel component
-- [x] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
-- [x] Implement custom dimensions
-- [x] Implement quality settings (compression level)
-- [x] Implement format options (PNG, JPG, WebP)
-- [x] Implement copy to clipboard functionality
-- [x] Implement system share sheet integration (macOS)
-- [x] Create HistoryPanel component
-- [x] Implement screenshot history storage
-
-#### Phase 5: Advanced Features
-
-- [x] Implement templates system
-- [x] Add preset saving functionality
-- [ ] Implement batch processing (future)
-- [ ] Add cloud upload (Imgur, Cloudinary) - future
-- [ ] Implement AI background suggestions - future
-- [x] Add keyboard shortcuts
-- [x] Implement drag & drop image loading
-- [x] Add image comparison mode
+- [x] Setup tool structure
+- [x] Install dependencies
+- [x] Create store
+- [x] Screen capture integration
+- [x] Capture UI
+- [x] Preview
+- [x] Auto-balance
+- [x] Export
+- [x] Save to file
+- [x] Tool registry integration
+- [x] OCR
+- [x] Regex detection
+- [x] Redaction panel
+- [x] Blur/pixelate/overlay
+- [x] Manual redaction
+- [x] Background panel
+- [x] Gradient background
+- [x] Background blur
+- [x] Background thumbnails
+- [x] Fabric canvas
+- [x] Arrow tool
+- [x] Text tool
+- [x] Shape tools
+- [x] Selective blur
+- [x] Crop tool
+- [x] Annotation toolbar
+- [x] Undo/redo
+- [x] Color/size controls
+- [x] Export panel
+- [x] Social presets
+- [x] Custom dimensions
+- [x] Quality settings
+- [x] Format options
+- [x] Copy to clipboard
+- [x] Share sheet (macOS)
+- [x] History panel
+- [x] History storage
+- [x] Templates system
+- [x] Preset saving
+- [ ] Quick action: double-click copy
+- [ ] Quick action: drag-and-drop export
+- [ ] Aspect ratio presets
+- [ ] Batch processing (future)
+- [x] Cloud upload (Imgur)
+- [x] Scrolling screenshot (Web)
+- [ ] AI background suggestions (future)
+- [x] Keyboard shortcuts
+- [x] Drag & drop load
+- [x] Comparison mode
 
 ### 3.10 Data Tools
 
-- [ ] Phone parser and formatter
-- [ ] IBAN validator and parser
+- [ ] Phone parser/formatter
+- [ ] IBAN validator/parser
 
 ### 3.11 PDF Tools
 
 - [ ] PDF signature checker
-- [ ] PDF to Images (PNG/JPG)
+- [ ] PDF to Images
 - [x] Images to PDF
 - [ ] PDF to Text
 - [ ] PDF to HTML
@@ -374,7 +359,7 @@
 - [x] PDF Page Reorder
 - [x] PDF Compressor
 - [ ] PDF Optimizer
-- [x] PDF Watermarker (text/image)
+- [x] PDF Watermarker
 - [x] PDF Page Numbering
 - [ ] PDF Password Protector
 - [ ] PDF Password Remover
@@ -391,12 +376,12 @@
 - [ ] PDF Form Filler
 - [ ] PDF Form Creator
 - [ ] PDF Form Field Extractor
-- [ ] PDF OCR (text recognition)
+- [ ] PDF OCR
 - [ ] PDF Redaction
 - [ ] PDF Annotation
 - [ ] PDF Bookmark Generator
 - [ ] PDF Table Extractor
-- [ ] PDF Comparison (diff)
+- [ ] PDF Comparison
 - [ ] PDF Preview
 - [ ] PDF Thumbnail Generator
 - [x] PDF to Base64
@@ -407,99 +392,65 @@
 
 ## Phase 4: Polish & Advanced Features
 
-### 4.1 Animations & Transitions
-
 - [x] Add Framer Motion animations
-- [ ] Implement status pulse animation (Dynamic Island)
-- [x] Add hover transitions
-- [x] Add focus effects
-- [x] Add page transitions
+- [ ] Status pulse animation
+- [x] Hover transitions
+- [x] Focus effects
+- [x] Page transitions
 - [x] Optimize animation performance
-
-### 4.2 Dynamic Island
-
-- [ ] Complete Dynamic Island component
-- [ ] Add status indicators
-- [ ] Add latency display
-- [ ] Add active tool indicator
-- [ ] Implement pulse animation
-- [ ] Test on different screen sizes
-
-### 4.3 Keyboard Shortcuts
-
-- [x] Implement Cmd/Ctrl + K for search
-- [x] Add tool-specific shortcuts
-- [x] Add navigation shortcuts
-- [x] Create shortcuts help modal
-- [x] Store shortcuts in settings
-
-### 4.4 Settings & Persistence
-
-- [x] Create Settings UI
-- [x] Implement preferences storage
-- [x] Add theme settings (if needed)
-- [x] Refactor components for Light/Dark mode support
-- [x] Add window state persistence
-- [x] Add tool history persistence
-- [x] Test persistence across app restarts
-
-## 5. Performance Improvements
-
-- [x] Optimize Dynamic Island animations (GPU acceleration, remove expensive blur)
-- [x] Implement Lazy Loading for routes (SettingsPage)
-- [ ] Implement virtualization for large data outputs (future)
-- [ ] Optimize sidebar re-renders with Memoization (future)
-
-### 4.5 Tool Search & Filter
-
-- [x] Implement search functionality
-- [x] Add filter by category
-- [x] Add recent tools section
-- [x] Add favorites system
-- [x] Implement tool sorting
-- [x] Test search performance
-
-### 4.6 History & Favorites
-
-- [x] Create history store
-- [x] Implement tool usage history
-- [x] Add favorites functionality
-- [x] Create history UI
-- [x] Add clear history option
-- [x] Test history persistence
-
-### 4.7 Export/Import
-
-- [ ] Implement export tool data
-- [ ] Implement import tool data
-- [ ] Add export settings
-- [ ] Add backup/restore functionality
-- [ ] Test export/import flow
-
-### 4.8 File Handling
-
-- [ ] Implement drag & drop for files
-- [ ] Add file picker integration
-- [ ] Handle file reading (Electron IPC)
-- [ ] Handle file saving (Electron IPC)
-- [ ] Test file operations
-
-### 4.9 Toast Notifications
-
-- [x] Integrate Sonner
-- [x] Add toast for copy actions
-- [x] Add toast for download actions
-- [x] Add toast for errors
-- [x] Add toast for success messages
-- [x] Style toasts with glassmorphism
-
-### 4.10 System Tray Support
-
-- [x] Basic Tray Icon
-- [x] Minimize to Tray
-- [x] Context Menu (Show/Hide, Quit)
-- [x] Settings (Toggle minimize/start)
-- [x] Quick Access (Recent tools)
+- [ ] Dynamic Island completion
+- [ ] Status indicators
+- [ ] Latency display
+- [ ] Active tool indicator
+- [ ] Pulse animation
+- [ ] Screen size test
+- [x] Cmd/Ctrl + K search
+- [x] Tool shortcuts
+- [x] Navigation shortcuts
+- [x] Shortcuts modal
+- [x] Store shortcuts
+- [x] Settings UI
+- [x] Preferences storage
+- [x] Theme settings
+- [x] Light/Dark support
+- [x] Window state persistence
+- [x] Tool history persistence
+- [x] Persistence test
+- [ ] Virtualization for large outputs
+- [ ] Sidebar memoization
+- [x] Search
+- [x] Category filter
+- [x] Recent tools
+- [x] Favorites system
+- [x] Sorting
+- [x] Search perf test
+- [x] History store
+- [x] Usage history
+- [x] Favorites
+- [x] History UI
+- [x] Clear history
+- [x] History test
+- [ ] Export tool data
+- [ ] Import tool data
+- [ ] Export settings
+- [ ] Backup/restore
+- [ ] Export/import test
+- [ ] Drag & drop files
+- [ ] File picker
+- [ ] File read IPC
+- [ ] File save IPC
+- [ ] File ops test
+- [x] Sonner integration
+- [x] Toast copy
+- [x] Toast download
+- [x] Toast errors
+- [x] Toast success
+- [x] Toast styling
+- [x] Tray icon
+- [x] Minimize to tray
+- [x] Tray context menu
+- [x] Tray settings
+- [x] Tray quick access
 
 ---
 
@@ -507,36 +458,36 @@
 
 ### 5.1 Performance Optimizations
 
-- [x] Implement virtual scrolling for long lists (VirtualizedList component)
-- [x] Add lazy loading for tool components
-- [ ] Add React.memo for expensive components
-- [x] Implement debouncing for input handlers
+- [x] Virtual scrolling
+- [x] Lazy loading
+- [ ] React.memo for expensive components
+- [x] Debounce input handlers
 - [ ] Optimize Zustand selectors
-- [ ] Test performance with large data
+- [ ] Test large data performance
 
 ### 5.2 Code Optimization
 
-- [x] Review and optimize bundle size
-- [x] Implement code splitting
-- [x] Optimize images and assets
+- [x] Bundle size optimization
+- [x] Code splitting
+- [x] Optimize assets
 - [x] Remove unused dependencies
 - [x] Optimize Electron main process
 
 ### 5.3 Error Handling
 
-- [x] Add error boundaries
-- [x] Implement error logging
-- [x] Add user-friendly error messages
-- [x] Handle network errors (if applicable)
-- [x] Test error scenarios
+- [x] Error boundaries
+- [x] Error logging
+- [x] Friendly messages
+- [x] Network errors handling
+- [x] Error scenario tests
 
 ### 5.4 Testing
 
-- [ ] Write unit tests for utilities
-- [ ] Write component tests
-- [ ] Write integration tests for tools
-- [ ] Test Electron IPC communication
-- [ ] Test cross-platform compatibility
+- [ ] Unit tests (utils)
+- [ ] Component tests
+- [ ] Integration tests (tools)
+- [ ] IPC tests
+- [ ] Cross-platform tests
 
 ---
 
@@ -545,36 +496,36 @@
 ### 6.1 Build Configuration
 
 - [x] Finalize electron-builder.yml
-- [x] Configure Windows build (NSIS)
-- [x] Configure macOS build (DMG)
-- [x] Setup code signing (macOS)
-- [x] Setup notarization (macOS)
+- [x] Windows build (NSIS)
+- [x] macOS build (DMG)
+- [x] Code signing (macOS)
+- [x] Notarization (macOS)
 - [x] Test build process
 
 ### 6.2 Auto-updater
 
-- [ ] Complete auto-updater implementation
-- [ ] Setup update server/endpoint
-- [ ] Test update flow
-- [ ] Add update notifications
-- [ ] Handle update errors
+- [ ] Auto-updater implementation
+- [ ] Update server/endpoint
+- [ ] Update flow tests
+- [ ] Update notifications
+- [ ] Update error handling
 
 ### 6.3 Documentation
 
-- [ ] Create README.md
-- [ ] Document installation process
-- [ ] Document tool usage
-- [ ] Create changelog
-- [ ] Add screenshots/demos
+- [ ] README.md
+- [ ] Install docs
+- [ ] Tool usage docs
+- [ ] Changelog
+- [ ] Screenshots/demos
 
 ### 6.4 Release Preparation
 
 - [ ] Version bumping
-- [ ] Create release notes
-- [ ] Test on Windows
-- [ ] Test on macOS
-- [ ] Final QA testing
-- [ ] Create release build
+- [ ] Release notes
+- [ ] Windows testing
+- [ ] macOS testing
+- [ ] QA testing
+- [ ] Release build
 
 ---
 
@@ -583,390 +534,361 @@
 ### Maintenance
 
 - [ ] Monitor error logs
-- [ ] Update dependencies regularly
-- [ ] Fix reported bugs
-- [ ] Add requested features
+- [ ] Update dependencies
+- [ ] Fix bugs
+- [ ] Add features
 - [ ] Performance monitoring
 
 ### Future Enhancements
 
-- [ ] Additional tools (based on feedback)
-- [ ] Plugin system (if needed)
-- [ ] Cloud sync (optional)
-- [ ] Multi-language support (if needed)
-- [ ] Advanced customization options
-
----
+- [ ] Additional tools
+- [ ] Plugin system
+- [ ] Cloud sync
+- [ ] Multi-language
+- [ ] Customization
 
 ---
 
 ## Phase 7: System Cleaner Tool (mac-cleaner.md)
 
-### 7.0 Core Features (Completed ✅)
-
-- [x] Settings & Preferences panel (SettingsView with all preferences)
-- [x] Welcome Screen / Onboarding (WelcomeScreen component with multi-step flow)
-- [x] Keyboard Shortcuts (keyboardShortcuts.ts utility)
-- [x] Browser Data Cleanup (Chrome, Firefox, Edge, Safari)
-- [x] Wi-Fi Network Cleanup (Windows & macOS)
-- [x] Search & Filter functionality (across all views)
-- [x] Bulk Actions (Select All, Bulk Delete, Bulk Enable/Disable)
-- [x] Better Empty States (enhanced ScanPlaceholder with tips and quick actions)
-- [x] Smart Scan Improvements (real performance data, privacy scans, retry logic)
-- [x] Progress Tracking (progressUtils.ts with ETA calculations)
-- [x] Backup Management UI (BackupManagementView with CRUD operations)
-- [x] Advanced Space Lens Features (export to JSON/CSV, snapshots, comparison)
-- [x] Error Recovery (errorRecovery.ts with retry logic and batch processing)
-- [x] Memory Management (VirtualizedList component, chunked processing)
-- [x] Caching Strategy (cacheUtils.ts with TTL and size limits)
-- [x] Type Safety (comprehensive types/index.ts with error types)
-
-### 7.1 Testing & Quality Assurance
-
-- [ ] Cross-platform testing (Windows 10/11, macOS Big Sur+)
-- [ ] Safety testing (both platforms)
-- [ ] Performance testing (memory leaks, CPU usage, large dataset handling)
-- [ ] Unit tests for utilities, hooks, components
-- [ ] Integration tests for IPC handlers, Electron main process
-- [ ] E2E tests for critical user flows
-
-### 7.2 Platform-Specific Features
-
-#### Windows-Specific
-
-- [ ] Windows Update Cleanup (remove old Windows Update files)
-- [ ] System Restore Points management and cleanup
-- [ ] Windows.old Cleanup (remove old Windows installation files)
-- [ ] Registry Cleanup (safe registry cleanup with backups)
-- [ ] Windows Defender Integration (use Windows Defender for malware scanning)
-- [ ] Windows Services Management (enable/disable services)
-- [ ] Task Scheduler Integration (schedule maintenance tasks)
-- [ ] Windows Search Optimization (rebuild and optimize Windows Search index)
-
-#### macOS-Specific
-
-- [x] Time Machine Management (clean up Time Machine snapshots)
-- [x] Spotlight Optimization (rebuild Spotlight index)
-- [x] Disk Permissions repair (if supported)
-- [x] Launch Services management (Reset Database)
-- [x] Gatekeeper Integration (check app security status)
-- [x] iCloud Optimization (clear local cloud cache)
-- [x] Mail.app Optimization (rebuild Mail database)
-
-### 7.3 Long-term Enhancements
-
-- [ ] AI-Powered Recommendations (ML-based cleaning suggestions)
-- [ ] Cloud Integration (sync settings across devices)
-- [ ] Advanced Analytics (detailed usage statistics)
-- [ ] Custom Scripts (user-defined maintenance scripts - PowerShell/AppleScript)
-- [ ] Community Features (share safety rules, tips)
-- [ ] Multi-language Support (internationalization)
-- [ ] Enhanced Dark Mode
-- [ ] Accessibility (full keyboard navigation, screen reader support)
-- [ ] Linux Support (extend to Linux distributions)
-- [ ] Remote Management (manage multiple devices)
-- [ ] Scheduled Tasks (schedule automatic scans and maintenance)
-- [ ] Export & Reports (export scan results, print-friendly reports, history logs)
-
-### 7.4 App Updater
-
-- [ ] App updater functionality (Windows Store/Chocolatey + macOS App Store)
-- [ ] Update notification system
+- [x] Settings & Preferences panel
+- [x] Welcome / Onboarding
+- [x] Keyboard Shortcuts
+- [x] Browser Data Cleanup
+- [x] Wi-Fi Network Cleanup
+- [x] Search & Filter
+- [x] Bulk Actions
+- [x] Empty States improvements
+- [x] Smart Scan improvements
+- [x] Progress tracking
+- [x] Backup Management UI
+- [x] Space Lens export & snapshots
+- [x] Error Recovery
+- [x] Memory Management
+- [x] Caching Strategy
+- [x] Type Safety
+- [ ] Cross-platform testing
+- [ ] Safety testing
+- [ ] Performance testing
+- [ ] Unit tests
+- [ ] Integration tests
+- [ ] E2E tests
+- [ ] Windows Update Cleanup
+- [ ] System Restore Points cleanup
+- [ ] Windows.old cleanup
+- [ ] Registry cleanup
+- [ ] Windows Defender integration
+- [ ] Windows Services management
+- [ ] Task Scheduler integration
+- [ ] Windows Search optimization
+- [x] Time Machine management
+- [x] Spotlight optimization
+- [x] Disk permissions repair
+- [x] Launch Services reset
+- [x] Gatekeeper integration
+- [x] iCloud optimization
+- [x] Mail.app optimization
+- [ ] AI recommendations
+- [ ] Cloud sync
+- [ ] Advanced analytics
+- [ ] Custom scripts
+- [ ] Community features
+- [ ] Multi-language
+- [ ] Accessibility
+- [ ] Linux support
+- [ ] Remote management
+- [ ] Scheduled tasks
+- [ ] Export & reports
+- [ ] App updater (Store/Chocolatey/App Store)
+- [ ] Update notifications
 - [ ] Background update checks
-- [ ] Update installation flow
+- [ ] Update install flow
 
 ---
 
 ## Phase 8: Xnapper/Screenshot Tool (xnapper.md)
 
-### 8.1 Phase 1: Core Capture & Basic Processing
-
-- [x] Setup Xnapper tool structure (`src/tools/screenshot/`)
-- [x] Install dependencies (fabric, tesseract.js)
-- [x] Create Xnapper store (`src/store/xnapperStore.ts`)
-- [x] Implement Electron screen capture API integration
-- [x] Create CaptureSection component (full screen, window, area selection)
-- [x] Implement basic image preview
-- [x] Implement auto-balance enhancement
-- [x] Implement simple export (PNG/JPG)
-- [x] Implement save to file functionality
-- [x] Add to tools registry and sidebar
-
-### 8.2 Phase 2: Redaction & Background
-
-- [x] Integrate Tesseract.js for OCR
-- [x] Implement regex pattern detection (email, IP, API keys)
-- [x] Create RedactionPanel component
-- [x] Implement redaction tools (blur, pixelate, solid overlay)
-- [x] Implement manual redaction area selection
-- [x] Create BackgroundPanel component
-- [x] Implement gradient background generator
-- [x] Implement image background support with blur effect
-- [x] Add background preview thumbnails
-
-### 8.3 Phase 3: Annotations
-
-- [x] Integrate Fabric.js for canvas manipulation (utilities created)
-- [x] Create PreviewSection with Fabric.js canvas
-- [x] Implement arrow tool (straight, curved)
-- [x] Implement text tool with font selection
-- [x] Implement shape tools (rectangle, circle, ellipse)
-- [x] Implement blur tool for selective blur
-- [x] Implement crop tool for manual adjustment
-- [x] Create AnnotationToolbar component
-- [x] Implement undo/redo functionality
-- [x] Add color picker and size controls
-
-### 8.4 Phase 4: Export & Share
-
-- [x] Create ExportPanel component
-- [x] Implement social media presets (Twitter, LinkedIn, Instagram, Facebook)
-- [x] Implement custom dimensions
-- [x] Implement quality settings (compression level)
-- [x] Implement format options (PNG, JPG, WebP)
-- [x] Implement copy to clipboard functionality
-- [x] Implement system share sheet integration (macOS)
-- [x] Create HistoryPanel component
-- [x] Implement screenshot history storage
-
-### 8.5 Phase 5: Advanced Features & Polish
-
-- [ ] Quick Actions: Double-click to Copy (with visual flash feedback)
-- [ ] Quick Actions: Drag-and-Drop Export (create temp file for Finder/Desktop)
-- [ ] Aspect Ratio Presets (16:9, 1:1, 4:5, 9:16)
-- [x] Implement templates system
-- [x] Add preset saving functionality
-- [ ] Implement batch processing (future)
-- [x] Add cloud upload (Imgur)
-- [x] Implement scrolling screenshot (Web)
-- [ ] Implement AI background suggestions - future
-- [x] Add keyboard shortcuts
-- [x] Implement drag & drop image loading
-- [x] Add image comparison mode
+- [x] Core capture & export
+- [x] Redaction & background
+- [x] Annotations
+- [x] Export & share
+- [x] Templates & presets
+- [ ] Quick actions (double-click copy)
+- [ ] Drag-and-drop export
+- [ ] Aspect ratio presets
+- [ ] Batch processing (future)
+- [x] Cloud upload (Imgur)
+- [x] Scrolling screenshot
+- [ ] AI background suggestions (future)
+- [x] Shortcuts
+- [x] Drag & drop loading
+- [x] Comparison mode
 
 ---
 
 ## Phase 9: Stats Monitor Tool (stats-monitor.md)
 
-### 9.1 Core Monitoring Modules
-
-- [x] CPU Module (real-time utilization, per-core usage, top processes, temperature, frequency)
-- [x] GPU Module (utilization, VRAM, temperature, active GPU detection)
-- [x] Memory Module (RAM usage, memory pressure, swap, breakdown)
-- [x] Disk Module (disk activity, space, I/O, SMART data)
-- [x] Network Module (in/out speeds, active connections, interface, data usage)
-- [x] Battery Module (level, status, time remaining, health)
-- [x] Sensors Module (temperature, voltage, power, fan speed)
-- [x] Bluetooth Module (connected devices, status, battery, signal strength)
-- [x] Time Zones Module (multiple time zones, world clock)
-
-### 9.2 Menu Bar Integration
-
-- [x] Native menu bar dropdown
-- [ ] Menu bar icon states (color-coded, animated)
-- [ ] Real-time graphs in menu
-- [x] Quick actions (toggle modules)
-- [x] Settings modal functionality
-- [ ] Module reordering (drag & drop)
+- [x] CPU module
+- [x] GPU module
+- [x] Memory module
+- [x] Disk module
+- [x] Network module
+- [x] Battery module
+- [x] Sensors module
+- [x] Bluetooth module
+- [x] Time Zones module
+- [x] Menu bar dropdown
+- [ ] Menu bar icon states
+- [ ] Real-time graphs
+- [x] Quick actions
+- [x] Settings modal
+- [ ] Module reordering
 - [ ] Customizable time zones
-
-### 9.3 Additional Features
-
-- [ ] Export metrics data
-- [ ] Historical data charts
-- [ ] Alerts/notifications
-- [ ] Dark/Light theme toggle
-- [ ] Module size customization
-- [ ] Stats tray with dynamic icon
+- [ ] Export metrics
+- [ ] Historical charts
+- [ ] Alerts
+- [ ] Theme toggle
+- [ ] Module size
+- [ ] Stats tray icon
 - [ ] Context menu integration
-
-### 9.4 Implementation Tasks
-
-- [x] Add BluetoothStats, TimeZonesStats types
-- [x] Implement `get-bluetooth-stats` and `get-timezones-stats` IPC handlers
-- [x] Add getBluetoothStats and getTimeZonesStats to preload API
-- [x] Update useSystemMetrics hook
-- [x] Create BluetoothModule component
-- [x] Create TimeZonesModule component
-- [x] Add modules to StatsMonitor
-- [ ] Create statsTray with dynamic icon
+- [x] IPC handlers & preload API
+- [x] Hooks & modules
+- [ ] statsTray dynamic icon
 
 ---
 
 ## Phase 10: Application Manager Tool (application-manager-plan.md)
 
-### 10.1 Core Features
-
-- [x] Installed Apps Tab (list, search, filter, uninstall)
-- [x] Running Processes Tab (real-time monitoring, kill process)
-- [x] App Type Filter (All/User/System)
-- [x] Process Grouping (by name)
-- [x] Color-coded CPU/RAM usage
-- [x] Badge indicators for system vs user apps
-- [x] Confirmation dialogs for destructive actions
-
-### 10.2 Implementation Tasks
-
-- [x] Create TypeScript types for InstalledApp and RunningProcess
-- [x] Implement backend IPC handlers (get-installed-apps, get-running-processes, uninstall-app, kill-process)
-- [x] Add appManagerAPI to preload
-- [x] Create useInstalledApps hook with filter logic
-- [x] Create useRunningProcesses hook with real-time updates
-- [x] Create InstalledAppsTab component
-- [x] Create RunningProcessesTab component
-- [x] Create UI components (AppCard, ProcessCard, ProcessMetrics, AppTypeFilter)
-- [x] Create main ApplicationManager component
-- [x] Register tool in tools registry
-
-### 10.3 Safety & Performance
-
-- [x] Confirm before uninstall/kill actions
-- [x] Show warning for system processes/apps
-- [x] Require admin/elevated permissions where needed
-- [x] Log all destructive actions
-- [x] Prevent uninstall system critical apps
-- [x] Lazy load process list
-- [x] Virtual scrolling for large lists
-- [x] Debounce search input
-- [x] Cache installed apps
-- [x] Throttle process updates
+- [x] Installed Apps tab
+- [x] Running Processes tab
+- [x] App type filter
+- [x] Process grouping
+- [x] CPU/RAM color coding
+- [x] System vs user badges
+- [x] Confirmation dialogs
+- [x] Types for InstalledApp/RunningProcess
+- [x] IPC handlers
+- [x] Preload API
+- [x] Hooks
+- [x] Components
+- [x] Tool registry
+- [x] Safety guards
+- [x] Performance guards
 
 ---
 
 ## Phase 11: Clipboard Manager Enhancements (clipboard-advanced-features.md)
 
-### 11.1 Advanced Features
-
-- [ ] Export/Import clipboard history (backup and restore)
-- [ ] Clipboard sync across devices (future)
+- [ ] Export/Import history
+- [ ] Clipboard sync (future)
 - [ ] Rich text support
 - [ ] File clipboard support
-- [ ] Clipboard monitoring service
+- [ ] Monitoring service
 - [ ] Auto-paste shortcuts
-- [ ] Clipboard statistics and analytics
-- [ ] Better scroll performance for large history (clipboard-scroll-debug.md)
-- [ ] Tray icon quick access (clipboard-manager-tray.md)
+- [ ] Statistics
+- [ ] Better scroll performance
+- [ ] Tray icon quick access
 
 ---
 
-## Phase 12: Universal Media Downloader Implementation (UNIVERSAL_DOWNLOADER_PLAN.md)
+## Phase 12: Universal Media Downloader (UNIVERSAL_DOWNLOADER_PLAN.md)
 
-### 12.1 Backend Service
-
-- [x] Create `electron/main/universal-downloader.ts`
-- [x] Implement `UniversalDownloader` class with generic `getVideoInfo` and `downloadMedia`
-- [x] Implement platform-specific arguments system (cookies, user-agent)
-- [x] Register IPC handlers: `universal:get-info`, `universal:download`, `universal:cancel`, `universal:get-history`
-- [x] Expose `window.universalAPI` in preload script
-
-### 12.2 React Components
-
-- [x] Create `utils/platform-detector.ts` for URL type identification
-- [x] Create `UniversalDownloader.tsx` main container
-- [x] Implement `PlatformDetector.tsx` for visual feedback
-- [x] Implement `UniversalVideoInfo.tsx` for unified metadata display
-- [x] Implement `UniversalFormatSelector.tsx` for simplified audio/video selection
-- [x] Implement `PlatformBadge.tsx` for platform indication
-
-### 12.3 Advanced Media Features
-
-- [ ] Batch URL Download capability (paste multiple links) (Phase 3.1)
-- [ ] Import URLs from file/clipboard
-- [ ] Instagram Stories/Reels/Posts specialized support
-- [ ] Twitter/X Video/GIF/Spaces support
-- [ ] Reddit Video (with audio) support
-- [ ] Facebook/Watch video support
-- [ ] Cloud Storage auto-sync after download
-- [ ] Audio Extractor tool enhancements (AUDIO_EXTRACTOR_PLAN.md)
-
-### 12.4 Advanced Tooling (UNIVERSAL_DOWNLOADER_IMPROVEMENTS.md)
-
-- [x] Queue Management UI (Visualization, Cancel, Clear)
-- [x] Disk Space Check (Pre-download, Warning, Auto-pause)
-- [x] Enhanced History (Search, Filter, Sort, Export CSV/JSON)
+- [x] Backend service + IPC
+- [x] Preload API
+- [x] React components
+- [x] Queue UI
+- [x] Disk space check
+- [x] History export
+- [ ] Batch URL downloads
+- [ ] Import URLs
+- [ ] Instagram specialized support
+- [ ] Twitter/X support
+- [ ] Reddit support
+- [ ] Facebook support
+- [ ] Cloud auto-sync
+- [ ] Audio extractor enhancements
 
 ---
 
 ## Phase 13: Refactoring & Code Quality (REFACTORING_PLAN.md)
 
-### 13.1 Centralized Utilities
-
-- [ ] Create `src/utils/format/` (bytes, time, speed, index)
-- [ ] Create `src/utils/validation/` (url, file, index)
-- [ ] Implement `formatBytes`, `formatDuration`, `formatETA`, `formatSpeed`
-- [ ] Implement `isValidYoutubeUrl`, `extractVideoId`, `sanitizeFilename`
-
-### 13.2 Type Centralization
-
-- [ ] Create `src/types/clipboard.ts` (extract from store)
-- [ ] Create `src/types/screenshot.ts` (move from tool folder)
-- [ ] Create `src/types/system-cleaner.ts` (move from tool folder)
-- [ ] Create `src/types/common/ui.ts` (shared UI types)
-
-### 13.3 Component Refactoring
-
-- [ ] Refactor `YoutubeDownloader.tsx` to use centralized utils
-- [ ] Refactor Stats Monitor components (`DiskModule`, `MemoryModule`, etc.)
-- [ ] Refactor `VideoToFrames.tsx` and `FramesToVideo.tsx`
-- [ ] Update all imports across the codebase
+- [ ] Centralized utils (format)
+- [ ] Centralized utils (validation)
+- [ ] Implement format helpers
+- [ ] Implement URL/file helpers
+- [ ] Centralize types
+- [ ] Refactor components
+- [ ] Update imports
 
 ---
 
 ## Phase 14: Video Frame Tools Enhancements (VIDEOFRAMES_COMPLETION.md)
 
-### 14.1 Phase 2: Advanced Processing
-
-- [ ] FFmpeg.wasm integration for client-side processing
-- [ ] MP4 and H.265 export support
+- [ ] FFmpeg.wasm integration
+- [ ] MP4/H.265 export
 - [ ] GIF creation tool
-- [ ] Manual frame selection and trimming
-- [ ] Batch processing for multiple videos
-
-### 14.2 Phase 3: Effects & Optimization
-
-- [ ] Video effects and filters
-- [ ] Watermarking capabilities
-- [ ] Advanced compression settings
-- [ ] Concurrent processing/Worker support
+- [ ] Frame selection/trimming
+- [ ] Batch processing
+- [ ] Effects/filters
+- [ ] Watermarking
+- [ ] Compression settings
+- [ ] Worker/concurrency support
 
 ---
 
-## Phase 15: Stats Monitor Additional Modules (stats-monitor-additional-modules-plan.md)
+## Phase 15: Stats Monitor Additional Modules
 
-### 15.1 New Monitoring Modules
-
-- [ ] Bluetooth Module (connected devices, battery, icons)
-- [ ] Time Zones Module (multiple clocks, date, offset)
-- [ ] Performance Metrics Export (JSON/CSV)
-
-### 15.2 Menu Bar (Tray) Integration
-
-- [ ] Create `statsTray` with dynamic icon (CPU usage based)
-- [ ] Implement Tray Context Menu with quick stats
-- [ ] Frontend integration for real-time tray updates
+- [ ] Export metrics (JSON/CSV)
+- [ ] Create statsTray dynamic icon
+- [ ] Tray context menu
+- [ ] Frontend tray updates
 
 ---
 
 ## Phase 16: Browser Extension Support
 
-- [ ] Create Chrome/Edge/Firefox Extension
-- [ ] Implement Native Messaging with DevTools App
-- [ ] Add "Download with DevTools" right-click menu
-- [ ] Floating download button on video players
+- [ ] Chrome/Edge/Firefox extension
+- [ ] Native messaging
+- [ ] Context menu integration
+- [ ] Floating download button
+
+## Phase 17: Additional Tools Expansion
+
+### 17.1 Dev / Engineering Tools
+
+#### API & Backend
+
+- [ ] API Tester (Postman-lite)
+- [ ] GraphQL Explorer
+- [ ] WebSocket Tester
+- [ ] gRPC Request Builder
+- [ ] API Mock Server
+- [ ] OpenAPI (Swagger) Viewer & Validator
+- [ ] API Contract Diff Tool
+
+#### Code & Configuration
+
+- [ ] Environment Variables Manager
+- [ ] .env File Validator
+- [ ] Dockerfile Linter
+- [ ] Kubernetes YAML Validator
+- [ ] Helm Values Generator
+- [ ] Nginx Config Generator
+- [ ] Apache .htaccess Generator
+- [ ] CI/CD Pipeline Generator (GitHub Actions, GitLab CI)
 
 ---
 
-## Notes
+### 17.2 Security & Privacy Tools
 
-- Prioritize Phase 1 and Phase 2 for MVP
-- Each tool should be isolated and testable
-- Follow glassmorphism design consistently
-- Ensure all tools work client-side (privacy)
-- Test on both Windows and macOS
-- Keep bundle size optimized
-- Document all tools with examples
-- System Cleaner: Most features completed, focus on testing and platform-specific features
-- Xnapper: Core implementation complete, need AI background and batch processing in the future
-- Stats Monitor: Core modules implemented, expansion planned for Bluetooth and Timezones
-- Application Manager: Planned for system management
-- Universal Downloader: Highest priority for next media feature
+- [ ] Password Breach Checker (offline hash-based)
+- [ ] JWT Signature Verifier (public key)
+- [ ] OAuth 2.0 Flow Visualizer
+- [ ] TLS / SSL Inspector
+- [ ] Certificate Chain Analyzer
+- [ ] Security Checklist Generator (Web / API / Mobile)
+- [ ] Secrets Scanner (API keys, tokens, credentials)
+- [ ] Data Masking Tool (logs, JSON, CSV)
+- [ ] Hash Comparison Tool
+- [ ] Checksum Verifier (MD5 / SHA)
+
+---
+
+### 17.3 File & Data Tools
+
+#### CSV / Data
+
+- [ ] CSV Cleaner
+- [ ] CSV ⇄ JSON Advanced Mapper
+- [ ] CSV Schema Generator
+- [ ] Excel Formula Tester
+- [ ] SQL Query Runner (SQLite in-memory)
+- [ ] Schema-based Data Validator
+
+#### File Utilities
+
+- [ ] File Hash Generator
+- [ ] Bulk File Rename Tool
+- [ ] File Tree Visualizer
+- [ ] Duplicate File Finder
+- [ ] Large File Analyzer
+- [ ] Archive Inspector (ZIP, TAR, 7z)
+
+---
+
+### 17.4 Web / Frontend Tools
+
+- [ ] CSS Generator (Gradient, Box-shadow, Glassmorphism)
+- [ ] Tailwind Class Builder
+- [ ] HTML Accessibility Checker (a11y)
+- [ ] Offline Lighthouse-style Analyzer
+- [ ] SEO Audit Tool
+- [ ] Meta Preview Generator (Google / Twitter / Facebook)
+- [ ] Responsive Breakpoint Tester
+- [ ] Viewport Simulator
+
+---
+
+### 17.5 Productivity & Power User Tools
+
+- [ ] Command Palette Automation (Macros)
+- [ ] Clipboard Rules Engine
+- [ ] Snippet Manager (Code / Text)
+- [ ] Regex Snippet Library
+- [ ] Developer Notes / Scratchpad
+- [ ] Task Runner (npm / pnpm / yarn scripts)
+- [ ] Git Commit Message Generator
+- [ ] Conventional Commit Validator
+
+---
+
+### 17.6 Image & Media Tools (Extended)
+
+- [ ] Smart Image Optimizer (auto WebP / AVIF)
+- [ ] Batch Image Resizer & Renamer
+- [ ] Sprite Sheet Generator
+- [ ] CSS Sprite Generator
+- [ ] Image Diff (pixel-level)
+- [ ] Screenshot Annotation Templates
+- [ ] Video Metadata Inspector
+- [ ] Audio Metadata Editor
+- [ ] Waveform Viewer
+- [ ] Subtitle Editor (SRT / VTT)
+
+---
+
+### 17.7 AI-Assist Tools (Privacy-first)
+
+- [ ] Prompt Formatter
+- [ ] Prompt Versioning Tool
+- [ ] Log Summarizer
+- [ ] Code Explanation Tool
+- [ ] Error Log Analyzer
+- [ ] Regex Generator (AI-assisted)
+
+---
+
+### 17.8 System & OS Utilities
+
+- [ ] Startup Applications Manager
+- [ ] Login Items Inspector
+- [ ] Process Dependency Viewer
+- [ ] Disk Usage Treemap
+- [ ] Battery Health Report Export
+- [ ] Local Network Port Scanner
+- [ ] Hosts File Manager
+- [ ] DNS Cache Viewer
+- [ ] Firewall Rules Viewer
+
+---
+
+### 17.9 Advanced & Differentiation Features
+
+- [ ] Tool Chaining (Output → Input)
+- [ ] Workflow Builder
+- [ ] Plugin SDK
+- [ ] CLI Companion Tool
+- [ ] Portable Mode
+- [ ] Offline-first Mode
+- [ ] Enterprise Profiles
+- [ ] Policy-based Tool Access

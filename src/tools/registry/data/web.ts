@@ -1,8 +1,19 @@
-import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot, KeyRound, Edit3 } from 'lucide-react';
+import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot, KeyRound, Edit3, Map, Zap, Cookie } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
 export const webTools: ToolDefinition[] = [
+    {
+        id: 'cookie-parser',
+        name: 'Cookie Parser',
+        path: '/cookie-parser',
+        description: 'Parse and inspect HTTP cookies',
+        category: 'web',
+        icon: Cookie,
+        color: 'text-amber-600',
+        component: Lazy.CookieParser,
+        keywords: ['cookie', 'parser', 'http', 'header', 'session']
+    },
     {
         id: 'otp',
         name: 'OTP Generator',
@@ -233,6 +244,28 @@ export const webTools: ToolDefinition[] = [
         color: 'text-cyan-500',
         component: Lazy.ManifestGenerator,
         keywords: ['pwa', 'manifest', 'json', 'web', 'app']
+    },
+    {
+        id: 'sitemap-generator',
+        name: 'Sitemap Generator',
+        path: '/sitemap-generator',
+        description: 'Generate XML sitemaps for SEO',
+        category: 'web',
+        icon: Map,
+        color: 'text-indigo-400',
+        component: Lazy.SitemapGenerator,
+        keywords: ['sitemap', 'xml', 'seo', 'google', 'crawl']
+    },
+    {
+        id: 'service-worker-generator',
+        name: 'Service Worker',
+        path: '/service-worker-generator',
+        description: 'Generate PWA Service Worker (Workbox)',
+        category: 'web',
+        icon: Zap,
+        color: 'text-amber-400',
+        component: Lazy.ServiceWorkerGenerator,
+        keywords: ['service', 'worker', 'pwa', 'offline', 'cache', 'workbox']
     },
 ];
 
