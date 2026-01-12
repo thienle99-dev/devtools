@@ -7,14 +7,8 @@ import React from 'react';
 
 
 // Converters
-export const JsonYamlConverter = React.lazy(() => import('@tools/converters/JsonYamlConverter').then(m => ({ default: m.JsonYamlConverter })));
-export const JsonXmlConverter = React.lazy(() => import('@tools/converters/JsonXmlConverter').then(m => ({ default: m.JsonXmlConverter })));
-export const JsonToCsv = React.lazy(() => import('@tools/development/JsonToCsv').then(m => ({ default: m.JsonToCsv })));
-export const MarkdownHtmlConverter = React.lazy(() => import('@tools/converters/MarkdownHtmlConverter').then(m => ({ default: m.MarkdownHtmlConverter })));
-export const Base64Converter = React.lazy(() => import('@tools/converters/Base64Converter').then(m => ({ default: m.Base64Converter })));
+// Converters
 export const Base64FileConverter = React.lazy(() => import('@tools/converters/Base64FileConverter').then(m => ({ default: m.Base64FileConverter })));
-export const NumberBaseConverter = React.lazy(() => import('@tools/converters/NumberBaseConverter').then(m => ({ default: m.NumberBaseConverter })));
-export const CaseConverter = React.lazy(() => import('@tools/converters/CaseConverter').then(m => ({ default: m.CaseConverter })));
 export const ColorConverter = React.lazy(() => import('@tools/converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
 export const DateConverter = React.lazy(() => import('@tools/converters/DateConverter').then(m => ({ default: m.DateConverter })));
 export const CsvExcelConverter = React.lazy(() => import('@tools/converters/CsvExcelConverter').then(m => ({ default: m.CsvExcelConverter })));
@@ -45,8 +39,6 @@ export const AesEncryptor = React.lazy(() => import('@tools/crypto/AesEncryptor'
 export const BcryptGenerator = React.lazy(() => import('@tools/crypto/BcryptGenerator').then(m => ({ default: m.BcryptGenerator })));
 
 // Web
-export const UrlEncoder = React.lazy(() => import('@tools/web/UrlEncoder').then(m => ({ default: m.UrlEncoder })));
-export const HtmlEntityEncoder = React.lazy(() => import('@tools/web/HtmlEntityEncoder').then(m => ({ default: m.HtmlEntityEncoder })));
 export const UrlParser = React.lazy(() => import('@tools/web/UrlParser').then(m => ({ default: m.UrlParser })));
 export const BasicAuthGenerator = React.lazy(() => import('@tools/web/BasicAuthGenerator').then(m => ({ default: m.BasicAuthGenerator })));
 export const MimeTypesList = React.lazy(() => import('@tools/web/MimeTypesList').then(m => ({ default: m.MimeTypesList })));
@@ -110,4 +102,5 @@ export const Chronometer = React.lazy(() => import('@tools/math/Chronometer').th
 export const SettingsPage = React.lazy(() => import('@pages/Settings'));
 
 export const UniversalFormatter = React.lazy(() => import('@tools/development/UniversalFormatter').then(m => ({ default: m.UniversalFormatter })));
+export const Converter = React.lazy(() => import('@tools/converters/Converter').then(m => ({ default: m.Converter })));
 

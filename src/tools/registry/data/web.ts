@@ -1,30 +1,9 @@
-import { Link, Code, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft } from 'lucide-react';
+import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
 export const webTools: ToolDefinition[] = [
-    {
-        id: 'url-encoder',
-        name: 'URL Encoder',
-        path: '/url-encoder',
-        description: 'Encode and decode URLs',
-        category: 'web',
-        icon: Link,
-        color: 'text-sky-500',
-        component: Lazy.UrlEncoder,
-        keywords: ['url', 'encode', 'decode', 'uri']
-    },
-    {
-        id: 'html-entity',
-        name: 'HTML Entity',
-        path: '/html-entity',
-        description: 'Escape/Unescape HTML Entities',
-        category: 'web',
-        icon: Code,
-        color: 'text-orange-500',
-        component: Lazy.HtmlEntityEncoder,
-        keywords: ['html', 'entity', 'escape', 'unescape']
-    },
+
     {
         id: 'url-parser',
         name: 'URL Parser',

@@ -30,6 +30,7 @@
     "@types/diff": "^8.0.0",
     "@types/he": "^1.2.3",
     "@types/jszip": "^3.4.1",
+    "@types/marked": "^6.0.0",
     "@types/ua-parser-js": "^0.7.39",
     "@types/zxcvbn": "^4.4.5",
     "@uiw/codemirror-theme-github": "^4.25.4",
