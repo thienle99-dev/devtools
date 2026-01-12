@@ -3,7 +3,8 @@ import {
     Upload, Download, Play, RotateCcw, Video, Settings, Film, Grid, GalleryHorizontal,
     ChevronLeft, ChevronRight, Clock, Scan, List, Pencil, X, CheckSquare, FolderOutput, ChartBar, Activity, Zap, Scissors, MonitorPlay, Smartphone, Trash2, Filter, FileVideo
 } from 'lucide-react';
-import { FrameEditor } from './FrameEditor';
+// Lazy load FrameEditor to avoid bundling Fabric.js with the list view
+const FrameEditor = React.lazy(() => import('./FrameEditor').then(module => ({ default: module.FrameEditor })));
 import { TimelineEditor } from './TimelineEditor';
 import JSZip from 'jszip';
 import { Slider } from '../../../components/ui/Slider';
@@ -664,12 +665,21 @@ export const VideoToFrames: React.FC = () => {
                         <Pencil className="w-4 h-4" /> Editing Frame #{frames[editingFrameIndex].index}
                     </h2>
                 </div>
-                <div className="flex-1 overflow-hidden rounded-lg border border-border-glass shadow-xl">
-                    <FrameEditor
-                        imageUrl={URL.createObjectURL(frames[editingFrameIndex].blob)}
-                        onSave={handleSaveFrame}
-                        onCancel={handleCancelEdit}
-                    />
+                <div className="flex-1 overflow-hidden rounded-lg border border-border-glass shadow-xl relative">
+                    <React.Suspense fallback={
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                                <span className="text-xs font-medium text-indigo-400">Loading Editor...</span>
+                            </div>
+                        </div>
+                    }>
+                        <FrameEditor
+                            imageUrl={URL.createObjectURL(frames[editingFrameIndex].blob)}
+                            onSave={handleSaveFrame}
+                            onCancel={handleCancelEdit}
+                        />
+                    </React.Suspense>
                 </div>
             </div>
         )

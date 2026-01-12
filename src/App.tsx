@@ -14,7 +14,7 @@ import { TOOLS } from '@tools/registry';
 import { useClipboardStore } from '@store/clipboardStore';
 import { useResponsive } from '@hooks/useResponsive';
 import { Footer } from '@components/layout/Footer';
-import { preloadHeavyModules } from '@utils/lazyLoad';
+// import { preloadHeavyModules } from '@utils/lazyLoad';
 import { motion } from 'framer-motion';
 import { useOnboardingStore } from '@store/onboardingStore';
 import { WelcomeTour } from '@components/onboarding/WelcomeTour';
@@ -137,7 +137,7 @@ function App() {
 
   // Phase 2: Preload heavy modules on idle for better UX
   useEffect(() => {
-    preloadHeavyModules();
+    // preloadHeavyModules();
   }, []);
 
   const { hasCompletedOnboarding, startTour } = useOnboardingStore();
