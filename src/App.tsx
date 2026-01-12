@@ -9,16 +9,28 @@ import { TabBar } from '@components/layout/TabBar';
 import { TabContent } from '@components/layout/TabContent';
 import { GlobalClipboardMonitor } from '@components/GlobalClipboardMonitor';
 import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
+import { CommandPalette } from '@components/CommandPalette';
 import { TOOLS } from '@tools/registry';
 import { useClipboardStore } from '@store/clipboardStore';
 import { useResponsive } from '@hooks/useResponsive';
 import { Footer } from '@components/layout/Footer';
 import { preloadHeavyModules } from '@utils/lazyLoad';
+import { motion } from 'framer-motion';
 
 // Loading fallback component
 const PageLoader = () => (
-  <div className="flex-1 flex items-center justify-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+  <div className="flex-1 flex items-center justify-center bg-background/30 backdrop-blur-sm">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center gap-4"
+    >
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-xl bg-indigo-500/20 border border-indigo-500/30 animate-pulse" />
+        <div className="absolute inset-2 rounded-lg bg-indigo-500 animate-[spin_2s_linear_infinite]" />
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 animate-pulse">Initializing...</span>
+    </motion.div>
   </div>
 );
 
@@ -124,8 +136,16 @@ const MainLayout = () => {
 }
 
 function App() {
-  const { theme } = useSettingsStore();
+  const { theme, layoutMode, accentColor, glassIntensity, blurEnabled } = useSettingsStore();
   const responsive = useResponsive();
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.setAttribute('data-layout', layoutMode);
+    root.style.setProperty('--accent-color', accentColor);
+    root.style.setProperty('--glass-intensity', glassIntensity.toString());
+    root.classList.toggle('blur-disabled', !blurEnabled);
+  }, [layoutMode, accentColor, glassIntensity, blurEnabled]);
 
   // Auto-collapse sidebar on mobile/tablet
   useEffect(() => {
@@ -163,8 +183,6 @@ function App() {
       root.classList.add(mediaQuery.matches ? 'dark' : 'light');
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
@@ -288,6 +306,7 @@ function App() {
     <Router>
       <GlobalClipboardMonitor />
       <TrayController />
+      <CommandPalette />
       <AppErrorBoundary>
         <div className="flex flex-col h-screen bg-app-gradient text-foreground overflow-hidden font-sans selection:bg-indigo-500/30">
           <WindowControls />

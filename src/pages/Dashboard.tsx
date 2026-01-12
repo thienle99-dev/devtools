@@ -2,6 +2,7 @@ import React from 'react';
 import { QuickAccessSection } from './dashboard/QuickAccessSection';
 import { ToolDiscoverySection } from './dashboard/ToolDiscoverySection';
 import { StatisticsSection } from './dashboard/StatisticsSection';
+import { TipsSection } from './dashboard/TipsSection';
 
 
 export const Dashboard: React.FC = () => {
@@ -14,8 +15,9 @@ export const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6 space-y-6 custom-scrollbar">
+            <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar">
                 <QuickAccessSection />
+                <TipsSection />
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
                     <div className="xl:col-span-2 space-y-6">
                         <ToolDiscoverySection />

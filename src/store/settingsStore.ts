@@ -13,8 +13,16 @@ interface SettingsStore {
     
     // Responsive settings
     autoCollapseSidebar: boolean;
-    compactMode: boolean;
+    layoutMode: 'compact' | 'comfortable' | 'dense';
     adaptiveLayout: boolean;
+    collapsedCategories: string[];
+    categoryOrder: string[];
+    
+    // UI Visuals
+    accentColor: string;
+    glassIntensity: number;
+    blurEnabled: boolean;
+    
     setSidebarOpen: (open: boolean) => void;
 
     // Notifications
@@ -57,8 +65,15 @@ interface SettingsStore {
     
     // Responsive setters
     setAutoCollapseSidebar: (value: boolean) => void;
-    setCompactMode: (value: boolean) => void;
+    setLayoutMode: (mode: 'compact' | 'comfortable' | 'dense') => void;
     setAdaptiveLayout: (value: boolean) => void;
+    toggleCategoryCollapsed: (categoryId: string) => void;
+    setCategoryOrder: (order: string[]) => void;
+
+    // UI Visuals setters
+    setAccentColor: (color: string) => void;
+    setGlassIntensity: (intensity: number) => void;
+    setBlurEnabled: (enabled: boolean) => void;
 
     // Notifications setters
     setNotificationsEnabled: (value: boolean) => void;
@@ -105,8 +120,15 @@ const defaultSettings = {
     
     // Responsive defaults
     autoCollapseSidebar: true,
-    compactMode: false,
+    layoutMode: 'comfortable' as const,
     adaptiveLayout: true,
+    collapsedCategories: [],
+    categoryOrder: [], // Empty means use default registry order
+
+    // UI Visuals
+    accentColor: '#6366f1', // indigo-500
+    glassIntensity: 0.1,
+    blurEnabled: true,
 
     // Notifications
     notificationsEnabled: true,
@@ -170,9 +192,20 @@ export const useSettingsStore = create<SettingsStore>()(
             setSidebarOpen: (open) => set({ sidebarCollapsed: !open }),
             
             // Responsive setters
-            setAutoCollapseSidebar: (autoCollapseSidebar) => set({ autoCollapseSidebar }),
-            setCompactMode: (compactMode) => set({ compactMode }),
-            setAdaptiveLayout: (adaptiveLayout) => set({ adaptiveLayout }),
+            setAutoCollapseSidebar: (autoCollapseSidebar: boolean) => set({ autoCollapseSidebar }),
+            setLayoutMode: (layoutMode: 'compact' | 'comfortable' | 'dense') => set({ layoutMode }),
+            setAdaptiveLayout: (adaptiveLayout: boolean) => set({ adaptiveLayout }),
+            toggleCategoryCollapsed: (categoryId: string) => set((state) => ({
+                collapsedCategories: state.collapsedCategories.includes(categoryId)
+                    ? state.collapsedCategories.filter(id => id !== categoryId)
+                    : [...state.collapsedCategories, categoryId]
+            })),
+            setCategoryOrder: (categoryOrder: string[]) => set({ categoryOrder }),
+
+            // UI Visuals setters
+            setAccentColor: (accentColor: string) => set({ accentColor }),
+            setGlassIntensity: (glassIntensity: number) => set({ glassIntensity }),
+            setBlurEnabled: (blurEnabled: boolean) => set({ blurEnabled }),
 
             // Notifications setters
             setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
@@ -232,7 +265,8 @@ export const useSettingsStore = create<SettingsStore>()(
                         enableAnimations, lazyLoading, memoryLimit, backgroundProcessing, maxBackgroundTabs,
                         autoBackup, backupRetentionDays,
                         toolShortcuts,
-                        autoCollapseSidebar, compactMode, adaptiveLayout,
+                        autoCollapseSidebar, layoutMode, adaptiveLayout, collapsedCategories, categoryOrder,
+                        accentColor, glassIntensity, blurEnabled
                     } = data;
 
                     set({
@@ -264,8 +298,13 @@ export const useSettingsStore = create<SettingsStore>()(
                         backupRetentionDays: backupRetentionDays ?? defaultSettings.backupRetentionDays,
                         toolShortcuts: toolShortcuts ?? defaultSettings.toolShortcuts,
                         autoCollapseSidebar: autoCollapseSidebar ?? defaultSettings.autoCollapseSidebar,
-                        compactMode: compactMode ?? defaultSettings.compactMode,
+                        layoutMode: layoutMode ?? defaultSettings.layoutMode,
                         adaptiveLayout: adaptiveLayout ?? defaultSettings.adaptiveLayout,
+                        collapsedCategories: collapsedCategories ?? defaultSettings.collapsedCategories,
+                        categoryOrder: categoryOrder ?? defaultSettings.categoryOrder,
+                        accentColor: accentColor ?? defaultSettings.accentColor,
+                        glassIntensity: glassIntensity ?? defaultSettings.glassIntensity,
+                        blurEnabled: blurEnabled ?? defaultSettings.blurEnabled,
                     });
 
                     return true;

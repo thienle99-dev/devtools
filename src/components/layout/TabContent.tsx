@@ -4,6 +4,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { getToolById } from '../../tools/registry';
 import { DashboardPage } from '../../tools/registry/lazy-tools';
 import { cn } from '../../utils/cn';
+import { ToolSkeleton } from '../ui/Skeleton';
 
 export const TabContent: React.FC = React.memo(() => {
     const tabs = useTabStore(state => state.tabs);
@@ -85,11 +86,8 @@ export const TabContent: React.FC = React.memo(() => {
                         )}
                     >
                         <Suspense fallback={
-                            <div className="flex-1 flex items-center justify-center">
-                                <div className="text-center">
-                                    <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4 mx-auto" />
-                                    <p className="text-sm text-foreground-muted">Loading tool...</p>
-                                </div>
+                            <div className="flex-1 p-8 overflow-y-auto">
+                                <ToolSkeleton />
                             </div>
                         }>
                             {/* 

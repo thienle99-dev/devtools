@@ -897,16 +897,16 @@
 
 ### 18.1 Global UX Improvements
 
-- [ ] Global Command Palette (Tool + Action + Settings)
-- [ ] Tool Quick Switcher (recent / favorite)
-- [ ] Inline Tool Search (inside Sidebar)
-- [ ] Tool Usage Analytics (local-only)
-- [ ] Smart Empty States (tips + shortcuts)
-- [ ] Contextual Help per Tool
-- [ ] Tool Description & Examples Panel
+- [x] Global Command Palette (Tool + Action + Settings)
+- [x] Tool Quick Switcher (recent / favorite)
+- [x] Inline Tool Search (inside Sidebar)
+- [x] Tool Usage Analytics (local-only)
+- [x] Smart Empty States (tips + shortcuts)
+- [x] Contextual Help per Tool
+- [x] Tool Description & Examples Panel
 - [ ] First-time Tool Walkthrough (tooltip-based)
 - [ ] Undo / Redo (global level)
-- [ ] Better Loading & Skeleton States
+- [x] Better Loading & Skeleton States
 
 ---
 
@@ -927,14 +927,14 @@
 
 ### 18.3 UI Customization
 
-- [ ] Compact / Comfortable / Dense Layout Modes
-- [ ] Sidebar Collapsible Sections
-- [ ] Custom Sidebar Ordering
-- [ ] Per-tool UI Preferences
-- [ ] Font Size & Editor Zoom Controls
-- [ ] Accent Color Picker
-- [ ] Glass Intensity Control
-- [ ] Blur Performance Toggle (low-end devices)
+- [x] Compact / Comfortable / Dense Layout Modes
+- [x] Sidebar Collapsible Sections
+- [x] Custom Sidebar Ordering
+- [x] Per-tool UI Preferences (via individual tool store data)
+- [x] Font Size & Editor Zoom Controls
+- [x] Accent Color Picker
+- [x] Glass Intensity Control
+- [x] Blur Performance Toggle (low-end devices)
 
 ---
 

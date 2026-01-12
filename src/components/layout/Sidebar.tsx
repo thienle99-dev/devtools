@@ -8,6 +8,8 @@ import {
     Star,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
+    ChevronUp,
     Command,
     X
 } from 'lucide-react';
@@ -32,6 +34,9 @@ export const Sidebar: React.FC = React.memo(() => {
 
     const sidebarCollapsed = useSettingsStore(state => state.sidebarCollapsed);
     const toggleSidebar = useSettingsStore(state => state.toggleSidebar);
+    const collapsedCategories = useSettingsStore(state => state.collapsedCategories);
+    const toggleCategoryCollapsed = useSettingsStore(state => state.toggleCategoryCollapsed);
+    const categoryOrder = useSettingsStore(state => state.categoryOrder);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -64,7 +69,7 @@ export const Sidebar: React.FC = React.memo(() => {
     }, [searchQuery]);
 
     const categoriesWithTools = useMemo(() => {
-        return CATEGORIES.map(category => {
+        const mapped = CATEGORIES.map(category => {
             let tools;
             if (category.id === 'favorites') {
                 const uniqueFavorites = Array.from(new Set(favorites));
@@ -85,7 +90,18 @@ export const Sidebar: React.FC = React.memo(() => {
             }
             return { ...category, tools: tools.filter((t: any) => t.id !== 'settings' && t.id !== 'dashboard') };
         });
-    }, [favorites, history]);
+
+        if (categoryOrder.length === 0) return mapped;
+
+        return [...mapped].sort((a, b) => {
+            const indexA = categoryOrder.indexOf(a.id);
+            const indexB = categoryOrder.indexOf(b.id);
+            if (indexA === -1 && indexB === -1) return 0;
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+    }, [favorites, history, categoryOrder]);
 
     return (
         <motion.aside
@@ -231,32 +247,50 @@ export const Sidebar: React.FC = React.memo(() => {
                                 if (['favorites', 'recent'].includes(category.id) && tools.length === 0) return null;
                                 if (tools.length === 0) return null;
 
+                                const isCollapsed = collapsedCategories.includes(category.id);
+
                                 return (
                                     <div key={category.id} className="space-y-1.5">
                                         {!sidebarCollapsed && (
-                                            <div className="px-5 mb-1 flex items-center justify-between group/cat">
+                                            <button 
+                                                onClick={() => toggleCategoryCollapsed(category.id)}
+                                                className="w-full px-5 mb-1 flex items-center justify-between group/cat hover:bg-white/5 py-1 rounded-lg transition-colors"
+                                            >
                                                 <div className="flex items-center gap-2">
                                                     <div className={cn("w-1 h-3 rounded-full bg-current opacity-40 group-hover/cat:opacity-100 transition-opacity", category.color || "text-foreground")} />
                                                     <h3 className="text-[10px] font-black text-foreground-muted uppercase tracking-widest group-hover/cat:text-foreground transition-colors">{category.name}</h3>
                                                 </div>
-                                                <span className="text-[9px] font-mono text-foreground-muted/30 group-hover/cat:opacity-100">{tools.length}</span>
-                                            </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] font-mono text-foreground-muted/30 group-hover/cat:text-foreground/50">{tools.length}</span>
+                                                    {isCollapsed ? <ChevronDown className="w-3 h-3 text-foreground-muted/50" /> : <ChevronUp className="w-3 h-3 text-foreground-muted/50" />}
+                                                </div>
+                                            </button>
                                         )}
 
-                                        <div className={cn("space-y-0.5", sidebarCollapsed ? "flex flex-col items-center" : "px-2")}>
-                                            {tools.map((tool: any) => (
-                                                <ToolNavItem
-                                                    key={tool.id}
-                                                    tool={tool}
-                                                    isActive={activeTab?.toolId === tool.id}
-                                                    isCollapsed={sidebarCollapsed}
-                                                    favorites={favorites}
-                                                    toggleFavorite={toggleFavorite}
-                                                    openTab={openTab}
-                                                    navigate={navigate}
-                                                />
-                                            ))}
-                                        </div>
+                                        <AnimatePresence initial={false}>
+                                            {(!isCollapsed || sidebarCollapsed) && (
+                                                <motion.div 
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: "auto", opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                                                    className={cn("space-y-0.5 overflow-hidden", sidebarCollapsed ? "flex flex-col items-center" : "px-2")}
+                                                >
+                                                    {tools.map((tool: any) => (
+                                                        <ToolNavItem
+                                                            key={tool.id}
+                                                            tool={tool}
+                                                            isActive={activeTab?.toolId === tool.id}
+                                                            isCollapsed={sidebarCollapsed}
+                                                            favorites={favorites}
+                                                            toggleFavorite={toggleFavorite}
+                                                            openTab={openTab}
+                                                            navigate={navigate}
+                                                        />
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 );
                             })}

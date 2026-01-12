@@ -68,6 +68,32 @@ export const CookieParser: React.FC<{ tabId: string }> = ({ tabId }) => {
             title="Cookie Parser"
             description="Parse and inspect HTTP cookie strings"
             onClear={handleClear}
+            helpContent={
+                <>
+                    <div>
+                        <h4 className="font-bold text-foreground mb-2">About Cookies</h4>
+                        <p>HTTP cookies are small blocks of data created by a web server while a user is browsing a website and placed on the user's computer or other device.</p>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-foreground mb-2">Request Header</h4>
+                        <p className="mb-2">In requests, multiple cookies are sent in a single <code>Cookie</code> header:</p>
+                        <pre className="p-2 bg-black/30 rounded text-xs">name1=value1; name2=value2</pre>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-foreground mb-2">Response Header</h4>
+                        <p className="mb-2">In responses, each cookie is sent in its own <code>Set-Cookie</code> header with attributes:</p>
+                        <pre className="p-2 bg-black/30 rounded text-xs text-wrap">id=abc; Path=/; Secure; HttpOnly</pre>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-foreground mb-2">Tips</h4>
+                        <ul className="list-disc list-inside space-y-1">
+                            <li>Check for <code>Secure</code> and <code>HttpOnly</code> flags for security.</li>
+                            <li>Use the search box to find specific keys.</li>
+                            <li>Clear the input to reset the view.</li>
+                        </ul>
+                    </div>
+                </>
+            }
         >
             <div className="space-y-6 h-full flex flex-col">
                 <div className="space-y-2 shrink-0">

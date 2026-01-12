@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import type { ReactNode, DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Copy, Download, Upload, Clipboard, ExternalLink, ArrowRight, Link as LinkIcon } from 'lucide-react';
+import { Trash2, Copy, Download, Upload, Clipboard, ExternalLink, ArrowRight, Link as LinkIcon, HelpCircle, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useToolState, useToolStore } from '../../store/toolStore';
 import { readFileAsText, downloadFile, openContentInNewTab } from '../../utils/fileIo';
 import { ToolSelector } from './ToolSelector';
 import type { ToolDefinition } from '../../tools/registry/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ToolPaneProps {
     title: string;
@@ -19,6 +20,7 @@ interface ToolPaneProps {
     onCopy?: () => void;
     onDownload?: () => void;
     onClear?: () => void;
+    helpContent?: ReactNode;
     contentClassName?: string;
 }
 
@@ -31,6 +33,7 @@ export const ToolPane = ({
     onCopy,
     onDownload,
     onClear,
+    helpContent,
     contentClassName
 }: ToolPaneProps): JSX.Element => {
     const navigate = useNavigate();
@@ -168,6 +171,8 @@ export const ToolPane = ({
         }
     };
 
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+
     const hasInputCapability = !!toolId;
     const hasOutputCapability = (!!toolId && !!data?.output) || !!onCopy || !!onDownload;
 
@@ -279,8 +284,22 @@ export const ToolPane = ({
                         </div>
                     )}
 
-                    {/* Clear */}
+                    {/* Clear & Help */}
                     <div className="flex bg-[var(--color-glass-input)] rounded-xl p-1 border border-border-glass">
+                        {helpContent && (
+                            <button
+                                onClick={() => setIsHelpOpen(!isHelpOpen)}
+                                className={cn(
+                                    "p-2 rounded-lg transition-all",
+                                    isHelpOpen 
+                                        ? "text-indigo-400 bg-indigo-500/10" 
+                                        : "text-foreground-muted hover:text-foreground hover:bg-bg-glass-hover"
+                                )}
+                                title="Toggle Help"
+                            >
+                                <HelpCircle className="w-4 h-4" />
+                            </button>
+                        )}
                         <button
                             onClick={handleClearAll}
                             className="p-2 text-foreground-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all disabled:opacity-50"
@@ -292,9 +311,39 @@ export const ToolPane = ({
                 </div>
             </div>
 
-            {/* Content */}
-            <div className={cn("flex-1 min-h-0 overflow-auto p-8 custom-scrollbar", contentClassName)}>
-                {children}
+            {/* Content & Sidebar */}
+            <div className="flex-1 flex min-h-0 overflow-hidden">
+                <div className={cn("flex-1 overflow-auto p-8 custom-scrollbar", contentClassName)}>
+                    {children}
+                </div>
+
+                {/* Help Sidebar */}
+                <AnimatePresence>
+                    {isHelpOpen && helpContent && (
+                        <motion.div
+                            initial={{ x: 400, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 400, opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-80 border-l border-border-glass bg-[var(--color-glass-panel)]/50 backdrop-blur-3xl overflow-y-auto custom-scrollbar"
+                        >
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-lg font-bold">Tool Guide</h3>
+                                    <button 
+                                        onClick={() => setIsHelpOpen(false)}
+                                        className="p-1.5 rounded-lg hover:bg-white/5 text-foreground-muted transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="space-y-6 text-sm text-foreground-secondary leading-relaxed">
+                                    {helpContent}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );
