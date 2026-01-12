@@ -201,7 +201,10 @@ export const webTools: ToolDefinition[] = [
         icon: Bot,
         color: 'text-green-500',
         component: Lazy.RobotsTxtGenerator,
-        keywords: ['robots', 'seo', 'crawler', 'bot']
+        keywords: ['robots', 'seo', 'crawler', 'bot'],
+        inputTypes: ['json'],
+        outputTypes: ['text'],
+        process: (_, options) => Logic.generateRobotsTxt(options)
     },
     {
         id: 'safelink',
@@ -276,7 +279,10 @@ export const webTools: ToolDefinition[] = [
         icon: FileCode,
         color: 'text-yellow-500',
         component: Lazy.StructuredDataGenerator,
-        keywords: ['seo', 'json-ld', 'schema', 'google', 'rich']
+        keywords: ['seo', 'json-ld', 'schema', 'google', 'rich'],
+        inputTypes: ['json'],
+        outputTypes: ['json'],
+        process: (_, options) => Logic.generateJsonLd(options)
     },
     {
         id: 'manifest-generator',
@@ -298,7 +304,10 @@ export const webTools: ToolDefinition[] = [
         icon: Map,
         color: 'text-indigo-400',
         component: Lazy.SitemapGenerator,
-        keywords: ['sitemap', 'xml', 'seo', 'google', 'crawl']
+        keywords: ['sitemap', 'xml', 'seo', 'google', 'crawl'],
+        inputTypes: ['json'],
+        outputTypes: ['text'],
+        process: (_, options) => Logic.generateSitemap(options)
     },
     {
         id: 'service-worker-generator',

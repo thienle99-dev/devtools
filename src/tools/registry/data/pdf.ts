@@ -1,6 +1,7 @@
 import { FileImage, FileCheck, Scissors, FileUp, RotateCw, Binary, FileText, Archive, CheckCircle2, Move, FileCode, FileDigit, Code2, Eraser } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import { convertImagesToPdf } from '../../pdf/logic';
 
 export const pdfTools: ToolDefinition[] = [
     {
@@ -12,7 +13,13 @@ export const pdfTools: ToolDefinition[] = [
         icon: FileImage,
         color: 'text-purple-400',
         component: Lazy.ImagesToPdfConverter,
-        keywords: ['pdf', 'image', 'convert', 'merge', 'pages']
+        keywords: ['pdf', 'image', 'convert', 'merge', 'pages'],
+        inputTypes: ['image', 'any'], // Can be array of images
+        outputTypes: ['file'],
+        process: (input, options) => {
+            const images = Array.isArray(input) ? input : [input];
+            return convertImagesToPdf(images, options);
+        }
     },
     {
         id: 'pdf-merger',

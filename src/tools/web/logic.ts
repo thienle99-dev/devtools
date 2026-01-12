@@ -102,3 +102,39 @@ export const generateOpenGraph = (options: { title?: string, description?: strin
     if (options.site_name) tags.push(`<meta property="og:site_name" content="${options.site_name}">`);
     return tags.join('\n');
 };
+
+export const generateRobotsTxt = (options: { userAgent?: string, allow?: string[], disallow?: string[], sitemap?: string }) => {
+    const lines: string[] = [];
+    lines.push(`User-agent: ${options.userAgent || '*'}`);
+    (options.disallow || []).forEach(path => lines.push(`Disallow: ${path}`));
+    (options.allow || []).forEach(path => lines.push(`Allow: ${path}`));
+    if (options.sitemap) lines.push(`Sitemap: ${options.sitemap}`);
+    return lines.join('\n');
+};
+
+export const generateSitemap = (options: { urls: { loc: string, lastmod?: string, changefreq?: string, priority?: string }[] }) => {
+    const lines: string[] = [];
+    lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+    lines.push('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    
+    options.urls.forEach(url => {
+        lines.push('  <url>');
+        lines.push(`    <loc>${url.loc}</loc>`);
+        if (url.lastmod) lines.push(`    <lastmod>${url.lastmod}</lastmod>`);
+        if (url.changefreq) lines.push(`    <changefreq>${url.changefreq}</changefreq>`);
+        if (url.priority) lines.push(`    <priority>${url.priority}</priority>`);
+        lines.push('  </url>');
+    });
+    
+    lines.push('</urlset>');
+    return lines.join('\n');
+};
+
+export const generateJsonLd = (options: { type: string, data: Record<string, any> }) => {
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': options.type,
+        ...options.data
+    };
+    return JSON.stringify(jsonLd, null, 2);
+};

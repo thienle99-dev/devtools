@@ -1183,8 +1183,8 @@
 ### B3. SEO / Metadata
 
 - [x] Meta Tags Generator → Open Graph Meta Generator → Export HTML
-- [ ] Robots.txt Generator → Sitemap Generator → Export Files
-- [ ] Structured Data (JSON-LD) Generator → JSON Validator → Export JSON-LD
+- [x] Robots.txt Generator → Sitemap Generator → Export Files
+- [x] Structured Data (JSON-LD) Generator → JSON Validator → Export JSON-LD
 
 ---
 
@@ -1223,7 +1223,7 @@
 ### D3. Dates & IDs
 
 - [ ] Date-time Converter → Export ISO8601
-- [ ] UUID Generator → Copy
+- [x] UUID Generator → Copy
 - [ ] ULID Generator → Copy
 
 ---
@@ -1232,8 +1232,8 @@
 
 ### E1. Optimize & Convert
 
-- [ ] Image Import → Image Compressor → Image Format Converter → Export Image
-- [ ] Image Import → Image Resize → Image Compressor → Export
+- [x] Image Import → Image Compressor → Image Format Converter → Export Image
+- [x] Image Import → Image Resize → Image Compressor → Export
 
 ### E2. Privacy & Metadata
 
@@ -1245,8 +1245,8 @@
 
 ### E4. Visual Transform
 
-- [ ] Image Import → Image to ASCII Art → Export TXT/MD
-- [ ] Image Import → Base64 Image Encoder → Copy Data URI
+- [x] Image Import → Image to ASCII Art → Export TXT/MD
+- [x] Image Import → Base64 Image Encoder → Copy Data URI
 
 ---
 

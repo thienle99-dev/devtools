@@ -1,4 +1,5 @@
 import ExifReader from 'exifreader';
+import imageCompression from 'browser-image-compression';
 
 export const getImageMetadata = async (file: File | Blob) => {
     try {
@@ -113,4 +114,20 @@ export const imageToAscii = async (file: File | Blob | string, options: {
 
     if (src.startsWith('blob:')) URL.revokeObjectURL(src);
     return result;
+};
+
+export const compressImage = async (file: File | Blob, options: { 
+    maxSizeMB?: number, 
+    maxWidthOrHeight?: number, 
+    format?: string,
+    quality?: number
+} = {}) => {
+    const compressionOptions = {
+        maxSizeMB: options.maxSizeMB || 1,
+        maxWidthOrHeight: options.maxWidthOrHeight || 1920,
+        useWebWorker: true,
+        fileType: options.format as any,
+        initialQuality: options.quality || 0.8
+    };
+    return await imageCompression(file as File, compressionOptions);
 };

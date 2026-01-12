@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { jsPDF } from 'jspdf';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { Button } from '../../components/ui/Button';
 import { useToolState } from '../../store/toolStore';
 import { X, ArrowUp, ArrowDown, FileImage } from 'lucide-react';
+import { convertImagesToPdf } from './logic';
 
 const TOOL_ID = 'images-to-pdf';
 
@@ -31,6 +31,8 @@ export const ImagesToPdfConverter: React.FC<ImagesToPdfConverterProps> = ({ tabI
             orientation: 'portrait' as 'portrait' | 'landscape',
             pageSize: 'a4' as 'a4' | 'letter',
             margin: 0,
+            quality: 0.8,
+            compression: 'FAST' as 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW',
             pdfBlob: undefined as Blob | undefined
         }
     };
@@ -42,6 +44,8 @@ export const ImagesToPdfConverter: React.FC<ImagesToPdfConverterProps> = ({ tabI
         orientation: options.orientation || 'portrait',
         pageSize: options.pageSize || 'a4',
         margin: options.margin || 0,
+        quality: options.quality ?? 0.8,
+        compression: options.compression || 'FAST',
         pdfBlob: options.pdfBlob as Blob | undefined
     };
 
@@ -115,62 +119,17 @@ export const ImagesToPdfConverter: React.FC<ImagesToPdfConverterProps> = ({ tabI
         setLoadingAction('Converting');
 
         try {
-            const pdf = new jsPDF({
-                orientation: currentOptions.orientation as any,
-                unit: 'mm',
-                format: currentOptions.pageSize
-            });
-
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = currentOptions.margin || 0;
-            const contentWidth = pageWidth - (margin * 2);
-            const contentHeight = pageHeight - (margin * 2);
-
-            for (let i = 0; i < images.length; i++) {
-                if (i > 0) {
-                    pdf.addPage();
+            const pdfBlob = await convertImagesToPdf(
+                images.map(img => img.file),
+                {
+                    orientation: currentOptions.orientation as any,
+                    pageSize: currentOptions.pageSize as any,
+                    margin: currentOptions.margin,
+                    quality: currentOptions.quality,
+                    compression: currentOptions.compression as any
                 }
+            );
 
-                const img = images[i];
-                const imgElement = new Image();
-
-                await new Promise<void>((resolve, reject) => {
-                    imgElement.onload = () => {
-                        try {
-                            // Calculate dimensions to fit page while maintaining aspect ratio
-                            let imgWidth = imgElement.width;
-                            let imgHeight = imgElement.height;
-                            const aspectRatio = imgWidth / imgHeight;
-
-                            let finalWidth = contentWidth;
-                            let finalHeight = contentWidth / aspectRatio;
-
-                            if (finalHeight > contentHeight) {
-                                finalHeight = contentHeight;
-                                finalWidth = contentHeight * aspectRatio;
-                            }
-
-                            const x = margin + (contentWidth - finalWidth) / 2;
-                            const y = margin + (contentHeight - finalHeight) / 2;
-
-                            pdf.addImage(imgElement, 'JPEG', x, y, finalWidth, finalHeight);
-                            resolve();
-                        } catch (error) {
-                            reject(error);
-                        }
-                    };
-
-                    imgElement.onerror = () => {
-                        reject(new Error(`Failed to load image: ${img.name}`));
-                    };
-
-                    imgElement.src = img.preview;
-                });
-            }
-
-            // Generate PDF blob
-            const pdfBlob = pdf.output('blob');
             const pdfUrl = URL.createObjectURL(pdfBlob);
 
             setToolData(effectiveId, {
@@ -276,6 +235,31 @@ export const ImagesToPdfConverter: React.FC<ImagesToPdfConverterProps> = ({ tabI
                                 onChange={(e) => updateOption('margin', parseInt(e.target.value) || 0)}
                                 className="glass-input w-full text-sm"
                             />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Quality (0-1)</label>
+                            <input
+                                type="number"
+                                min="0.1"
+                                max="1"
+                                step="0.1"
+                                value={currentOptions.quality}
+                                onChange={(e) => updateOption('quality', parseFloat(e.target.value) || 0.8)}
+                                className="glass-input w-full text-sm"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1">Compression</label>
+                            <select
+                                value={currentOptions.compression}
+                                onChange={(e) => updateOption('compression', e.target.value)}
+                                className="glass-input w-full text-sm"
+                            >
+                                <option value="NONE">None</option>
+                                <option value="FAST">Fast</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="SLOW">Slow</option>
+                            </select>
                         </div>
                     </div>
                 )}

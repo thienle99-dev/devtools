@@ -194,5 +194,107 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
                 label: 'Generate OG Tags'
             }
         ]
+    },
+    {
+        id: 'seo-optimization-flow',
+        name: 'Full SEO Site Config Flow',
+        description: 'Meta Tags + OG + Robots.txt + Sitemap Generator',
+        steps: [
+            {
+                toolId: 'meta-tags',
+                options: { charset: 'UTF-8' },
+                label: 'Base Meta'
+            },
+            {
+                toolId: 'open-graph',
+                options: {},
+                label: 'Social Meta'
+            },
+            {
+                toolId: 'robots-txt',
+                options: { userAgent: '*', sitemap: 'https://example.com/sitemap.xml' },
+                label: 'Robots.txt'
+            },
+            {
+                toolId: 'sitemap-generator',
+                options: {},
+                label: 'XML Sitemap'
+            }
+        ]
+    },
+    {
+        id: 'image-pdf-flow',
+        name: 'Optimized Image → PDF',
+        description: 'Compress Images → Generate PDF document',
+        steps: [
+            {
+                toolId: 'image-converter',
+                options: { format: 'image/jpeg', maxSizeMB: 0.5, maxWidthOrHeight: 1200 },
+                label: 'Compress for PDF'
+            },
+            {
+                toolId: 'images-to-pdf',
+                options: { quality: 0.7, compression: 'FAST' },
+                label: 'Create PDF'
+            }
+        ]
+    },
+    {
+        id: 'image-ascii-flow',
+        name: 'Image → ASCII Art Flow',
+        description: 'Resize Image → Convert to stylized ASCII text',
+        steps: [
+            {
+                toolId: 'image-converter',
+                options: { format: 'image/jpeg', maxWidthOrHeight: 300 },
+                label: 'Resize for Grid'
+            },
+            {
+                toolId: 'image-to-ascii',
+                options: { width: 100, charSet: 'standard' },
+                label: 'Generate ASCII'
+            }
+        ]
+    },
+    {
+        id: 'structured-data-flow',
+        name: 'Structured Data Validator Flow',
+        description: 'Generate JSON-LD → Format/Validate JSON',
+        steps: [
+            {
+                toolId: 'structured-data',
+                options: { type: 'WebSite' },
+                label: 'Generate JSON-LD'
+            },
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format & Validate'
+            }
+        ]
+    },
+    {
+        id: 'uuid-flow',
+        name: 'Bulk UUID Generator',
+        description: 'Generate multiple UUIDs → Copy to Clipboard',
+        steps: [
+            {
+                toolId: 'uuid',
+                options: { count: 10, hyphens: true },
+                label: 'Generate 10 IDs'
+            }
+        ]
+    },
+    {
+        id: 'data-uri-flow',
+        name: 'Image → Data URI Flow',
+        description: 'Convert Image to Base64 Data URI',
+        steps: [
+            {
+                toolId: 'data-uri',
+                options: {},
+                label: 'Generate URI'
+            }
+        ]
     }
 ];

@@ -1,7 +1,7 @@
 import { Image as ImageIcon, FileImage, Info, Code, Type } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import { getImageMetadata, generateQrCode } from '../../image/logic';
+import { getImageMetadata, generateQrCode, compressImage, imageToAscii } from '../../image/logic';
 
 export const imageTools: ToolDefinition[] = [
     {
@@ -27,7 +27,10 @@ export const imageTools: ToolDefinition[] = [
         icon: FileImage,
         color: 'text-emerald-400',
         component: Lazy.ImageConverter,
-        keywords: ['image', 'convert', 'compress', 'resize', 'batch', 'webp', 'avif']
+        keywords: ['image', 'convert', 'compress', 'resize', 'batch', 'webp', 'avif'],
+        inputTypes: ['image', 'file'],
+        outputTypes: ['image', 'file'],
+        process: (input, options) => compressImage(input, options)
     },
     {
         id: 'image-metadata',
@@ -86,6 +89,9 @@ export const imageTools: ToolDefinition[] = [
         icon: Type,
         color: 'text-orange-400',
         component: Lazy.ImageToAscii,
-        keywords: ['ascii', 'image', 'text', 'art', 'convert']
+        keywords: ['ascii', 'image', 'text', 'art', 'convert'],
+        inputTypes: ['image', 'file'],
+        outputTypes: ['text'],
+        process: (input, options) => imageToAscii(input, options)
     },
 ];
