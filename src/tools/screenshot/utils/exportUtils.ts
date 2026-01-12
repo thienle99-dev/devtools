@@ -24,7 +24,7 @@ export async function generateFinalImage(
         shadowOffsetY?: number;
         inset?: number;
         showWindowControls?: boolean;
-        watermark?: { text: string; opacity: number; position: string };
+        watermark?: { text: string; opacity: number; position: string; fontSize?: number };
         aspectRatio?: string;
     }
 ): Promise<string> {
@@ -105,15 +105,42 @@ export async function generateFinalImage(
 
     const baseDataUrl = await baseImagePromise;
 
-    // 2. If no annotations, return base image
-    if (!options.annotations || options.annotations === '[]') {
-        if (options.outputConfig) {
-            return applyOutputConfig(baseDataUrl, options.outputConfig, options.background);
-        }
-        return baseDataUrl;
+    // 2. Apply border radius, shadow, and inset FIRST (before annotations)
+    let styledBaseUrl = baseDataUrl;
+    const needsStyling = options.borderRadius || options.shadowBlur || options.inset || 
+                         options.showWindowControls || (options.watermark?.text && options.watermark.text.trim());
+    
+    console.log('🎨 Checking if styling needed:', {
+        borderRadius: options.borderRadius,
+        shadowBlur: options.shadowBlur,
+        inset: options.inset,
+        showWindowControls: options.showWindowControls,
+        watermarkText: options.watermark?.text,
+        needsStyling
+    });
+    
+    if (needsStyling) {
+        styledBaseUrl = await applyBorderRadiusAndShadow(baseDataUrl, {
+            borderRadius: options.borderRadius,
+            shadowBlur: options.shadowBlur,
+            shadowOpacity: options.shadowOpacity,
+            shadowOffsetX: options.shadowOffsetX,
+            shadowOffsetY: options.shadowOffsetY,
+            inset: options.inset,
+            showWindowControls: options.showWindowControls,
+            watermark: options.watermark,
+        });
     }
 
-    // 3. Apply annotations using Fabric.js (lazy loaded)
+    // 3. If no annotations, return styled base image
+    if (!options.annotations || options.annotations === '[]') {
+        if (options.outputConfig) {
+            return applyOutputConfig(styledBaseUrl, options.outputConfig, options.background);
+        }
+        return styledBaseUrl;
+    }
+
+    // 4. Apply annotations using Fabric.js (lazy loaded)
     // We create a temporary Fabric canvas, load the base image, overlay annotations, and export
     const annotationPromise = new Promise<string>(async (resolve) => {
         try {
@@ -124,8 +151,8 @@ export async function generateFinalImage(
             const canvasEl = document.createElement('canvas');
             const fabricCanvas = new fabric.StaticCanvas(canvasEl);
 
-            // Load base image
-            fabric.Image.fromURL(baseDataUrl, { crossOrigin: 'anonymous' }).then((bgImg) => {
+            // Load styled base image (with border radius, shadow already applied)
+            fabric.Image.fromURL(styledBaseUrl, { crossOrigin: 'anonymous' }).then((bgImg) => {
                 const width = bgImg.width!;
                 const height = bgImg.height!;
 
@@ -151,41 +178,26 @@ export async function generateFinalImage(
                     resolve(finalDataUrl);
                 }).catch(err => {
                     console.error('Error enlivening objects:', err);
-                    resolve(baseDataUrl); // Fallback to base
+                    resolve(styledBaseUrl); // Fallback to styled base
                 });
             }).catch(err => {
                 console.error('Error loading base image into fabric:', err);
-                resolve(baseDataUrl);
+                resolve(styledBaseUrl);
             });
         } catch (e) {
             console.error('Error in annotation export:', e);
-            resolve(baseDataUrl);
+            resolve(styledBaseUrl);
         }
     });
 
     const finalDataUrl = await annotationPromise;
 
-    // 4. Apply border radius and shadow (Xnapper-style)
-    let styledDataUrl = finalDataUrl;
-    if (options.borderRadius || options.shadowBlur || options.inset) {
-        styledDataUrl = await applyBorderRadiusAndShadow(finalDataUrl, {
-            borderRadius: options.borderRadius,
-            shadowBlur: options.shadowBlur,
-            shadowOpacity: options.shadowOpacity,
-            shadowOffsetX: options.shadowOffsetX,
-            shadowOffsetY: options.shadowOffsetY,
-            inset: options.inset,
-            showWindowControls: options.showWindowControls,
-            watermark: options.watermark,
-        });
-    }
-
     // 5. Apply output dimensions / presets if specified
     if (options.outputConfig) {
-        return applyOutputConfig(styledDataUrl, options.outputConfig, options.background);
+        return applyOutputConfig(finalDataUrl, options.outputConfig, options.background);
     }
 
-    return styledDataUrl;
+    return finalDataUrl;
 }
 
 export type SocialPreset = 'twitter' | 'instagram-square' | 'instagram-portrait' | 'instagram-story';
@@ -344,7 +356,7 @@ export async function applyBorderRadiusAndShadow(
         shadowOffsetY?: number;
         inset?: number;
         showWindowControls?: boolean;
-        watermark?: { text: string; opacity: number; position: string };
+        watermark?: { text: string; opacity: number; position: string; fontSize?: number };
     }
 ): Promise<string> {
     return new Promise((resolve) => {
@@ -471,9 +483,18 @@ export async function applyBorderRadiusAndShadow(
 
             // Draw Watermark
             if (watermark && watermark.text) {
+                const fontSize = watermark.fontSize || 16;
+                console.log('💧 Drawing watermark:', {
+                    text: watermark.text,
+                    opacity: watermark.opacity,
+                    position: watermark.position,
+                    fontSize
+                });
+                
                 ctx.save();
-                ctx.font = 'bold 16px Inter, sans-serif';
-                ctx.fillStyle = `rgba(255, 255, 255, ${watermark.opacity})`;
+                ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+                const opacity = watermark.opacity || 0.3;
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
                 ctx.shadowColor = 'rgba(0,0,0,0.5)';
                 ctx.shadowBlur = 4;
 

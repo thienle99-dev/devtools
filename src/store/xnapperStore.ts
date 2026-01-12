@@ -75,8 +75,9 @@ interface XnapperState {
         text: string;
         opacity: number;
         position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+        fontSize: number;
     };
-    setWatermark: (watermark: Partial<{ text: string; opacity: number; position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center' }>) => void;
+    setWatermark: (watermark: Partial<{ text: string; opacity: number; position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center'; fontSize: number }>) => void;
 
     // Annotations
     activeAnnotationTool: AnnotationType | null;
@@ -178,7 +179,7 @@ export const useXnapperStore = create<XnapperState>()(
             // Window Controls & Watermark
             showWindowControls: true,
             setShowWindowControls: (show) => set({ showWindowControls: show }),
-            watermark: { text: '', opacity: 0.3, position: 'bottom-right' },
+            watermark: { text: '', opacity: 0.3, position: 'bottom-right', fontSize: 16 },
             setWatermark: (watermark) => set((state) => ({ watermark: { ...state.watermark, ...watermark } })),
 
             // Annotations
