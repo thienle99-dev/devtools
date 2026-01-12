@@ -22,6 +22,7 @@ import { videoTrimmer } from './video-trimmer'
 import { videoEffects } from './video-effects'
 import si from 'systeminformation'
 import Store from 'electron-store'
+import { setupDownloadManagerHandlers } from './download-manager-handlers'
 
 const execAsync = promisify(exec)
 
@@ -2092,6 +2093,7 @@ app.whenReady().then(() => {
   }
 
   setupCleanerHandlers();
+  setupDownloadManagerHandlers(win!);
 
   // Handle local-media protocol
   protocol.handle('local-media', async (request) => {

@@ -1,4 +1,4 @@
-import { Network, RotateCw, Fingerprint, Search } from 'lucide-react';
+import { Network, RotateCw, Fingerprint, Search, Download } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
@@ -46,5 +46,16 @@ export const networkTools: ToolDefinition[] = [
         color: 'text-orange-400',
         component: Lazy.MacLookup,
         keywords: ['mac', 'lookup', 'vendor', 'oui']
+    },
+    {
+        id: 'download-manager',
+        name: 'Download Manager',
+        path: '/download-manager',
+        description: 'Multi-threaded download accelerator',
+        category: 'network',
+        icon: Download,
+        color: 'text-blue-600',
+        component: Lazy.DownloadManager,
+        keywords: ['download', 'manager', 'idm', 'accelerator', 'file', 'http', 'https']
     },
 ];

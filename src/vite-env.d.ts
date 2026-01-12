@@ -81,4 +81,18 @@ interface Window {
         openFile: (path: string) => Promise<void>;
         showInFolder: (path: string) => Promise<void>;
     };
+    downloadAPI: {
+        getHistory: () => Promise<import('./types/network/download').DownloadTask[]>;
+        getSettings: () => Promise<import('./types/network/download').DownloadSettings>;
+        saveSettings: (settings: Partial<import('./types/network/download').DownloadSettings>) => Promise<void>;
+        create: (options: { url: string, filename?: string }) => Promise<import('./types/network/download').DownloadTask>;
+        start: (taskId: string) => Promise<void>;
+        pause: (taskId: string) => Promise<void>;
+        resume: (taskId: string) => Promise<void>;
+        cancel: (taskId: string) => Promise<void>;
+        openFolder: (filePath: string) => Promise<void>;
+        clearHistory: () => Promise<void>;
+        onProgress: (taskId: string, callback: (progress: import('./types/network/download').DownloadProgress) => void) => () => void;
+        onAnyProgress: (callback: (progress: import('./types/network/download').DownloadProgress) => void) => () => void;
+    };
 }

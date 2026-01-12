@@ -78,6 +78,7 @@ export const Ipv4SubnetCalculator = React.lazy(() => import('@tools/network/Ipv4
 export const Ipv4Converter = React.lazy(() => import('@tools/network/Ipv4Converter').then(m => ({ default: m.Ipv4Converter })));
 export const MacGenerator = React.lazy(() => import('@tools/network/MacGenerator').then(m => ({ default: m.MacGenerator })));
 export const MacLookup = React.lazy(() => import('@tools/network/MacLookup').then(m => ({ default: m.MacLookup })));
+export const DownloadManager = React.lazy(() => import('@tools/network/DownloadManager/DownloadManager').then(m => ({ default: m.default })));
 
 // Development
 export const RegexTester = React.lazy(() => import('@tools/development/RegexTester').then(m => ({ default: m.RegexTester })));

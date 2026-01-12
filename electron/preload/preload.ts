@@ -276,3 +276,26 @@ contextBridge.exposeInMainWorld('videoEffectsAPI', {
   openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
   showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
 })
+
+contextBridge.exposeInMainWorld('downloadAPI', {
+  getHistory: () => ipcRenderer.invoke('download:get-history'),
+  getSettings: () => ipcRenderer.invoke('download:get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('download:save-settings', settings),
+  create: (options: { url: string, filename?: string }) => ipcRenderer.invoke('download:create', options),
+  start: (taskId: string) => ipcRenderer.invoke('download:start', taskId),
+  pause: (taskId: string) => ipcRenderer.invoke('download:pause', taskId),
+  resume: (taskId: string) => ipcRenderer.invoke('download:resume', taskId),
+  cancel: (taskId: string) => ipcRenderer.invoke('download:cancel', taskId),
+  openFolder: (filePath: string) => ipcRenderer.invoke('download:open-folder', filePath),
+  clearHistory: () => ipcRenderer.invoke('download:clear-history'),
+  onProgress: (taskId: string, callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on(`download:progress:${taskId}`, listener);
+    return () => ipcRenderer.removeListener(`download:progress:${taskId}`, listener);
+  },
+  onAnyProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('download:any-progress', listener);
+    return () => ipcRenderer.removeListener('download:any-progress', listener);
+  }
+})
