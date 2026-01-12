@@ -64,18 +64,18 @@ export const Base64UrlConverter = () => {
         {/* Input */}
         <div className="flex flex-col gap-2 h-full">
             <div className="flex justify-between items-center">
-                <label className="text-sm font-medium text-gray-400">
+                <label className="text-sm font-medium text-muted-foreground">
                     {mode === 'encode' ? 'Text Input' : 'Base64 URL String'}
                 </label>
                 <Button variant="ghost" size="sm" onClick={() => setInput('')}>
                     <Trash2 className="w-4 h-4" />
                 </Button>
             </div>
-            <Card className="flex-1 p-0 overflow-hidden bg-gray-900/50 border-gray-700">
+            <Card className="flex-1 p-0 overflow-hidden bg-muted/50 border-input">
                 <textarea
                     value={input}
                     onChange={(e) => process(e.target.value, mode)}
-                    className="w-full h-full bg-transparent border-none p-4 text-sm font-mono focus:ring-0 resize-none"
+                    className="w-full h-full bg-transparent border-none p-4 text-sm font-mono focus:ring-0 resize-none text-foreground placeholder:text-muted-foreground"
                     placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 URL string to decode...'}
                 />
             </Card>
@@ -86,29 +86,29 @@ export const Base64UrlConverter = () => {
         {/* Output */}
         <div className="flex flex-col gap-2 h-full relative">
              <div className="flex justify-between items-center">
-                <label className="text-sm font-medium text-gray-400">
+                <label className="text-sm font-medium text-muted-foreground">
                     {mode === 'encode' ? 'Base64 URL Output' : 'Decoded Text'}
                 </label>
                 <Button variant="ghost" size="sm" onClick={handleCopy} disabled={!output || output.startsWith('Error')}>
                     <Copy className="w-4 h-4" />
                 </Button>
             </div>
-            <Card className="flex-1 p-0 overflow-hidden bg-gray-900/50 border-gray-700 relative group">
+            <Card className="flex-1 p-0 overflow-hidden bg-muted/50 border-input relative group">
                 <textarea
                     readOnly
                     value={output}
-                    className="w-full h-full bg-transparent border-none p-4 text-sm font-mono focus:ring-0 resize-none text-blue-400"
+                    className="w-full h-full bg-transparent border-none p-4 text-sm font-mono focus:ring-0 resize-none text-primary placeholder:text-muted-foreground"
                     placeholder="Result..."
                 />
                  {/* Swap Button Absolute Center (Desktop) or top (Mobile) */}
                  <div className="absolute top-1/2 -left-3 transform -translate-y-1/2 -translate-x-full md:block hidden z-10">
                      <Button 
                         size="sm" 
-                        className="rounded-full w-8 h-8 p-0 bg-gray-800 border border-gray-600 hover:bg-gray-700 shadow-xl"
+                        className="rounded-full w-8 h-8 p-0 bg-secondary border border-border hover:bg-secondary/80 shadow-xl"
                         onClick={toggleMode}
                         title={`Switch to ${mode === 'encode' ? 'Decode' : 'Encode'}`}
                      >
-                        <ArrowRightLeft className="w-4 h-4" />
+                        <ArrowRightLeft className="w-4 h-4 text-secondary-foreground" />
                      </Button>
                  </div>
             </Card>

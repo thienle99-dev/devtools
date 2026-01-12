@@ -40,7 +40,7 @@ export const HtmlWysiwyg = () => {
       size="sm"
       onClick={() => exec(command, value)}
       title={title}
-      className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
     >
       <Icon className="w-4 h-4" />
     </Button>
@@ -63,23 +63,23 @@ export const HtmlWysiwyg = () => {
     >
       <div className="h-full flex flex-col p-4 gap-4">
         {/* Toolbar */}
-        <Card className="p-2 flex items-center justify-between bg-gray-900/50 border-gray-700 shrink-0">
+        <Card className="p-2 flex items-center justify-between bg-muted/50 border-border shrink-0">
             <div className="flex items-center gap-1 flex-wrap">
                 <ToolbarButton icon={Undo} command="undo" title="Undo" />
                 <ToolbarButton icon={Redo} command="redo" title="Redo" />
-                <div className="w-px h-6 bg-gray-700 mx-1" />
+                <div className="w-px h-6 bg-border mx-1" />
                 <ToolbarButton icon={Bold} command="bold" title="Bold" />
                 <ToolbarButton icon={Italic} command="italic" title="Italic" />
                 <ToolbarButton icon={Underline} command="underline" title="Underline" />
                 <ToolbarButton icon={Eraser} command="removeFormat" title="Clear Format" />
-                <div className="w-px h-6 bg-gray-700 mx-1" />
+                <div className="w-px h-6 bg-border mx-1" />
                 <ToolbarButton icon={AlignLeft} command="justifyLeft" title="Align Left" />
                 <ToolbarButton icon={AlignCenter} command="justifyCenter" title="Align Center" />
                 <ToolbarButton icon={AlignRight} command="justifyRight" title="Align Right" />
-                <div className="w-px h-6 bg-gray-700 mx-1" />
+                <div className="w-px h-6 bg-border mx-1" />
                 <ToolbarButton icon={List} command="insertUnorderedList" title="Bullet List" />
                 <ToolbarButton icon={ListOrdered} command="insertOrderedList" title="Numbered List" />
-                <div className="w-px h-6 bg-gray-700 mx-1" />
+                <div className="w-px h-6 bg-border mx-1" />
                 <Button
                     variant="ghost"
                     size="sm"
@@ -88,22 +88,22 @@ export const HtmlWysiwyg = () => {
                         if (url) exec('createLink', url);
                     }}
                     title="Insert Link"
-                    className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
                 >
                     <Link className="w-4 h-4" />
                 </Button>
             </div>
 
-            <div className="flex items-center gap-2 bg-gray-800 rounded-lg p-1">
+            <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
                  <button
                     onClick={() => setMode('visual')}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${mode === 'visual' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${mode === 'visual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                  >
                     <Type className="w-4 h-4 mr-1 inline-block" /> Visual
                  </button>
                  <button
                     onClick={() => setMode('code')}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${mode === 'code' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${mode === 'code' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                  >
                     <Code className="w-4 h-4 mr-1 inline-block" /> Source
                  </button>
@@ -111,13 +111,13 @@ export const HtmlWysiwyg = () => {
         </Card>
 
         {/* Editor Area */}
-        <Card className="flex-1 overflow-hidden p-0 bg-white text-black relative flex flex-col">
-            {mode === 'visual' ? (
+        <Card className="flex-1 overflow-hidden p-0 bg-background text-foreground relative flex flex-col">
+             {mode === 'visual' ? (
                 <div
                     ref={editorRef}
                     contentEditable
                     onInput={handleInput}
-                    className="w-full h-full p-6 outline-none overflow-auto prose max-w-none"
+                    className="w-full h-full p-6 outline-none overflow-auto prose max-w-none dark:prose-invert"
                     style={{ minHeight: '100%' }}
                 />
             ) : (
@@ -125,7 +125,7 @@ export const HtmlWysiwyg = () => {
                     value={content}
                     height="100%"
                     extensions={[html()]}
-                    theme={githubDark}
+                    theme={githubDark} // Should strictly be dynamic based on theme, but githubDark is fine for code usually
                     onChange={(val) => setContent(val)}
                     className="h-full text-base"
                 />

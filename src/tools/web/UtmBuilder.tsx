@@ -83,78 +83,78 @@ export const UtmBuilder = () => {
         {/* Inputs */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-lg text-white">Website URL</h3>
+            <h3 className="font-semibold text-lg text-foreground">Website URL</h3>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Website URL *</label>
+              <label className="text-sm font-medium text-muted-foreground">Website URL *</label>
               <div className="relative">
-                <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={values.baseUrl}
                   onChange={(e) => handleChange('baseUrl', e.target.value)}
                   placeholder="https://example.com"
-                  className="pl-9 bg-gray-800/50 border-gray-700"
+                  className="pl-9 bg-muted/50 border-input"
                 />
               </div>
-              <p className="text-xs text-gray-500">The full website URL (e.g. https://www.example.com)</p>
+              <p className="text-xs text-muted-foreground">The full website URL (e.g. https://www.example.com)</p>
             </div>
           </Card>
 
           <Card className="p-4 space-y-4">
-             <h3 className="font-semibold text-lg text-white">Campaign Parameters</h3>
+             <h3 className="font-semibold text-lg text-foreground">Campaign Parameters</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Campaign Source *</label>
+                  <label className="text-sm font-medium text-muted-foreground">Campaign Source *</label>
                   <Input
                     value={values.source}
                     onChange={(e) => handleChange('source', e.target.value)}
                     placeholder="google, newsletter"
-                    className="bg-gray-800/50 border-gray-700"
+                    className="bg-muted/50 border-input"
                   />
-                  <p className="text-xs text-gray-500">utm_source: The referrer (e.g. google, newsletter)</p>
+                  <p className="text-xs text-muted-foreground">utm_source: The referrer (e.g. google, newsletter)</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Campaign Medium *</label>
+                  <label className="text-sm font-medium text-muted-foreground">Campaign Medium *</label>
                   <Input
                     value={values.medium}
                     onChange={(e) => handleChange('medium', e.target.value)}
                     placeholder="cpc, banner, email"
-                    className="bg-gray-800/50 border-gray-700"
+                    className="bg-muted/50 border-input"
                   />
-                  <p className="text-xs text-gray-500">utm_medium: Marketing medium (e.g. cpc, banner, email)</p>
+                  <p className="text-xs text-muted-foreground">utm_medium: Marketing medium (e.g. cpc, banner, email)</p>
                 </div>
              </div>
              
              <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Campaign Name *</label>
+                  <label className="text-sm font-medium text-muted-foreground">Campaign Name *</label>
                   <Input
                     value={values.campaign}
                     onChange={(e) => handleChange('campaign', e.target.value)}
                     placeholder="spring_sale"
-                    className="bg-gray-800/50 border-gray-700"
+                    className="bg-muted/50 border-input"
                   />
-                  <p className="text-xs text-gray-500">utm_campaign: Product, promo code, or slogan</p>
+                  <p className="text-xs text-muted-foreground">utm_campaign: Product, promo code, or slogan</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Campaign Term</label>
+                  <label className="text-sm font-medium text-muted-foreground">Campaign Term</label>
                   <Input
                     value={values.term}
                     onChange={(e) => handleChange('term', e.target.value)}
                     placeholder="running+shoes"
-                    className="bg-gray-800/50 border-gray-700"
+                    className="bg-muted/50 border-input"
                   />
-                   <p className="text-xs text-gray-500">utm_term: Identify the paid keywords</p>
+                   <p className="text-xs text-muted-foreground">utm_term: Identify the paid keywords</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Campaign Content</label>
+                  <label className="text-sm font-medium text-muted-foreground">Campaign Content</label>
                   <Input
                     value={values.content}
                     onChange={(e) => handleChange('content', e.target.value)}
                     placeholder="logolink"
-                    className="bg-gray-800/50 border-gray-700"
+                    className="bg-muted/50 border-input"
                   />
-                  <p className="text-xs text-gray-500">utm_content: Use to differentiate ads</p>
+                  <p className="text-xs text-muted-foreground">utm_content: Use to differentiate ads</p>
                 </div>
             </div>
           </Card>
@@ -162,8 +162,8 @@ export const UtmBuilder = () => {
 
         {/* Output */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-           <div className="flex items-center justify-between p-4 border-b border-gray-800/50 bg-gray-900/20 rounded-t-lg">
-             <h3 className="text-sm font-medium text-gray-400">Generated URL</h3>
+           <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-lg">
+             <h3 className="text-sm font-medium text-muted-foreground">Generated URL</h3>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={handleReset}>
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -175,12 +175,12 @@ export const UtmBuilder = () => {
               </Button>
             </div>
           </div>
-          <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-950 border-gray-800 rounded-b-lg rounded-t-none border-x border-b">
+          <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-background border-border rounded-b-lg rounded-t-none border-x border-b">
              <Card className="w-full p-6 bg-transparent border-none break-all text-center shadow-none">
                {output ? (
-                   <span className="text-lg font-mono text-blue-400 select-all">{output}</span>
+                   <span className="text-lg font-mono text-primary select-all">{output}</span>
                ) : (
-                   <span className="text-gray-500 italic">Enter website URL and parameters to generate a link</span>
+                   <span className="text-muted-foreground italic">Enter website URL and parameters to generate a link</span>
                )}
              </Card>
           </div>

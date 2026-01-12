@@ -71,63 +71,63 @@ export const OpenGraphGenerator = () => {
         {/* Inputs */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-lg text-white">General Info</h3>
+            <h3 className="font-semibold text-lg text-foreground">General Info</h3>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Site Name</label>
+              <label className="text-sm font-medium text-muted-foreground">Site Name</label>
               <Input
                 value={values.siteName}
                 onChange={(e) => handleChange('siteName', e.target.value)}
                 placeholder="e.g. My Brand"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
              <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Page Title</label>
+              <label className="text-sm font-medium text-muted-foreground">Page Title</label>
               <Input
                 value={values.title}
                 onChange={(e) => handleChange('title', e.target.value)}
                 placeholder="e.g. Amazing Content"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Page URL</label>
+              <label className="text-sm font-medium text-muted-foreground">Page URL</label>
               <Input
                 value={values.url}
                 onChange={(e) => handleChange('url', e.target.value)}
                 placeholder="https://example.com/page"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Description</label>
+              <label className="text-sm font-medium text-muted-foreground">Description</label>
               <textarea
                 value={values.description}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Description shown in social previews..."
-                className="w-full h-24 p-3 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm resize-none"
+                className="w-full h-24 p-3 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none"
               />
             </div>
           </Card>
 
           <Card className="p-4 space-y-4">
-             <h3 className="font-semibold text-lg text-white">Media & Type</h3>
+             <h3 className="font-semibold text-lg text-foreground">Media & Type</h3>
              <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Image URL</label>
+              <label className="text-sm font-medium text-muted-foreground">Image URL</label>
               <Input
                 value={values.image}
                 onChange={(e) => handleChange('image', e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Content Type</label>
+                  <label className="text-sm font-medium text-muted-foreground">Content Type</label>
                   <select
                     value={values.type}
                     onChange={(e) => handleChange('type', e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                    className="w-full p-2.5 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                   >
                     <option value="website">Website</option>
                     <option value="article">Article</option>
@@ -138,11 +138,11 @@ export const OpenGraphGenerator = () => {
                   </select>
                 </div>
                  <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Twitter Card</label>
+                  <label className="text-sm font-medium text-muted-foreground">Twitter Card</label>
                   <select
                     value={values.cardType}
                     onChange={(e) => handleChange('cardType', e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                    className="w-full p-2.5 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                   >
                     <option value="summary">Summary</option>
                     <option value="summary_large_image">Summary Large Image</option>
@@ -156,8 +156,8 @@ export const OpenGraphGenerator = () => {
 
         {/* Output */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-           <div className="flex items-center justify-between p-4 border-b border-gray-800/50 bg-gray-900/20 rounded-t-lg">
-            <h3 className="text-sm font-medium text-gray-400">Generated HTML</h3>
+           <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-lg">
+             <h3 className="text-sm font-medium text-muted-foreground">Generated HTML</h3>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={handleReset}>
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -170,8 +170,8 @@ export const OpenGraphGenerator = () => {
             </div>
           </div>
           <div className="flex-1 p-0 overflow-hidden">
-             <Card className="h-full p-0 overflow-hidden bg-gray-950 border-gray-800 rounded-b-lg rounded-t-none">
-               <pre className="p-4 text-sm font-mono text-gray-300 whitespace-pre-wrap overflow-auto h-full language-html">
+             <Card className="h-full p-0 overflow-hidden bg-background border-border rounded-b-lg rounded-t-none">
+               <pre className="p-4 text-sm font-mono text-foreground whitespace-pre-wrap overflow-auto h-full language-html">
                   {output}
                </pre>
              </Card>

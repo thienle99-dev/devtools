@@ -125,45 +125,45 @@ export const OtpGenerator = () => {
         {/* Add Account Form */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-lg text-white flex items-center">
-                <Plus className="w-5 h-5 mr-2 text-blue-400" />
+            <h3 className="font-semibold text-lg text-foreground flex items-center">
+                <Plus className="w-5 h-5 mr-2 text-primary" />
                 Add Account
             </h3>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Account Name *</label>
+              <label className="text-sm font-medium text-muted-foreground">Account Name *</label>
               <Input
                 value={newAccount.name}
                 onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
                 placeholder="e.g. Google: user@example.com"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
              <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Secret Key (Base32) *</label>
+              <label className="text-sm font-medium text-muted-foreground">Secret Key (Base32) *</label>
               <Input
                 value={newAccount.secret}
                 onChange={(e) => setNewAccount({ ...newAccount, secret: e.target.value })}
                 placeholder="JBSWY3DPEHPK3PXP"
-                className="bg-gray-800/50 border-gray-700 font-mono"
+                className="bg-muted/50 border-input font-mono"
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Issuer (Optional)</label>
+                    <label className="text-sm font-medium text-muted-foreground">Issuer (Optional)</label>
                     <Input
                         value={newAccount.issuer}
                         onChange={(e) => setNewAccount({ ...newAccount, issuer: e.target.value })}
                         placeholder="Service Name"
-                        className="bg-gray-800/50 border-gray-700"
+                        className="bg-muted/50 border-input"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Digits</label>
+                    <label className="text-sm font-medium text-muted-foreground">Digits</label>
                     <select
                         value={newAccount.digits}
                         onChange={(e) => setNewAccount({ ...newAccount, digits: parseInt(e.target.value) })}
-                        className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                        className="w-full p-2.5 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                     >
                         <option value={6}>6</option>
                         <option value={8}>8</option>
@@ -171,7 +171,7 @@ export const OtpGenerator = () => {
                 </div>
             </div>
 
-            <Button onClick={handleAddAccount} className="w-full bg-blue-600 hover:bg-blue-500 text-white">
+            <Button onClick={handleAddAccount} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                 Add to List
             </Button>
           </Card>
@@ -179,41 +179,41 @@ export const OtpGenerator = () => {
 
         {/* Codes List */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-           <div className="flex items-center justify-between p-4 border-b border-gray-800/50 bg-gray-900/20 rounded-t-lg">
+           <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-lg">
              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-400">Active Codes ({timeLeft}s)</h3>
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-muted-foreground">Active Codes ({timeLeft}s)</h3>
              </div>
-             <div className="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+             <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div 
-                    className="h-full bg-blue-500 transition-all duration-1000 ease-linear"
+                    className="h-full bg-primary transition-all duration-1000 ease-linear"
                     style={{ width: `${progress}%` }}
                 />
              </div>
           </div>
           
-          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar bg-gray-950 border-gray-800 rounded-b-lg rounded-t-none border-x border-b">
+          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar bg-background border-border rounded-b-lg rounded-t-none border-x border-b">
              {accounts.length === 0 ? (
-                 <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
+                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-4">
                      <Key className="w-12 h-12 opacity-20" />
                      <p className="italic">No accounts added yet</p>
                  </div>
              ) : (
                  <div className="grid gap-4">
                      {accounts.map(account => (
-                         <Card key={account.id} className="p-4 flex justify-between items-center group hover:bg-gray-900/50 transition-colors">
+                         <Card key={account.id} className="p-4 flex justify-between items-center group hover:bg-muted/50 transition-colors">
                              <div className="flex flex-col">
-                                 <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{account.issuer || 'Account'}</span>
-                                 <span className="text-sm font-medium text-gray-300">{account.name}</span>
-                                 <div className="mt-1 font-mono text-2xl font-bold text-blue-400 tracking-widest">
+                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{account.issuer || 'Account'}</span>
+                                 <span className="text-sm font-medium text-foreground">{account.name}</span>
+                                 <div className="mt-1 font-mono text-2xl font-bold text-primary tracking-widest">
                                      {codes[account.id] ? codes[account.id].replace(/(.{3})/g, '$1 ').trim() : '---'}
                                  </div>
                              </div>
                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <Button variant="ghost" size="sm" onClick={() => copyCode(codes[account.id])} className="hover:text-blue-400">
+                                 <Button variant="ghost" size="sm" onClick={() => copyCode(codes[account.id])} className="hover:text-primary">
                                      <Copy className="w-4 h-4" />
                                  </Button>
-                                 <Button variant="ghost" size="sm" onClick={() => handleRemoveAccount(account.id)} className="hover:text-red-400 text-gray-600">
+                                 <Button variant="ghost" size="sm" onClick={() => handleRemoveAccount(account.id)} className="hover:text-destructive text-muted-foreground">
                                      <Trash2 className="w-4 h-4" />
                                  </Button>
                              </div>

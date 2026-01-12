@@ -60,12 +60,12 @@ export const SafelinkDecoder = () => {
             case 'p': description = 'Payload'; break;
         }
         return (
-            <div key={key} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
+            <div key={key} className="flex justify-between items-center py-2 border-b border-border last:border-0">
                 <div className="flex flex-col">
-                    <span className="font-mono text-blue-400 text-sm">{key}</span>
-                    {description && <span className="text-xs text-gray-500">{description}</span>}
+                    <span className="font-mono text-blue-600 dark:text-blue-400 text-sm">{key}</span>
+                    {description && <span className="text-xs text-muted-foreground">{description}</span>}
                 </div>
-                <span className="font-mono text-gray-300 text-sm break-all max-w-[70%] text-right">{value}</span>
+                <span className="font-mono text-foreground text-sm break-all max-w-[70%] text-right">{value}</span>
             </div>
         );
     };
@@ -78,7 +78,7 @@ export const SafelinkDecoder = () => {
         >
             <div className="max-w-4xl mx-auto space-y-6 pt-6 px-4">
                 <Card className="p-4 space-y-4">
-                    <label className="text-sm font-medium text-gray-400">Safe Link URL</label>
+                    <label className="text-sm font-medium text-muted-foreground">Safe Link URL</label>
                     <Input
                         value={input}
                         onChange={(e) => handleDecode(e.target.value)}
@@ -95,10 +95,10 @@ export const SafelinkDecoder = () => {
                             <ArrowRight className="w-8 h-8 rotate-90 md:rotate-0" />
                         </div>
 
-                        <Card className="p-6 space-y-4 border-blue-500/30 bg-blue-500/5">
+                        <Card className="p-6 space-y-4 border-blue-500/30 bg-blue-500/10">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-blue-100 flex items-center gap-2">
-                                    <ShieldCheck className="w-5 h-5 text-blue-400" />
+                                <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-100 flex items-center gap-2">
+                                    <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                     Original URL
                                 </h3>
                                 <div className="flex gap-2">
@@ -111,14 +111,14 @@ export const SafelinkDecoder = () => {
                                 </div>
                             </div>
                             
-                            <div className="p-4 bg-black/30 rounded-lg border border-gray-800/50 break-all font-mono text-lg text-green-400">
+                            <div className="p-4 bg-muted rounded-lg border border-border break-all font-mono text-lg text-green-600 dark:text-green-400">
                                 {decoded.url}
                             </div>
                         </Card>
 
                         {Object.keys(decoded.params).length > 0 && (
                             <Card className="p-4 space-y-2 relative overflow-hidden">
-                                <h4 className="text-sm font-medium text-gray-400 uppercase tracking-widest mb-4">Tracking Parameters</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-4">Tracking Parameters</h4>
                                 <div className="space-y-1">
                                     {Object.entries(decoded.params).map(([key, value]) => renderParamDescription(key, value))}
                                 </div>
@@ -128,7 +128,7 @@ export const SafelinkDecoder = () => {
                 )}
                 
                 {!decoded && input && (
-                    <div className="text-center text-red-400 p-4 animate-in fade-in">
+                    <div className="text-center text-destructive p-4 animate-in fade-in">
                         Unable to decode URL. Ensure it is a valid Outlook Safe Link.
                     </div>
                 )}

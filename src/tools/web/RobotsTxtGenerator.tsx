@@ -98,40 +98,40 @@ export const RobotsTxtGenerator = () => {
         {/* Configuration */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <Card className="p-4 space-y-4">
-             <h3 className="font-semibold text-lg text-white">Sitemap</h3>
+             <h3 className="font-semibold text-lg text-foreground">Sitemap</h3>
              <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Sitemap URL</label>
+              <label className="text-sm font-medium text-muted-foreground">Sitemap URL</label>
               <Input
                 value={siemap}
                 onChange={(e) => setSitemap(e.target.value)}
                 placeholder="https://example.com/sitemap.xml"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
           </Card>
 
           {rules.map((rule, ruleIndex) => (
             <Card key={ruleIndex} className="p-4 space-y-4 relative group">
-              <div className="flex justify-between items-center border-b border-gray-800 pb-2 mb-2">
-                 <h3 className="font-semibold text-lg text-white">Rule Config</h3>
+              <div className="flex justify-between items-center border-b border-border pb-2 mb-2">
+                 <h3 className="font-semibold text-lg text-foreground">Rule Config</h3>
                  {rules.length > 1 && (
-                     <Button variant="ghost" size="sm" onClick={() => removeRule(ruleIndex)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                     <Button variant="ghost" size="sm" onClick={() => removeRule(ruleIndex)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                          <Trash2 className="w-4 h-4" />
                      </Button>
                  )}
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400">User Agent</label>
+                <label className="text-sm font-medium text-muted-foreground">User Agent</label>
                 <div className="flex gap-2">
                     <Input
                         value={rule.userAgent}
                         onChange={(e) => updateRule(ruleIndex, 'userAgent', e.target.value)}
                         placeholder="*"
-                        className="bg-gray-800/50 border-gray-700"
+                        className="bg-muted/50 border-input"
                     />
                     <select 
-                        className="bg-gray-800/50 border border-gray-700 rounded-lg px-2 text-sm text-gray-300"
+                        className="bg-muted/50 border border-input rounded-lg px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                         onChange={(e) => updateRule(ruleIndex, 'userAgent', e.target.value)}
                         value={rule.userAgent}
                     >
@@ -149,7 +149,7 @@ export const RobotsTxtGenerator = () => {
               {/* Allow Paths */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-green-400">Allow Paths</label>
+                    <label className="text-sm font-medium text-green-600 dark:text-green-400">Allow Paths</label>
                     <Button variant="ghost" size="sm" onClick={() => addPath(ruleIndex, 'allow')} className="h-6 px-2 text-xs">
                         <Plus className="w-3 h-3 mr-1" /> Add
                     </Button>
@@ -159,9 +159,9 @@ export const RobotsTxtGenerator = () => {
                         <Input
                             value={path}
                             onChange={(e) => updatePath(ruleIndex, 'allow', pathIndex, e.target.value)}
-                            className="bg-gray-800/50 border-gray-700 h-8 text-sm"
+                            className="bg-muted/50 border-input h-8 text-sm"
                         />
-                         <Button variant="ghost" size="sm" onClick={() => removePath(ruleIndex, 'allow', pathIndex)} className="h-8 w-8 p-0 text-gray-500 hover:text-red-400">
+                         <Button variant="ghost" size="sm" onClick={() => removePath(ruleIndex, 'allow', pathIndex)} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
                              <Trash2 className="w-3 h-3" />
                          </Button>
                     </div>
@@ -171,7 +171,7 @@ export const RobotsTxtGenerator = () => {
               {/* Disallow Paths */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-red-400">Disallow Paths</label>
+                    <label className="text-sm font-medium text-destructive">Disallow Paths</label>
                     <Button variant="ghost" size="sm" onClick={() => addPath(ruleIndex, 'disallow')} className="h-6 px-2 text-xs">
                         <Plus className="w-3 h-3 mr-1" /> Add
                     </Button>
@@ -181,9 +181,9 @@ export const RobotsTxtGenerator = () => {
                         <Input
                             value={path}
                             onChange={(e) => updatePath(ruleIndex, 'disallow', pathIndex, e.target.value)}
-                            className="bg-gray-800/50 border-gray-700 h-8 text-sm"
+                            className="bg-muted/50 border-input h-8 text-sm"
                         />
-                         <Button variant="ghost" size="sm" onClick={() => removePath(ruleIndex, 'disallow', pathIndex)} className="h-8 w-8 p-0 text-gray-500 hover:text-red-400">
+                         <Button variant="ghost" size="sm" onClick={() => removePath(ruleIndex, 'disallow', pathIndex)} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
                              <Trash2 className="w-3 h-3" />
                          </Button>
                     </div>
@@ -192,15 +192,15 @@ export const RobotsTxtGenerator = () => {
             </Card>
           ))}
           
-          <Button variant="outline" onClick={addRule} className="w-full border-dashed border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white">
+          <Button variant="outline" onClick={addRule} className="w-full border-dashed border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground">
             <Plus className="w-4 h-4 mr-2" /> Add Another User Agent Rule
           </Button>
         </div>
 
         {/* Output */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-           <div className="flex items-center justify-between p-4 border-b border-gray-800/50 bg-gray-900/20 rounded-t-lg">
-            <h3 className="text-sm font-medium text-gray-400">Generated robots.txt</h3>
+           <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-lg">
+            <h3 className="text-sm font-medium text-muted-foreground">Generated robots.txt</h3>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={handleReset}>
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -213,8 +213,8 @@ export const RobotsTxtGenerator = () => {
             </div>
           </div>
           <div className="flex-1 p-0 overflow-hidden">
-             <Card className="h-full p-0 overflow-hidden bg-gray-950 border-gray-800 rounded-b-lg rounded-t-none">
-               <pre className="p-4 text-sm font-mono text-gray-300 whitespace-pre-wrap overflow-auto h-full language-text">
+             <Card className="h-full p-0 overflow-hidden bg-background border-border rounded-b-lg rounded-t-none">
+               <pre className="p-4 text-sm font-mono text-foreground whitespace-pre-wrap overflow-auto h-full language-text">
                   {output}
                </pre>
              </Card>

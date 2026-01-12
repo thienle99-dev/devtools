@@ -65,73 +65,73 @@ export const MetaTagsGenerator = () => {
         {/* Inputs */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-lg text-white">Basic Information</h3>
+            <h3 className="font-semibold text-lg text-foreground">Basic Information</h3>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Page Title</label>
+              <label className="text-sm font-medium text-muted-foreground">Page Title</label>
               <Input
                 value={values.title}
                 onChange={(e) => handleChange('title', e.target.value)}
                 placeholder="e.g. My Awesome Website"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Description</label>
+              <label className="text-sm font-medium text-muted-foreground">Description</label>
               <textarea
                 value={values.description}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Brief description of your page content..."
-                className="w-full h-24 p-3 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm resize-none"
+                className="w-full h-24 p-3 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Keywords (comma separated)</label>
+              <label className="text-sm font-medium text-muted-foreground">Keywords (comma separated)</label>
               <Input
                 value={values.keywords}
                 onChange={(e) => handleChange('keywords', e.target.value)}
                 placeholder="e.g. react, tools, generator"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
              <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-400">Author</label>
+              <label className="text-sm font-medium text-muted-foreground">Author</label>
               <Input
                 value={values.author}
                 onChange={(e) => handleChange('author', e.target.value)}
                 placeholder="e.g. John Doe"
-                className="bg-gray-800/50 border-gray-700"
+                className="bg-muted/50 border-input"
               />
             </div>
           </Card>
 
           <Card className="p-4 space-y-4">
-             <h3 className="font-semibold text-lg text-white">Advanced</h3>
+             <h3 className="font-semibold text-lg text-foreground">Advanced</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Viewport</label>
+                  <label className="text-sm font-medium text-muted-foreground">Viewport</label>
                   <Input
                     value={values.viewport}
                     onChange={(e) => handleChange('viewport', e.target.value)}
-                    className="bg-gray-800/50 border-gray-700"
+                    className="bg-muted/50 border-input"
                   />
                 </div>
                  <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Charset</label>
+                  <label className="text-sm font-medium text-muted-foreground">Charset</label>
                   <select
                     value={values.charset}
                     onChange={(e) => handleChange('charset', e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                    className="w-full p-2.5 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                   >
                     <option value="UTF-8">UTF-8</option>
                     <option value="ISO-8859-1">ISO-8859-1</option>
                   </select>
                 </div>
                  <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-400">Robots</label>
+                  <label className="text-sm font-medium text-muted-foreground">Robots</label>
                   <select
                     value={values.robots}
                     onChange={(e) => handleChange('robots', e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-gray-800/50 border border-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                    className="w-full p-2.5 rounded-lg bg-muted/50 border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                   >
                     <option value="index, follow">Index, Follow</option>
                     <option value="index, nofollow">Index, No Follow</option>
@@ -145,8 +145,8 @@ export const MetaTagsGenerator = () => {
 
         {/* Output */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-           <div className="flex items-center justify-between p-4 border-b border-gray-800/50 bg-gray-900/20 rounded-t-lg">
-            <h3 className="text-sm font-medium text-gray-400">Generated HTML</h3>
+           <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-lg">
+             <h3 className="text-sm font-medium text-muted-foreground">Generated HTML</h3>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={handleReset}>
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -159,8 +159,8 @@ export const MetaTagsGenerator = () => {
             </div>
           </div>
           <div className="flex-1 p-0 overflow-hidden">
-             <Card className="h-full p-0 overflow-hidden bg-gray-950 border-gray-800 rounded-b-lg rounded-t-none">
-               <pre className="p-4 text-sm font-mono text-gray-300 whitespace-pre-wrap overflow-auto h-full language-html">
+             <Card className="h-full p-0 overflow-hidden bg-background border-border rounded-b-lg rounded-t-none">
+               <pre className="p-4 text-sm font-mono text-foreground whitespace-pre-wrap overflow-auto h-full language-html">
                   {output}
                </pre>
              </Card>
