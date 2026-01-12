@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, X, Copy } from 'lucide-react';
+import { Check, X, Copy, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { CanvasPreview } from './CanvasPreview';
@@ -9,13 +9,15 @@ import { generateFinalImage } from '../utils/exportUtils';
 import { toast } from 'sonner';
 
 interface PreviewSectionProps {
-    canvasRef: React.RefObject<CanvasPreviewHandle>;
+    canvasRef: React.RefObject<CanvasPreviewHandle | null>;
     onHistoryChange: (undo: boolean, redo: boolean, count: number) => void;
+    onZoomChange?: (zoom: number) => void;
 }
 
 export const PreviewSection = ({
     canvasRef,
-    onHistoryChange
+    onHistoryChange,
+    onZoomChange
 }: PreviewSectionProps): JSX.Element => {
     const {
         currentScreenshot,
@@ -80,9 +82,10 @@ export const PreviewSection = ({
             setShowCopyFlash(true);
             toast.success('Copied to clipboard!', {
                 icon: <Copy className="w-4 h-4" />,
+                duration: 2000,
             });
 
-            setTimeout(() => setShowCopyFlash(false), 500);
+            setTimeout(() => setShowCopyFlash(false), 1000);
         } catch (error) {
             console.error('Copy failed:', error);
             toast.error('Failed to copy to clipboard');
@@ -93,10 +96,47 @@ export const PreviewSection = ({
 
     if (!currentScreenshot) {
         return (
-            <div className="flex items-center justify-center h-full min-h-[400px] text-foreground-muted">
-                <div className="text-center">
-                    <p className="text-lg">No screenshot captured yet</p>
-                    <p className="text-sm mt-2">Capture a screenshot to see the preview</p>
+            <div className="flex items-center justify-center h-full min-h-[400px]">
+                <div className="text-center space-y-6 max-w-md mx-auto p-8">
+                    {/* Icon with glow */}
+                    <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl blur-3xl opacity-20 animate-pulse" />
+                        <div className="relative w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/30 flex items-center justify-center backdrop-blur-sm">
+                            <ImageIcon 
+                                className="w-12 h-12"
+                                style={{ color: '#818cf8' }}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Text */}
+                    <div className="space-y-2">
+                        <h3 
+                            className="text-2xl font-bold"
+                            style={{ color: 'var(--color-text-primary)' }}
+                        >
+                            No Screenshot Yet
+                        </h3>
+                        <p 
+                            className="text-sm"
+                            style={{ color: 'var(--color-text-muted)' }}
+                        >
+                            Capture a screenshot to start editing and enhancing
+                        </p>
+                    </div>
+                    
+                    {/* Hint badges */}
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <span className="px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400">
+                            📸 Multiple modes
+                        </span>
+                        <span className="px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs font-bold text-purple-400">
+                            ✨ Auto enhance
+                        </span>
+                        <span className="px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-xs font-bold text-pink-400">
+                            🎨 Backgrounds
+                        </span>
+                    </div>
                 </div>
             </div>
         );
@@ -134,52 +174,109 @@ export const PreviewSection = ({
     };
 
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            {/* Canvas Preview Area */}
+        <div 
+            style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+            }}
+        >
+            {/* Canvas Preview Area - Full height */}
             <div
-                className="flex-1 overflow-hidden relative"
                 onDoubleClick={handleDoubleClickCopy}
-                style={{ cursor: isCopying ? 'wait' : 'default' }}
+                style={{ 
+                    width: '100%',
+                    height: '100%',
+                    position: 'relative',
+                    cursor: isCopying ? 'wait' : 'default',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}
             >
                 <CanvasPreview
                     ref={canvasRef}
                     onHistoryChange={onHistoryChange}
+                    onZoomChange={onZoomChange}
                 />
 
-                {/* Copy Flash Feedback */}
+                {/* Copy Flash Feedback - Premium */}
                 {showCopyFlash && (
-                    <div className="absolute inset-0 bg-indigo-500/20 pointer-events-none animate-pulse z-50" />
+                    <>
+                        {/* Flash overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 pointer-events-none animate-pulse z-50" />
+                        
+                        {/* Success badge */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 animate-in zoom-in-95 duration-300">
+                            <div className="relative">
+                                {/* Glow effect */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl blur-2xl opacity-50 animate-pulse" />
+                                
+                                {/* Badge content */}
+                                <div className="relative px-8 py-6 rounded-3xl bg-glass-panel border-2 border-indigo-500 backdrop-blur-xl shadow-2xl shadow-indigo-500/50">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/50">
+                                            <Check className="w-8 h-8 text-white" />
+                                        </div>
+                                        <span className="text-lg font-bold text-indigo-400">
+                                            Copied!
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
                 )}
 
                 {/* Double-Click Hint (show when not cropping and not copying) */}
                 {!isCropping && !isCopying && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-sm text-white text-sm rounded-lg border border-white/10 pointer-events-none opacity-60 hover:opacity-100 transition-opacity">
-                        💡 Double-click to copy
+                    <div 
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 backdrop-blur-xl text-sm rounded-2xl pointer-events-none opacity-70 hover:opacity-100 transition-all duration-300 border-2"
+                        style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            color: 'var(--color-text-primary)',
+                            borderColor: 'rgba(99, 102, 241, 0.3)',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                        }}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">💡</span>
+                            <span className="font-semibold">Double-click to copy</span>
+                        </div>
                     </div>
                 )}
 
-                {/* Crop Controls - Keep these overlaying the canvas */}
+                {/* Crop Controls - Premium overlay */}
                 {isCropping && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-glass-panel p-3 rounded-lg border border-border-glass shadow-lg z-10">
-                        <Button
-                            variant="primary"
-                            onClick={handleApplyCrop}
-                            disabled={!cropBounds}
-                            size="sm"
-                            className="gap-2"
-                        >
-                            <Check className="w-4 h-4" />
-                            Apply Crop
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={handleCancelCrop}
-                            size="sm"
-                            className="gap-2"
-                        >
-                            <X className="w-4 h-4" />
-                            Cancel
-                        </Button>
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 animate-in slide-in-from-bottom-4 duration-300">
+                        {/* Background with blur and glow */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl blur-xl" />
+                        
+                        <div className="relative flex gap-3 bg-glass-panel p-4 rounded-2xl border-2 border-border-glass backdrop-blur-xl shadow-2xl shadow-indigo-500/30">
+                            <Button
+                                variant="primary"
+                                onClick={handleApplyCrop}
+                                disabled={!cropBounds}
+                                size="sm"
+                                className="gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            >
+                                <Check className="w-4 h-4" />
+                                Apply Crop
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={handleCancelCrop}
+                                size="sm"
+                                className="gap-2 px-6 py-2.5 bg-glass-panel hover:bg-glass-panel-light border-2 border-border-glass hover:border-indigo-500/30 font-bold rounded-xl transition-all duration-200 hover:scale-105"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                                <X className="w-4 h-4" />
+                                Cancel
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

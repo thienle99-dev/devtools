@@ -1,31 +1,31 @@
-import forge from 'node-forge';
+import * as forge from 'node-forge';
 
-export const maskText = (text: string, options: { 
-    maskChar?: string, 
-    visibleStart?: number, 
+export const maskText = (text: string, options: {
+    maskChar?: string,
+    visibleStart?: number,
     visibleEnd?: number,
     maskLength?: number
 } = {}) => {
     const { maskChar = '*', visibleStart = 0, visibleEnd = 0, maskLength } = options;
-    
+
     if (text.length <= visibleStart + visibleEnd) return text;
-    
+
     const start = text.substring(0, visibleStart);
     const end = text.substring(text.length - visibleEnd);
-    const middle = maskLength !== undefined 
-        ? maskChar.repeat(maskLength) 
+    const middle = maskLength !== undefined
+        ? maskChar.repeat(maskLength)
         : maskChar.repeat(text.length - visibleStart - visibleEnd);
-        
+
     return start + middle + end;
 };
 
 export const maskJson = (json: any, fields: string[]): any => {
     if (typeof json !== 'object' || json === null) return json;
-    
+
     if (Array.isArray(json)) {
         return json.map(item => maskJson(item, fields));
     }
-    
+
     const result = { ...json };
     for (const key in result) {
         if (fields.includes(key)) {
@@ -51,10 +51,10 @@ export const scanSecrets = (text: string) => {
         { name: 'Private Key', regex: /-----BEGIN [A-Z ]+ PRIVATE KEY-----/g },
         { name: 'Password in JSON', regex: /"pass(word)?"\s*:\s*"([^"]+)"/gi }
     ];
-    
+
     const matches: { name: string, found: string, line: number }[] = [];
     const lines = text.split('\n');
-    
+
     lines.forEach((line, index) => {
         rules.forEach(rule => {
             const ruleMatches = line.match(rule.regex);
@@ -69,7 +69,7 @@ export const scanSecrets = (text: string) => {
             }
         });
     });
-    
+
     return matches;
 };
 
@@ -104,35 +104,35 @@ export const convertCertificate = (input: string, toFormat: 'PEM' | 'DER' | 'BAS
         return `-----BEGIN CERTIFICATE-----\n${input}\n-----END CERTIFICATE-----`;
     }
     // DER would usually be binary, but we return a hex/base64 representation for tools
-    return btoa(input); 
+    return btoa(input);
 };
 
-export const generateCsr = (options: { 
-    commonName: string, 
-    organization?: string, 
-    country?: string, 
-    state?: string, 
+export const generateCsr = (options: {
+    commonName: string,
+    organization?: string,
+    country?: string,
+    state?: string,
     locality?: string,
-    keySize?: number 
+    keySize?: number
 }) => {
     const keys = forge.pki.rsa.generateKeyPair(options.keySize || 2048);
     const csr = forge.pki.createCertificationRequest();
     csr.publicKey = keys.publicKey;
-    
+
     const attrs = [
         { name: 'commonName', value: options.commonName },
     ];
-    
+
     if (options.country) attrs.push({ name: 'countryName', value: options.country });
     if (options.state) attrs.push({ name: 'st', value: options.state });
     if (options.locality) attrs.push({ name: 'localityName', value: options.locality });
     if (options.organization) attrs.push({ name: 'organizationName', value: options.organization });
 
     csr.setSubject(attrs);
-    
+
     // sign certification request
     csr.sign(keys.privateKey);
-    
+
     return {
         csr: forge.pki.certificationRequestToPem(csr),
         privateKey: forge.pki.privateKeyToPem(keys.privateKey),

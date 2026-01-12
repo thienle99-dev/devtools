@@ -38,9 +38,10 @@ export interface CanvasPreviewHandle {
 
 interface CanvasPreviewProps {
     onHistoryChange?: (canUndo: boolean, canRedo: boolean, count: number) => void;
+    onZoomChange?: (zoom: number) => void;
 }
 
-export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(({ onHistoryChange }, ref) => {
+export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>(({ onHistoryChange, onZoomChange }, ref) => {
     const {
         currentScreenshot,
         autoBalance,
@@ -68,6 +69,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const fabricCanvasRef = useRef<Canvas | null>(null);
     const [canvasScale, setCanvasScale] = useState(1);
     const [baseZoom, setBaseZoom] = useState(1); // Zoom level applied on top of fit-to-screen
+
+    // Sync zoom changes
+    useEffect(() => {
+        onZoomChange?.(baseZoom);
+    }, [baseZoom, onZoomChange]);
 
     // Undo/Redo stacks
     const undoStackRef = useRef<string[]>([]);
@@ -203,18 +209,44 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const updateCanvasScale = useCallback((imgWidth: number, imgHeight: number) => {
         if (!canvasContainerRef.current) return;
         const container = canvasContainerRef.current;
-        // Padding for the container
-        const containerWidth = container.clientWidth - 48;
-        const containerHeight = container.clientHeight - 48;
+        
+        // Get actual container dimensions
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
 
-        if (containerWidth <= 0 || containerHeight <= 0) return;
+        console.log('🎨 Canvas Scale Update:', {
+            imgWidth,
+            imgHeight,
+            containerWidth,
+            containerHeight,
+            containerRect: container.getBoundingClientRect()
+        });
 
-        // Calculate fit scale
-        const scaleX = containerWidth / imgWidth;
-        const scaleY = containerHeight / imgHeight;
-        // Allow upscaling for small images to fit container
+        if (containerWidth <= 0 || containerHeight <= 0) {
+            console.warn('❌ Invalid container dimensions');
+            return;
+        }
+
+        // Use 90% of available space for padding/margins
+        const availableWidth = containerWidth * 0.90;
+        const availableHeight = containerHeight * 0.90;
+
+        // Calculate fit scale - maximize canvas size
+        const scaleX = availableWidth / imgWidth;
+        const scaleY = availableHeight / imgHeight;
         const fitScale = Math.min(scaleX, scaleY);
 
+        console.log('✅ New scale:', {
+            scaleX,
+            scaleY,
+            fitScale,
+            resultSize: {
+                width: Math.round(imgWidth * fitScale),
+                height: Math.round(imgHeight * fitScale)
+            }
+        });
+
+        // Always update scale for immediate feedback
         setCanvasScale(fitScale);
     }, []);
 
@@ -237,13 +269,16 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         };
 
         const resizeObserver = new ResizeObserver(() => {
+            // Debounce with requestAnimationFrame for smooth updates
             requestAnimationFrame(updateScale);
         });
 
-        // Initial checks to allow layout to settle
+        // Multiple initial checks to ensure proper scaling after layout
         requestAnimationFrame(updateScale);
-        const t1 = setTimeout(updateScale, 100);
-        const t2 = setTimeout(updateScale, 500);
+        const t1 = setTimeout(updateScale, 50);
+        const t2 = setTimeout(updateScale, 200);
+        const t3 = setTimeout(updateScale, 500);
+        const t4 = setTimeout(updateScale, 1000); // Extra delay for panel animations
 
         resizeObserver.observe(canvasContainerRef.current);
 
@@ -251,6 +286,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             resizeObserver.disconnect();
             clearTimeout(t1);
             clearTimeout(t2);
+            clearTimeout(t3);
+            clearTimeout(t4);
         };
     }, [updateCanvasScale]);
 
@@ -286,22 +323,78 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
             // Handle promise or callback based on Fabric version
             try {
-                const img = await FabricImage.fromURL(baseDataUrl, { crossOrigin: 'anonymous' });
+                const img = await FabricImage.fromURL(baseDataUrl, { 
+                    crossOrigin: 'anonymous'
+                });
+                
+                console.log('📸 Image loaded:', {
+                    width: img.width,
+                    height: img.height,
+                    scaleX: img.scaleX,
+                    scaleY: img.scaleY
+                });
+                
                 setupCanvasImage(img);
             } catch (e) {
-                console.error('Error loading image into fabric:', e);
+                console.error('❌ Error loading image into fabric:', e);
             }
         };
 
         const setupCanvasImage = (img: FabricImage) => {
             const canvas = fabricCanvasRef.current!;
-            if (!img.width || !img.height) return;
+            if (!img.width || !img.height) {
+                console.error('❌ Image has no dimensions');
+                return;
+            }
 
-            canvas.setDimensions({ width: img.width, height: img.height });
+            // Get actual image element dimensions
+            const actualWidth = img.width;
+            const actualHeight = img.height;
+
+            console.log('🖼️ Setting up canvas image:', {
+                imgWidth: actualWidth,
+                imgHeight: actualHeight,
+                imgElement: img.getElement(),
+                imgScaleX: img.scaleX,
+                imgScaleY: img.scaleY
+            });
+
+            // Set canvas to EXACT image dimensions (no background, no padding in dimensions)
+            canvas.setDimensions({ 
+                width: actualWidth, 
+                height: actualHeight 
+            });
+            
+            // Reset any transforms on the image and position at origin
+            img.set({
+                left: 0,
+                top: 0,
+                originX: 'left',
+                originY: 'top',
+                scaleX: 1,
+                scaleY: 1,
+                angle: 0
+            });
+            
+            // Set as background image
             canvas.backgroundImage = img;
-            canvas.requestRenderAll();
+            canvas.renderAll();
 
-            updateCanvasScale(img.width, img.height);
+            console.log('✅ Canvas setup complete:', {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
+                canvasElementWidth: canvasRef.current?.width,
+                canvasElementHeight: canvasRef.current?.height,
+                bgImageWidth: canvas.backgroundImage?.width,
+                bgImageHeight: canvas.backgroundImage?.height
+            });
+
+            // Update scale immediately and after delays to handle animations
+            updateCanvasScale(actualWidth, actualHeight);
+            requestAnimationFrame(() => updateCanvasScale(actualWidth, actualHeight));
+            setTimeout(() => updateCanvasScale(actualWidth, actualHeight), 100);
+            setTimeout(() => updateCanvasScale(actualWidth, actualHeight), 300);
+            setTimeout(() => updateCanvasScale(actualWidth, actualHeight), 700);
 
             // Initialize history for this image if empty
             if (undoStackRef.current.length === 0) {
@@ -591,18 +684,47 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     if (!currentScreenshot) return null;
 
     return (
-        <div ref={canvasContainerRef} className="w-full h-full grid place-items-center bg-transparent overflow-hidden relative p-8">
+        <div 
+            ref={canvasContainerRef} 
+            style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+            }}
+        >
             <div
                 style={{
                     // Use standard transform scaling
                     transform: `scale(${canvasScale * baseZoom})`,
                     transformOrigin: 'center center',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-                    // Ensure it doesn't collapse
-                    display: 'inline-block',
+                    boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+                    // Ensure proper rendering
+                    display: 'block',
+                    willChange: 'transform',
+                    backfaceVisibility: 'hidden',
+                    position: 'relative',
+                    // Prevent any distortion
+                    lineHeight: 0
                 }}
             >
-                <canvas ref={canvasRef} />
+                <canvas 
+                    ref={canvasRef}
+                    style={{
+                        display: 'block',
+                        imageRendering: '-webkit-optimize-contrast',
+                        // Ensure no extra space
+                        verticalAlign: 'top',
+                        // Critical: prevent CSS from scaling canvas
+                        maxWidth: 'none',
+                        maxHeight: 'none',
+                        width: 'auto',
+                        height: 'auto'
+                    }}
+                />
             </div>
         </div>
     );
