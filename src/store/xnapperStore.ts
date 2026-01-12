@@ -33,6 +33,10 @@ interface XnapperState {
     exportQuality: number; // 0-100
     setExportQuality: (quality: number) => void;
 
+    // Delay
+    captureDelay: number;
+    setCaptureDelay: (delay: number) => void;
+
     // Auto-balance
     autoBalance: boolean;
     setAutoBalance: (enabled: boolean) => void;
@@ -127,6 +131,10 @@ export const useXnapperStore = create<XnapperState>()(
             setExportFormat: (format) => set({ exportFormat: format }),
             exportQuality: 90,
             setExportQuality: (quality) => set({ exportQuality: quality }),
+
+            // Delay
+            captureDelay: 0,
+            setCaptureDelay: (delay) => set({ captureDelay: delay }),
 
             // Auto-balance
             autoBalance: true,

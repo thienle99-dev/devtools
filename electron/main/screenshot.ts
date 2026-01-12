@@ -160,7 +160,8 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                     webPreferences: {
                         nodeIntegration: false,
                         contextIsolation: true,
-                        preload: path.join(__dirname, '../preload/preload.js'),
+                        // Use the same preload as the main window
+                        preload: path.join(__dirname, 'preload.mjs'),
                     }
                 });
 
@@ -294,13 +295,23 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                             document.addEventListener('contextmenu', e => e.preventDefault());
 
                             function capture() {
+                                if (!window.electronAPI) {
+                                    alert('Error: Electron API not available. Preload script missed?');
+                                    return;
+                                }
                                 if (currentBounds.width > 0 && currentBounds.height > 0) {
                                     window.electronAPI.sendSelection(currentBounds);
                                 }
                             }
                             
                             function cancel() {
-                                window.electronAPI.cancelSelection();
+                                if (window.electronAPI) {
+                                    window.electronAPI.cancelSelection();
+                                } else {
+                                    // If API is missing, we can't notify main process, but we can try to close window via window.close() if not sandboxed?
+                                    // But contextIsolation is on.
+                                    alert('Error: Electron API not available. Cannot cancel properly.');
+                                }
                             }
 
                             btnCapture.onclick = capture;

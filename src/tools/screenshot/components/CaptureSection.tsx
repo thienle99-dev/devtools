@@ -18,12 +18,15 @@ export const CaptureSection: React.FC = () => {
         history,
         setCanvasData,
         clearRedactionAreas,
+        captureDelay,
+        setCaptureDelay,
     } = useXnapperStore();
 
     const [sources, setSources] = useState<CaptureSource[]>([]);
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
     const [isLoadingSources, setIsLoadingSources] = useState(false);
     const [urlInput, setUrlInput] = useState('');
+    const [countdown, setCountdown] = useState<number | null>(null);
 
     // Load available capture sources (screens and windows)
     const loadSources = async () => {
@@ -35,6 +38,8 @@ export const CaptureSection: React.FC = () => {
                 if (availableSources.length > 0) {
                     setSelectedSource(availableSources[0].id);
                 }
+            } else {
+                // Not in electron, skip loading sources
             }
         } catch (error) {
             console.error('Failed to load capture sources:', error);
@@ -50,19 +55,82 @@ export const CaptureSection: React.FC = () => {
         }
     }, [captureMode]);
 
-    const handleCapture = async () => {
+    const captureWeb = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { cursor: "always" } as any,
+                audio: false
+            });
+            const video = document.createElement("video");
+            video.srcObject = stream;
+            // Wait for metadata to load
+            await new Promise((resolve) => {
+                video.onloadedmetadata = () => resolve(true);
+            });
+            await video.play();
+
+            // Allow a brief moment for the video to actually render a frame
+            await new Promise(r => setTimeout(r, 100));
+
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx?.drawImage(video, 0, 0);
+
+            const dataUrl = canvas.toDataURL("image/png");
+            stream.getTracks().forEach(track => track.stop());
+
+            return {
+                dataUrl,
+                width: canvas.width,
+                height: canvas.height,
+            };
+        } catch (err) {
+            console.error(err);
+            if ((err as DOMException).name !== 'NotAllowedError') {
+                toast.error('Browser capture failed');
+            }
+            return null;
+        }
+    };
+
+    const performCapture = async () => {
         setIsCapturing(true);
+
+        // Handle Delay
+        if (captureDelay > 0) {
+            for (let i = captureDelay; i > 0; i--) {
+                setCountdown(i);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            setCountdown(null);
+        }
 
         try {
             let screenshot: any = null;
+            const api = (window as any).screenshotAPI;
 
-            if (captureMode === 'fullscreen') {
-                screenshot = await (window as any).screenshotAPI?.captureScreen();
-            } else if (captureMode === 'window' && selectedSource) {
-                screenshot = await (window as any).screenshotAPI?.captureWindow(selectedSource);
-            } else if (captureMode === 'area') {
-                screenshot = await (window as any).screenshotAPI?.captureArea();
-            } else if (captureMode === 'url') {
+            if (api) {
+                if (captureMode === 'fullscreen') {
+                    screenshot = await api.captureScreen();
+                } else if (captureMode === 'window' && selectedSource) {
+                    screenshot = await api.captureWindow(selectedSource);
+                } else if (captureMode === 'area') {
+                    screenshot = await api.captureArea();
+                } else if (captureMode === 'url') {
+                    // URL capture logic handled below
+                }
+            } else {
+                // Fallback to Web API for non-URL modes
+                if (captureMode !== 'url') {
+                    screenshot = await captureWeb();
+                }
+            }
+
+            // URL mode (can be same for Electron/Web if backend is API based, 
+            // but usually Electron uses internal chromium. Here we assume API handles it or fail)
+            if (captureMode === 'url') {
                 if (!urlInput) {
                     toast.error('Please enter a URL');
                     setIsCapturing(false);
@@ -73,7 +141,11 @@ export const CaptureSection: React.FC = () => {
                     targetUrl = 'https://' + targetUrl;
                 }
                 toast.loading('Capturing full page...', { duration: 2000 });
-                screenshot = await (window as any).screenshotAPI?.captureUrl(targetUrl);
+                if (api?.captureUrl) {
+                    screenshot = await api.captureUrl(targetUrl);
+                } else {
+                    toast.error('URL capture requires Electron environment');
+                }
             }
 
             if (screenshot) {
@@ -96,7 +168,13 @@ export const CaptureSection: React.FC = () => {
             toast.error('Failed to capture screenshot');
         } finally {
             setIsCapturing(false);
+            setCountdown(null);
         }
+    };
+
+    const handleCapture = () => {
+        // Just a wrapper to trigger async
+        performCapture();
     };
 
     const captureModes: Array<{ mode: CaptureMode; icon: any; label: string; description: string }> = [
@@ -125,6 +203,8 @@ export const CaptureSection: React.FC = () => {
             description: 'Capture full scrolling page',
         },
     ];
+
+    const delayOptions = [0, 3, 5, 10];
 
     return (
         <div className="space-y-6">
@@ -162,40 +242,72 @@ export const CaptureSection: React.FC = () => {
                 </div>
             </div>
 
+            {/* Delay Settings */}
+            <div>
+                <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-foreground-muted" />
+                    <h3 className="text-sm font-semibold text-foreground-secondary">Timer Delay</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                    {delayOptions.map((seconds) => (
+                        <button
+                            key={seconds}
+                            onClick={() => setCaptureDelay(seconds)}
+                            className={cn(
+                                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border",
+                                captureDelay === seconds
+                                    ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/30"
+                                    : "bg-glass-panel text-foreground-muted border-border-glass hover:bg-white/5"
+                            )}
+                        >
+                            {seconds === 0 ? 'No Delay' : `${seconds}s`}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {captureMode === 'window' && (
                 <div>
                     <h3 className="text-lg font-semibold mb-4">Select Window</h3>
-                    {isLoadingSources ? (
-                        <div className="text-center py-8 text-foreground-muted">
-                            Loading windows...
-                        </div>
-                    ) : sources.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto custom-scrollbar">
-                            {sources.map((source) => (
-                                <button
-                                    key={source.id}
-                                    onClick={() => setSelectedSource(source.id)}
-                                    className={cn(
-                                        "flex flex-col items-center gap-2 p-3 rounded-lg border transition-all",
-                                        selectedSource === source.id
-                                            ? "border-indigo-500 bg-indigo-500/10"
-                                            : "border-border-glass bg-glass-panel hover:border-indigo-500/50"
-                                    )}
-                                >
-                                    <img
-                                        src={source.thumbnail}
-                                        alt={source.name}
-                                        className="w-full h-24 object-cover rounded"
-                                    />
-                                    <span className="text-xs text-center truncate w-full">
-                                        {source.name}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
+                    {(window as any).screenshotAPI ? (
+                        /* Electron Window Selection */
+                        isLoadingSources ? (
+                            <div className="text-center py-8 text-foreground-muted">
+                                Loading windows...
+                            </div>
+                        ) : sources.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto custom-scrollbar">
+                                {sources.map((source) => (
+                                    <button
+                                        key={source.id}
+                                        onClick={() => setSelectedSource(source.id)}
+                                        className={cn(
+                                            "flex flex-col items-center gap-2 p-3 rounded-lg border transition-all",
+                                            selectedSource === source.id
+                                                ? "border-indigo-500 bg-indigo-500/10"
+                                                : "border-border-glass bg-glass-panel hover:border-indigo-500/50"
+                                        )}
+                                    >
+                                        <img
+                                            src={source.thumbnail}
+                                            alt={source.name}
+                                            className="w-full h-24 object-cover rounded"
+                                        />
+                                        <span className="text-xs text-center truncate w-full">
+                                            {source.name}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-foreground-muted">
+                                No windows available
+                            </div>
+                        )
                     ) : (
-                        <div className="text-center py-8 text-foreground-muted">
-                            No windows available
+                        /* Browser Fallback Message */
+                        <div className="p-4 rounded-lg bg-glass-panel border border-border-glass text-center text-sm text-foreground-muted">
+                            In browser mode, you will select the window after clicking Capture.
                         </div>
                     )}
                 </div>
@@ -226,11 +338,11 @@ export const CaptureSection: React.FC = () => {
                     variant="primary"
                     size="lg"
                     onClick={handleCapture}
-                    disabled={captureMode === 'window' && !selectedSource}
+                    disabled={captureMode === 'window' && (window as any).screenshotAPI && !selectedSource}
                     className="min-w-[200px]"
                 >
-                    <Camera className="w-5 h-5 mr-2" />
-                    Capture Screenshot
+                    <Camera className={cn("w-5 h-5 mr-2", countdown !== null && "animate-pulse")} />
+                    {countdown !== null ? `Capturing in ${countdown}s...` : 'Capture Screenshot'}
                 </Button>
             </div>
 

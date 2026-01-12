@@ -10,7 +10,6 @@ import { toast } from 'sonner';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Virtuoso } from 'react-virtuoso';
 import { useDebounce } from '../../../hooks/useDebounce';
-import type { RunningProcess, ProcessGroup } from '../../../types/application-manager';
 
 interface RunningProcessesTabProps {
     onKill: (pid: number) => Promise<void>;
