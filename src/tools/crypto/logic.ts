@@ -160,3 +160,7 @@ export const generateHmac = (input: string, key: string, algorithm: 'md5' | 'sha
         default: return CryptoJS.HmacSHA256(input, key).toString();
     }
 };
+
+export const generateBearerToken = (length: number = 32) => {
+    return generateTokens({ length, numbers: true, uppercase: true, lowercase: true, symbols: false });
+};

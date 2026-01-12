@@ -12,6 +12,23 @@ export const minifyJson = (input: string) => {
 
 export const validateJson = (input: string) => {
     if (!input.trim()) return 'Empty input.';
-    JSON.parse(input);
-    return 'Valid JSON ✔️';
+    try {
+        JSON.parse(input);
+        return 'Valid JSON ✔️';
+    } catch (e) {
+        return `Invalid JSON: ${(e as Error).message}`;
+    }
+};
+
+export const jsonDiff = (left: string, right: string) => {
+    try {
+        const leftObj = JSON.parse(left);
+        const rightObj = JSON.parse(right);
+        // Prettify both for line-by-line comparison
+        const leftPretty = JSON.stringify(leftObj, null, 2);
+        const rightPretty = JSON.stringify(rightObj, null, 2);
+        return { leftPretty, rightPretty };
+    } catch (e) {
+        throw new Error('Invalid JSON input for comparison');
+    }
 };

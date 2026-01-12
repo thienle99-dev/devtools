@@ -1,7 +1,7 @@
-import { Percent, Clock, Lock, Container, Settings, GitBranch, Database, Code } from 'lucide-react';
-import composerize from 'composerize';
+import { Percent, Clock, Lock, Container, Settings, GitBranch, Database, Code, FileSearch } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
+import * as Logic from '../../development/logic';
 
 export const developmentTools: ToolDefinition[] = [
     {
@@ -60,13 +60,21 @@ export const developmentTools: ToolDefinition[] = [
         keywords: ['docker', 'compose', 'convert', 'container'],
         inputTypes: ['text'],
         outputTypes: ['text'],
-        process: (input) => {
-            try {
-                return composerize(input.trim());
-            } catch (e) {
-                throw new Error(`Docker conversion failed: ${(e as Error).message}`);
-            }
-        }
+        process: (input) => Logic.convertDockerRun(input)
+    },
+    {
+        id: 'log-analyzer',
+        name: 'Log Analyzer',
+        path: '/log-analyzer',
+        description: 'Highlight and analyze server logs',
+        category: 'development',
+        icon: FileSearch,
+        color: 'text-indigo-400',
+        component: Lazy.LogAnalyzer,
+        keywords: ['log', 'analyze', 'debug', 'error', 'highlight'],
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+        process: (input) => Logic.analyzeLogs(input)
     },
     {
         id: 'mock-data-generator',

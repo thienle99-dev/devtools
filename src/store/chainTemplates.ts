@@ -1,192 +1,138 @@
-import type { WorkflowStep } from './workflowStore';
-
 export interface ChainTemplate {
     id: string;
     name: string;
     description: string;
-    steps: Omit<WorkflowStep, 'id'>[];
+    steps: {
+        toolId: string;
+        options: Record<string, any>;
+        label: string;
+    }[];
 }
 
 export const CHAIN_TEMPLATES: ChainTemplate[] = [
     {
-        id: 'json-clean-csv-export',
-        name: 'JSON Clean → CSV Export',
-        description: 'Formatter → Validator → JSON to CSV (Ready for download)',
+        id: 'json-format-flow',
+        name: 'Standard JSON Cleanup',
+        description: 'Format JSON → Validate → Copy to Clipboard',
         steps: [
             {
-                toolId: 'code-formatter',
+                toolId: 'universal-formatter',
                 options: { language: 'json', indent: 2 },
-                label: 'Format & Validate JSON'
+                label: 'Format & Prettify'
+            }
+        ]
+    },
+    {
+        id: 'json-to-csv-flow',
+        name: 'JSON → CSV Export Flow',
+        description: 'Format JSON → Convert to CSV → Download File',
+        steps: [
+            {
+                toolId: 'universal-formatter',
+                options: { language: 'json' },
+                label: 'Pre-format'
             },
             {
-                toolId: 'converter',
-                options: { mode: 'json-csv' },
+                toolId: 'csv-converter',
+                options: { from: 'json', to: 'csv' },
                 label: 'Convert to CSV'
             }
         ]
     },
     {
-        id: 'json-minify-copy',
-        name: 'JSON Format → Minify',
-        description: 'JSON Formatter → JSON Minifier (Ready for clipboard)',
+        id: 'xml-to-json-flow',
+        name: 'XML → Clean JSON Pipeline',
+        description: 'Convert XML → Format JSON → Export',
         steps: [
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json' },
-                label: 'Ensure Valid JSON'
-            },
-            {
-                toolId: 'json-minifier',
-                options: {},
-                label: 'Compress / Minify'
-            }
-        ]
-    },
-    {
-        id: 'json-to-yaml-flow',
-        name: 'JSON → YAML flow',
-        description: 'JSON Formatter → JSON to YAML conversion',
-        steps: [
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json' },
-                label: 'Clean Input'
-            },
             {
                 toolId: 'converter',
-                options: { mode: 'json-yaml' },
-                label: 'Convert to YAML'
+                options: { from: 'xml', to: 'json' },
+                label: 'XML to JSON'
+            },
+            {
+                toolId: 'universal-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format Output'
             }
         ]
     },
     {
         id: 'yaml-to-json-flow',
-        name: 'YAML → JSON flow',
-        description: 'YAML to JSON conversion → JSON Validator',
+        name: 'YAML → JSON Flow',
+        description: 'Convert YAML → Format JSON Output',
         steps: [
             {
                 toolId: 'converter',
-                options: { mode: 'yaml-json' },
-                label: 'Parse YAML'
+                options: { from: 'yaml', to: 'json' },
+                label: 'YAML to JSON'
             },
             {
-                toolId: 'code-formatter',
+                toolId: 'universal-formatter',
                 options: { language: 'json', indent: 2 },
-                label: 'Format Result'
+                label: 'Format JSON'
             }
         ]
     },
     {
-        id: 'json-to-xml-flow',
-        name: 'JSON → XML flow',
-        description: 'JSON Formatter → JSON to XML conversion',
+        id: 'base64-decode-image',
+        name: 'Base64 → Image File',
+        description: 'Decode String → Save as Image',
         steps: [
             {
-                toolId: 'code-formatter',
-                options: { language: 'json' },
-                label: 'Clean JSON'
+                toolId: 'converter',
+                options: { from: 'base64', to: 'text' },
+                label: 'Decode Base64'
             },
             {
-                toolId: 'converter',
-                options: { mode: 'json-xml' },
-                label: 'Convert to XML'
+                toolId: 'image-converter',
+                options: { format: 'image/png' },
+                label: 'Convert to PNG'
             }
         ]
     },
     {
-        id: 'jwt-claims-flow',
-        name: 'JWT Debugger Flow',
-        description: 'JWT Parser → JSON Formatter (Inspect Claims)',
+        id: 'jwt-decode-flow',
+        name: 'JWT Investigation Flow',
+        description: 'Decode JWT → Format Payload → Check Expiry',
         steps: [
             {
                 toolId: 'jwt',
                 options: {},
-                label: 'Parse JWT'
+                label: 'Decode JWT'
             },
             {
-                toolId: 'code-formatter',
-                options: { language: 'json', indent: 2 },
+                toolId: 'universal-formatter',
+                options: { language: 'json' },
                 label: 'Format Claims'
             }
         ]
     },
     {
-        id: 'safelink-inspect-flow',
-        name: 'Safelink → URL Parser',
-        description: 'Decode Outlook Safelink → URL Parameter Parser',
+        id: 'log-clean-flow',
+        name: 'Production Log Sanitization',
+        description: 'Mask sensitive data in logs for sharing',
         steps: [
             {
-                toolId: 'safelink',
-                options: {},
-                label: 'Decode Safelink'
+                toolId: 'data-masking',
+                options: { fields: ['password', 'token', 'email', 'secret', 'key'] },
+                label: 'Anonymize PII'
             },
             {
-                toolId: 'url-parser',
-                options: {},
-                label: 'Parse Parameters'
+                toolId: 'universal-formatter',
+                options: { language: 'text' },
+                label: 'Cleanup Format'
             }
         ]
     },
     {
-        id: 'ua-inspect-flow',
-        name: 'UA Parser → JSON',
-        description: 'User-Agent Parser → JSON Formatter',
-        steps: [
-            {
-                toolId: 'user-agent',
-                options: {},
-                label: 'Parse UA String'
-            },
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json', indent: 2 },
-                label: 'Format Info'
-            }
-        ]
-    },
-    {
-        id: 'docker-compose-flow',
-        name: 'Docker → Compose → Prep',
-        description: 'Docker run → docker-compose Converter → YAML Formatter',
-        steps: [
-            {
-                toolId: 'docker-convert',
-                options: {},
-                label: 'Convert to Compose'
-            },
-            {
-                toolId: 'code-formatter',
-                options: { language: 'yaml', indent: 2 },
-                label: 'Format YAML'
-            }
-        ]
-    },
-    {
-        id: 'secure-token-flow',
-        name: 'Secure Token → Hash',
-        description: 'Generate Token → Create SHA256 Hash',
-        steps: [
-            {
-                toolId: 'token-generator',
-                options: { length: 32, uppercase: true, lowercase: true, numbers: true, symbols: true },
-                label: 'Generate Secret'
-            },
-            {
-                toolId: 'hash',
-                options: { algorithm: 'sha256' },
-                label: 'Create SHA256'
-            }
-        ]
-    },
-    {
-        id: 'seo-meta-flow',
-        name: 'SEO & Social Meta Flow',
-        description: 'Standard Meta Tags + Open Graph Tag Generator',
+        id: 'seo-social-flow',
+        name: 'Quick Social Config',
+        description: 'Generate Meta Tags + OpenGraph Tags',
         steps: [
             {
                 toolId: 'meta-tags',
-                options: { charset: 'UTF-8', viewport: 'width=device-width, initial-scale=1' },
-                label: 'Generate Base Meta'
+                options: { title: 'My Awesome Page' },
+                label: 'Base Meta'
             },
             {
                 toolId: 'open-graph',
@@ -250,130 +196,21 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
                 label: 'Resize for Grid'
             },
             {
-                toolId: 'image-to-ascii',
-                options: { width: 100, charSet: 'standard' },
-                label: 'Generate ASCII'
-            }
-        ]
-    },
-    {
-        id: 'structured-data-flow',
-        name: 'Structured Data Validator Flow',
-        description: 'Generate JSON-LD → Format/Validate JSON',
-        steps: [
-            {
-                toolId: 'structured-data',
-                options: { type: 'WebSite' },
-                label: 'Generate JSON-LD'
-            },
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json', indent: 2 },
-                label: 'Format & Validate'
+                toolId: 'ascii-art',
+                options: { font: 'Standard' },
+                label: 'Stylize Text'
             }
         ]
     },
     {
         id: 'uuid-flow',
-        name: 'Bulk UUID Generator',
-        description: 'Generate multiple UUIDs → Copy to Clipboard',
+        name: 'Batch UUID Generator',
+        description: 'Generate 10 v4 UUIDs',
         steps: [
             {
                 toolId: 'uuid',
-                options: { count: 10, hyphens: true },
-                label: 'Generate 10 IDs'
-            }
-        ]
-    },
-    {
-        id: 'data-uri-flow',
-        name: 'Image → Data URI Flow',
-        description: 'Convert Image to Base64 Data URI',
-        steps: [
-            {
-                toolId: 'data-uri',
-                options: {},
-                label: 'Generate URI'
-            }
-        ]
-    },
-    {
-        id: 'jwt-inspect-flow',
-        name: 'JWT Insights Flow',
-        description: 'Parse JWT → Format Claims → Highlight Payload',
-        steps: [
-            {
-                toolId: 'jwt',
-                options: {},
-                label: 'Parse JWT'
-            },
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json', indent: 2 },
-                label: 'Format Claims'
-            }
-        ]
-    },
-    {
-        id: 'utm-campaign-flow',
-        name: 'Marketing URL Flow',
-        description: 'Build UTM URL → Generate QR Code',
-        steps: [
-            {
-                toolId: 'utm-builder',
-                options: { source: 'google', medium: 'social' },
-                label: 'Build UTM Link'
-            },
-            {
-                toolId: 'qr-code',
-                options: { size: 400 },
-                label: 'Generate QR'
-            }
-        ]
-    },
-    {
-        id: 'post-slug-flow',
-        name: 'SEO URL Prep Flow',
-        description: 'Clean Text → Generate Slug → Copy URL',
-        steps: [
-            {
-                toolId: 'slug',
-                options: { separator: '-', lowercase: true },
-                label: 'Generate Slug'
-            }
-        ]
-    },
-    {
-        id: 'secrets-sanitization-flow',
-        name: 'Security Audit & Masking',
-        description: 'Scan for Secrets → Redact PII/Keys',
-        steps: [
-            {
-                toolId: 'secrets-scanner',
-                options: {},
-                label: 'Scan for Vulnerabilities'
-            },
-            {
-                toolId: 'data-masking',
-                options: { fields: 'password,api_key,token,secret', visibleStart: 4 },
-                label: 'Mask Sensitive Data'
-            }
-        ]
-    },
-    {
-        id: 'regex-masking-flow',
-        name: 'Smart Redaction Flow',
-        description: 'Regex Replace Pattern → Apply Masking',
-        steps: [
-            {
-                toolId: 'regex-replace',
-                options: { pattern: '[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}', replacement: '[CARD_NUMBER]' },
-                label: 'Redact Credit Cards'
-            },
-            {
-                toolId: 'data-masking',
-                options: { maskChar: 'X', visibleStart: 0, visibleEnd: 0 },
-                label: 'Final Pass Masking'
+                options: { type: 'v4', count: 10 },
+                label: 'Generate Bulk'
             }
         ]
     },
@@ -420,6 +257,100 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
                 toolId: 'universal-formatter',
                 options: { language: 'sql', uppercase: true },
                 label: 'Format SQL'
+            }
+        ]
+    },
+    {
+        id: 'docker-compose-flow',
+        name: 'Docker Run → Compose Flow',
+        description: 'Convert Command → Format YAML Output',
+        steps: [
+            {
+                toolId: 'docker-convert',
+                options: {},
+                label: 'Convert to Compose'
+            },
+            {
+                toolId: 'universal-formatter',
+                options: { language: 'yaml', indent: 2 },
+                label: 'Prettify YAML'
+            }
+        ]
+    },
+    {
+        id: 'log-analysis-flow',
+        name: 'Log Analysis & Masking',
+        description: 'Analyze Logs → Mask Sensitive Data',
+        steps: [
+            {
+                toolId: 'log-analyzer',
+                options: {},
+                label: 'Analyze Logs'
+            },
+            {
+                toolId: 'data-masking',
+                options: { maskChar: '*', visibleStart: 2 },
+                label: 'Redact Secrets'
+            }
+        ]
+    },
+    {
+        id: 'date-standard-flow',
+        name: 'Universal Date Formatting',
+        description: 'Convert Any Date → Standard ISO 8601',
+        steps: [
+            {
+                toolId: 'date-converter',
+                options: { format: 'iso' },
+                label: 'To ISO 8601'
+            }
+        ]
+    },
+    {
+        id: 'json-diff-report-flow',
+        name: 'JSON Architecture Diff',
+        description: 'Compare JSON → Export Markdown Report',
+        steps: [
+            {
+                toolId: 'json-diff',
+                options: {},
+                label: 'Diff Structures'
+            }
+        ]
+    },
+    {
+        id: 'bearer-token-copy-flow',
+        name: 'API Key Generation Flow',
+        description: 'Generate Bearer Token → Copy to Clipboard',
+        steps: [
+            {
+                toolId: 'bearer-token',
+                options: { length: 32 },
+                label: 'Generate Secret'
+            }
+        ]
+    },
+    {
+        id: 'url-deep-parse-flow',
+        name: 'Deep URL Investigation',
+        description: 'URL Decode → Parse Components → Extract Query',
+        steps: [
+            {
+                toolId: 'url-parser',
+                options: {},
+                label: 'Parse & Inspect'
+            }
+        ]
+    },
+    {
+        id: 'password-security-flow',
+        name: 'Security Compliance Check',
+        description: 'Analyze Strength → Verify Policy Compliance',
+        steps: [
+            {
+                toolId: 'password-policy',
+                options: { minLength: 12, requireSymbols: true },
+                label: 'Policy Check'
             }
         ]
     }

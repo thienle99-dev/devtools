@@ -1151,7 +1151,7 @@
 - [x] JSON Formatter → JSON Validator → JSON to CSV → Export CSV
 - [x] JSON Formatter → JSON Minifier → Copy to Clipboard
 - [x] JSON Formatter → Data Masking (JSON) → Export JSON
-- [ ] JSON Diff → Export Report (TXT/MD)
+- [x] JSON Diff → Export Report (TXT/MD)
 
 ### A2. JSON ↔ Other Formats
 
@@ -1164,7 +1164,7 @@
 
 - [x] JWT Parser → JSON Formatter → Copy Claims
 - [x] JWT Parser → Data Masking (JSON) → Export JSON
-- [ ] Bearer Token Generator → Copy to Clipboard
+- [x] Bearer Token Generator → Copy to Clipboard
 
 ---
 
@@ -1172,7 +1172,7 @@
 
 ### B1. URL Inspection
 
-- [ ] URL Decode → URL Parser → URL Query String Parser → Export Report
+- [x] URL Decode → URL Parser → URL Query String Parser → Export Report
 - [x] URL Parser → UTM Builder → Copy Result URL
 - [x] URL Decode → Outlook Safelink Decoder → URL Parser → Export
 
@@ -1197,14 +1197,14 @@
 
 ### C2. Password & Keys
 
-- [ ] Password Strength Analyzer → Password Policy Tester → Export Report
-- [ ] Password Strength Analyzer → Password Policy Tester → Export Report
+- [x] Password Strength Analyzer → Password Policy Tester → Export Report
+- [x] Password Strength Analyzer → Password Policy Tester → Export Report
 - [x] Token Generator → Hash Generator → Copy / Export
 
 ### C3. Certificates
 
-- [ ] PEM/DER Converter → X.509 Certificate Parser → Export Report
-- [ ] CSR Generator → Export CSR + Private Key
+- [x] PEM/DER Converter → X.509 Certificate Parser → Export Report
+- [x] CSR Generator → Export CSR + Private Key
 
 ---
 
@@ -1212,19 +1212,19 @@
 
 ### D1. Logs & Debug
 
-- [ ] Log Text → Data Masking → Error Log Analyzer → Export Report
-- [ ] Log Text → Regex Tester → Export Patterns
+- [x] Log Text → Data Masking → Error Log Analyzer → Export Report
+- [x] Log Text → Regex Tester → Export Patterns
 
 ### D2. Docker & Infra
 
 - [x] Docker run → docker-compose Converter → YAML Formatter → Export docker-compose.yml
-- [ ] YAML Formatter → Kubernetes YAML Validator → Export Validated YAML
+- [x] YAML Formatter → Kubernetes YAML Validator → Export Validated YAML
 
 ### D3. Dates & IDs
 
-- [ ] Date-time Converter → Export ISO8601
+- [x] Date-time Converter → Export ISO8601
 - [x] UUID Generator → Copy
-- [ ] ULID Generator → Copy
+- [x] ULID Generator → Copy
 
 ---
 

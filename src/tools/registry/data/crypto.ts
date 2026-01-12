@@ -1,8 +1,8 @@
-import { Fingerprint, ShieldCheck, Shield, ScanLine, Key, Lock } from 'lucide-react';
+import { Fingerprint, ShieldCheck, Shield, ScanLine, Key, Lock, KeyRound } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import { generateHash, generateHmac, bcryptHash, generateIds, generateTokens } from '../../crypto/logic';
-import { process as aesProcess } from '../../crypto/AesEncryptor';
+import * as Logic from '../../crypto/logic';
+import { process as aesProcess } from '../../crypto/SymmetricEncryptor';
 
 export const cryptoTools: ToolDefinition[] = [
     {
@@ -17,7 +17,7 @@ export const cryptoTools: ToolDefinition[] = [
         keywords: ['hash', 'md5', 'sha', 'crypto'],
         inputTypes: ['text'],
         outputTypes: ['text'],
-        process: (input, options) => generateHash(input, options?.algorithm)
+        process: (input, options) => Logic.generateHash(input, options?.algorithm)
     },
     {
         id: 'hmac',
@@ -31,7 +31,7 @@ export const cryptoTools: ToolDefinition[] = [
         keywords: ['hmac', 'key', 'hash', 'security'],
         inputTypes: ['text'],
         outputTypes: ['text'],
-        process: (input, options) => generateHmac(input, options?.key || '', options?.algorithm || 'sha256')
+        process: (input, options) => Logic.generateHmac(input, options?.key || '', options?.algorithm || 'sha256')
     },
     {
         id: 'bcrypt',
@@ -45,7 +45,7 @@ export const cryptoTools: ToolDefinition[] = [
         keywords: ['bcrypt', 'password', 'hash', 'salt'],
         inputTypes: ['text'],
         outputTypes: ['text'],
-        process: (input, options) => bcryptHash(input, options?.rounds || 10)
+        process: (input, options) => Logic.bcryptHash(input, options?.rounds || 10)
     },
     {
         id: 'uuid',
@@ -59,7 +59,7 @@ export const cryptoTools: ToolDefinition[] = [
         keywords: ['uuid', 'ulid', 'guid', 'id'],
         shortcut: 'Ctrl+Shift+U',
         outputTypes: ['text'],
-        process: (_, options) => generateIds(options)
+        process: (_, options) => Logic.generateIds(options)
     },
     {
         id: 'token-generator',
@@ -72,7 +72,20 @@ export const cryptoTools: ToolDefinition[] = [
         component: Lazy.TokenGenerator,
         keywords: ['token', 'password', 'random', 'secure', 'bearer', 'api', 'key'],
         outputTypes: ['text'],
-        process: (_, options) => generateTokens(options)
+        process: (_, options) => Logic.generateTokens(options)
+    },
+    {
+        id: 'bearer-token',
+        name: 'Bearer Token',
+        path: '/bearer-token',
+        description: 'Generate secure API secret tokens',
+        category: 'crypto',
+        icon: KeyRound,
+        color: 'text-indigo-400',
+        component: Lazy.BearerTokenGenerator,
+        keywords: ['token', 'bearer', 'api', 'key', 'secret'],
+        outputTypes: ['text'],
+        process: (options) => Logic.generateBearerToken(options?.length || 32)
     },
     {
         id: 'symmetric-encryptor',

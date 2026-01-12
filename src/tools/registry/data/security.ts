@@ -1,4 +1,4 @@
-import { ShieldAlert, EyeOff, Shield } from 'lucide-react';
+import { Shield, Eye, ShieldAlert, KeyRound, FileKey } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../security/logic';
@@ -8,33 +8,30 @@ export const securityTools: ToolDefinition[] = [
         id: 'secrets-scanner',
         name: 'Secrets Scanner',
         path: '/secrets-scanner',
-        description: 'Scan text for API keys, passwords, and PII',
-        category: 'crypto',
+        description: 'Scan text for API keys, tokens, and credentials',
+        category: 'security',
         icon: ShieldAlert,
         color: 'text-rose-500',
         component: Lazy.SecretsScanner,
-        keywords: ['security', 'audit', 'scan', 'secrets', 'api', 'key', 'pii'],
+        keywords: ['secrets', 'pats', 'keys', 'tokens', 'scan', 'security'],
         inputTypes: ['text', 'json'],
         outputTypes: ['json'],
-        process: (input) => {
-            const results = Logic.scanSecrets(input);
-            return results;
-        }
+        process: (input) => Logic.scanSecrets(input)
     },
     {
         id: 'data-masking',
         name: 'Data Masking',
         path: '/data-masking',
         description: 'Mask sensitive information in text or JSON',
-        category: 'crypto',
-        icon: EyeOff,
-        color: 'text-orange-400',
+        category: 'security',
+        icon: Eye,
+        color: 'text-indigo-400',
         component: Lazy.DataMasking,
-        keywords: ['mask', 'pii', 'privacy', 'redact', 'security'],
+        keywords: ['mask', 'anonymize', 'privacy', 'redact', 'pii'],
         inputTypes: ['text', 'json'],
         outputTypes: ['text', 'json'],
         process: (input, options) => {
-            if (typeof input === 'object' && input !== null) {
+            if (typeof input === 'object') {
                 return Logic.maskJson(input, options?.fields || []);
             }
             return Logic.maskText(input, options);
@@ -45,7 +42,7 @@ export const securityTools: ToolDefinition[] = [
         name: 'Certificate Tools',
         path: '/cert-tools',
         description: 'Parse certificates and convert between PEM/DER',
-        category: 'crypto',
+        category: 'security',
         icon: Shield,
         color: 'text-sky-400',
         component: Lazy.CertificateTools,
@@ -58,5 +55,30 @@ export const securityTools: ToolDefinition[] = [
             }
             return Logic.parseCertificate(input);
         }
+    },
+    {
+        id: 'password-policy',
+        name: 'Password Policy',
+        path: '/password-policy',
+        description: 'Test password compliance and strength',
+        category: 'security',
+        icon: KeyRound,
+        color: 'text-indigo-400',
+        component: Lazy.PasswordPolicyTester,
+        keywords: ['password', 'policy', 'strength', 'security', 'compliance'],
+        inputTypes: ['text'],
+        outputTypes: ['json']
+    },
+    {
+        id: 'csr-generator',
+        name: 'CSR Generator',
+        path: '/csr-generator',
+        description: 'Generate CSR and Private Keys',
+        category: 'security',
+        icon: FileKey,
+        color: 'text-amber-400',
+        component: Lazy.CsrGenerator,
+        keywords: ['csr', 'key', 'pair', 'request', 'ssl', 'tls'],
+        outputTypes: ['json']
     }
 ];

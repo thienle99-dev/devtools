@@ -38,9 +38,12 @@ export const HmacGenerator = React.lazy(() => import('@tools/crypto/HmacGenerato
 export const SymmetricEncryptor = React.lazy(() => import('@tools/crypto/SymmetricEncryptor').then(m => ({ default: m.SymmetricEncryptor })));
 export const RsaGenerator = React.lazy(() => import('@tools/crypto/RsaGenerator').then(m => ({ default: m.RsaGenerator })));
 export const BcryptGenerator = React.lazy(() => import('@tools/crypto/BcryptGenerator').then(m => ({ default: m.BcryptGenerator })));
+export const BearerTokenGenerator = React.lazy(() => import('@tools/crypto/BearerTokenGenerator').then(m => ({ default: m.BearerTokenGenerator })));
 export const SecretsScanner = React.lazy(() => import('@tools/security/SecretsScanner').then(m => ({ default: m.SecretsScanner })));
 export const DataMasking = React.lazy(() => import('@tools/security/DataMasking').then(m => ({ default: m.DataMasking })));
 export const CertificateTools = React.lazy(() => import('@tools/security/CertificateTools').then(m => ({ default: m.CertificateTools })));
+export const PasswordPolicyTester = React.lazy(() => import('@tools/security/PasswordPolicyTester').then(m => ({ default: m.PasswordPolicyTester })));
+export const CsrGenerator = React.lazy(() => import('@tools/security/CsrGenerator').then(m => ({ default: m.CsrGenerator })));
 
 // Web
 export const UrlParser = React.lazy(() => import('@tools/web/UrlParser').then(m => ({ default: m.UrlParser })));
@@ -50,7 +53,6 @@ export const SlugGenerator = React.lazy(() => import('@tools/web/SlugGenerator')
 export const UserAgentParser = React.lazy(() => import('@tools/web/UserAgentParser').then(m => ({ default: m.UserAgentParser })));
 export const JwtParser = React.lazy(() => import('@tools/web/JwtParser').then(m => ({ default: m.JwtParser })));
 export const HttpStatusCode = React.lazy(() => import('@tools/web/HttpStatusCode').then(m => ({ default: m.HttpStatusCode })));
-export const JsonDiff = React.lazy(() => import('@tools/web/JsonDiff').then(m => ({ default: m.JsonDiff })));
 export const MetaTagsGenerator = React.lazy(() => import('@tools/web/MetaTagsGenerator').then(m => ({ default: m.MetaTagsGenerator })));
 export const OpenGraphGenerator = React.lazy(() => import('@tools/web/OpenGraphGenerator').then(m => ({ default: m.OpenGraphGenerator })));
 export const UtmBuilder = React.lazy(() => import('@tools/web/UtmBuilder').then(m => ({ default: m.UtmBuilder })));
@@ -86,6 +88,8 @@ export const PipelineDesigner = React.lazy(() => import('@tools/development/Pipe
 export const MockDataGenerator = React.lazy(() => import('@tools/development/MockDataGenerator').then(m => ({ default: m.MockDataGenerator })));
 
 export const CodeSnippetGenerator = React.lazy(() => import('@tools/development/CodeSnippetGenerator').then(m => ({ default: m.CodeSnippetGenerator })));
+export const LogAnalyzer = React.lazy(() => import('@tools/development/LogAnalyzer').then(m => ({ default: m.LogAnalyzer })));
+export const JsonDiff = React.lazy(() => import('@tools/json/JsonDiff').then(m => ({ default: m.JsonDiff })));
 
 // Utilities
 export const ClipboardManager = React.lazy(() => import('@tools/utilities/ClipboardManager').then(m => ({ default: m.ClipboardManager })));

@@ -1,3 +1,4 @@
+import forge from 'node-forge';
 
 export const maskText = (text: string, options: { 
     maskChar?: string, 
@@ -104,4 +105,37 @@ export const convertCertificate = (input: string, toFormat: 'PEM' | 'DER' | 'BAS
     }
     // DER would usually be binary, but we return a hex/base64 representation for tools
     return btoa(input); 
+};
+
+export const generateCsr = (options: { 
+    commonName: string, 
+    organization?: string, 
+    country?: string, 
+    state?: string, 
+    locality?: string,
+    keySize?: number 
+}) => {
+    const keys = forge.pki.rsa.generateKeyPair(options.keySize || 2048);
+    const csr = forge.pki.createCertificationRequest();
+    csr.publicKey = keys.publicKey;
+    
+    const attrs = [
+        { name: 'commonName', value: options.commonName },
+    ];
+    
+    if (options.country) attrs.push({ name: 'countryName', value: options.country });
+    if (options.state) attrs.push({ name: 'st', value: options.state });
+    if (options.locality) attrs.push({ name: 'localityName', value: options.locality });
+    if (options.organization) attrs.push({ name: 'organizationName', value: options.organization });
+
+    csr.setSubject(attrs);
+    
+    // sign certification request
+    csr.sign(keys.privateKey);
+    
+    return {
+        csr: forge.pki.certificationRequestToPem(csr),
+        privateKey: forge.pki.privateKeyToPem(keys.privateKey),
+        publicKey: forge.pki.publicKeyToPem(keys.publicKey)
+    };
 };
