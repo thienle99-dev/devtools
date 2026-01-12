@@ -669,9 +669,10 @@ function createWindow() {
     minHeight: 600,
     resizable: true, // Explicitly enable resizing for frameless window
     show: !startMinimized, // Respect startMinimized
-    // Frameless and transparent for custom UI
+    // Frameless for custom UI
     frame: false,
-    transparent: true,
+    transparent: process.platform === 'darwin', // Transparency often breaks Windows resizing
+    backgroundColor: '#050505', // Prevent white flash on load
     titleBarStyle: 'hidden',
     vibrancy: 'sidebar', // for macOS
     trafficLightPosition: { x: 15, y: 15 }, // macOS specific

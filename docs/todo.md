@@ -912,16 +912,16 @@
 
 ### 18.2 Tool UX Enhancements
 
-- [ ] Tool Presets (Save / Load / Share)
-- [ ] Tool History Replay
-- [ ] Compare Mode (before / after)
-- [ ] Side-by-side Input / Output
-- [ ] Multi-input Tabs
-- [ ] Drag & Drop Input Everywhere
-- [ ] Inline Validation & Warnings
-- [ ] Error Explanation Panel (human-readable)
-- [ ] Output Highlighting (diff / syntax)
-- [ ] Output Export Menu (copy / save / share)
+- [x] Tool Presets (Save / Load / Share)
+- [x] Tool History Replay
+- [x] Compare Mode (before / after)
+- [x] Side-by-side Input / Output
+- [x] Multi-input Tabs
+- [x] Drag & Drop Input Everywhere
+- [x] Inline Validation & Warnings
+- [x] Error Explanation Panel (human-readable)
+- [x] Output Highlighting (diff / syntax)
+- [x] Output Export Menu (copy / save / share)
 
 ---
 

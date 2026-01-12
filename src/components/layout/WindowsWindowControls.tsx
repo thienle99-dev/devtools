@@ -72,7 +72,11 @@ export const WindowsWindowControls: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center justify-between px-2 h-10 select-none drag bg-background/40 backdrop-blur-md border-b border-white/5 relative z-50 transition-colors duration-300">
+        <div className="flex flex-col h-10 select-none bg-background/40 backdrop-blur-md border-b border-white/5 relative z-50 transition-colors duration-300">
+            {/* 1px Buffer for top-edge resizing - must NOT be draggable */}
+            <div className="h-[1px] w-full no-drag shrink-0" />
+            
+            <div className="flex-1 flex items-center justify-between px-2 drag min-h-0">
             {/* Left: Breadcrumbs / Title */}
             <div className="flex items-center gap-2 flex-1 min-w-0 pl-1">
                 <div className="flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity no-drag group">
@@ -151,6 +155,7 @@ export const WindowsWindowControls: React.FC = () => {
                     <X className="w-4 h-4" />
                 </button>
             </div>
+          </div>
         </div>
     );
 };

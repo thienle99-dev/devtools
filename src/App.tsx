@@ -1,4 +1,4 @@
-import { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useSettingsStore } from '@store/settingsStore';
 import { useTabStore } from '@store/tabStore';
@@ -34,7 +34,7 @@ const PageLoader = () => (
   </div>
 );
 
-const MainLayout = () => {
+const MainLayout = React.memo(() => {
   const tabs = useTabStore(state => state.tabs);
   const activeTabId = useTabStore(state => state.activeTabId);
   const location = useLocation();
@@ -42,54 +42,33 @@ const MainLayout = () => {
   const settings = useClipboardStore(state => state.settings);
 
   // Sync URL -> Tab
-  // This allows bookmarks, tray navigation, and redirects to work
   useEffect(() => {
     const { tabs, activeTabId, openTab, setActiveTab } = useTabStore.getState();
 
-    // If no tabs are open, don't recreate a tab just because URL still points to a tool
-    // Exception: If we are intentionally navigating to a tool (e.g. from a bookmark or external link), we normally want it to open.
-    // But here we rely on the logic that "empty tabs" = "dashboard view".
-    // If the URL is '/', it might default to dashboard?
-    if (tabs.length === 0) {
-        // If tabs are empty, we check if we should open the tool from URL.
-        // If URL matches a tool, open it.
-        // If URL is /dashboard, we treat it as a tool now.
-    }
-
-    // If we are on a tool path (including settings), ensure tab is open
     const tool = TOOLS.find(t => t.path === location.pathname);
 
     if (tool) {
       if (tool.id === 'dashboard') {
-          // Special case: Dashboard is NOT a tab. It's the absence of an active tab.
           if (activeTabId) {
-              setActiveTab(null); // Deselect any active tab
+              setActiveTab(null);
           }
           return;
       }
 
-      // Check if tab already exists (including preview tabs)
       const existingTab = tabs.find(t => t.toolId === tool.id);
       if (!existingTab) {
-        // URL sync should create active tab (not preview) - user navigated directly
         openTab(tool.id, tool.path, tool.name, tool.description, false, false);
       } else {
-        // Tab exists! If it's not the active tab, switch to it.
-        // This handles cases where user navigates via Sidebar/Keys but tab is already open.
-        // Also handles "preview" promotion.
         if (existingTab.id !== activeTabId) {
              setActiveTab(existingTab.id);
         }
       }
     } else if (location.pathname === '/' || location.pathname === '/dashboard') {
-         // Fallback for root/dashboard if not caught by tool check (though dashboard is in TOOLS now)
          if (activeTabId) setActiveTab(null);
     }
   }, [location.pathname]);
 
-  // When all tabs are closed, redirect to dashboard? 
-  // If we close all tabs, TabContent renders Dashboard.
-  // We should probably update URL to /dashboard or / so it feels right.
+  // When all tabs are closed, redirect to dashboard
   useEffect(() => {
     if (tabs.length === 0 && location.pathname !== '/dashboard') {
       navigate('/dashboard', { replace: true });
@@ -97,7 +76,6 @@ const MainLayout = () => {
   }, [tabs.length, location.pathname, navigate]);
 
   // Sync Tab -> URL
-  // When active tab changes, update URL to match
   useEffect(() => {
     const activeTab = tabs.find(t => t.id === activeTabId);
     if (activeTab && location.pathname !== activeTab.path) {
@@ -109,7 +87,6 @@ const MainLayout = () => {
   useEffect(() => {
     const handleCheckClearClipboard = () => {
       if (settings.clearOnQuit) {
-        // Clear system clipboard
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText('').catch(() => { });
         }
@@ -124,7 +101,6 @@ const MainLayout = () => {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 relative h-full">
-      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <TabBar />
         <div className="flex-1 min-h-0">
@@ -133,7 +109,9 @@ const MainLayout = () => {
       </div>
     </div>
   );
-}
+});
+
+MainLayout.displayName = 'MainLayout';
 
 function App() {
   const { theme, layoutMode, accentColor, glassIntensity, blurEnabled } = useSettingsStore();

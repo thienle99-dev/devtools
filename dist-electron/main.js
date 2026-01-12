@@ -5092,7 +5092,8 @@ function createWindow() {
 		resizable: true,
 		show: !startMinimized,
 		frame: false,
-		transparent: true,
+		transparent: process.platform === "darwin",
+		backgroundColor: "#050505",
 		titleBarStyle: "hidden",
 		vibrancy: "sidebar",
 		trafficLightPosition: {

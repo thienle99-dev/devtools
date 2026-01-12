@@ -5,7 +5,7 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 import { symmetricEncrypt, symmetricDecrypt } from './logic';
-import { Settings, Lock, Unlock, ArrowRightLeft, Copy, Trash2, Key } from 'lucide-react';
+import { Settings, Lock, Unlock, ArrowRightLeft, Copy, Key } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TOOL_ID = 'symmetric-encryptor';
@@ -25,9 +25,13 @@ interface SymmetricEncryptorProps {
 
 export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Element => {
     const effectiveId = tabId || TOOL_ID;
-    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+    const { 
+        data: toolData, setToolData, clearToolData, addToHistory,
+        addToolHistoryEntry 
+    } = useToolState(effectiveId);
 
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
+    const [validation, setValidation] = useState<{ status: string, message: string, details?: string } | null>(null);
 
     const data = toolData || {
         input: '',
@@ -39,46 +43,61 @@ export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Elem
     };
 
     const { input, output, options } = data;
-
-    // Ensure algorithm is set in case of old state
-    if (!options.algorithm) {
-        options.algorithm = 'AES';
-    }
+    const algorithm = options.algorithm || 'AES';
 
     useEffect(() => {
-        addToHistory(TOOL_ID);
-    }, [addToHistory]);
+        addToHistory(effectiveId);
+    }, [addToHistory, effectiveId]);
 
     const handleInputChange = (val: string) => {
         setToolData(effectiveId, { input: val });
+        if (validation) setValidation(null);
     };
 
     const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setToolData(effectiveId, { options: { ...options, key: e.target.value } });
+        if (validation) setValidation(null);
     };
 
     const handleAlgorithmChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
          setToolData(effectiveId, { options: { ...options, algorithm: e.target.value as any } });
     };
 
+    const getErrorExplanation = (message: string) => {
+        if (message.includes('Malformed UTF-8 data')) {
+            return "This usually happens when the secret key is incorrect or the input is not a valid encrypted string. Make sure you are using the same algorithm and key as when you encrypted it.";
+        }
+        if (message.includes('key is required')) {
+            return "A secret key is needed to perform cryptographic operations. Choose a strong, secret phrase.";
+        }
+        return "An unexpected error occurred during processing.";
+    };
+
     const runAction = async (action: 'Encrypt' | 'Decrypt', fn: (i: string, k: string, a: any) => string) => {
         setLoadingAction(action);
+        setValidation(null);
         await new Promise(resolve => setTimeout(resolve, 300));
         try {
             if (!input) {
-                toast.error('Please enter text to process.');
+                setValidation({ status: 'warning', message: 'Input required', details: 'Please enter text to process.' });
                 return;
             }
             if (!options.key) {
-                toast.error('Secret key is required.');
+                setValidation({ status: 'error', message: 'Secret key missing', details: getErrorExplanation('key is required') });
                 return;
             }
-            const result = fn(input, options.key, options.algorithm);
+            const result = fn(input, options.key, algorithm);
             setToolData(effectiveId, { output: result });
+            addToolHistoryEntry(effectiveId, { input, output: result, options });
             toast.success(`${action}ed successfully`);
         } catch (e) {
-            setToolData(effectiveId, { output: (e as Error).message });
-            toast.error((e as Error).message);
+            const msg = (e as Error).message;
+            setValidation({ 
+                status: 'error', 
+                message: `${action} Failed`, 
+                details: getErrorExplanation(msg) 
+            });
+            setToolData(effectiveId, { output: '' });
         } finally {
             setLoadingAction(null);
         }
@@ -87,7 +106,11 @@ export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Elem
     const handleEncrypt = () => runAction('Encrypt', symmetricEncrypt);
     const handleDecrypt = () => runAction('Decrypt', symmetricDecrypt);
 
-    const handleClear = () => clearToolData(effectiveId);
+    const handleClear = () => {
+        clearToolData(effectiveId);
+        setValidation(null);
+    };
+
     const handleSwap = () => {
         setToolData(effectiveId, { input: output, output: input });
     };
@@ -98,139 +121,149 @@ export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Elem
         toast.success('Copied to clipboard');
     };
 
+    const helpContent = (
+        <>
+            <section>
+                <h4 className="flex items-center gap-2 text-foreground font-bold mb-2">
+                    <Lock size={14} className="text-indigo-400" />
+                    How to Encrypt
+                </h4>
+                <p>Enter your text, provide a secret key, choose an algorithm, and click Encrypt.</p>
+            </section>
+            <section>
+                <h4 className="flex items-center gap-2 text-foreground font-bold mb-2">
+                    <Unlock size={14} className="text-emerald-400" />
+                    How to Decrypt
+                </h4>
+                <p>Paste the encrypted text, provide the SAME secret key and algorithm, and click Decrypt.</p>
+            </section>
+            <section>
+                <h4 className="flex items-center gap-2 text-foreground font-bold mb-2">
+                    <Settings size={14} className="text-amber-400" />
+                    Algorithms
+                </h4>
+                <ul className="list-disc pl-4 space-y-1">
+                    <li><strong>AES:</strong> Industry standard, very secure.</li>
+                    <li><strong>TripleDES:</strong> Legacy support for older systems.</li>
+                    <li><strong>RC4:</strong> Very fast, but less secure for sensitive data.</li>
+                </ul>
+            </section>
+        </>
+    );
+
     return (
-        <ToolPane
-            title="Symmetric Encryptor"
-            description="Secure encryption using AES, TripleDES, Rabbit, and RC4 algorithms"
+        <ToolPane 
+            title="Symmetric Encryptor" 
+            description="Secure your data with AES, TripleDES, Rabbit or RC4"
+            toolId={TOOL_ID}
+            validation={validation as any}
             onClear={handleClear}
-            /* Removing default actions to implement custom header if desired, or keeping minimal */
+            helpContent={helpContent}
         >
-            <div className="flex flex-col h-full space-y-4">
-                
-                {/* Configuration Bar */}
-                <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl bg-glass-panel border border-border-glass items-end sm:items-center shadow-sm">
-                    <div className="flex-1 w-full sm:w-auto">
-                         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                             <Key className="w-3.5 h-3.5" /> Secret Key
-                         </label>
-                         <Input
-                            type="text" 
-                            value={options.key}
-                            onChange={handleKeyChange}
-                            className="font-mono bg-background/50 border-border-glass focus:border-primary/50 transition-all"
-                            placeholder="Enter your secret passphrase..."
-                            fullWidth
-                        />
+            <div className="space-y-8 max-w-5xl mx-auto">
+                {/* Configuration Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end bg-white/5 p-6 rounded-2xl border border-white/5">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-foreground-muted ml-1">Algorithm</label>
+                        <select 
+                            value={algorithm}
+                            onChange={handleAlgorithmChange}
+                            className="w-full h-11 bg-black/20 border border-white/10 rounded-xl px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="AES">AES (Modern Standard)</option>
+                            <option value="TripleDES">TripleDES (Legacy)</option>
+                            <option value="Rabbit">Rabbit (Stateful Stream)</option>
+                            <option value="RC4">RC4 (Fast Stream)</option>
+                        </select>
                     </div>
-                    
-                    <div className="w-full sm:w-48">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                            <Settings className="w-3.5 h-3.5" /> Algorithm
-                        </label>
-                        <div className="relative">
-                            <select
-                                className="w-full h-10 pl-3 pr-8 rounded-md border border-border-glass bg-background/50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer hover:bg-accent/50"
-                                value={options.algorithm}
-                                onChange={handleAlgorithmChange}
-                            >
-                                <option value="AES">AES (256-bit)</option>
-                                <option value="TripleDES">TripleDES</option>
-                                <option value="Rabbit">Rabbit</option>
-                                <option value="RC4">RC4</option>
-                            </select>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                            </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-foreground-muted ml-1">Secret Key</label>
+                        <div className="relative group">
+                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-disabled group-focus-within:text-indigo-400 transition-colors" />
+                            <Input
+                                placeholder="Enter secret key..."
+                                value={options.key}
+                                onChange={handleKeyChange}
+                                type="password"
+                                className="pl-11 h-11 bg-black/20 border-white/10"
+                            />
                         </div>
                     </div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-4">
-                    
-                    {/* Input Section */}
-                    <div className="flex-1 flex flex-col min-h-0">
-                        <div className="flex items-center justify-between mb-2 px-1">
-                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Input</label>
-                            <div className="flex gap-1">
-                                <button onClick={() => setToolData(effectiveId, { input: '' })} className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors" title="Clear Input">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => copyToClipboard(input)} className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors" title="Copy Input">
-                                    <Copy className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
+                {/* Main Action Area */}
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
+                    {/* Input */}
+                    <div className="flex flex-col space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground-muted">Input Content</label>
+                            <span className="text-[9px] font-mono opacity-30">{input.length} chars</span>
                         </div>
-                        <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-border-glass shadow-sm bg-glass-panel">
-                            <CodeEditor
-                                className="h-full"
-                                language="text"
-                                placeholder="Type or paste content here..."
-                                value={input}
-                                onChange={handleInputChange}
-                            />
-                        </div>
+                        <CodeEditor
+                            value={input}
+                            onChange={handleInputChange}
+                            language="text"
+                            placeholder="Enter text here..."
+                            className="flex-1 min-h-[300px] rounded-2xl border-white/5 overflow-hidden shadow-inner"
+                        />
                     </div>
 
-                    {/* Action Center - Desktop: Vertical, Mobile: Horizontal */}
-                    <div className="flex md:flex-col items-center justify-center gap-3 py-2 md:py-0 md:px-2">
-                        <Button
-                            variant="primary"
+                    {/* Actions */}
+                    <div className="flex lg:flex-col items-center justify-center gap-3 py-4">
+                        <Button 
                             onClick={handleEncrypt}
                             loading={loadingAction === 'Encrypt'}
-                            className="w-full md:w-32 h-10 shadow-lg shadow-primary/20"
-                            icon={Lock}
+                            className="w-full lg:w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 group"
+                            title="Encrypt"
                         >
-                            Encrypt
-                        </Button>
-                        
-                        <Button
-                            variant="secondary"
-                            onClick={handleSwap}
-                            className="p-2 rounded-full h-10 w-10 md:h-10 md:w-10 flex items-center justify-center bg-accent/50 hover:bg-accent border-border-glass"
-                            title="Swap Input & Output"
-                        >
-                            <ArrowRightLeft className="w-4 h-4 md:rotate-90" />
+                            <Lock className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         </Button>
 
-                        <Button
-                            variant="primary" // Changed to primary but maybe a different color via className if supported, or stick to secondary
-                            className="w-full md:w-32 h-10 bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-indigo-600"
+                        <button 
+                            onClick={handleSwap}
+                            className="p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-foreground-muted transition-all"
+                            title="Swap Input/Output"
+                        >
+                            <ArrowRightLeft className="w-4 h-4" />
+                        </button>
+
+                        <Button 
                             onClick={handleDecrypt}
                             loading={loadingAction === 'Decrypt'}
-                            icon={Unlock}
+                            variant="secondary"
+                            className="w-full lg:w-14 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 group"
+                            title="Decrypt"
                         >
-                            Decrypt
+                            <Unlock className="w-5 h-5 group-hover:scale-110 transition-transform text-white" />
                         </Button>
                     </div>
 
-                    {/* Output Section */}
-                    <div className="flex-1 flex flex-col min-h-0">
-                         <div className="flex items-center justify-between mb-2 px-1">
-                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Output</label>
-                            <div className="flex gap-1">
-                                <button onClick={() => copyToClipboard(output)} className="p-1.5 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground transition-colors" title="Copy Output">
+                    {/* Output */}
+                    <div className="flex flex-col space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground-secondary">Result Output</label>
+                            {output && (
+                                <button 
+                                    onClick={() => copyToClipboard(output)}
+                                    className="p-1 hover:bg-white/5 rounded text-indigo-400 transition-colors"
+                                    title="Copy Result"
+                                >
                                     <Copy className="w-3.5 h-3.5" />
                                 </button>
-                            </div>
+                            )}
                         </div>
-                        <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-border-glass shadow-sm bg-glass-panel relative group">
+                        <div className="relative flex-1 min-h-[300px] group">
                             <CodeEditor
-                                className="h-full"
-                                language="text"
                                 value={output}
-                                readOnly={true}
-                                editable={false}
+                                readOnly
+                                language="text"
+                                placeholder="Result will appear here..."
+                                className="h-full rounded-2xl border-white/5 overflow-hidden shadow-xl bg-indigo-500/[0.02]"
                             />
-                            {/* Overlay for empty state if needed, or just let CodeEditor handle it */}
                             {!output && (
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
-                                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <Lock className="w-8 h-8 opacity-20" />
-                                        <span className="text-xs uppercase tracking-widest font-medium">Result will appear here</span>
-                                    </div>
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 group-hover:opacity-30 transition-opacity">
+                                    <Lock size={40} className="text-foreground" />
                                 </div>
                             )}
                         </div>
