@@ -9,73 +9,13 @@ export interface ChainTemplate {
 
 export const CHAIN_TEMPLATES: ChainTemplate[] = [
     {
-        id: 'json-clean',
-        name: 'Clean & Format JSON',
-        description: 'Parses JSON and formats it with proper indentation',
+        id: 'json-clean-csv-export',
+        name: 'JSON Clean → CSV Export',
+        description: 'Formatter → Validator → JSON to CSV (Ready for download)',
         steps: [
             {
                 toolId: 'code-formatter',
                 options: { language: 'json', indent: 2 },
-                label: 'Format JSON'
-            }
-        ]
-    },
-    {
-        id: 'json-minify',
-        name: 'Minify JSON',
-        description: 'Compresses JSON for production use',
-        steps: [
-            {
-                toolId: 'json-minifier',
-                options: {},
-                label: 'Minify JSON'
-            }
-        ]
-    },
-    {
-        id: 'json-to-yaml',
-        name: 'JSON to YAML',
-        description: 'Converts JSON data to YAML format',
-        steps: [
-            {
-                toolId: 'converter',
-                options: { mode: 'json-yaml' },
-                label: 'Convert to YAML'
-            }
-        ]
-    },
-    {
-        id: 'yaml-to-json',
-        name: 'YAML to JSON',
-        description: 'Converts YAML data to JSON format',
-        steps: [
-            {
-                toolId: 'converter',
-                options: { mode: 'yaml-json' },
-                label: 'Convert to JSON'
-            }
-        ]
-    },
-    {
-        id: 'json-to-csv',
-        name: 'JSON to CSV',
-        description: 'Converts JSON array to CSV format',
-        steps: [
-            {
-                toolId: 'converter',
-                options: { mode: 'json-csv' },
-                label: 'Convert to CSV'
-            }
-        ]
-    },
-    {
-        id: 'json-clean-csv',
-        name: 'JSON Clean → CSV',
-        description: 'Format JSON array and convert to CSV format',
-        steps: [
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json' },
                 label: 'Format & Validate JSON'
             },
             {
@@ -86,58 +26,70 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
         ]
     },
     {
-        id: 'json-validate-minify',
+        id: 'json-minify-copy',
         name: 'JSON Format → Minify',
-        description: 'Ensures JSON is valid and then minimizes it',
+        description: 'JSON Formatter → JSON Minifier (Ready for clipboard)',
         steps: [
             {
                 toolId: 'code-formatter',
                 options: { language: 'json' },
-                label: 'Format JSON'
+                label: 'Ensure Valid JSON'
             },
             {
                 toolId: 'json-minifier',
                 options: {},
-                label: 'Minify'
+                label: 'Compress / Minify'
             }
         ]
     },
     {
-        id: 'json-format-yaml',
-        name: 'JSON Format → YAML',
-        description: 'Clean up JSON before converting to YAML',
+        id: 'json-to-yaml-flow',
+        name: 'JSON → YAML flow',
+        description: 'JSON Formatter → JSON to YAML conversion',
         steps: [
             {
                 toolId: 'code-formatter',
                 options: { language: 'json' },
-                label: 'Format JSON'
+                label: 'Clean Input'
             },
             {
                 toolId: 'converter',
                 options: { mode: 'json-yaml' },
-                label: 'To YAML'
+                label: 'Convert to YAML'
             }
         ]
     },
     {
-        id: 'clean-pipeline',
-        name: 'Multi-Format Roundtrip',
-        description: 'Example flow: JSON → YAML → JSON (demo)',
+        id: 'yaml-to-json-flow',
+        name: 'YAML → JSON flow',
+        description: 'YAML to JSON conversion → JSON Validator',
         steps: [
-            {
-                toolId: 'code-formatter',
-                options: { language: 'json' },
-                label: 'Initial Format'
-            },
-            {
-                toolId: 'converter',
-                options: { mode: 'json-yaml' },
-                label: 'To YAML'
-            },
             {
                 toolId: 'converter',
                 options: { mode: 'yaml-json' },
-                label: 'Back to JSON'
+                label: 'Parse YAML'
+            },
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json', indent: 2 },
+                label: 'Format Result'
+            }
+        ]
+    },
+    {
+        id: 'json-to-xml-flow',
+        name: 'JSON → XML flow',
+        description: 'JSON Formatter → JSON to XML conversion',
+        steps: [
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json' },
+                label: 'Clean JSON'
+            },
+            {
+                toolId: 'converter',
+                options: { mode: 'json-xml' },
+                label: 'Convert to XML'
             }
         ]
     }

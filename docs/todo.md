@@ -1123,10 +1123,10 @@
 
 ### 20.7 Error Handling
 
-- [ ] Per-step error isolation
-- [ ] Human-readable error messages
-- [ ] Retry failed step
-- [ ] Skip step option
+- [x] Per-step error isolation
+- [x] Human-readable error messages
+- [x] Retry failed step
+- [x] Skip step option
 
 ---
 
@@ -1134,8 +1134,8 @@
 
 - [ ] Lazy execution
 - [ ] Background execution
-- [ ] Progress indicator per step
-- [ ] Cancel running chain
+- [x] Progress indicator per step
+- [x] Cancel running chain
 
 ## Phase 20.9: Built-in Chain Templates (Flows)
 
@@ -1148,16 +1148,16 @@
 
 ### A1. JSON Cleanup & Export
 
-- [ ] JSON Formatter → JSON Validator → JSON to CSV → Export CSV
-- [ ] JSON Formatter → JSON Minifier → Copy to Clipboard
+- [x] JSON Formatter → JSON Validator → JSON to CSV → Export CSV
+- [x] JSON Formatter → JSON Minifier → Copy to Clipboard
 - [ ] JSON Formatter → Data Masking (JSON) → Export JSON
 - [ ] JSON Diff → Export Report (TXT/MD)
 
 ### A2. JSON ↔ Other Formats
 
-- [ ] JSON Formatter → JSON ⇄ YAML (to YAML) → Export YAML
-- [ ] JSON Formatter → JSON ⇄ XML (to XML) → Export XML
-- [ ] YAML ⇄ JSON (to JSON) → JSON Validator → Export JSON
+- [x] JSON Formatter → JSON ⇄ YAML (to YAML) → Export YAML
+- [x] JSON Formatter → JSON ⇄ XML (to XML) → Export XML
+- [x] YAML ⇄ JSON (to JSON) → JSON Validator → Export JSON
 - [ ] XML ⇄ JSON (to JSON) → JSON Formatter → Export JSON
 
 ### A3. Token / JWT Workflows

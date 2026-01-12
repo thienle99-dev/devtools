@@ -15,7 +15,7 @@ import type { ChainTemplate } from '@store/chainTemplates';
 const VisualPipelineDesigner = React.lazy(() => import('./VisualPipelineDesigner'));
 
 const PipelineDesigner: React.FC = () => {
-    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, duplicateWorkflow, addStep, removeStep, toggleFavorite } = useWorkflowStore();
+    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, duplicateWorkflow, addStep, updateStep, removeStep, toggleFavorite } = useWorkflowStore();
     const removeWorkflow = deleteWorkflow; // Alias for cleaner usage
     const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'visual'>('list');
@@ -137,14 +137,25 @@ const PipelineDesigner: React.FC = () => {
         toast.success('Pipeline configuration copied to clipboard');
     };
 
+    // For cancellation
+    const abortControllerRef = React.useRef<AbortController | null>(null);
+
     const runStep = async (stepIndex: number, startData: any) => {
         if (!activeWorkflow) return;
         const step = activeWorkflow.steps[stepIndex];
         if (!step) return;
 
+        if (step.disabled) {
+            setStepResults(prev => ({
+                ...prev,
+                [step.id]: { status: 'success', output: startData } // Pass-through
+            }));
+            return startData;
+        }
+
         setStepResults(prev => ({
             ...prev,
-            [step.id]: { status: 'running', output: null }
+            [step.id]: { status: 'running', output: null, error: undefined }
         }));
 
         const startTime = performance.now();
@@ -153,6 +164,10 @@ const PipelineDesigner: React.FC = () => {
             let result = startData;
             
             if (tool && tool.process) {
+                // Check for abort before processing if it's a long task
+                if (abortControllerRef.current?.signal.aborted) {
+                    throw new Error('Operation cancelled');
+                }
                 result = await tool.process(startData, step.options);
             }
             
@@ -164,9 +179,10 @@ const PipelineDesigner: React.FC = () => {
             return result;
         } catch (error) {
             const duration = performance.now() - startTime;
+            const message = (error as Error).message || 'Unknown error';
             setStepResults(prev => ({
                 ...prev,
-                [step.id]: { status: 'error', output: null, error: (error as Error).message, duration }
+                [step.id]: { status: 'error', output: null, error: message, duration }
             }));
             throw error;
         }
@@ -177,18 +193,35 @@ const PipelineDesigner: React.FC = () => {
 
         setIsRunning(true);
         setStepResults({}); // Reset previous results
+        abortControllerRef.current = new AbortController();
 
         let currentData = input;
 
         try {
             for (let i = 0; i < activeWorkflow.steps.length; i++) {
+                if (abortControllerRef.current.signal.aborted) {
+                    toast.error('Pipeline cancelled');
+                    break;
+                }
                 currentData = await runStep(i, currentData);
             }
-            toast.success('Pipeline executed successfully');
+            if (!abortControllerRef.current.signal.aborted) {
+                toast.success('Pipeline executed successfully');
+            }
         } catch (error) {
-            console.error(error);
-            toast.error(`Pipeline failed: ${(error as Error).message}`);
+            if ((error as Error).message !== 'Operation cancelled') {
+                console.error(error);
+                toast.error(`Pipeline failed: ${(error as Error).message}`);
+            }
         } finally {
+            setIsRunning(false);
+            abortControllerRef.current = null;
+        }
+    };
+
+    const handleCancel = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
             setIsRunning(false);
         }
     };
@@ -209,6 +242,7 @@ const PipelineDesigner: React.FC = () => {
                     "flex-1 glass-panel p-4 flex items-center gap-4 transition-all border",
                     result?.status === 'running' ? "border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.1)]" : 
                     result?.status === 'error' ? "border-rose-500/50 bg-rose-500/5" :
+                    step.disabled ? "opacity-50 grayscale border-dashed border-border-glass" :
                     "hover:border-indigo-500/50 border-transparent"
                 )}>
                     <div className={cn("p-2 rounded-lg bg-indigo-500/10", tool?.color)}>
@@ -237,7 +271,18 @@ const PipelineDesigner: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            icon={Play}
+                            icon={RotateCcw}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                updateStep(activeWorkflow!.id, step.id, { disabled: !step.disabled });
+                            }}
+                            className={cn(step.disabled ? "text-amber-400" : "text-foreground-muted")}
+                            title={step.disabled ? "Enable Step" : "Disable/Skip Step"}
+                        />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={result?.status === 'error' ? RotateCcw : Play}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const prevStep = index > 0 ? activeWorkflow!.steps[index - 1] : null;
@@ -249,8 +294,8 @@ const PipelineDesigner: React.FC = () => {
                                 }
                                 runStep(index, prevOutput);
                             }}
-                            className="text-indigo-400 hover:text-indigo-500 hover:bg-indigo-500/10"
-                            title="Run only this step"
+                            className={cn(result?.status === 'error' ? "text-amber-400" : "text-indigo-400")}
+                            title={result?.status === 'error' ? "Retry Step" : "Run only this step"}
                         />
                         <Button
                             variant="ghost"
@@ -505,15 +550,26 @@ const PipelineDesigner: React.FC = () => {
                                     >
                                         Reset
                                     </Button>
-                                    <Button
-                                        variant="primary"
-                                        icon={Play}
-                                        loading={isRunning}
-                                        onClick={handleRun}
-                                        disabled={!activeWorkflow?.steps.length}
-                                    >
-                                        Run Pipeline
-                                    </Button>
+                                    {isRunning ? (
+                                        <Button
+                                            variant="secondary"
+                                            className="bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                                            icon={XCircle}
+                                            onClick={handleCancel}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="primary"
+                                            icon={Play}
+                                            loading={isRunning}
+                                            onClick={handleRun}
+                                            disabled={!activeWorkflow?.steps.length}
+                                        >
+                                            Run Pipeline
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
 

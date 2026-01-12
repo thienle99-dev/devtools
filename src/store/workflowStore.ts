@@ -6,6 +6,7 @@ export interface WorkflowStep {
     toolId: string;
     options: Record<string, any>;
     label?: string;
+    disabled?: boolean;
     metadata?: Record<string, any>; // For visual builder (position, etc)
 }
 
