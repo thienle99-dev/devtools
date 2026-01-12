@@ -69,14 +69,65 @@ export const CHAIN_TEMPLATES: ChainTemplate[] = [
         ]
     },
     {
-        id: 'clean-pipeline',
-        name: 'Format -> Convert -> Minify',
-        description: 'Example flow: Format JSON, Convert to YAML, then back to JSON (demo)',
+        id: 'json-clean-csv',
+        name: 'JSON Clean → CSV',
+        description: 'Format JSON array and convert to CSV format',
         steps: [
             {
                 toolId: 'code-formatter',
                 options: { language: 'json' },
-                label: 'Ensure JSON'
+                label: 'Format & Validate JSON'
+            },
+            {
+                toolId: 'converter',
+                options: { mode: 'json-csv' },
+                label: 'Convert to CSV'
+            }
+        ]
+    },
+    {
+        id: 'json-validate-minify',
+        name: 'JSON Format → Minify',
+        description: 'Ensures JSON is valid and then minimizes it',
+        steps: [
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json' },
+                label: 'Format JSON'
+            },
+            {
+                toolId: 'json-minifier',
+                options: {},
+                label: 'Minify'
+            }
+        ]
+    },
+    {
+        id: 'json-format-yaml',
+        name: 'JSON Format → YAML',
+        description: 'Clean up JSON before converting to YAML',
+        steps: [
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json' },
+                label: 'Format JSON'
+            },
+            {
+                toolId: 'converter',
+                options: { mode: 'json-yaml' },
+                label: 'To YAML'
+            }
+        ]
+    },
+    {
+        id: 'clean-pipeline',
+        name: 'Multi-Format Roundtrip',
+        description: 'Example flow: JSON → YAML → JSON (demo)',
+        steps: [
+            {
+                toolId: 'code-formatter',
+                options: { language: 'json' },
+                label: 'Initial Format'
             },
             {
                 toolId: 'converter',

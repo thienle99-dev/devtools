@@ -1,6 +1,6 @@
 import React, { useState, useMemo, Suspense } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
-import { ArrowRight, Plus, Trash2, Play, Package, Download, Copy, CheckCircle, XCircle, Loader2, RotateCcw, Layout, List, Star, Sparkles, BookTemplate, Upload, Share2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Play, Package, Download, Copy, CheckCircle, XCircle, Loader2, RotateCcw, Layout, List, Star, Sparkles, Upload, Share2 } from 'lucide-react';
 import { useWorkflowStore, type WorkflowStep } from '@store/workflowStore';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
