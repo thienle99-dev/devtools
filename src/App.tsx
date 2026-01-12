@@ -7,15 +7,13 @@ import { WindowControls } from '@components/layout/WindowControls';
 import { TrayController } from '@components/layout/TrayController';
 import { TabBar } from '@components/layout/TabBar';
 import { TabContent } from '@components/layout/TabContent';
-import { Dashboard } from '@pages/Dashboard';
 import { GlobalClipboardMonitor } from '@components/GlobalClipboardMonitor';
 import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
 import { TOOLS } from '@tools/registry';
 import { useClipboardStore } from '@store/clipboardStore';
 import { useResponsive } from '@hooks/useResponsive';
 import { Footer } from '@components/layout/Footer';
-import { preloadHeavyModules } from '@utils/lazyLoad'; // Phase 2: Preload on idle
-
+import { preloadHeavyModules } from '@utils/lazyLoad';
 
 // Loading fallback component
 const PageLoader = () => (
@@ -25,41 +23,61 @@ const PageLoader = () => (
 );
 
 const MainLayout = () => {
-  const openTab = useTabStore(state => state.openTab);
-  const setActiveTab = useTabStore(state => state.setActiveTab);
   const tabs = useTabStore(state => state.tabs);
   const activeTabId = useTabStore(state => state.activeTabId);
   const location = useLocation();
   const navigate = useNavigate();
   const settings = useClipboardStore(state => state.settings);
 
-  const isDashboard = location.pathname === '/dashboard';
-
   // Sync URL -> Tab
   // This allows bookmarks, tray navigation, and redirects to work
   useEffect(() => {
-    // Never auto-open a tool when on dashboard
-    if (location.pathname === '/dashboard') return;
+    const { tabs, activeTabId, openTab, setActiveTab } = useTabStore.getState();
 
     // If no tabs are open, don't recreate a tab just because URL still points to a tool
-    if (tabs.length === 0) return;
+    // Exception: If we are intentionally navigating to a tool (e.g. from a bookmark or external link), we normally want it to open.
+    // But here we rely on the logic that "empty tabs" = "dashboard view".
+    // If the URL is '/', it might default to dashboard?
+    if (tabs.length === 0) {
+        // If tabs are empty, we check if we should open the tool from URL.
+        // If URL matches a tool, open it.
+        // If URL is /dashboard, we treat it as a tool now.
+    }
 
     // If we are on a tool path (including settings), ensure tab is open
     const tool = TOOLS.find(t => t.path === location.pathname);
+
     if (tool) {
+      if (tool.id === 'dashboard') {
+          // Special case: Dashboard is NOT a tab. It's the absence of an active tab.
+          if (activeTabId) {
+              setActiveTab(null); // Deselect any active tab
+          }
+          return;
+      }
+
       // Check if tab already exists (including preview tabs)
       const existingTab = tabs.find(t => t.toolId === tool.id);
       if (!existingTab) {
         // URL sync should create active tab (not preview) - user navigated directly
         openTab(tool.id, tool.path, tool.name, tool.description, false, false);
-      } else if (existingTab.isPreview) {
-        // If existing tab is preview, activate it when URL matches
-        setActiveTab(existingTab.id);
+      } else {
+        // Tab exists! If it's not the active tab, switch to it.
+        // This handles cases where user navigates via Sidebar/Keys but tab is already open.
+        // Also handles "preview" promotion.
+        if (existingTab.id !== activeTabId) {
+             setActiveTab(existingTab.id);
+        }
       }
+    } else if (location.pathname === '/' || location.pathname === '/dashboard') {
+         // Fallback for root/dashboard if not caught by tool check (though dashboard is in TOOLS now)
+         if (activeTabId) setActiveTab(null);
     }
-  }, [location.pathname, openTab, tabs, setActiveTab]);
+  }, [location.pathname]);
 
-  // When all tabs are closed, redirect to dashboard instead of recreating the last tool tab
+  // When all tabs are closed, redirect to dashboard? 
+  // If we close all tabs, TabContent renders Dashboard.
+  // We should probably update URL to /dashboard or / so it feels right.
   useEffect(() => {
     if (tabs.length === 0 && location.pathname !== '/dashboard') {
       navigate('/dashboard', { replace: true });
@@ -98,7 +116,7 @@ const MainLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TabBar />
         <div className="flex-1 min-h-0">
-          {isDashboard ? <Dashboard /> : <TabContent />}
+          <TabContent />
         </div>
       </div>
     </div>

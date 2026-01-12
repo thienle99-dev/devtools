@@ -16,10 +16,16 @@ export const QuickAccessSection: React.FC = () => {
 
     const recentTools = useMemo(() => {
         const result: ReturnType<typeof getToolById>[] = [];
+        const seen = new Set<string>();
+        
         for (const item of history) {
+            // Deduplicate and exclude Dashboard itself
+            if (seen.has(item.id) || item.id === 'dashboard') continue;
+            
             const tool = getToolById(item.id);
             if (tool) {
                 result.push(tool);
+                seen.add(item.id);
             }
             if (result.length >= 6) break;
         }
@@ -27,7 +33,9 @@ export const QuickAccessSection: React.FC = () => {
     }, [history]);
 
     const favoriteTools = useMemo(() => {
-        return favorites
+        // Deduplicate favorites
+        const uniqueFavorites = Array.from(new Set(favorites));
+        return uniqueFavorites
             .map(id => getToolById(id))
             .filter((t): t is NonNullable<ReturnType<typeof getToolById>> => Boolean(t));
     }, [favorites]);

@@ -52,7 +52,7 @@ export const Sidebar: React.FC = React.memo(() => {
         const allCategories = CATEGORIES.map(c => getToolsByCategory(c.id)).flat();
         const uniqueTools = Array.from(new Set(allCategories.map(t => t.id)))
             .map(id => allCategories.find(t => t.id === id)!)
-            .filter(t => t.id !== 'settings');
+            .filter(t => t.id !== 'settings' && t.id !== 'dashboard');
 
         const results = uniqueTools.filter(tool =>
             tool.name.toLowerCase().includes(query) ||
@@ -67,7 +67,8 @@ export const Sidebar: React.FC = React.memo(() => {
         return CATEGORIES.map(category => {
             let tools;
             if (category.id === 'favorites') {
-                tools = favorites.map(id => getToolById(id)).filter((t): t is any => Boolean(t));
+                const uniqueFavorites = Array.from(new Set(favorites));
+                tools = uniqueFavorites.map(id => getToolById(id)).filter((t): t is any => Boolean(t));
             } else if (category.id === 'recent') {
                 // Unique based on tool ID, limited to 5
                 const seen = new Set<string>();
@@ -82,7 +83,7 @@ export const Sidebar: React.FC = React.memo(() => {
             } else {
                 tools = getToolsByCategory(category.id);
             }
-            return { ...category, tools: tools.filter((t: any) => t.id !== 'settings') };
+            return { ...category, tools: tools.filter((t: any) => t.id !== 'settings' && t.id !== 'dashboard') };
         });
     }, [favorites, history]);
 
@@ -189,7 +190,11 @@ export const Sidebar: React.FC = React.memo(() => {
                             label="Dashboard"
                             subtitle="Overview"
                             isActive={location.pathname === '/dashboard'}
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => {
+                                const { setActiveTab } = useTabStore.getState();
+                                setActiveTab(null);
+                                navigate('/dashboard');
+                            }}
                             color="text-indigo-400"
                         />
                     </div>

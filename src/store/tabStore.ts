@@ -16,7 +16,7 @@ interface TabStore {
 
     openTab: (toolId: string, path: string, title: string, description?: string, forceNew?: boolean, isPreview?: boolean) => void;
     closeTab: (tabId: string) => void;
-    setActiveTab: (tabId: string) => void;
+    setActiveTab: (tabId: string | null) => void;
     reorderTabs: (tabs: Tab[]) => void;
     closeAllTabs: () => void;
     closeOtherTabs: (tabId: string) => void;
@@ -105,7 +105,12 @@ export const useTabStore = create<TabStore>()(
                 });
             },
 
-            setActiveTab: (tabId: string) => {
+            setActiveTab: (tabId: string | null) => {
+                if (tabId === null) {
+                    set({ activeTabId: null });
+                    return;
+                }
+
                 const { tabs } = get();
                 // When activating a tab, remove preview status
                 set({

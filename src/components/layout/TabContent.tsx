@@ -1,8 +1,9 @@
 import React, { Suspense, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useTabStore } from '../../store/tabStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { getToolById } from '../../tools/registry';
+import { DashboardPage } from '../../tools/registry/lazy-tools';
+import { cn } from '../../utils/cn';
 
 export const TabContent: React.FC = React.memo(() => {
     const tabs = useTabStore(state => state.tabs);
@@ -36,24 +37,9 @@ export const TabContent: React.FC = React.memo(() => {
     if (tabs.length === 0 || !activeTab) {
         return (
             <div className="flex-1 overflow-hidden relative flex flex-col min-h-0 tab-content-area">
-                <div className="flex-1 flex flex-col items-center justify-center text-foreground-muted select-none px-8">
-                    <div className="relative mb-8">
-                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-xl border border-white/10 flex items-center justify-center text-5xl mb-6 shadow-2xl">
-                            🚀
-                        </div>
-                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500/60 rounded-full border-2 border-[var(--color-glass-panel)] animate-pulse" />
-                    </div>
-                    <h2 className="text-2xl font-semibold text-foreground mb-2">No Tool Selected</h2>
-                    <p className="text-sm opacity-70 text-center max-w-md mb-8">
-                        Select a tool from the sidebar to get started, or use the search to find what you need
-                    </p>
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-glass-input)] border border-border-glass text-xs opacity-60">
-                        <kbd className="px-2 py-1 rounded bg-[var(--color-glass-button)] border border-border-glass">⌘</kbd>
-                        <span>+</span>
-                        <kbd className="px-2 py-1 rounded bg-[var(--color-glass-button)] border border-border-glass">K</kbd>
-                        <span className="ml-2">to search</span>
-                    </div>
-                </div>
+                <Suspense fallback={null}>
+                    <DashboardPage />
+                </Suspense>
             </div>
         );
     }
@@ -91,20 +77,12 @@ export const TabContent: React.FC = React.memo(() => {
                 const ToolComponent = toolDef.component;
 
                 return (
-                    <motion.div
+                    <div
                         key={tab.id}
-                        initial={false}
-                        animate={{
-                            opacity: isActive ? 1 : 0,
-                        }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        style={{
-                            display: isActive ? 'flex' : 'none',
-                            position: 'absolute',
-                            inset: 0,
-                            flexDirection: 'column'
-                        }}
-                        className="h-full w-full"
+                        className={cn(
+                            "absolute inset-0 flex flex-col h-full w-full bg-background/50 backdrop-blur-[1px]",
+                            isActive ? "z-10 opacity-100" : "z-0 opacity-0 pointer-events-none hidden"
+                        )}
                     >
                         <Suspense fallback={
                             <div className="flex-1 flex items-center justify-center">
@@ -120,7 +98,7 @@ export const TabContent: React.FC = React.memo(() => {
                             */}
                             <ToolComponent tabId={tab.id} {...(toolDef.props || {})} />
                         </Suspense>
-                    </motion.div>
+                    </div>
                 );
             })}
 

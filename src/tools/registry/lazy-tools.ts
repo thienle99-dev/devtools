@@ -114,6 +114,7 @@ export const Chronometer = React.lazy(() => import('@tools/math/Chronometer').th
 // Pages
 // Pages
 export const SettingsPage = React.lazy(() => import('@pages/Settings'));
+export const DashboardPage = React.lazy(() => import('@pages/Dashboard').then(m => ({ default: m.Dashboard })));
 
 export const UniversalFormatter = React.lazy(() => import('@tools/development/UniversalFormatter').then(m => ({ default: m.UniversalFormatter })));
 export const Converter = React.lazy(() => import('@tools/converters/Converter').then(m => ({ default: m.Converter })));
