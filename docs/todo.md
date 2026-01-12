@@ -1064,20 +1064,20 @@
 
 ### 20.1 Core Architecture
 
-- [ ] Define ToolDataType (text, json, image, file, etc.)
-- [ ] Extend ToolDefinition with accepts / produces
-- [ ] Standardize Tool input/output contract
-- [ ] Add chainable flag to tools
-- [ ] Validate tool compatibility (A → B)
+- [x] Define ToolDataType (text, json, image, file, etc.)
+- [x] Extend ToolDefinition with accepts / produces
+- [x] Standardize Tool input/output contract
+- [x] Add chainable flag to tools
+- [x] Validate tool compatibility (A → B)
 
 ---
 
 ### 20.2 Quick Chain (MVP)
 
-- [ ] Add "Send to..." action in Tool output
-- [ ] Show compatible tools only
-- [ ] Auto-fill input of next tool
-- [ ] Preserve tool state during chaining
+- [x] Add "Send to..." action in Tool output
+- [x] Show compatible tools only
+- [x] Auto-fill input of next tool
+- [x] Preserve tool state during chaining
 - [ ] Save chained actions to history
 
 ---

@@ -11,24 +11,43 @@ interface ToolSelectorProps {
     onClose: () => void;
     onSelect: (tool: ToolDefinition) => void;
     title?: string;
+    compatibleInputType?: string;
 }
 
 export const ToolSelector: React.FC<ToolSelectorProps> = ({
     isOpen,
     onClose,
     onSelect,
-    title = "Select Tool"
+    title = "Select Tool",
+    compatibleInputType
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredTools = useMemo(() => {
         const query = searchQuery.toLowerCase();
-        return TOOLS.filter(tool =>
-            tool.name.toLowerCase().includes(query) ||
+        return TOOLS.filter(tool => {
+            const matchesSearch = tool.name.toLowerCase().includes(query) ||
             tool.description.toLowerCase().includes(query) ||
-            tool.category.toLowerCase().includes(query)
-        );
-    }, [searchQuery]);
+            tool.category.toLowerCase().includes(query);
+
+            if (!matchesSearch) return false;
+
+            if (compatibleInputType) {
+                // If the tool explicitly supports 'any' input, or the specific type
+                if (tool.inputTypes?.includes('any')) return true;
+                if (tool.inputTypes?.includes(compatibleInputType as any)) return true;
+                
+                // Fallback: If no inputTypes defined, assume not compatible for strict typing
+                // But if we want to be lenient for now while migrating:
+                // return false; 
+                
+                // For now, strict:
+                return false;
+            }
+
+            return true;
+        });
+    }, [searchQuery, compatibleInputType]);
 
     return (
         <Modal

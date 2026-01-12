@@ -3,6 +3,7 @@ import type { ReactNode, DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Copy, Download, Upload, Clipboard, ExternalLink, ArrowRight, Link as LinkIcon, HelpCircle, X, Bookmark, History as HistoryIcon, Save, Share2, Columns, AlertTriangle, Info, GitCompare } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { TOOLS } from '../../tools/registry/tools';
 import { useToolState, useToolStore } from '../../store/toolStore';
 import { toast } from 'sonner';
 import { Button } from '../ui/Button';
@@ -57,6 +58,11 @@ export const ToolPane = ({
     const [isPipeOpen, setIsPipeOpen] = useState(false);
     const [activeSidebar, setActiveSidebar] = useState<'help' | 'presets' | 'history' | null>(null);
     const [isCompareMode, setIsCompareMode] = useState(false);
+
+    const currentToolDef = toolId ? TOOLS.find(t => t.id === toolId) : undefined;
+    // Default to 'text' if not defined but has output, for backward compatibility with older tools
+    // But ideally should be explicit.
+    const primaryOutputType = currentToolDef?.outputTypes?.[0] || 'text';
 
     const toggleCompare = () => {
         if (!data?.output) {
@@ -235,7 +241,8 @@ export const ToolPane = ({
                 isOpen={isPipeOpen}
                 onClose={() => setIsPipeOpen(false)}
                 onSelect={handlePipeOutput}
-                title="Pipe Output To..."
+                title={primaryOutputType ? `Pipe (${primaryOutputType}) to...` : "Pipe Output To..."}
+                compatibleInputType={primaryOutputType}
             />
 
             {/* Header */}
