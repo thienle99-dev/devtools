@@ -69,7 +69,7 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
                             <Input
                                 type="number"
                                 min="1"
-                                max="10"
+                                max="30"
                                 value={maxConcurrent}
                                 onChange={(e) => setMaxConcurrent(Number(e.target.value))}
                                 icon={Layers}
@@ -86,7 +86,7 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
                             <Input
                                 type="number"
                                 min="1"
-                                max="32"
+                                max="64"
                                 value={segments}
                                 onChange={(e) => setSegments(Number(e.target.value))}
                                 icon={Zap}

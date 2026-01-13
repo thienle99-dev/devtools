@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Settings,
-    History,
     Trash2,
     Plus,
     Search,
     ArrowUpDown,
     CheckCircle2,
     Clock,
-    AlertCircle,
     LayoutGrid,
     LayoutList,
     DownloadCloud,
@@ -205,66 +203,72 @@ export default function DownloadManager() {
     return (
         <ToolPane
             title="Download Manager"
-            description="High-performance multi-threaded download engine with real-time analytics."
+            description="Ultra-fast multi-threaded download engine with AI-ready file management."
             actions={
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleClearHistory}
-                        className="text-foreground-tertiary hover:text-rose-400"
+                        className="text-foreground-tertiary hover:text-rose-400 hover:bg-rose-500/5 transition-all rounded-xl"
                     >
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Clear History
+                        Clear All
                     </Button>
+                    <div className="w-[1px] h-6 bg-border-glass" />
                     <Button
                         size="sm"
                         onClick={() => setIsAddDialogOpen(true)}
-                        className="bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-[0_8px_25px_rgba(59,130,246,0.3)] border-t border-white/20 px-4 transition-all active:scale-95"
+                        className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20 border-t border-white/20 px-5 transition-all active:scale-95 flex items-center gap-2"
                     >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Task
+                        <Plus className="w-4 h-4" />
+                        New Download
                     </Button>
                 </div>
             }
         >
-            <div className="flex gap-8 min-h-[600px]">
-                {/* Sidebar Navigation */}
-                <aside className="w-56 shrink-0 flex flex-col gap-6">
-                    {/* Network Status Monitor */}
-                    <div className="bg-gradient-to-br from-blue-600/15 via-blue-900/5 to-transparent border border-blue-500/20 rounded-2xl p-4 overflow-hidden relative group shadow-lg shadow-blue-500/5 backdrop-blur-md">
-                        <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex flex-col lg:flex-row gap-8 min-h-[700px]">
+                {/* Sidebar Navigation - Compact Analytics Hub */}
+                <aside className="w-full lg:w-60 shrink-0 flex flex-col gap-6">
+                    {/* Performance Dashboard Card - Compact */}
+                    <div className="relative group rounded-[24px] bg-bg-glass-panel border border-border-glass p-5 shadow-2xl transition-all duration-700 hover:border-blue-500/30">
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-3 text-[10px] uppercase tracking-widest font-black text-blue-400">
-                                <span className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-                                    Network Status
-                                </span>
-                                <div className="flex gap-1 opacity-50">
-                                    <div className="w-1 h-1 rounded-full bg-blue-500" />
-                                    <div className="w-1 h-1 rounded-full bg-blue-500/40" />
-                                    <div className="w-1 h-1 rounded-full bg-blue-500/20" />
+                            <div className="flex items-center justify-between mb-4">
+                                <Zap className="w-4 h-4 text-blue-500 animate-pulse" />
+                                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                                    Live
                                 </div>
                             </div>
-                            <div className="text-2xl font-black text-foreground-primary tabular-nums tracking-tighter mb-1 bg-clip-text text-transparent bg-gradient-to-r from-foreground-primary to-foreground-primary/70">
-                                {formatBytes(totalSpeed)}/s
+                            
+                            <div className="space-y-1">
+                                <div className="text-2xl font-black text-foreground tabular-nums tracking-tighter">
+                                    {formatBytes(totalSpeed)}<span className="text-xs font-bold text-foreground-tertiary ml-1">/s</span>
+                                </div>
+                                <div className="text-[9px] text-foreground-tertiary font-bold uppercase tracking-wider opacity-80">
+                                    Overall Speed
+                                </div>
                             </div>
-                            <div className="text-[10px] text-foreground-muted font-bold flex items-center gap-1.5 uppercase tracking-wide">
-                                <Zap className="w-3 h-3 text-blue-500" />
-                                Live Throughput
+
+                            <div className="mt-5 pt-4 border-t border-border-glass grid grid-cols-2 gap-4">
+                                <div>
+                                    <div className="text-sm font-black text-foreground">{stats.downloading}</div>
+                                    <div className="text-[8px] uppercase font-bold text-foreground-tertiary tracking-widest opacity-80">Active</div>
+                                </div>
+                                <div>
+                                    <div className="text-sm font-black text-foreground">{stats.completed}</div>
+                                    <div className="text-[8px] uppercase font-bold text-foreground-tertiary tracking-widest opacity-80">Done</div>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Background Decorative Glow */}
-                        <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl" />
                     </div>
 
-                    <nav className="space-y-6">
-                        <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground-tertiary mb-4 px-2">
-                                Library
-                            </div>
-                            <div className="space-y-1">
+                    <nav className="space-y-6 flex-1">
+                        <section>
+                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground-muted mb-2 px-3 opacity-40">
+                                Filters
+                            </h4>
+                            <div className="space-y-0.5">
                                 {categories.map(cat => (
                                     <SidebarItem
                                         key={cat.id}
@@ -276,19 +280,16 @@ export default function DownloadManager() {
                                     />
                                 ))}
                             </div>
-                        </div>
+                        </section>
 
-                        <div>
-                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground-tertiary mb-4 px-2">
-                                Activity
-                            </div>
-                            <div className="space-y-1">
+                        <section>
+                            <div className="space-y-0.5">
                                 <SidebarItem
                                     icon={Clock}
                                     label="Downloading"
                                     active={statusFilter === 'downloading'}
                                     onClick={() => setStatusFilter('downloading')}
-                                    color="text-blue-400"
+                                    color="text-blue-500"
                                     count={stats.downloading}
                                 />
                                 <SidebarItem
@@ -296,71 +297,62 @@ export default function DownloadManager() {
                                     label="Finished"
                                     active={statusFilter === 'completed'}
                                     onClick={() => setStatusFilter('completed')}
-                                    color="text-emerald-400"
+                                    color="text-emerald-500"
                                     count={stats.completed}
                                 />
-                                <SidebarItem
-                                    icon={History}
-                                    label="Paused"
-                                    active={statusFilter === 'paused'}
-                                    onClick={() => setStatusFilter('paused')}
-                                    color="text-amber-400"
-                                    count={stats.paused}
-                                />
-                                <SidebarItem
-                                    icon={AlertCircle}
-                                    label="Failed"
-                                    active={statusFilter === 'failed'}
-                                    onClick={() => setStatusFilter('failed')}
-                                    color="text-rose-400"
-                                    count={stats.failed}
-                                />
                             </div>
-                        </div>
+                        </section>
                     </nav>
 
-                    <div className="mt-auto">
-                        <button
+                    <div className="pt-6 mt-auto border-t border-border-glass scale-95 origin-bottom">
+                         <button
                             onClick={() => setIsSettingsOpen(true)}
-                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-foreground-tertiary hover:bg-foreground-primary/5 hover:text-foreground transition-all border border-transparent hover:border-border-glass group"
+                            className="w-full group flex items-center justify-between px-5 py-4 rounded-[20px] bg-bg-glass-panel border border-border-glass hover:bg-bg-glass-hover transition-all duration-300 shadow-xl shadow-black/20"
                         >
-                            <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform" />
-                            Engine Settings
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-foreground-primary/5 text-foreground-tertiary group-hover:text-foreground-primary transition-colors">
+                                    <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" />
+                                </div>
+                                <span className="text-[11px] font-black uppercase tracking-widest text-foreground-tertiary group-hover:text-foreground-primary transition-colors">Settings</span>
+                            </div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
                         </button>
                     </div>
                 </aside>
 
-                {/* Main Content Area */}
-                <main className="flex-1 min-w-0">
-                    {/* Integrated Toolbar */}
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6 bg-foreground-primary/[0.03] dark:bg-foreground-primary/[0.02] border border-border-glass rounded-2xl p-2 pr-4 backdrop-blur-md shadow-sm">
-                        <div className="relative w-full md:w-80 group">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-tertiary group-focus-within:text-blue-400 transition-colors" />
+                {/* Main Content Area - Compact Density */}
+                <main className="flex-1 min-w-0 flex flex-col gap-4">
+                    {/* Compact Toolbar */}
+                    <header className="flex items-center justify-between bg-bg-glass-panel border border-border-glass rounded-2xl p-1.5 shadow-xl backdrop-blur-xl">
+                        <div className="relative group flex-1 max-w-sm">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground-tertiary group-focus-within:text-blue-500 transition-colors" />
                             <input
-                                placeholder="Search library..."
+                                placeholder="Search..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-transparent border-none h-11 pl-11 pr-4 text-sm font-medium text-foreground-primary focus:ring-0 placeholder:text-foreground-tertiary"
+                                className="w-full bg-transparent border-none py-2 pl-9 pr-4 text-xs font-bold text-foreground-primary focus:ring-0 placeholder:text-foreground-tertiary/40 transition-all"
                             />
                         </div>
 
-                        <div className="flex items-center gap-6">
-                            {/* Sort Controls */}
-                            <div className="flex items-center gap-1.5 p-1 bg-foreground-primary/5 dark:bg-black/20 rounded-xl border border-border-glass">
-                                <button
-                                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                                    className="p-2 rounded-lg text-foreground-tertiary hover:text-foreground hover:bg-foreground-primary/10 transition-all"
-                                >
-                                    <ArrowUpDown className={cn("w-3.5 h-3.5 transition-transform duration-500", sortOrder === 'asc' ? "rotate-180" : "")} />
-                                </button>
-                                <div className="h-4 w-[1px] bg-border-glass mx-1" />
-                                {(['date', 'name', 'size'] as const).map(s => (
+                        <div className="flex items-center gap-1.5 pr-1.5">
+                            <button
+                                onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                                className="p-2 rounded-lg text-foreground-tertiary hover:text-white hover:bg-white/5 transition-all"
+                                title="Toggle Sort Order"
+                            >
+                                <ArrowUpDown className={cn("w-3.5 h-3.5 transition-transform duration-500", sortOrder === 'asc' ? "rotate-180" : "")} />
+                            </button>
+
+                            <div className="flex items-center gap-0.5 bg-foreground-primary/5 rounded-xl p-0.5 border border-border-glass">
+                                {(['date', 'name'] as const).map(s => (
                                     <button
                                         key={s}
                                         onClick={() => setSortBy(s)}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                                            sortBy === s ? "bg-foreground-primary/10 dark:bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground-secondary"
+                                            "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                                            sortBy === s 
+                                                ? "bg-blue-600 text-white" 
+                                                : "text-foreground-tertiary hover:text-foreground-primary"
                                         )}
                                     >
                                         {s}
@@ -368,36 +360,36 @@ export default function DownloadManager() {
                                 ))}
                             </div>
 
-                            {/* View Mode Toggle */}
-                            <div className="flex p-1 bg-foreground-primary/5 dark:bg-black/20 rounded-xl border border-border-glass">
+                            <div className="flex gap-0.5 bg-foreground-primary/5 rounded-xl p-0.5 border border-border-glass">
                                 <button
                                     onClick={() => setViewMode('list')}
                                     className={cn(
-                                        "p-2 rounded-lg transition-all",
-                                        viewMode === 'list' ? "bg-foreground-primary/10 dark:bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground"
+                                        "p-1.5 rounded-lg transition-all",
+                                        viewMode === 'list' ? "bg-foreground-primary/10 text-foreground-primary" : "text-foreground-tertiary hover:text-foreground-secondary"
                                     )}
                                 >
-                                    <LayoutList className="w-4 h-4" />
+                                    <LayoutList className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                     onClick={() => setViewMode('grid')}
                                     className={cn(
-                                        "p-2 rounded-lg transition-all",
-                                        viewMode === 'grid' ? "bg-foreground-primary/10 dark:bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground"
+                                        "p-1.5 rounded-lg transition-all",
+                                        viewMode === 'grid' ? "bg-foreground-primary/10 text-foreground-primary" : "text-foreground-tertiary hover:text-foreground-secondary"
                                     )}
                                 >
-                                    <LayoutGrid className="w-4 h-4" />
+                                    <LayoutGrid className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </header>
 
-                    {/* Content Feed */}
-                    {filteredTasks.length > 0 ? (
-                        <div className={cn(
-                            "grid gap-5 transition-all duration-500",
-                            viewMode === 'list' ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-                        )}>
+                    {/* Scrollable Feed - High Density */}
+                    <div className="flex-1 min-h-0 overflow-y-auto p-4 custom-scrollbar">
+                        {filteredTasks.length > 0 ? (
+                            <div className={cn(
+                                "grid transition-all duration-700",
+                                viewMode === 'list' ? "grid-cols-1 gap-1.5" : "grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-2"
+                            )}>
                             {filteredTasks.map(task => (
                                 <DownloadItem
                                     key={task.id}
@@ -406,6 +398,7 @@ export default function DownloadManager() {
                                     onPause={handlePause}
                                     onCancel={handleCancel}
                                     onOpenFolder={openFolder}
+                                    viewMode={viewMode}
                                 />
                             ))}
                         </div>
@@ -435,8 +428,9 @@ export default function DownloadManager() {
                             <div className="absolute bottom-10 left-10 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl" />
                         </div>
                     )}
-                </main>
-            </div>
+                </div>
+            </main>
+        </div>
 
             <AddDownloadDialog
                 isOpen={isAddDialogOpen}
@@ -473,25 +467,27 @@ function SidebarItem({ icon: Icon, label, active, onClick, count, color }: Sideb
         <button
             onClick={onClick}
             className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 group relative overflow-hidden",
+                "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black transition-all duration-500 group relative overflow-hidden",
                 active
-                    ? "bg-foreground-primary/10 dark:bg-white/10 text-foreground shadow-lg shadow-black/5"
-                    : "text-foreground-tertiary hover:bg-foreground-primary/5 dark:hover:bg-white/5 hover:text-foreground-secondary"
+                    ? "bg-blue-600/10 dark:bg-blue-500/10 text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)] border border-blue-500/20"
+                    : "text-foreground-tertiary hover:bg-white/5 hover:text-foreground-secondary border border-transparent"
             )}
         >
             {active && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1/2 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
             )}
             <Icon className={cn(
-                "w-4 h-4 transition-all duration-300",
+                "w-4 h-4 transition-all duration-500",
                 active ? (color || "text-blue-500") : "text-foreground-tertiary group-hover:scale-110",
-                active && "scale-110"
+                active && "scale-125 rotate-[5deg]"
             )} />
-            {label}
+            <span className="uppercase tracking-widest">{label}</span>
             {count !== undefined && (
                 <span className={cn(
-                    "ml-auto px-1.5 py-0.5 rounded-md text-[9px] font-black tabular-nums transition-all",
-                    active ? "bg-foreground-primary/10 dark:bg-white/10 text-foreground" : "text-foreground-tertiary opacity-40 group-hover:opacity-100"
+                    "ml-auto px-2 py-0.5 rounded-lg text-[9px] font-black tabular-nums transition-all border",
+                    active 
+                        ? "bg-blue-500 text-white shadow-lg border-blue-400/50" 
+                        : "bg-white/5 text-foreground-tertiary border-border-glass opacity-40 group-hover:opacity-100"
                 )}>
                     {count}
                 </span>

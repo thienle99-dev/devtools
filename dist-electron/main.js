@@ -4849,6 +4849,17 @@ var VideoEffects = class {
 	}
 };
 const videoEffects = new VideoEffects();
+var HTTP_AGENT = new http.Agent({
+	keepAlive: true,
+	maxSockets: 128,
+	keepAliveMsecs: 1e4
+});
+var HTTPS_AGENT = new https.Agent({
+	keepAlive: true,
+	maxSockets: 128,
+	keepAliveMsecs: 1e4
+});
+var COMMON_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
 var DownloadManager = class extends EventEmitter {
 	constructor() {
 		super();
@@ -4859,8 +4870,8 @@ var DownloadManager = class extends EventEmitter {
 				history: [],
 				settings: {
 					downloadPath: app.getPath("downloads"),
-					maxConcurrentDownloads: 3,
-					segmentsPerDownload: 8,
+					maxConcurrentDownloads: 5,
+					segmentsPerDownload: 32,
 					autoStart: true
 				}
 			}
@@ -4953,12 +4964,15 @@ var DownloadManager = class extends EventEmitter {
 		if (limit <= 0) throw new Error("Too many redirects");
 		return new Promise((resolve, reject) => {
 			try {
-				const protocol$1 = new URL(url).protocol === "https:" ? https : http;
+				const parsedUrl = new URL(url);
+				const protocol$1 = parsedUrl.protocol === "https:" ? https : http;
 				const options = {
 					method: "HEAD",
+					agent: parsedUrl.protocol === "https:" ? HTTPS_AGENT : HTTP_AGENT,
 					headers: {
-						"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-						"Accept": "*/*"
+						"User-Agent": COMMON_USER_AGENT,
+						"Accept": "*/*",
+						"Connection": "keep-alive"
 					}
 				};
 				const req = protocol$1.request(url, options, (res) => {
@@ -5085,7 +5099,9 @@ var DownloadManager = class extends EventEmitter {
 		const abortControllers = [];
 		this.activeTasks.set(taskId, {
 			task,
-			abortControllers
+			abortControllers,
+			lastUpdate: Date.now(),
+			lastDownloaded: task.downloadedSize
 		});
 		const dir = path$1.dirname(task.filepath);
 		if (!fs$1.existsSync(dir)) fs$1.mkdirSync(dir, { recursive: true });
@@ -5160,43 +5176,47 @@ var DownloadManager = class extends EventEmitter {
 				return resolve();
 			}
 			const headers = {
-				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+				"User-Agent": COMMON_USER_AGENT,
 				"Accept": "*/*",
 				"Connection": "keep-alive",
 				"Referer": new URL(task.url).origin
 			};
 			if (endPos !== -1) headers["Range"] = `bytes=${startPos}-${endPos}`;
-			const download = (currentUrl, redirectLimit) => {
+			const download = (currentUrl, redirectLimit, retryCount = 0) => {
 				if (redirectLimit <= 0) {
 					reject(/* @__PURE__ */ new Error("Too many redirects in segment download"));
 					return;
 				}
 				const parsedUrl = new URL(currentUrl);
 				const protocol$1 = parsedUrl.protocol === "https:" ? https : http;
+				const agent = parsedUrl.protocol === "https:" ? HTTPS_AGENT : HTTP_AGENT;
 				headers["Referer"] = parsedUrl.origin;
 				const req = protocol$1.get(currentUrl, {
 					headers,
+					agent,
 					signal: controller.signal
 				}, (res) => {
 					if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
 						const redirectUrl = new URL(res.headers.location, currentUrl).toString();
 						res.resume();
-						download(redirectUrl, redirectLimit - 1);
+						download(redirectUrl, redirectLimit - 1, retryCount);
 						return;
 					}
 					if (res.statusCode !== 200 && res.statusCode !== 206) {
+						if (retryCount < 3) {
+							res.resume();
+							setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2e3 * (retryCount + 1));
+							return;
+						}
 						reject(/* @__PURE__ */ new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
 						return;
 					}
 					segment.status = "downloading";
-					let lastUpdateTime = Date.now();
-					let downloadedSinceLastUpdate = 0;
 					let isWriting = false;
 					res.on("data", (chunk) => {
 						const writePos = segment.start + segment.downloaded;
 						segment.downloaded += chunk.length;
 						task.downloadedSize += chunk.length;
-						downloadedSinceLastUpdate += chunk.length;
 						isWriting = true;
 						fs$1.write(fd, chunk, 0, chunk.length, writePos, (err) => {
 							isWriting = false;
@@ -5207,13 +5227,15 @@ var DownloadManager = class extends EventEmitter {
 							}
 						});
 						const now = Date.now();
-						const diff = now - lastUpdateTime;
-						if (diff >= 1e3) {
-							task.speed = Math.floor(downloadedSinceLastUpdate * 1e3 / diff);
+						const entry = this.activeTasks.get(task.id);
+						if (entry && now - entry.lastUpdate >= 1e3) {
+							const diff = now - entry.lastUpdate;
+							const downloadedDiff = task.downloadedSize - entry.lastDownloaded;
+							task.speed = Math.floor(downloadedDiff * 1e3 / diff);
 							task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
+							entry.lastUpdate = now;
+							entry.lastDownloaded = task.downloadedSize;
 							this.emitProgress(task);
-							lastUpdateTime = now;
-							downloadedSinceLastUpdate = 0;
 						}
 					});
 					res.on("end", () => {
@@ -5226,17 +5248,24 @@ var DownloadManager = class extends EventEmitter {
 						checkFinish();
 					});
 					res.on("error", (err) => {
-						segment.status = "failed";
-						reject(err);
+						if (retryCount < 3) setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2e3 * (retryCount + 1));
+						else {
+							segment.status = "failed";
+							reject(err);
+						}
 					});
 				});
 				req.on("error", (err) => {
-					segment.status = "failed";
-					reject(err);
+					if (retryCount < 3 && err.name !== "AbortError") setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2e3 * (retryCount + 1));
+					else {
+						segment.status = "failed";
+						reject(err);
+					}
 				});
-				req.setTimeout(45e3, () => {
+				req.setTimeout(6e4, () => {
 					req.destroy();
-					reject(/* @__PURE__ */ new Error("Segment download timeout"));
+					if (retryCount < 3) setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2e3 * (retryCount + 1));
+					else reject(/* @__PURE__ */ new Error("Segment download timeout"));
 				});
 			};
 			download(task.url, 5);
@@ -5298,7 +5327,10 @@ var DownloadManager = class extends EventEmitter {
 				"ogg",
 				"m4a",
 				"flac",
-				"aac"
+				"aac",
+				"alac",
+				"aik",
+				"opus"
 			],
 			video: [
 				"mp4",
@@ -5309,7 +5341,10 @@ var DownloadManager = class extends EventEmitter {
 				"flv",
 				"webm",
 				"mpeg",
-				"mpg"
+				"mpg",
+				"m4v",
+				"3gp",
+				"ts"
 			],
 			document: [
 				"pdf",
@@ -5321,7 +5356,23 @@ var DownloadManager = class extends EventEmitter {
 				"pptx",
 				"txt",
 				"epub",
-				"csv"
+				"csv",
+				"rtf",
+				"odt",
+				"ods"
+			],
+			image: [
+				"jpg",
+				"jpeg",
+				"png",
+				"gif",
+				"bmp",
+				"webp",
+				"svg",
+				"ico",
+				"tiff",
+				"heic",
+				"avif"
 			],
 			program: [
 				"exe",
@@ -5331,7 +5382,9 @@ var DownloadManager = class extends EventEmitter {
 				"app",
 				"sh",
 				"bat",
-				"bin"
+				"bin",
+				"deb",
+				"rpm"
 			],
 			compressed: [
 				"zip",
@@ -5340,7 +5393,9 @@ var DownloadManager = class extends EventEmitter {
 				"tar",
 				"gz",
 				"bz2",
-				"iso"
+				"iso",
+				"7zip",
+				"xz"
 			]
 		})) if (extensions.includes(ext)) return cat;
 		return "other";

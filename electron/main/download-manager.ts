@@ -13,6 +13,10 @@ interface StoreSchema {
     settings: DownloadSettings;
 }
 
+const HTTP_AGENT = new http.Agent({ keepAlive: true, maxSockets: 128, keepAliveMsecs: 10000 });
+const HTTPS_AGENT = new https.Agent({ keepAlive: true, maxSockets: 128, keepAliveMsecs: 10000 });
+const COMMON_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+
 export class DownloadManager extends EventEmitter {
     private store: Store<StoreSchema>;
     private history: DownloadTask[];
@@ -20,6 +24,8 @@ export class DownloadManager extends EventEmitter {
         task: DownloadTask;
         abortControllers: AbortController[];
         fd?: number;
+        lastUpdate: number;
+        lastDownloaded: number;
     }> = new Map();
 
     constructor() {
@@ -30,8 +36,8 @@ export class DownloadManager extends EventEmitter {
                 history: [],
                 settings: {
                     downloadPath: app.getPath('downloads'),
-                    maxConcurrentDownloads: 3,
-                    segmentsPerDownload: 8,
+                    maxConcurrentDownloads: 5,
+                    segmentsPerDownload: 32,
                     autoStart: true
                 }
             }
@@ -150,11 +156,14 @@ export class DownloadManager extends EventEmitter {
             try {
                 const parsedUrl = new URL(url);
                 const protocol = parsedUrl.protocol === 'https:' ? https : http;
+                const agent = parsedUrl.protocol === 'https:' ? HTTPS_AGENT : HTTP_AGENT;
                 const options = {
                     method: 'HEAD',
+                    agent,
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept': '*/*'
+                        'User-Agent': COMMON_USER_AGENT,
+                        'Accept': '*/*',
+                        'Connection': 'keep-alive'
                     }
                 };
 
@@ -300,7 +309,12 @@ export class DownloadManager extends EventEmitter {
         this.emitProgress(task);
 
         const abortControllers: AbortController[] = [];
-        this.activeTasks.set(taskId, { task, abortControllers });
+        this.activeTasks.set(taskId, { 
+            task, 
+            abortControllers, 
+            lastUpdate: Date.now(), 
+            lastDownloaded: task.downloadedSize 
+        });
 
         // Ensure directory exists
         const dir = path.dirname(task.filepath);
@@ -402,7 +416,7 @@ export class DownloadManager extends EventEmitter {
             }
 
             const headers: any = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': COMMON_USER_AGENT,
                 'Accept': '*/*',
                 'Connection': 'keep-alive',
                 'Referer': new URL(task.url).origin
@@ -412,7 +426,7 @@ export class DownloadManager extends EventEmitter {
                 headers['Range'] = `bytes=${startPos}-${endPos}`;
             }
 
-            const download = (currentUrl: string, redirectLimit: number) => {
+            const download = (currentUrl: string, redirectLimit: number, retryCount: number = 0) => {
                 if (redirectLimit <= 0) {
                     reject(new Error('Too many redirects in segment download'));
                     return;
@@ -420,40 +434,43 @@ export class DownloadManager extends EventEmitter {
 
                 const parsedUrl = new URL(currentUrl);
                 const protocol = parsedUrl.protocol === 'https:' ? https : http;
+                const agent = parsedUrl.protocol === 'https:' ? HTTPS_AGENT : HTTP_AGENT;
                 
                 // Update Referer if helpful
                 headers['Referer'] = parsedUrl.origin;
                 
-                const req = protocol.get(currentUrl, { headers, signal: controller.signal }, (res) => {
+                const req = protocol.get(currentUrl, { headers, agent, signal: controller.signal }, (res) => {
                     // Handle redirects
                     if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                         const redirectUrl = new URL(res.headers.location, currentUrl).toString();
                         res.resume(); // Must consume current response
-                        download(redirectUrl, redirectLimit - 1);
+                        download(redirectUrl, redirectLimit - 1, retryCount);
                         return;
                     }
 
                     if (res.statusCode !== 200 && res.statusCode !== 206) {
+                        // If we get an error but haven't exhausted retries, try again
+                        if (retryCount < 3) {
+                            res.resume();
+                            setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2000 * (retryCount + 1));
+                            return;
+                        }
                         reject(new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
                         return;
                     }
 
                     segment.status = 'downloading';
 
-                    let lastUpdateTime = Date.now();
-                    let downloadedSinceLastUpdate = 0;
                     let isWriting = false;
 
                     res.on('data', (chunk: Buffer) => {
                         const writePos = segment.start + segment.downloaded;
                         
-                        // Increment metrics immediately for UI reactivity
+                        // Increment metrics
                         segment.downloaded += chunk.length;
                         task.downloadedSize += chunk.length;
-                        downloadedSinceLastUpdate += chunk.length;
 
                         // Perform direct write using the task's shared file descriptor
-                        // This avoids file locking issues on Windows that occur with createWriteStream
                         isWriting = true;
                         fs.write(fd, chunk, 0, chunk.length, writePos, (err) => {
                             isWriting = false;
@@ -465,20 +482,21 @@ export class DownloadManager extends EventEmitter {
                         });
 
                         const now = Date.now();
-                        const diff = now - lastUpdateTime;
-                        if (diff >= 1000) {
-                            task.speed = Math.floor((downloadedSinceLastUpdate * 1000) / diff);
+                        const entry = this.activeTasks.get(task.id);
+                        if (entry && now - entry.lastUpdate >= 1000) {
+                            const diff = now - entry.lastUpdate;
+                            const downloadedDiff = task.downloadedSize - entry.lastDownloaded;
+                            
+                            task.speed = Math.floor((downloadedDiff * 1000) / diff);
                             task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
-
+                            
+                            entry.lastUpdate = now;
+                            entry.lastDownloaded = task.downloadedSize;
                             this.emitProgress(task);
-
-                            lastUpdateTime = now;
-                            downloadedSinceLastUpdate = 0;
                         }
                     });
 
                     res.on('end', () => {
-                        // Small delay to ensure last write completes
                         const checkFinish = () => {
                             if (!isWriting) {
                                 segment.status = 'completed';
@@ -491,19 +509,31 @@ export class DownloadManager extends EventEmitter {
                     });
 
                     res.on('error', (err) => {
-                        segment.status = 'failed';
-                        reject(err);
+                        if (retryCount < 3) {
+                            setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2000 * (retryCount + 1));
+                        } else {
+                            segment.status = 'failed';
+                            reject(err);
+                        }
                     });
                 });
 
                 req.on('error', (err) => {
-                    segment.status = 'failed';
-                    reject(err);
+                    if (retryCount < 3 && err.name !== 'AbortError') {
+                        setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2000 * (retryCount + 1));
+                    } else {
+                        segment.status = 'failed';
+                        reject(err);
+                    }
                 });
 
-                req.setTimeout(45000, () => {
+                req.setTimeout(60000, () => {
                     req.destroy();
-                    reject(new Error('Segment download timeout'));
+                    if (retryCount < 3) {
+                        setTimeout(() => download(currentUrl, redirectLimit, retryCount + 1), 2000 * (retryCount + 1));
+                    } else {
+                        reject(new Error('Segment download timeout'));
+                    }
                 });
             };
 
@@ -568,11 +598,12 @@ export class DownloadManager extends EventEmitter {
     private getCategory(filename: string): DownloadTask['category'] {
         const ext = path.extname(filename).toLowerCase().slice(1);
         const categories: Record<string, string[]> = {
-            music: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'],
-            video: ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mpeg', 'mpg'],
-            document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'epub', 'csv'],
-            program: ['exe', 'msi', 'dmg', 'pkg', 'app', 'sh', 'bat', 'bin'],
-            compressed: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'iso']
+            music: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'alac', 'aik', 'opus'],
+            video: ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mpeg', 'mpg', 'm4v', '3gp', 'ts'],
+            document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'epub', 'csv', 'rtf', 'odt', 'ods'],
+            image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'heic', 'avif'],
+            program: ['exe', 'msi', 'dmg', 'pkg', 'app', 'sh', 'bat', 'bin', 'deb', 'rpm'],
+            compressed: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'iso', '7zip', 'xz']
         };
 
         for (const [cat, extensions] of Object.entries(categories)) {

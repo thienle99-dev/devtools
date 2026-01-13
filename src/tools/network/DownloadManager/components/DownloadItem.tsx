@@ -8,16 +8,19 @@ import {
     Zap,
     FileText,
     ExternalLink,
-    Music,
-    Video,
-    Box,
-    Cpu,
-    FileCode
+    Archive,
+    CheckCircle2,
+    AlertCircle,
+    FileCode,
+    FileImage,
+    FileAudio,
+    FileVideo,
+    Binary
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { formatBytes, formatTime } from '@utils/format';
 import { Button } from '@components/ui/Button';
-import type { DownloadTask, DownloadSegment } from '@/types/network/download';
+import type { DownloadTask } from '@/types/network/download';
 
 interface DownloadItemProps {
     task: DownloadTask;
@@ -25,6 +28,7 @@ interface DownloadItemProps {
     onPause: (id: string) => void;
     onCancel: (id: string) => void;
     onOpenFolder: (path: string) => void;
+    viewMode?: 'list' | 'grid';
 }
 
 export const DownloadItem: React.FC<DownloadItemProps> = ({
@@ -32,200 +36,166 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
     onStart,
     onPause,
     onCancel,
-    onOpenFolder
+    onOpenFolder,
+    viewMode = 'list'
 }) => {
     const isDownloading = task.status === 'downloading';
-    const isPaused = task.status === 'paused';
     const isCompleted = task.status === 'completed';
     const isFailed = task.status === 'failed';
-    const isQueued = task.status === 'queued';
 
     const progress = (task.downloadedSize / task.totalSize) * 100 || 0;
 
-    const getCategoryIcon = () => {
+    const getCategoryInfo = () => {
         switch (task.category) {
-            case 'music': return Music;
-            case 'video': return Video;
-            case 'document': return FileText;
-            case 'program': return Cpu;
-            case 'compressed': return Box;
-            default: return FileCode;
+            case 'music': return { icon: FileAudio, color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-500/10' };
+            case 'video': return { icon: FileVideo, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-500/10' };
+            case 'document': return { icon: FileText, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+            case 'image': return { icon: FileImage, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+            case 'program': return { icon: Binary, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+            case 'compressed': return { icon: Archive, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-500/10' };
+            default: return { icon: FileCode, color: 'text-foreground-tertiary', bg: 'bg-foreground-primary/10' };
         }
     };
 
-    const CategoryIcon = getCategoryIcon();
+    const { icon: CategoryIcon, color: categoryColor, bg: categoryBg } = getCategoryInfo();
 
     return (
         <div className={cn(
-            "group relative bg-bg-glass-panel dark:bg-bg-glass-panel backdrop-blur-xl border rounded-2xl p-4 transition-all duration-500",
+            "group relative bg-bg-glass-panel border-border-glass border rounded-2xl p-3 transition-all duration-500 ease-out",
             isDownloading
-                ? "border-blue-500/40 ring-1 ring-blue-500/10 shadow-[0_0_25px_rgba(59,130,246,0.15)]"
-                : "border-border-glass hover:border-foreground-primary/20 hover:bg-foreground-primary/5 active:scale-[0.99]"
+                ? "border-blue-500/30 shadow-[0_8px_30px_rgba(0,0,0,0.3)] scale-[1.005]"
+                : "hover:border-glass-border-hover hover:bg-bg-glass-hover"
         )}>
-            {/* Background Accent */}
-            <div className={cn(
-                "absolute inset-0 rounded-2xl opacity-0 truncate group-hover:opacity-100 transition-opacity duration-700 pointer-events-none",
-                "bg-gradient-to-br from-blue-500/5 via-transparent to-transparent"
-            )} />
+            {/* Background Glow for Active Tasks */}
+            {isDownloading && (
+                <div className="absolute inset-0 bg-blue-500/[0.02] rounded-2xl pointer-events-none" />
+            )}
 
-            <div className="relative flex items-center gap-5">
-                {/* File Icon with Status Ring */}
+            <div className="relative flex items-center gap-4">
+                {/* 1. Compact Icon with Status Badge */}
                 <div className="relative shrink-0">
                     <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 shadow-inner",
-                        isCompleted ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 shadow-emerald-500/5" :
-                            isFailed ? "bg-rose-500/10 text-rose-500 dark:text-rose-400 group-hover:bg-rose-500/20 shadow-rose-500/5" :
-                                isDownloading ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20 shadow-blue-500/5" :
-                                    "bg-foreground-primary/10 text-foreground-tertiary group-hover:bg-foreground-primary/20 shadow-white/5"
+                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 relative overflow-hidden ring-1",
+                        isCompleted ? "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20" :
+                        isFailed ? "bg-rose-500/10 text-rose-400 ring-rose-500/20" :
+                        isDownloading ? "bg-blue-600/15 text-blue-400 ring-blue-500/30" :
+                        `${categoryBg} ${categoryColor} ring-border-glass`
                     )}>
-                        <CategoryIcon className="w-6 h-6" />
+                        <CategoryIcon className={cn("w-5 h-5 relative z-10", isDownloading && "animate-pulse")} />
                     </div>
-
+                    
                     {/* Status Dot */}
-                    {isDownloading && (
-                        <div className="absolute -top-1 -right-1 flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 border-2 border-[#161b22]"></span>
-                        </div>
-                    )}
+                    <div className="absolute -bottom-0.5 -right-0.5">
+                        {isDownloading ? (
+                            <div className="w-3 h-3 rounded-full bg-blue-500 border-2 border-bg-glass-panel animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                        ) : isCompleted ? (
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-bg-glass-panel" />
+                        ) : isFailed ? (
+                            <div className="w-3 h-3 rounded-full bg-rose-500 border-2 border-bg-glass-panel" />
+                        ) : null}
+                    </div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-3 mb-1.5">
-                        <div className="min-w-0">
-                            <h4 className="text-[14px] font-bold text-foreground-primary truncate pr-4 leading-tight mb-0.5" title={task.filename}>
-                                {task.filename}
-                            </h4>
-                            <div className="flex items-center gap-2 text-[10px] text-foreground-tertiary font-medium">
-                                <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                </span>
-                                <span>•</span>
-                                <span className="uppercase tracking-wider opacity-80">{task.category}</span>
-                            </div>
-                        </div>
-
-                        {/* Controls - macOS Style Rounded Pill */}
-                        <div className="flex items-center bg-foreground-muted/5 rounded-full p-0.5 border border-border-glass hidden group-hover:flex transition-all">
-                            {isDownloading ? (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-foreground-primary/10"
-                                    onClick={() => onPause(task.id)}
-                                >
-                                    <Pause className="w-3.5 h-3.5" />
-                                </Button>
-                            ) : (isPaused || isQueued || isFailed) && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 rounded-full text-blue-400 hover:bg-blue-400/10"
-                                    onClick={() => onStart(task.id)}
-                                >
-                                    <Play className="w-3.5 h-3.5 ml-0.5" />
-                                </Button>
-                            )}
-
-                            {isCompleted ? (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-foreground-primary/10"
-                                    onClick={() => onOpenFolder(task.filepath)}
-                                >
-                                    <Folder className="w-3.5 h-3.5" />
-                                </Button>
-                            ) : (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:text-rose-400 hover:bg-rose-400/10"
-                                    onClick={() => onCancel(task.id)}
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </Button>
-                            )}
-                        </div>
-
-                        {/* Status Label (Visible when not hoving) */}
-                        <div className="group-hover:hidden flex items-center shrink-0">
-                            {isCompleted && <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">Done</span>}
-                            {isFailed && <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20">Error</span>}
-                            {isPaused && <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold border border-amber-500/20">Pause</span>}
-                            {isQueued && <span className="px-2 py-0.5 rounded-full bg-foreground-tertiary/10 text-foreground-tertiary text-[10px] font-bold border border-border-glass">Queue</span>}
-                            {isDownloading && <span className="text-blue-400 text-[10px] font-bold tabular-nums tracking-tight">{progress.toFixed(1)}%</span>}
+                {/* 2. Main Content Feed */}
+                <div className={cn(
+                    "flex-1 min-w-0 flex gap-3",
+                    viewMode === 'list' ? "flex-col sm:flex-row sm:items-center sm:gap-6" : "flex-col"
+                )}>
+                    {/* Name & Metadata */}
+                    <div className="flex-1 min-w-0">
+                        <h4 className="text-[13px] font-bold text-foreground truncate leading-tight mb-0.5 group-hover:text-blue-500 transition-colors" title={task.filename}>
+                            {task.filename}
+                        </h4>
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-foreground-tertiary">
+                             <span className={cn("opacity-80 transition-colors", categoryColor)}>{task.category}</span>
+                             <span className="opacity-40">•</span>
+                             <span className="tabular-nums">{formatBytes(task.downloadedSize)} / {formatBytes(task.totalSize)}</span>
                         </div>
                     </div>
 
-                    {/* Meta Stats Row */}
-                    <div className="flex items-center gap-3 text-[11px] mb-3">
-                        <span className="font-bold text-foreground-secondary">{formatBytes(task.downloadedSize)} / {formatBytes(task.totalSize)}</span>
-
-                        {isDownloading && (
-                            <div className="flex items-center gap-3 ml-auto animate-in fade-in slide-in-from-right-2">
-                                <span className="flex items-center gap-1 text-blue-400 font-bold">
-                                    <Zap className="w-3 h-3" />
-                                    {formatBytes(task.speed || 0)}/s
+                    {/* Stats & Progress */}
+                    <div className={cn(
+                        "flex flex-col gap-1.5 shrink-0",
+                        viewMode === 'list' ? "sm:items-end sm:min-w-[140px]" : "w-full"
+                    )}>
+                        {task.error ? (
+                            <div className="text-[8px] font-black text-rose-500 uppercase tracking-widest bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 max-w-full truncate mb-0.5" title={task.error}>
+                                {task.error}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between gap-3 w-full">
+                                {isDownloading && (
+                                    <span className="text-[10px] font-black text-blue-500 tabular-nums uppercase tracking-tighter flex items-center gap-1">
+                                        <Zap className="w-2.5 h-2.5" />
+                                        {formatBytes(task.speed)}/s
+                                    </span>
+                                )}
+                                <span className={cn(
+                                    "text-[11px] font-black tabular-nums transition-colors",
+                                    isDownloading ? "text-blue-500" : "text-foreground-secondary"
+                                )}>
+                                    {progress.toFixed(1)}%
                                 </span>
-                                <span className="text-foreground-tertiary font-medium">{formatTime(task.eta || 0)} left</span>
                             </div>
                         )}
-                    </div>
-
-                    {/* Modern Progress Bar */}
-                    {!isCompleted && !isFailed && (
-                        <div className="relative w-full h-1.5 bg-foreground-primary/5 dark:bg-white/5 rounded-full overflow-hidden">
+                        
+                        {/* Ultra Thin Progress Bar */}
+                        <div className="h-1 w-full bg-foreground-muted/10 rounded-full overflow-hidden border border-border-glass relative">
                             <div
                                 className={cn(
-                                    "absolute top-0 left-0 h-full transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                                    isDownloading ? "bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.5)]" : "bg-foreground-muted"
+                                    "h-full rounded-full transition-all duration-700 ease-out",
+                                    isCompleted ? "bg-emerald-500" : 
+                                    isFailed ? "bg-rose-500" : 
+                                    "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
                                 )}
                                 style={{ width: `${progress}%` }}
                             />
-                            {/* Glass overlay on progress */}
-                            <div className="absolute inset-0 opacity-20 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse pointer-events-none" />
+                        </div>
+
+                        {/* Smaller metadata for error case */}
+                        {task.error && (
+                             <span className="text-[9px] font-black tabular-nums text-foreground-tertiary">
+                                {progress.toFixed(1)}%
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Time (List mode only for spacing) */}
+                    {viewMode === 'list' && isDownloading && task.eta > 0 && !task.error && (
+                        <div className="hidden xl:flex items-center gap-1.5 text-[9px] font-black text-foreground-tertiary uppercase min-w-[70px] shrink-0 opacity-60">
+                            <Clock className="w-3 h-3" />
+                            {formatTime(task.eta)}
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Futuristic Segments Visualization */}
-            {isDownloading && task.segments && task.segments.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-border-glass">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-foreground-tertiary">Segment Grid</span>
-                        <div className="flex gap-0.5">
-                            <span className="w-1 h-1 rounded-full bg-blue-500/50" />
-                            <span className="w-1 h-1 rounded-full bg-blue-500/30" />
-                        </div>
-                    </div>
-                    <div className="flex gap-1 h-1.5">
-                        {task.segments.map((segment: DownloadSegment, i: number) => {
-                            const segProgress = (segment.downloaded / (segment.end - segment.start)) * 100 || 0;
-                            return (
-                                <div key={i} className="flex-1 bg-foreground-primary/5 dark:bg-white/[0.03] rounded-sm overflow-hidden border border-border-glass">
-                                    <div
-                                        className={cn(
-                                            "h-full transition-all duration-1000 ease-out",
-                                            segment.status === 'completed' ? "bg-emerald-500/40" : "bg-gradient-to-r from-blue-500 to-blue-300 shadow-[0_0_5px_rgba(59,130,246,0.4)]"
-                                        )}
-                                        style={{ width: `${segProgress}%` }}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
+                {/* 3. Actions - Always visible, Compact Pills */}
+                <div className="flex items-center gap-1 shrink-0">
+                    {!isCompleted && !isFailed && (
+                        <button
+                            onClick={() => isDownloading ? onPause(task.id) : onStart(task.id)}
+                            className={cn(
+                                "w-7 h-7 flex items-center justify-center rounded-lg transition-all border border-transparent",
+                                isDownloading ? "text-amber-400 hover:bg-amber-400/10 hover:border-amber-400/20" : "text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400/20"
+                            )}
+                        >
+                            {isDownloading ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => isCompleted ? onOpenFolder(task.filepath) : onCancel(task.id)}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-foreground-primary/10 border border-transparent hover:border-border-glass"
+                    >
+                        {isCompleted ? <Folder className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                    </button>
+                    
+                    {/* Tiny URL Link */}
+                    <button className="w-7 h-7 flex items-center justify-center rounded-lg text-foreground-tertiary hover:text-blue-400 hover:bg-blue-400/10 border border-transparent hover:border-blue-400/20" title={task.url}>
+                         <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
                 </div>
-            )}
-
-            {/* Hover URL Peek */}
-            <div className="mt-2 flex items-center gap-1.5 text-[9px] text-foreground-tertiary truncate opacity-0 group-hover:opacity-40 transition-all duration-500 delay-150">
-                <ExternalLink className="w-2.5 h-2.5" />
-                <span className="truncate tracking-wide">{task.url}</span>
             </div>
+
         </div>
     );
 };

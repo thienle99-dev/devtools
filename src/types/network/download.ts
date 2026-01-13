@@ -18,7 +18,7 @@ export interface DownloadTask {
     speed: number;
     eta: number;
     priority: number;
-    category: 'music' | 'video' | 'document' | 'program' | 'compressed' | 'other';
+    category: 'music' | 'video' | 'document' | 'program' | 'compressed' | 'image' | 'other';
     createdAt: number;
     completedAt?: number;
     error?: string;
