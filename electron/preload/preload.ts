@@ -202,7 +202,9 @@ contextBridge.exposeInMainWorld('universalAPI', {
   pause: (id: string) => ipcRenderer.invoke('universal:pause', id),
   resume: (id: string) => ipcRenderer.invoke('universal:resume', id),
   reorderQueue: (id: string, newIndex: number) => ipcRenderer.invoke('universal:reorder-queue', id, newIndex),
+  retry: (id: string) => ipcRenderer.invoke('universal:retry', id),
 })
+
 
 
 

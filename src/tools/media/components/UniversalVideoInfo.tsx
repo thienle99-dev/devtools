@@ -28,7 +28,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
         <Card className="p-4 bg-background/40 border-border-glass backdrop-blur-sm shadow-xl">
             <div className="flex flex-col md:flex-row gap-5">
                 {/* Thumbnail */}
-                <div className="relative group rounded-xl overflow-hidden md:w-64 flex-shrink-0 aspect-video bg-black/40 border border-white/10 shadow-lg">
+                <div className="relative group rounded-xl overflow-hidden md:w-64 flex-shrink-0 aspect-video bg-background/50 border border-border-glass shadow-lg">
                     {info.thumbnailUrl ? (
                         <img
                             src={info.thumbnailUrl}
@@ -61,7 +61,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
                     <div className="space-y-3">
                         {/* Platform & Tag */}
                         <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold uppercase tracking-wider ${platformColor} bg-white/5 px-2 py-0.5 rounded border border-white/5`}>
+                            <span className={`text-xs font-bold uppercase tracking-wider ${platformColor} bg-foreground-primary/5 px-2 py-0.5 rounded border border-border-glass`}>
                                 {platformName}
                             </span>
                             {info.uploadDate && (
@@ -86,7 +86,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
                                     href={info.authorUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-foreground-muted hover:text-primary transition-colors"
+                                    className="text-foreground-muted hover:text-primary transition-colors hover:bg-foreground-primary/5 p-1 rounded"
                                 >
                                     <ExternalLink className="w-3 h-3" />
                                 </a>
@@ -95,7 +95,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
                     </div>
 
                     {/* Stats */}
-                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
+                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border-glass">
                         {formatCompactNumber(info.viewCount) && (
                             <div className="flex items-center gap-1.5 text-xs text-foreground-muted" title={`${info.viewCount} views`}>
                                 <Eye className="w-4 h-4" />
@@ -128,7 +128,7 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
 
             {/* Playlist Items */}
             {hasPlaylist && (
-                <div className="mt-6 pt-6 border-t border-white/5 space-y-4">
+                <div className="mt-6 pt-6 border-t border-border-glass space-y-4">
                     <div className="flex items-center justify-between">
                         <h4 className="font-bold text-sm text-foreground-primary">
                             Playlist Videos ({info.playlistVideos?.length})
@@ -169,19 +169,19 @@ export const UniversalVideoInfo: React.FC<UniversalVideoInfoProps> = ({
                                         "flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer group",
                                         isSelected
                                             ? "bg-primary/10 border-primary/30"
-                                            : "bg-white/5 border-transparent hover:border-white/10"
+                                            : "bg-foreground-primary/5 border-transparent hover:border-border-glass transition-all"
                                     )}
                                 >
                                     <div className="flex-shrink-0">
                                         <div className={cn(
                                             "w-4 h-4 rounded border flex items-center justify-center transition-colors",
-                                            isSelected ? "bg-primary border-primary" : "border-white/20 group-hover:border-white/40"
+                                            isSelected ? "bg-primary border-primary" : "border-foreground-muted/20 group-hover:border-foreground-muted/40"
                                         )}>
                                             {isSelected && <Check className="w-3 h-3 text-white" />}
                                         </div>
                                     </div>
 
-                                    <div className="w-12 aspect-video rounded bg-black/40 overflow-hidden flex-shrink-0 border border-white/5">
+                                    <div className="w-12 aspect-video rounded bg-background/40 overflow-hidden flex-shrink-0 border border-border-glass">
                                         {video.thumbnail && (
                                             <img src={video.thumbnail} alt="" className="w-full h-full object-cover opacity-60" />
                                         )}

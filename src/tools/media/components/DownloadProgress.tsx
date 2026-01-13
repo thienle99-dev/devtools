@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@components/ui/Button';
-import { Download, Clock, HardDrive, XCircle, ExternalLink, FolderOpen, CheckCircle2, Copy, Pause, Play } from 'lucide-react';
+import { Download, Clock, HardDrive, XCircle, ExternalLink, FolderOpen, CheckCircle2, Copy, Pause, Play, RotateCcw } from 'lucide-react';
+
 
 import { formatSpeed, formatBytes as formatFileSize, formatDuration } from '@utils/format';
 
@@ -53,16 +54,16 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
 
 
     return (
-        <div className="group relative bg-background-tertiary/30 border border-white/5 rounded-lg p-3 hover:bg-background-tertiary/50 transition-all">
+        <div className="group relative bg-background-tertiary/30 dark:bg-background-tertiary/30 border border-border-glass rounded-lg p-3 hover:bg-background-tertiary/50 transition-all">
             <div className="flex items-center gap-4">
                 {/* Icon / Status */}
                 <div className="flex-shrink-0">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        status.status === 'downloading' ? 'bg-blue-500/10 text-blue-400' :
-                        status.status === 'success' ? 'bg-green-500/10 text-green-400' :
-                        status.status === 'paused' ? 'bg-amber-500/10 text-amber-400' :
-                        status.status === 'processing' ? 'bg-purple-500/10 text-purple-400' :
-                        'bg-red-500/10 text-red-400'
+                        status.status === 'downloading' ? 'bg-blue-500/10 text-blue-500' :
+                        status.status === 'success' ? 'bg-green-500/10 text-green-500' :
+                        status.status === 'paused' ? 'bg-amber-500/10 text-amber-500' :
+                        status.status === 'processing' ? 'bg-purple-500/10 text-purple-500' :
+                        'bg-red-500/10 text-red-500'
                     }`}>
                         {status.status === 'downloading' ? <Download className="w-5 h-5 animate-pulse" /> :
                          status.status === 'success' ? <CheckCircle2 className="w-5 h-5" /> :
@@ -82,7 +83,7 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                         {/* URL / Channel / Status Detail */}
                         {status.url && (
                              <div className="flex items-center gap-2 group/url">
-                                <div className="text-[10px] text-foreground-secondary truncate font-mono opacity-60 max-w-[80%] select-text cursor-text" title={status.url}>
+                                <div className="text-[10px] text-foreground-secondary truncate font-mono opacity-80 max-w-[80%] select-text cursor-text" title={status.url}>
                                     {status.url}
                                 </div>
                                 <button 
@@ -90,7 +91,7 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                                         e.stopPropagation();
                                         navigator.clipboard.writeText(status.url || '');
                                     }}
-                                    className="opacity-0 group-hover/url:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded"
+                                    className="opacity-0 group-hover/url:opacity-100 transition-opacity p-0.5 hover:bg-foreground-primary/10 rounded"
                                     title="Copy URL"
                                 >
                                     <Copy className="w-3 h-3 text-foreground-secondary" />
@@ -133,13 +134,13 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                             </>
                         )}
                         {status.status === 'success' && (
-                            <span className="flex items-center gap-1 text-green-400/80">
+                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                                 <HardDrive className="w-3 h-3" />
                                 {formatFileSize(status.total || 0)}
                             </span>
                         )}
                         {status.status === 'error' && (
-                            <span className="text-red-400/80 truncate max-w-[300px]">
+                            <span className="text-red-500 dark:text-red-400 truncate max-w-[300px]">
                                 {status.message || 'Unknown error'}
                             </span>
                         )}
@@ -166,10 +167,14 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                                     variant="ghost" 
                                     size="sm" 
                                     onClick={onResume}
-                                    className="h-8 w-8 hover:bg-green-500/10 text-foreground-secondary hover:text-green-400 rounded-full"
-                                    title="Resume"
+                                    className={`h-8 w-8 rounded-full ${
+                                        status.status === 'error' 
+                                            ? 'hover:bg-blue-500/10 text-foreground-secondary hover:text-blue-400' 
+                                            : 'hover:bg-green-500/10 text-foreground-secondary hover:text-green-400'
+                                    }`}
+                                    title={status.status === 'error' ? "Retry" : "Resume"}
                                 >
-                                    <Play className="w-4 h-4" />
+                                    {status.status === 'error' ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                                 </Button>
                             )}
                             <Button 
@@ -191,7 +196,7 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                                 onClick={onOpenFile}
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 hover:bg-white/5 text-foreground-secondary hover:text-foreground-primary rounded-full"
+                                className="h-8 w-8 hover:bg-foreground-primary/5 text-foreground-secondary hover:text-foreground-primary rounded-full"
                                 title="Open File"
                             >
                                 <ExternalLink className="w-4 h-4" />
@@ -200,7 +205,7 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                                 onClick={onShowFolder}
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 hover:bg-white/5 text-foreground-secondary hover:text-foreground-primary rounded-full"
+                                className="h-8 w-8 hover:bg-foreground-primary/5 text-foreground-secondary hover:text-foreground-primary rounded-full"
                                 title="Show in Folder"
                             >
                                 <FolderOpen className="w-4 h-4" />

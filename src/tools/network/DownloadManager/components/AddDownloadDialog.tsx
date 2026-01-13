@@ -72,7 +72,7 @@ export const AddDownloadDialog: React.FC<AddDownloadDialogProps> = ({
                     )}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-white/5 pt-6">
+                <div className="flex items-center justify-between border-t border-border-glass pt-6">
                     <button
                         type="button"
                         onClick={() => setAdvanced(!advanced)}
@@ -86,10 +86,10 @@ export const AddDownloadDialog: React.FC<AddDownloadDialogProps> = ({
                         <Button variant="ghost" type="button" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button
+                         <Button
                             type="submit"
                             disabled={!url}
-                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20"
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xl shadow-blue-600/20 border-t border-white/20"
                         >
                             <Download className="w-4 h-4 mr-2" />
                             Start Download

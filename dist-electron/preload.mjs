@@ -182,7 +182,8 @@ electron.contextBridge.exposeInMainWorld("universalAPI", {
 	getQueue: () => electron.ipcRenderer.invoke("universal:get-queue"),
 	pause: (id) => electron.ipcRenderer.invoke("universal:pause", id),
 	resume: (id) => electron.ipcRenderer.invoke("universal:resume", id),
-	reorderQueue: (id, newIndex) => electron.ipcRenderer.invoke("universal:reorder-queue", id, newIndex)
+	reorderQueue: (id, newIndex) => electron.ipcRenderer.invoke("universal:reorder-queue", id, newIndex),
+	retry: (id) => electron.ipcRenderer.invoke("universal:retry", id)
 });
 electron.contextBridge.exposeInMainWorld("audioAPI", {
 	getInfo: (filePath) => electron.ipcRenderer.invoke("audio:get-info", filePath),

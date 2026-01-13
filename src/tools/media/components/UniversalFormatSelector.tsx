@@ -138,7 +138,7 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                         "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
                         format === 'video'
                             ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20"
-                            : "text-foreground-secondary hover:text-foreground hover:bg-white/5"
+                            : "text-foreground-secondary hover:text-foreground hover:bg-foreground-primary/10"
                     )}
                 >
                     <Video className="w-4 h-4" />
@@ -150,7 +150,7 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                         "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
                         format === 'audio'
                             ? "bg-gradient-to-br from-pink-600 to-pink-500 text-white shadow-lg shadow-pink-500/20"
-                            : "text-foreground-secondary hover:text-foreground hover:bg-white/5"
+                            : "text-foreground-secondary hover:text-foreground hover:bg-foreground-primary/10"
                     )}
                 >
                     <Music className="w-4 h-4" />
@@ -172,8 +172,8 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                 className={cn(
                                     "flex-1 py-1.5 rounded-lg text-xs font-medium uppercase transition-colors border",
                                     audioFormat === fmt
-                                        ? "bg-pink-500/10 text-pink-400 border-pink-500/30"
-                                        : "bg-white/5 text-foreground-secondary border-transparent hover:bg-white/10 hover:text-foreground"
+                                        ? "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/30"
+                                        : "bg-foreground-primary/5 text-foreground-secondary border-transparent hover:bg-foreground-primary/10 hover:text-foreground"
                                 )}
                             >
                                 {fmt}
@@ -222,13 +222,13 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                             onClick={() => onSelectItem?.(index)}
                                             className={cn(
                                                 "flex items-center gap-2 p-1.5 rounded cursor-pointer group transition-colors",
-                                                isSelected ? "bg-primary/10" : "bg-white/5 hover:bg-white/10"
+                                                isSelected ? "bg-primary/10" : "bg-foreground-primary/5 hover:bg-foreground-primary/10"
                                             )}
                                         >
                                             <div className="flex-shrink-0">
                                                 <div className={cn(
                                                     "w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors",
-                                                    isSelected ? "bg-primary border-primary" : "border-white/20 group-hover:border-white/40"
+                                                    isSelected ? "bg-primary border-primary" : "border-foreground-muted/20 group-hover:border-foreground-muted/40"
                                                 )}>
                                                     {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                                                 </div>
@@ -280,7 +280,7 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                         "w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer",
                                         isRecommended
                                             ? "border-green-500/30 bg-green-500/5"
-                                            : "border-transparent hover:bg-white/5 hover:border-white/5 bg-background/20"
+                                            : "border-transparent hover:bg-foreground-primary/5 hover:border-border-glass bg-background/20"
                                     )}
                                 >
                                     <div className="flex items-center gap-4">
@@ -296,8 +296,8 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                             <div className={cn(
                                                 "text-sm font-bold flex items-center gap-2 transition-colors",
                                                 isRecommended
-                                                    ? "text-green-400"
-                                                    : "text-foreground-primary group-hover:text-blue-400"
+                                                    ? "text-green-600 dark:text-green-400"
+                                                    : "text-foreground-primary group-hover:text-blue-600 dark:group-hover:text-blue-400"
                                             )}>
                                                 {q}
                                                 {isRecommended && (
@@ -319,7 +319,7 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                             "p-2 rounded-lg transition-all shadow-sm",
                                             isRecommended
                                                 ? "bg-green-500 text-white"
-                                                : "bg-white/5 text-foreground-tertiary group-hover:bg-blue-500 group-hover:text-white"
+                                                : "bg-foreground-primary/5 text-foreground-tertiary group-hover:bg-blue-500 group-hover:text-white"
                                         )}>
                                             <Download className="w-4 h-4" />
                                         </div>
@@ -333,14 +333,14 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                 <div
                                     key={opt.id}
                                     onClick={() => onDownload(opt.id)}
-                                    className="w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer border-transparent hover:bg-white/5 hover:border-white/5 bg-background/20"
+                                    className="w-full flex items-center justify-between p-3 rounded-xl border transition-all group cursor-pointer border-transparent hover:bg-foreground-primary/5 hover:border-border-glass bg-background/20"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="p-2 rounded-lg transition-colors bg-background-tertiary text-foreground-tertiary group-hover:bg-pink-500/10 group-hover:text-pink-400">
                                             <Music className="w-5 h-5" />
                                         </div>
                                         <div className="text-left">
-                                            <div className="text-sm font-bold transition-colors text-foreground-primary group-hover:text-pink-400">
+                                            <div className="text-sm font-bold transition-colors text-foreground-primary group-hover:text-pink-600 dark:group-hover:text-pink-400">
                                                 {opt.label}
                                             </div>
                                             <div className="text-xs text-foreground-secondary opacity-80">
@@ -352,7 +352,7 @@ export const UniversalFormatSelector: React.FC<UniversalFormatSelectorProps> = (
                                         <div className="text-xs font-mono font-medium text-foreground-secondary">
                                             ~{estimateSize(opt.id)}
                                         </div>
-                                        <div className="p-2 rounded-lg transition-all shadow-sm bg-white/5 text-foreground-tertiary group-hover:bg-pink-500 group-hover:text-white">
+                                        <div className="p-2 rounded-lg transition-all shadow-sm bg-foreground-primary/5 text-foreground-tertiary group-hover:bg-pink-500 group-hover:text-white">
                                             <Download className="w-4 h-4" />
                                         </div>
                                     </div>

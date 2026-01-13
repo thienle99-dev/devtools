@@ -220,7 +220,7 @@ export default function DownloadManager() {
                     <Button
                         size="sm"
                         onClick={() => setIsAddDialogOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_8px_20px_rgba(59,130,246,0.2)] border-t border-white/20"
+                        className="bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-[0_8px_25px_rgba(59,130,246,0.3)] border-t border-white/20 px-4 transition-all active:scale-95"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Add Task
@@ -231,25 +231,32 @@ export default function DownloadManager() {
             <div className="flex gap-8 min-h-[600px]">
                 {/* Sidebar Navigation */}
                 <aside className="w-56 shrink-0 flex flex-col gap-6">
-                    {/* Live Speed Monitor */}
-                    <div className="bg-[#0F1117]/60 border border-white/5 rounded-2xl p-4 overflow-hidden relative group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {/* Network Status Monitor */}
+                    <div className="bg-gradient-to-br from-blue-600/15 via-blue-900/5 to-transparent border border-blue-500/20 rounded-2xl p-4 overflow-hidden relative group shadow-lg shadow-blue-500/5 backdrop-blur-md">
+                        <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-3 text-[10px] uppercase tracking-widest font-black text-foreground-tertiary">
-                                <span>Network</span>
-                                <div className="flex gap-0.5">
-                                    <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                            <div className="flex items-center justify-between mb-3 text-[10px] uppercase tracking-widest font-black text-blue-400">
+                                <span className="flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                                    Network Status
+                                </span>
+                                <div className="flex gap-1 opacity-50">
+                                    <div className="w-1 h-1 rounded-full bg-blue-500" />
+                                    <div className="w-1 h-1 rounded-full bg-blue-500/40" />
+                                    <div className="w-1 h-1 rounded-full bg-blue-500/20" />
                                 </div>
                             </div>
-                            <div className="text-2xl font-black text-foreground-primary tabular-nums tracking-tighter mb-1">
+                            <div className="text-2xl font-black text-foreground-primary tabular-nums tracking-tighter mb-1 bg-clip-text text-transparent bg-gradient-to-r from-foreground-primary to-foreground-primary/70">
                                 {formatBytes(totalSpeed)}/s
                             </div>
                             <div className="text-[10px] text-foreground-muted font-bold flex items-center gap-1.5 uppercase tracking-wide">
-                                <Zap className="w-3 h-3 text-blue-400" />
-                                Current Throughput
+                                <Zap className="w-3 h-3 text-blue-500" />
+                                Live Throughput
                             </div>
                         </div>
+
+                        {/* Background Decorative Glow */}
+                        <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl" />
                     </div>
 
                     <nav className="space-y-6">
@@ -315,9 +322,9 @@ export default function DownloadManager() {
                     <div className="mt-auto">
                         <button
                             onClick={() => setIsSettingsOpen(true)}
-                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-foreground-tertiary hover:bg-white/5 hover:text-foreground transition-all border border-transparent hover:border-white/5"
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-foreground-tertiary hover:bg-foreground-primary/5 hover:text-foreground transition-all border border-transparent hover:border-border-glass group"
                         >
-                            <Settings className="w-4 h-4" />
+                            <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform" />
                             Engine Settings
                         </button>
                     </div>
@@ -326,7 +333,7 @@ export default function DownloadManager() {
                 {/* Main Content Area */}
                 <main className="flex-1 min-w-0">
                     {/* Integrated Toolbar */}
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6 bg-white/[0.02] border border-white/5 rounded-2xl p-2 pr-4 backdrop-blur-sm">
+                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6 bg-foreground-primary/[0.03] dark:bg-foreground-primary/[0.02] border border-border-glass rounded-2xl p-2 pr-4 backdrop-blur-md shadow-sm">
                         <div className="relative w-full md:w-80 group">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-tertiary group-focus-within:text-blue-400 transition-colors" />
                             <input
@@ -339,21 +346,21 @@ export default function DownloadManager() {
 
                         <div className="flex items-center gap-6">
                             {/* Sort Controls */}
-                            <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5">
+                            <div className="flex items-center gap-1.5 p-1 bg-foreground-primary/5 dark:bg-black/20 rounded-xl border border-border-glass">
                                 <button
                                     onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                                    className="p-2 rounded-lg text-foreground-tertiary hover:text-foreground hover:bg-white/5 transition-all"
+                                    className="p-2 rounded-lg text-foreground-tertiary hover:text-foreground hover:bg-foreground-primary/10 transition-all"
                                 >
                                     <ArrowUpDown className={cn("w-3.5 h-3.5 transition-transform duration-500", sortOrder === 'asc' ? "rotate-180" : "")} />
                                 </button>
-                                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                                <div className="h-4 w-[1px] bg-border-glass mx-1" />
                                 {(['date', 'name', 'size'] as const).map(s => (
                                     <button
                                         key={s}
                                         onClick={() => setSortBy(s)}
                                         className={cn(
                                             "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                                            sortBy === s ? "bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground-secondary"
+                                            sortBy === s ? "bg-foreground-primary/10 dark:bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground-secondary"
                                         )}
                                     >
                                         {s}
@@ -362,12 +369,12 @@ export default function DownloadManager() {
                             </div>
 
                             {/* View Mode Toggle */}
-                            <div className="flex p-1 bg-black/20 rounded-xl border border-white/5">
+                            <div className="flex p-1 bg-foreground-primary/5 dark:bg-black/20 rounded-xl border border-border-glass">
                                 <button
                                     onClick={() => setViewMode('list')}
                                     className={cn(
                                         "p-2 rounded-lg transition-all",
-                                        viewMode === 'list' ? "bg-white/5 text-foreground" : "text-foreground-tertiary hover:text-foreground"
+                                        viewMode === 'list' ? "bg-foreground-primary/10 dark:bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground"
                                     )}
                                 >
                                     <LayoutList className="w-4 h-4" />
@@ -376,7 +383,7 @@ export default function DownloadManager() {
                                     onClick={() => setViewMode('grid')}
                                     className={cn(
                                         "p-2 rounded-lg transition-all",
-                                        viewMode === 'grid' ? "bg-white/5 text-foreground" : "text-foreground-tertiary hover:text-foreground"
+                                        viewMode === 'grid' ? "bg-foreground-primary/10 dark:bg-white/5 text-foreground shadow-sm" : "text-foreground-tertiary hover:text-foreground"
                                     )}
                                 >
                                     <LayoutGrid className="w-4 h-4" />
@@ -403,17 +410,29 @@ export default function DownloadManager() {
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-32 text-center bg-[#0F1117]/40 border-2 border-dashed border-white/5 rounded-[40px] animate-in fade-in zoom-in duration-700">
+                        <div className="group relative flex flex-col items-center justify-center py-32 text-center bg-glass-panel border-2 border-dashed border-border-glass rounded-[40px] animate-in fade-in zoom-in duration-1000 overflow-hidden">
+                            {/* Animated Background Glow */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                            
                             <div className="relative mb-8">
-                                <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
-                                <div className="relative w-24 h-24 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                                    <DownloadCloud className="w-12 h-12 text-blue-500" />
+                                <div className="absolute inset-0 bg-blue-500/30 blur-[60px] rounded-full animate-pulse-slow" />
+                                <div className="relative w-28 h-28 rounded-[32px] bg-gradient-to-br from-blue-500/20 to-blue-600/5 border border-blue-500/30 flex items-center justify-center shadow-2xl shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
+                                    <DownloadCloud className="w-14 h-14 text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                                 </div>
                             </div>
-                            <h3 className="text-2xl font-black text-foreground-primary mb-3 tracking-tight">No downloads here</h3>
-                            <p className="text-foreground-tertiary max-w-[280px] mx-auto text-sm font-medium leading-relaxed">
-                                {searchQuery ? "Your search query didn't match any of your tasks." : "Paste a URL to start accelerating your file downloads."}
+                            
+                            <h3 className="relative z-10 text-3xl font-black text-foreground-primary mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground-primary to-foreground-primary/60">
+                                No Downloads Found
+                            </h3>
+                            <p className="relative z-10 text-foreground-tertiary max-w-[320px] mx-auto text-base font-medium leading-relaxed opacity-80">
+                                {searchQuery ? 
+                                    "We couldn't find any tasks matching your search criteria. Try a different keyword." : 
+                                    "Ready to go? Simply paste a URL here or use the Add Task button to start downloading."}
                             </p>
+
+                            {/* Decorative Elements */}
+                            <div className="absolute top-10 right-10 w-24 h-24 bg-purple-500/5 rounded-full blur-3xl" />
+                            <div className="absolute bottom-10 left-10 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl" />
                         </div>
                     )}
                 </main>
@@ -454,22 +473,25 @@ function SidebarItem({ icon: Icon, label, active, onClick, count, color }: Sideb
         <button
             onClick={onClick}
             className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 group",
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 group relative overflow-hidden",
                 active
-                    ? "bg-white/10 text-foreground ring-1 ring-white/10 shadow-lg"
-                    : "text-foreground-tertiary hover:bg-white/5 hover:text-foreground-secondary"
+                    ? "bg-foreground-primary/10 dark:bg-white/10 text-foreground shadow-lg shadow-black/5"
+                    : "text-foreground-tertiary hover:bg-foreground-primary/5 dark:hover:bg-white/5 hover:text-foreground-secondary"
             )}
         >
+            {active && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+            )}
             <Icon className={cn(
                 "w-4 h-4 transition-all duration-300",
-                active ? (color || "text-blue-400") : "text-foreground-tertiary group-hover:scale-110",
+                active ? (color || "text-blue-500") : "text-foreground-tertiary group-hover:scale-110",
                 active && "scale-110"
             )} />
             {label}
             {count !== undefined && (
                 <span className={cn(
                     "ml-auto px-1.5 py-0.5 rounded-md text-[9px] font-black tabular-nums transition-all",
-                    active ? "bg-white/10 text-foreground" : "text-foreground-tertiary opacity-40 group-hover:opacity-100"
+                    active ? "bg-foreground-primary/10 dark:bg-white/10 text-foreground" : "text-foreground-tertiary opacity-40 group-hover:opacity-100"
                 )}>
                     {count}
                 </span>

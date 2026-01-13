@@ -27,7 +27,12 @@ interface UniversalSettings {
 interface StoreSchema {
     history: UniversalHistoryItem[];
     settings: UniversalSettings;
+    queue: Array<{
+        options: UniversalDownloadOptions;
+        state: 'queued' | 'downloading' | 'paused' | 'error';
+    }>;
 }
+
 
 export class UniversalDownloader {
     private ytDlp: any;
@@ -60,9 +65,11 @@ export class UniversalDownloader {
                     maxConcurrentDownloads: 3,
                     maxSpeedLimit: '',
                     useBrowserCookies: null
-                }
+                },
+                queue: []
             }
         });
+
 
         const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
         this.binaryPath = path.join(app.getPath('userData'), binaryName);
@@ -70,7 +77,32 @@ export class UniversalDownloader {
 
         // Initialize queue processing loop
         setInterval(() => this.processQueue(), 5000);
+
+        // Load persisted queue
+        this.loadPersistedQueue();
     }
+
+    private loadPersistedQueue() {
+        const persistedQueue = this.store.get('queue') || [];
+        for (const item of persistedQueue) {
+            this.downloadQueue.push({
+                options: item.options,
+                run: () => this.executeDownload(item.options),
+                resolve: () => {},
+                reject: () => {},
+                state: item.state === 'downloading' ? 'paused' : item.state as any
+            });
+        }
+    }
+
+    private saveQueuePersistently() {
+        const toSave = this.downloadQueue.map(item => ({
+            options: item.options,
+            state: item.state
+        }));
+        this.store.set('queue', toSave);
+    }
+
 
     private async init(): Promise<void> {
         try {
@@ -300,7 +332,6 @@ export class UniversalDownloader {
             throw new Error(`Failed to get media info: ${msg}`);
         }
     }
-
     async downloadMedia(
         options: UniversalDownloadOptions,
         progressCallback?: (progress: UniversalDownloadProgress) => void
@@ -315,33 +346,94 @@ export class UniversalDownloader {
                 reject,
                 state: 'queued'
             });
+            this.saveQueuePersistently();
             this.processQueue();
         });
     }
 
+    async retryDownload(id: string): Promise<void> {
+        // 1. Check if it's already in the queue in error state
+        const queuedItem = this.downloadQueue.find(item => item.options.id === id);
+        if (queuedItem) {
+            queuedItem.state = 'queued';
+            this.saveQueuePersistently();
+            this.processQueue();
+            return;
+        }
+
+        // 2. Check if it's in activeOptions (maybe it was paused/killed and lost from queue)
+        const options = this.activeOptions.get(id);
+        if (options) {
+            this.downloadQueue.push({
+                options,
+                run: () => this.executeDownload(options),
+                resolve: () => {},
+                reject: () => {},
+                state: 'queued'
+            });
+            this.saveQueuePersistently();
+            this.processQueue();
+            return;
+        }
+
+        // 3. Fallback to history
+        const historyItem = this.store.get('history').find(h => h.id === id);
+        if (historyItem) {
+            const reconstructedOptions: UniversalDownloadOptions = {
+                url: historyItem.url,
+                format: historyItem.format || 'video',
+                quality: 'best',
+                id: historyItem.id
+            };
+            this.downloadQueue.push({
+                options: reconstructedOptions,
+                run: () => this.executeDownload(reconstructedOptions),
+                resolve: () => {},
+                reject: () => {},
+                state: 'queued'
+            });
+            this.saveQueuePersistently();
+            this.processQueue();
+        }
+    }
+
+
+
     async pauseDownload(id: string): Promise<void> {
         const proc = this.activeProcesses.get(id);
         if (proc && proc.ytDlpProcess) {
+            const task = this.downloadQueue.find(t => t.options.id === id);
+            if (task) task.state = 'paused';
             proc.ytDlpProcess.kill('SIGTERM');
-            // We'll update the state in the process loop or here
-            // Note: the 'close' event will trigger and we can see it was killed
+            this.saveQueuePersistently();
         }
     }
 
     async resumeDownload(id: string): Promise<void> {
+        // Check if already in queue
+        const queuedItem = this.downloadQueue.find(item => item.options.id === id);
+        if (queuedItem) {
+            queuedItem.state = 'queued';
+            this.saveQueuePersistently();
+            this.processQueue();
+            return;
+        }
+
         const options = this.activeOptions.get(id);
         if (options) {
             // Re-add to queue at the front
             this.downloadQueue.unshift({
                 options,
                 run: () => this.executeDownload(options),
-                resolve: () => {}, // Handled by the first call usually, but we need to satisfy the type
+                resolve: () => {},
                 reject: () => {},
                 state: 'queued'
             });
+            this.saveQueuePersistently();
             this.processQueue();
         }
     }
+
 
 
     async checkDiskSpace(downloadPath?: string): Promise<{ available: number; total: number; warning: boolean }> {
@@ -391,8 +483,10 @@ export class UniversalDownloader {
         if (index !== -1 && newIndex >= 0 && newIndex < this.downloadQueue.length) {
             const item = this.downloadQueue.splice(index, 1)[0];
             this.downloadQueue.splice(newIndex, 0, item);
+            this.saveQueuePersistently();
         }
     }
+
 
 
     private async processQueue() {
@@ -402,26 +496,36 @@ export class UniversalDownloader {
         // Check disk space before starting any new download
         const space = await this.checkDiskSpace();
         if (space.available < 500 * 1024 * 1024) { // Less than 500MB
-            // We don't throw error here to avoid killing the app, but we don't start new ones
             console.warn('Low disk space, skipping queue processing');
             return;
         }
 
-        while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
-            const task = this.downloadQueue.shift();
-            if (task) {
-                this.activeDownloadsCount++;
-                task.state = 'downloading';
-                task.run()
-                    .then(result => task.resolve(result))
-                    .catch(error => task.reject(error))
-                    .finally(() => {
-                        this.activeDownloadsCount--;
-                        this.processQueue();
-                    });
-            }
+        while (this.activeDownloadsCount < maxConcurrent) {
+            const task = this.downloadQueue.find(t => t.state === 'queued');
+            if (!task) break;
+
+            this.activeDownloadsCount++;
+            task.state = 'downloading';
+            this.saveQueuePersistently();
+
+            task.run()
+                .then(result => {
+                    task.state = 'downloading'; // actually it will be removed soon
+                    this.downloadQueue = this.downloadQueue.filter(t => t !== task);
+                    task.resolve(result);
+                })
+                .catch(error => {
+                    task.state = 'error';
+                    task.reject(error);
+                })
+                .finally(() => {
+                    this.activeDownloadsCount--;
+                    this.saveQueuePersistently();
+                    this.processQueue();
+                });
         }
     }
+
 
     private async executeDownload(
         options: UniversalDownloadOptions,
@@ -797,10 +901,14 @@ export class UniversalDownloader {
             if (proc && proc.ytDlpProcess) {
                 proc.ytDlpProcess.kill();
             }
+            this.downloadQueue = this.downloadQueue.filter(t => t.options.id !== id);
+            this.saveQueuePersistently();
         } else {
             this.activeProcesses.forEach(proc => {
                 if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
             });
+            this.downloadQueue = [];
+            this.saveQueuePersistently();
         }
     }
 

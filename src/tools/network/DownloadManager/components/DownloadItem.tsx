@@ -57,10 +57,10 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
 
     return (
         <div className={cn(
-            "group relative bg-bg-glass-panel backdrop-blur-xl border rounded-2xl p-4 transition-all duration-500",
+            "group relative bg-bg-glass-panel dark:bg-bg-glass-panel backdrop-blur-xl border rounded-2xl p-4 transition-all duration-500",
             isDownloading
                 ? "border-blue-500/40 ring-1 ring-blue-500/10 shadow-[0_0_25px_rgba(59,130,246,0.15)]"
-                : "border-border-glass hover:border-white/15 hover:bg-white/5 active:scale-[0.99]"
+                : "border-border-glass hover:border-foreground-primary/20 hover:bg-foreground-primary/5 active:scale-[0.99]"
         )}>
             {/* Background Accent */}
             <div className={cn(
@@ -72,11 +72,11 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                 {/* File Icon with Status Ring */}
                 <div className="relative shrink-0">
                     <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500",
-                        isCompleted ? "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20" :
-                            isFailed ? "bg-rose-500/10 text-rose-400 group-hover:bg-rose-500/20" :
-                                isDownloading ? "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20" :
-                                    "bg-foreground-muted/10 text-foreground-tertiary group-hover:bg-foreground-muted/20"
+                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 shadow-inner",
+                        isCompleted ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 group-hover:bg-emerald-500/20 shadow-emerald-500/5" :
+                            isFailed ? "bg-rose-500/10 text-rose-500 dark:text-rose-400 group-hover:bg-rose-500/20 shadow-rose-500/5" :
+                                isDownloading ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20 shadow-blue-500/5" :
+                                    "bg-foreground-primary/10 text-foreground-tertiary group-hover:bg-foreground-primary/20 shadow-white/5"
                     )}>
                         <CategoryIcon className="w-6 h-6" />
                     </div>
@@ -113,7 +113,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-white/10"
+                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-foreground-primary/10"
                                     onClick={() => onPause(task.id)}
                                 >
                                     <Pause className="w-3.5 h-3.5" />
@@ -133,7 +133,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-white/10"
+                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-foreground-primary/10"
                                     onClick={() => onOpenFolder(task.filepath)}
                                 >
                                     <Folder className="w-3.5 h-3.5" />
@@ -175,13 +175,13 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                         )}
                     </div>
 
-                    {/* Ultra-Smooth Progress Bar */}
+                    {/* Modern Progress Bar */}
                     {!isCompleted && !isFailed && (
-                        <div className="relative w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="relative w-full h-1.5 bg-foreground-primary/5 dark:bg-white/5 rounded-full overflow-hidden">
                             <div
                                 className={cn(
                                     "absolute top-0 left-0 h-full transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                                    isDownloading ? "bg-blue-500" : "bg-foreground-muted"
+                                    isDownloading ? "bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.5)]" : "bg-foreground-muted"
                                 )}
                                 style={{ width: `${progress}%` }}
                             />
@@ -206,11 +206,11 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                         {task.segments.map((segment: DownloadSegment, i: number) => {
                             const segProgress = (segment.downloaded / (segment.end - segment.start)) * 100 || 0;
                             return (
-                                <div key={i} className="flex-1 bg-white/[0.03] rounded-sm overflow-hidden border border-white/[0.05]">
+                                <div key={i} className="flex-1 bg-foreground-primary/5 dark:bg-white/[0.03] rounded-sm overflow-hidden border border-border-glass">
                                     <div
                                         className={cn(
-                                            "h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.3)]",
-                                            segment.status === 'completed' ? "bg-emerald-500/40" : "bg-blue-400"
+                                            "h-full transition-all duration-1000 ease-out",
+                                            segment.status === 'completed' ? "bg-emerald-500/40" : "bg-gradient-to-r from-blue-500 to-blue-300 shadow-[0_0_5px_rgba(59,130,246,0.4)]"
                                         )}
                                         style={{ width: `${segProgress}%` }}
                                     />

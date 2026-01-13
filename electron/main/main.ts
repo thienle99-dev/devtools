@@ -1903,6 +1903,11 @@ app.whenReady().then(() => {
     return universalDownloader.reorderQueue(id, newIndex);
   });
 
+  ipcMain.handle('universal:retry', async (_, id: string) => {
+    return await universalDownloader.retryDownload(id);
+  });
+
+
 
 
   ipcMain.handle('universal:open-file', async (_, path: string) => {
@@ -2107,7 +2112,7 @@ app.whenReady().then(() => {
   }
 
   setupCleanerHandlers();
-  setupDownloadManagerHandlers(win!);
+  setupDownloadManagerHandlers();
 
   // Handle local-media protocol
   protocol.handle('local-media', async (request) => {

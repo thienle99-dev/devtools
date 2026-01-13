@@ -19,6 +19,7 @@ export class DownloadManager extends EventEmitter {
     private activeTasks: Map<string, {
         task: DownloadTask;
         abortControllers: AbortController[];
+        fd?: number;
     }> = new Map();
 
     constructor() {
@@ -87,22 +88,23 @@ export class DownloadManager extends EventEmitter {
     async createDownload(url: string, customFilename?: string): Promise<DownloadTask> {
         const info = await this.getFileInfo(url);
 
-        const parsedUrl = new URL(url);
-        const filename = customFilename || info.filename || path.basename(parsedUrl.pathname) || 'download';
         const settings = this.getSettings();
+        // Use custom filename, or filename from headers, or from final URL path
+        let filename = customFilename || info.filename || path.basename(new URL(info.finalUrl).pathname) || 'download';
+        filename = this.sanitizeFilename(filename);
+        
         const filepath = path.join(settings.downloadPath, filename);
-
         const category = this.getCategory(filename);
 
         const task: DownloadTask = {
             id: randomUUID(),
-            url,
+            url: info.finalUrl, // Use resolve/final URL for the task
             filename,
             filepath,
             totalSize: info.size,
             downloadedSize: 0,
             segments: [],
-            status: 'queued', // Start as queued, let checkQueue handle it
+            status: 'queued',
             speed: 0,
             eta: 0,
             priority: 5,
@@ -139,7 +141,7 @@ export class DownloadManager extends EventEmitter {
         return task;
     }
 
-    private async getFileInfo(url: string, limit = 5): Promise<{ size: number, acceptRanges: boolean, filename?: string }> {
+    private async getFileInfo(url: string, limit = 5): Promise<{ size: number, acceptRanges: boolean, filename?: string, finalUrl: string }> {
         if (limit <= 0) {
             throw new Error('Too many redirects');
         }
@@ -175,7 +177,7 @@ export class DownloadManager extends EventEmitter {
                             const filename = this.parseFilename(contentDisposition);
 
                             getRes.resume();
-                            resolve({ size, acceptRanges, filename });
+                            resolve({ size, acceptRanges, filename, finalUrl: url });
                         });
                         getReq.on('error', reject);
                         getReq.end();
@@ -187,7 +189,7 @@ export class DownloadManager extends EventEmitter {
                     const contentDisposition = res.headers['content-disposition'];
                     const filename = this.parseFilename(contentDisposition);
 
-                    resolve({ size, acceptRanges, filename });
+                    resolve({ size, acceptRanges, filename, finalUrl: url });
                 });
 
                 req.on('error', (err) => {
@@ -200,7 +202,7 @@ export class DownloadManager extends EventEmitter {
                         const filename = this.parseFilename(contentDisposition);
 
                         getRes.resume();
-                        resolve({ size, acceptRanges, filename });
+                        resolve({ size, acceptRanges, filename, finalUrl: url });
                     });
                     getReq.on('error', () => reject(err));
                     getReq.end();
@@ -226,8 +228,43 @@ export class DownloadManager extends EventEmitter {
 
     private parseFilename(disposition?: string): string | undefined {
         if (!disposition) return undefined;
-        const match = disposition.match(/filename=['"]?([^'"]+)['"]?/);
-        return match ? match[1] : undefined;
+
+        let filename: string | undefined;
+
+        // Try filename* first (RFC 5987)
+        // Matches filename*=UTF-8''name.ext
+        const filenameStarMatch = disposition.match(/filename\*=(?:UTF-8|utf-8)''([^;\s]+)/i);
+        if (filenameStarMatch) {
+            try {
+                filename = decodeURIComponent(filenameStarMatch[1]);
+            } catch (e) { }
+        }
+
+        // If not found or failed, try regular filename
+        if (!filename) {
+            // Matches filename="quoted name.ext" or filename=unquoted_name.ext
+            const filenameMatch = disposition.match(/filename=(?:(['"])(.*?)\1|([^;\s]+))/i);
+            if (filenameMatch) {
+                filename = filenameMatch[2] || filenameMatch[3];
+            }
+        }
+
+        return filename;
+    }
+
+    private sanitizeFilename(filename: string): string {
+        // First, strip common header pollution if they were accidentally captured
+        // (This is a safety net for imperfect regex)
+        let clean = filename.split(';')[0]; // Take everything before the first semicolon
+        clean = clean.replace(/filename\*?=.*/gi, ''); // Remove trailing filename assignments
+        
+        // Remove characters that are problematic across OSs
+        clean = clean.replace(/[<>:"/\\|?*]/g, '_');
+        
+        // Strip leading/trailing spaces and dots
+        clean = clean.replace(/^\.+|\.+$/g, '').trim();
+        
+        return clean || 'download';
     }
 
     private checkQueue(): void {
@@ -275,20 +312,34 @@ export class DownloadManager extends EventEmitter {
         try {
             if (!fs.existsSync(task.filepath)) {
                 if (task.totalSize > 0) {
-                    const fd = fs.openSync(task.filepath, 'w');
-                    fs.ftruncateSync(fd, task.totalSize);
-                    fs.closeSync(fd);
+                    const tempFd = fs.openSync(task.filepath, 'w');
+                    fs.ftruncateSync(tempFd, task.totalSize);
+                    fs.closeSync(tempFd);
                 } else {
                     fs.writeFileSync(task.filepath, Buffer.alloc(0));
                 }
             }
-        } catch (err) {
-            console.error('File allocation error:', err);
+
+            // Open for parallel reading/writing
+            const fd = fs.openSync(task.filepath, 'r+');
+            const entry = this.activeTasks.get(taskId);
+            if (entry) entry.fd = fd;
+        } catch (err: any) {
+            console.error('File allocation/open error:', err);
+            task.status = 'failed';
+            task.error = `File error: ${err.message}`;
+            this.saveTask(task);
+            this.activeTasks.delete(taskId);
+            return;
         }
+
+        const entry = this.activeTasks.get(taskId);
+        if (!entry || entry.fd === undefined) return;
+        const fd = entry.fd;
 
         const promises = task.segments.map(segment => {
             if (segment.status === 'completed') return Promise.resolve();
-            return this.downloadSegment(task, segment, abortControllers);
+            return this.downloadSegment(task, segment, abortControllers, fd);
         });
 
         Promise.all(promises).then(() => {
@@ -298,26 +349,44 @@ export class DownloadManager extends EventEmitter {
                 task.speed = 0;
                 this.saveTask(task);
                 this.emitProgress(task);
+                this.closeTaskFd(taskId);
                 this.activeTasks.delete(taskId);
                 this.checkQueue();
             }
         }).catch(err => {
-            if (err.name === 'AbortError' || task.status === 'paused') return;
+            if (err.name === 'AbortError' || task.status === 'paused') {
+                this.closeTaskFd(taskId);
+                return;
+            }
             console.error(`Download failed for ${task.filename}:`, err);
             task.status = 'failed';
             task.error = err.message;
             task.speed = 0;
             this.saveTask(task);
             this.emitProgress(task);
+            this.closeTaskFd(taskId);
             this.activeTasks.delete(taskId);
             this.checkQueue();
         });
     }
 
+    private closeTaskFd(taskId: string) {
+        const entry = this.activeTasks.get(taskId);
+        if (entry && entry.fd !== undefined) {
+            try {
+                fs.closeSync(entry.fd);
+                entry.fd = undefined;
+            } catch (e) {
+                console.error('Error closing fd:', e);
+            }
+        }
+    }
+
     private downloadSegment(
         task: DownloadTask,
         segment: DownloadSegment,
-        abortControllers: AbortController[]
+        abortControllers: AbortController[],
+        fd: number
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const controller = new AbortController();
@@ -332,89 +401,113 @@ export class DownloadManager extends EventEmitter {
                 return resolve();
             }
 
-            const protocol = task.url.startsWith('https') ? https : http;
             const headers: any = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': '*/*',
-                'Connection': 'keep-alive'
+                'Connection': 'keep-alive',
+                'Referer': new URL(task.url).origin
             };
 
             if (endPos !== -1) {
                 headers['Range'] = `bytes=${startPos}-${endPos}`;
             }
 
-            let fileStream: fs.WriteStream | null = null;
-
-            const req = protocol.get(task.url, { headers, signal: controller.signal }, (res) => {
-                if (res.statusCode !== 200 && res.statusCode !== 206) {
-                    reject(new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
+            const download = (currentUrl: string, redirectLimit: number) => {
+                if (redirectLimit <= 0) {
+                    reject(new Error('Too many redirects in segment download'));
                     return;
                 }
 
-                segment.status = 'downloading';
-
-                try {
-                    fileStream = fs.createWriteStream(task.filepath, {
-                        flags: 'r+',
-                        start: startPos
-                    });
-                } catch (e) {
-                    reject(e);
-                    return;
-                }
-
-                res.pipe(fileStream);
-
-                let lastUpdateTime = Date.now();
-                let downloadedSinceLastUpdate = 0;
-
-                res.on('data', (chunk: Buffer) => {
-                    segment.downloaded += chunk.length;
-                    task.downloadedSize += chunk.length;
-                    downloadedSinceLastUpdate += chunk.length;
-
-                    const now = Date.now();
-                    const diff = now - lastUpdateTime;
-                    if (diff >= 1000) {
-                        task.speed = Math.floor((downloadedSinceLastUpdate * 1000) / diff);
-                        task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
-
-                        this.emitProgress(task);
-
-                        lastUpdateTime = now;
-                        downloadedSinceLastUpdate = 0;
+                const parsedUrl = new URL(currentUrl);
+                const protocol = parsedUrl.protocol === 'https:' ? https : http;
+                
+                // Update Referer if helpful
+                headers['Referer'] = parsedUrl.origin;
+                
+                const req = protocol.get(currentUrl, { headers, signal: controller.signal }, (res) => {
+                    // Handle redirects
+                    if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                        const redirectUrl = new URL(res.headers.location, currentUrl).toString();
+                        res.resume(); // Must consume current response
+                        download(redirectUrl, redirectLimit - 1);
+                        return;
                     }
-                });
 
-                res.on('end', () => {
-                    if (fileStream) {
-                        fileStream.end(() => {
-                            segment.status = 'completed';
-                            resolve();
+                    if (res.statusCode !== 200 && res.statusCode !== 206) {
+                        reject(new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
+                        return;
+                    }
+
+                    segment.status = 'downloading';
+
+                    let lastUpdateTime = Date.now();
+                    let downloadedSinceLastUpdate = 0;
+                    let isWriting = false;
+
+                    res.on('data', (chunk: Buffer) => {
+                        const writePos = segment.start + segment.downloaded;
+                        
+                        // Increment metrics immediately for UI reactivity
+                        segment.downloaded += chunk.length;
+                        task.downloadedSize += chunk.length;
+                        downloadedSinceLastUpdate += chunk.length;
+
+                        // Perform direct write using the task's shared file descriptor
+                        // This avoids file locking issues on Windows that occur with createWriteStream
+                        isWriting = true;
+                        fs.write(fd, chunk, 0, chunk.length, writePos, (err) => {
+                            isWriting = false;
+                            if (err) {
+                                console.error('Write error in segment:', err);
+                                req.destroy();
+                                reject(err);
+                            }
                         });
-                    } else {
-                        segment.status = 'completed';
-                        resolve();
-                    }
+
+                        const now = Date.now();
+                        const diff = now - lastUpdateTime;
+                        if (diff >= 1000) {
+                            task.speed = Math.floor((downloadedSinceLastUpdate * 1000) / diff);
+                            task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
+
+                            this.emitProgress(task);
+
+                            lastUpdateTime = now;
+                            downloadedSinceLastUpdate = 0;
+                        }
+                    });
+
+                    res.on('end', () => {
+                        // Small delay to ensure last write completes
+                        const checkFinish = () => {
+                            if (!isWriting) {
+                                segment.status = 'completed';
+                                resolve();
+                            } else {
+                                setTimeout(checkFinish, 10);
+                            }
+                        };
+                        checkFinish();
+                    });
+
+                    res.on('error', (err) => {
+                        segment.status = 'failed';
+                        reject(err);
+                    });
                 });
 
-                res.on('error', (err) => {
+                req.on('error', (err) => {
                     segment.status = 'failed';
-                    if (fileStream) fileStream.destroy();
                     reject(err);
                 });
-            });
 
-            req.on('error', (err) => {
-                segment.status = 'failed';
-                if (fileStream) fileStream.destroy();
-                reject(err);
-            });
+                req.setTimeout(45000, () => {
+                    req.destroy();
+                    reject(new Error('Segment download timeout'));
+                });
+            };
 
-            req.setTimeout(30000, () => {
-                req.destroy();
-                reject(new Error('Segment download timeout'));
-            });
+            download(task.url, 5);
         });
     }
 
@@ -426,6 +519,7 @@ export class DownloadManager extends EventEmitter {
             active.abortControllers.forEach(c => c.abort());
             this.saveTask(active.task);
             this.emitProgress(active.task);
+            this.closeTaskFd(taskId);
             this.activeTasks.delete(taskId);
             this.checkQueue();
         } else {

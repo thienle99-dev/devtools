@@ -2,7 +2,17 @@ import { ipcMain, BrowserWindow, shell } from 'electron';
 import { downloadManager } from './download-manager';
 import type { DownloadSettings } from '../../src/types/network/download';
 
-export function setupDownloadManagerHandlers(win: BrowserWindow) {
+export function setupDownloadManagerHandlers() {
+    // Listen for progress updates and broadcast to all windows
+    downloadManager.on('progress', (progress) => {
+        BrowserWindow.getAllWindows().forEach(win => {
+            if (!win.isDestroyed()) {
+                win.webContents.send(`download:progress:${progress.taskId}`, progress);
+                win.webContents.send('download:any-progress', progress);
+            }
+        });
+    });
+
     ipcMain.handle('download:get-history', () => {
         return downloadManager.getHistory();
     });
@@ -22,10 +32,7 @@ export function setupDownloadManagerHandlers(win: BrowserWindow) {
     });
 
     ipcMain.handle('download:start', async (_event, taskId: string) => {
-        downloadManager.startDownload(taskId, (progress) => {
-            win.webContents.send(`download:progress:${taskId}`, progress);
-            win.webContents.send('download:any-progress', progress);
-        });
+        downloadManager.startDownload(taskId);
         return { success: true };
     });
 
@@ -35,10 +42,7 @@ export function setupDownloadManagerHandlers(win: BrowserWindow) {
     });
 
     ipcMain.handle('download:resume', (_event, taskId: string) => {
-        downloadManager.resumeDownload(taskId, (progress) => {
-            win.webContents.send(`download:progress:${taskId}`, progress);
-            win.webContents.send('download:any-progress', progress);
-        });
+        downloadManager.resumeDownload(taskId);
         return { success: true };
     });
 

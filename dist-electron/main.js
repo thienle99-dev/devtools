@@ -3202,13 +3202,32 @@ var UniversalDownloader = class {
 					maxConcurrentDownloads: 3,
 					maxSpeedLimit: "",
 					useBrowserCookies: null
-				}
+				},
+				queue: []
 			}
 		});
 		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
 		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
 		this.initPromise = this.init();
 		setInterval(() => this.processQueue(), 5e3);
+		this.loadPersistedQueue();
+	}
+	loadPersistedQueue() {
+		const persistedQueue = this.store.get("queue") || [];
+		for (const item of persistedQueue) this.downloadQueue.push({
+			options: item.options,
+			run: () => this.executeDownload(item.options),
+			resolve: () => {},
+			reject: () => {},
+			state: item.state === "downloading" ? "paused" : item.state
+		});
+	}
+	saveQueuePersistently() {
+		const toSave = this.downloadQueue.map((item) => ({
+			options: item.options,
+			state: item.state
+		}));
+		this.store.set("queue", toSave);
 	}
 	async init() {
 		try {
@@ -3398,14 +3417,67 @@ var UniversalDownloader = class {
 				reject,
 				state: "queued"
 			});
+			this.saveQueuePersistently();
 			this.processQueue();
 		});
 	}
+	async retryDownload(id) {
+		const queuedItem = this.downloadQueue.find((item) => item.options.id === id);
+		if (queuedItem) {
+			queuedItem.state = "queued";
+			this.saveQueuePersistently();
+			this.processQueue();
+			return;
+		}
+		const options = this.activeOptions.get(id);
+		if (options) {
+			this.downloadQueue.push({
+				options,
+				run: () => this.executeDownload(options),
+				resolve: () => {},
+				reject: () => {},
+				state: "queued"
+			});
+			this.saveQueuePersistently();
+			this.processQueue();
+			return;
+		}
+		const historyItem = this.store.get("history").find((h) => h.id === id);
+		if (historyItem) {
+			const reconstructedOptions = {
+				url: historyItem.url,
+				format: historyItem.format || "video",
+				quality: "best",
+				id: historyItem.id
+			};
+			this.downloadQueue.push({
+				options: reconstructedOptions,
+				run: () => this.executeDownload(reconstructedOptions),
+				resolve: () => {},
+				reject: () => {},
+				state: "queued"
+			});
+			this.saveQueuePersistently();
+			this.processQueue();
+		}
+	}
 	async pauseDownload(id) {
 		const proc = this.activeProcesses.get(id);
-		if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill("SIGTERM");
+		if (proc && proc.ytDlpProcess) {
+			const task = this.downloadQueue.find((t) => t.options.id === id);
+			if (task) task.state = "paused";
+			proc.ytDlpProcess.kill("SIGTERM");
+			this.saveQueuePersistently();
+		}
 	}
 	async resumeDownload(id) {
+		const queuedItem = this.downloadQueue.find((item) => item.options.id === id);
+		if (queuedItem) {
+			queuedItem.state = "queued";
+			this.saveQueuePersistently();
+			this.processQueue();
+			return;
+		}
 		const options = this.activeOptions.get(id);
 		if (options) {
 			this.downloadQueue.unshift({
@@ -3415,6 +3487,7 @@ var UniversalDownloader = class {
 				reject: () => {},
 				state: "queued"
 			});
+			this.saveQueuePersistently();
 			this.processQueue();
 		}
 	}
@@ -3462,6 +3535,7 @@ var UniversalDownloader = class {
 		if (index !== -1 && newIndex >= 0 && newIndex < this.downloadQueue.length) {
 			const item = this.downloadQueue.splice(index, 1)[0];
 			this.downloadQueue.splice(newIndex, 0, item);
+			this.saveQueuePersistently();
 		}
 	}
 	async processQueue() {
@@ -3470,16 +3544,24 @@ var UniversalDownloader = class {
 			console.warn("Low disk space, skipping queue processing");
 			return;
 		}
-		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
-			const task = this.downloadQueue.shift();
-			if (task) {
-				this.activeDownloadsCount++;
+		while (this.activeDownloadsCount < maxConcurrent) {
+			const task = this.downloadQueue.find((t) => t.state === "queued");
+			if (!task) break;
+			this.activeDownloadsCount++;
+			task.state = "downloading";
+			this.saveQueuePersistently();
+			task.run().then((result) => {
 				task.state = "downloading";
-				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
-					this.activeDownloadsCount--;
-					this.processQueue();
-				});
-			}
+				this.downloadQueue = this.downloadQueue.filter((t) => t !== task);
+				task.resolve(result);
+			}).catch((error) => {
+				task.state = "error";
+				task.reject(error);
+			}).finally(() => {
+				this.activeDownloadsCount--;
+				this.saveQueuePersistently();
+				this.processQueue();
+			});
 		}
 	}
 	async executeDownload(options, progressCallback) {
@@ -3727,9 +3809,15 @@ var UniversalDownloader = class {
 		if (id) {
 			const proc = this.activeProcesses.get(id);
 			if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill();
-		} else this.activeProcesses.forEach((proc) => {
-			if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
-		});
+			this.downloadQueue = this.downloadQueue.filter((t) => t.options.id !== id);
+			this.saveQueuePersistently();
+		} else {
+			this.activeProcesses.forEach((proc) => {
+				if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
+			});
+			this.downloadQueue = [];
+			this.saveQueuePersistently();
+		}
 	}
 	getHistory() {
 		return this.store.get("history", []);
@@ -4817,14 +4905,14 @@ var DownloadManager = class extends EventEmitter {
 	}
 	async createDownload(url, customFilename) {
 		const info = await this.getFileInfo(url);
-		const parsedUrl = new URL(url);
-		const filename = customFilename || info.filename || path$1.basename(parsedUrl.pathname) || "download";
 		const settings = this.getSettings();
+		let filename = customFilename || info.filename || path$1.basename(new URL(info.finalUrl).pathname) || "download";
+		filename = this.sanitizeFilename(filename);
 		const filepath = path$1.join(settings.downloadPath, filename);
 		const category = this.getCategory(filename);
 		const task = {
 			id: randomUUID$1(),
-			url,
+			url: info.finalUrl,
 			filename,
 			filepath,
 			totalSize: info.size,
@@ -4897,7 +4985,8 @@ var DownloadManager = class extends EventEmitter {
 							resolve({
 								size: size$1,
 								acceptRanges: acceptRanges$1,
-								filename
+								filename,
+								finalUrl: url
 							});
 						});
 						getReq.on("error", reject);
@@ -4910,7 +4999,8 @@ var DownloadManager = class extends EventEmitter {
 					resolve({
 						size,
 						acceptRanges,
-						filename: this.parseFilename(contentDisposition)
+						filename: this.parseFilename(contentDisposition),
+						finalUrl: url
 					});
 				});
 				req.on("error", (err) => {
@@ -4931,7 +5021,8 @@ var DownloadManager = class extends EventEmitter {
 						resolve({
 							size,
 							acceptRanges,
-							filename
+							filename,
+							finalUrl: url
 						});
 					});
 					getReq.on("error", () => reject(err));
@@ -4954,8 +5045,23 @@ var DownloadManager = class extends EventEmitter {
 	}
 	parseFilename(disposition) {
 		if (!disposition) return void 0;
-		const match = disposition.match(/filename=['"]?([^'"]+)['"]?/);
-		return match ? match[1] : void 0;
+		let filename;
+		const filenameStarMatch = disposition.match(/filename\*=(?:UTF-8|utf-8)''([^;\s]+)/i);
+		if (filenameStarMatch) try {
+			filename = decodeURIComponent(filenameStarMatch[1]);
+		} catch (e) {}
+		if (!filename) {
+			const filenameMatch = disposition.match(/filename=(?:(['"])(.*?)\1|([^;\s]+))/i);
+			if (filenameMatch) filename = filenameMatch[2] || filenameMatch[3];
+		}
+		return filename;
+	}
+	sanitizeFilename(filename) {
+		let clean = filename.split(";")[0];
+		clean = clean.replace(/filename\*?=.*/gi, "");
+		clean = clean.replace(/[<>:"/\\|?*]/g, "_");
+		clean = clean.replace(/^\.+|\.+$/g, "").trim();
+		return clean || "download";
 	}
 	checkQueue() {
 		const settings = this.getSettings();
@@ -4985,16 +5091,27 @@ var DownloadManager = class extends EventEmitter {
 		if (!fs$1.existsSync(dir)) fs$1.mkdirSync(dir, { recursive: true });
 		try {
 			if (!fs$1.existsSync(task.filepath)) if (task.totalSize > 0) {
-				const fd = fs$1.openSync(task.filepath, "w");
-				fs$1.ftruncateSync(fd, task.totalSize);
-				fs$1.closeSync(fd);
+				const tempFd = fs$1.openSync(task.filepath, "w");
+				fs$1.ftruncateSync(tempFd, task.totalSize);
+				fs$1.closeSync(tempFd);
 			} else fs$1.writeFileSync(task.filepath, Buffer.alloc(0));
+			const fd$1 = fs$1.openSync(task.filepath, "r+");
+			const entry$1 = this.activeTasks.get(taskId);
+			if (entry$1) entry$1.fd = fd$1;
 		} catch (err) {
-			console.error("File allocation error:", err);
+			console.error("File allocation/open error:", err);
+			task.status = "failed";
+			task.error = `File error: ${err.message}`;
+			this.saveTask(task);
+			this.activeTasks.delete(taskId);
+			return;
 		}
+		const entry = this.activeTasks.get(taskId);
+		if (!entry || entry.fd === void 0) return;
+		const fd = entry.fd;
 		const promises = task.segments.map((segment) => {
 			if (segment.status === "completed") return Promise.resolve();
-			return this.downloadSegment(task, segment, abortControllers);
+			return this.downloadSegment(task, segment, abortControllers, fd);
 		});
 		Promise.all(promises).then(() => {
 			if (task.status === "downloading") {
@@ -5003,22 +5120,36 @@ var DownloadManager = class extends EventEmitter {
 				task.speed = 0;
 				this.saveTask(task);
 				this.emitProgress(task);
+				this.closeTaskFd(taskId);
 				this.activeTasks.delete(taskId);
 				this.checkQueue();
 			}
 		}).catch((err) => {
-			if (err.name === "AbortError" || task.status === "paused") return;
+			if (err.name === "AbortError" || task.status === "paused") {
+				this.closeTaskFd(taskId);
+				return;
+			}
 			console.error(`Download failed for ${task.filename}:`, err);
 			task.status = "failed";
 			task.error = err.message;
 			task.speed = 0;
 			this.saveTask(task);
 			this.emitProgress(task);
+			this.closeTaskFd(taskId);
 			this.activeTasks.delete(taskId);
 			this.checkQueue();
 		});
 	}
-	downloadSegment(task, segment, abortControllers) {
+	closeTaskFd(taskId) {
+		const entry = this.activeTasks.get(taskId);
+		if (entry && entry.fd !== void 0) try {
+			fs$1.closeSync(entry.fd);
+			entry.fd = void 0;
+		} catch (e) {
+			console.error("Error closing fd:", e);
+		}
+	}
+	downloadSegment(task, segment, abortControllers, fd) {
 		return new Promise((resolve, reject) => {
 			const controller = new AbortController();
 			abortControllers.push(controller);
@@ -5028,74 +5159,87 @@ var DownloadManager = class extends EventEmitter {
 				segment.status = "completed";
 				return resolve();
 			}
-			const protocol$1 = task.url.startsWith("https") ? https : http;
 			const headers = {
-				"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 				"Accept": "*/*",
-				"Connection": "keep-alive"
+				"Connection": "keep-alive",
+				"Referer": new URL(task.url).origin
 			};
 			if (endPos !== -1) headers["Range"] = `bytes=${startPos}-${endPos}`;
-			let fileStream = null;
-			const req = protocol$1.get(task.url, {
-				headers,
-				signal: controller.signal
-			}, (res) => {
-				if (res.statusCode !== 200 && res.statusCode !== 206) {
-					reject(/* @__PURE__ */ new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
+			const download = (currentUrl, redirectLimit) => {
+				if (redirectLimit <= 0) {
+					reject(/* @__PURE__ */ new Error("Too many redirects in segment download"));
 					return;
 				}
-				segment.status = "downloading";
-				try {
-					fileStream = fs$1.createWriteStream(task.filepath, {
-						flags: "r+",
-						start: startPos
-					});
-				} catch (e) {
-					reject(e);
-					return;
-				}
-				res.pipe(fileStream);
-				let lastUpdateTime = Date.now();
-				let downloadedSinceLastUpdate = 0;
-				res.on("data", (chunk) => {
-					segment.downloaded += chunk.length;
-					task.downloadedSize += chunk.length;
-					downloadedSinceLastUpdate += chunk.length;
-					const now = Date.now();
-					const diff = now - lastUpdateTime;
-					if (diff >= 1e3) {
-						task.speed = Math.floor(downloadedSinceLastUpdate * 1e3 / diff);
-						task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
-						this.emitProgress(task);
-						lastUpdateTime = now;
-						downloadedSinceLastUpdate = 0;
+				const parsedUrl = new URL(currentUrl);
+				const protocol$1 = parsedUrl.protocol === "https:" ? https : http;
+				headers["Referer"] = parsedUrl.origin;
+				const req = protocol$1.get(currentUrl, {
+					headers,
+					signal: controller.signal
+				}, (res) => {
+					if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+						const redirectUrl = new URL(res.headers.location, currentUrl).toString();
+						res.resume();
+						download(redirectUrl, redirectLimit - 1);
+						return;
 					}
-				});
-				res.on("end", () => {
-					if (fileStream) fileStream.end(() => {
-						segment.status = "completed";
-						resolve();
-					});
-					else {
-						segment.status = "completed";
-						resolve();
+					if (res.statusCode !== 200 && res.statusCode !== 206) {
+						reject(/* @__PURE__ */ new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
+						return;
 					}
+					segment.status = "downloading";
+					let lastUpdateTime = Date.now();
+					let downloadedSinceLastUpdate = 0;
+					let isWriting = false;
+					res.on("data", (chunk) => {
+						const writePos = segment.start + segment.downloaded;
+						segment.downloaded += chunk.length;
+						task.downloadedSize += chunk.length;
+						downloadedSinceLastUpdate += chunk.length;
+						isWriting = true;
+						fs$1.write(fd, chunk, 0, chunk.length, writePos, (err) => {
+							isWriting = false;
+							if (err) {
+								console.error("Write error in segment:", err);
+								req.destroy();
+								reject(err);
+							}
+						});
+						const now = Date.now();
+						const diff = now - lastUpdateTime;
+						if (diff >= 1e3) {
+							task.speed = Math.floor(downloadedSinceLastUpdate * 1e3 / diff);
+							task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
+							this.emitProgress(task);
+							lastUpdateTime = now;
+							downloadedSinceLastUpdate = 0;
+						}
+					});
+					res.on("end", () => {
+						const checkFinish = () => {
+							if (!isWriting) {
+								segment.status = "completed";
+								resolve();
+							} else setTimeout(checkFinish, 10);
+						};
+						checkFinish();
+					});
+					res.on("error", (err) => {
+						segment.status = "failed";
+						reject(err);
+					});
 				});
-				res.on("error", (err) => {
+				req.on("error", (err) => {
 					segment.status = "failed";
-					if (fileStream) fileStream.destroy();
 					reject(err);
 				});
-			});
-			req.on("error", (err) => {
-				segment.status = "failed";
-				if (fileStream) fileStream.destroy();
-				reject(err);
-			});
-			req.setTimeout(3e4, () => {
-				req.destroy();
-				reject(/* @__PURE__ */ new Error("Segment download timeout"));
-			});
+				req.setTimeout(45e3, () => {
+					req.destroy();
+					reject(/* @__PURE__ */ new Error("Segment download timeout"));
+				});
+			};
+			download(task.url, 5);
 		});
 	}
 	pauseDownload(taskId) {
@@ -5106,6 +5250,7 @@ var DownloadManager = class extends EventEmitter {
 			active.abortControllers.forEach((c) => c.abort());
 			this.saveTask(active.task);
 			this.emitProgress(active.task);
+			this.closeTaskFd(taskId);
 			this.activeTasks.delete(taskId);
 			this.checkQueue();
 		} else {
@@ -5202,7 +5347,15 @@ var DownloadManager = class extends EventEmitter {
 	}
 };
 const downloadManager = new DownloadManager();
-function setupDownloadManagerHandlers(win$1) {
+function setupDownloadManagerHandlers() {
+	downloadManager.on("progress", (progress) => {
+		BrowserWindow.getAllWindows().forEach((win$1) => {
+			if (!win$1.isDestroyed()) {
+				win$1.webContents.send(`download:progress:${progress.taskId}`, progress);
+				win$1.webContents.send("download:any-progress", progress);
+			}
+		});
+	});
 	ipcMain.handle("download:get-history", () => {
 		return downloadManager.getHistory();
 	});
@@ -5217,10 +5370,7 @@ function setupDownloadManagerHandlers(win$1) {
 		return await downloadManager.createDownload(url, filename);
 	});
 	ipcMain.handle("download:start", async (_event, taskId) => {
-		downloadManager.startDownload(taskId, (progress) => {
-			win$1.webContents.send(`download:progress:${taskId}`, progress);
-			win$1.webContents.send("download:any-progress", progress);
-		});
+		downloadManager.startDownload(taskId);
 		return { success: true };
 	});
 	ipcMain.handle("download:pause", (_event, taskId) => {
@@ -5228,10 +5378,7 @@ function setupDownloadManagerHandlers(win$1) {
 		return { success: true };
 	});
 	ipcMain.handle("download:resume", (_event, taskId) => {
-		downloadManager.resumeDownload(taskId, (progress) => {
-			win$1.webContents.send(`download:progress:${taskId}`, progress);
-			win$1.webContents.send("download:any-progress", progress);
-		});
+		downloadManager.resumeDownload(taskId);
 		return { success: true };
 	});
 	ipcMain.handle("download:cancel", (_event, taskId) => {
@@ -6741,6 +6888,9 @@ app.whenReady().then(() => {
 	ipcMain.handle("universal:reorder-queue", async (_, id, newIndex) => {
 		return universalDownloader.reorderQueue(id, newIndex);
 	});
+	ipcMain.handle("universal:retry", async (_, id) => {
+		return await universalDownloader.retryDownload(id);
+	});
 	ipcMain.handle("universal:open-file", async (_, path$2) => {
 		const { shell: shell$1 } = await import("electron");
 		try {
@@ -6950,7 +7100,7 @@ app.whenReady().then(() => {
 		return dateStr;
 	}
 	setupCleanerHandlers();
-	setupDownloadManagerHandlers(win);
+	setupDownloadManagerHandlers();
 	protocol.handle("local-media", async (request) => {
 		try {
 			console.log("[LocalMedia] Request:", request.url);

@@ -57,6 +57,7 @@ interface Window {
         pause: (id: string) => Promise<void>;
         resume: (id: string) => Promise<void>;
         reorderQueue: (id: string, newIndex: number) => Promise<void>;
+        retry: (id: string) => Promise<void>;
     };
 
     audioAPI: {

@@ -453,6 +453,20 @@ export default function UniversalDownloader() {
         success('Download Resumed', 'Restarting download process...');
     };
 
+    const handleRetryDownload = async (id: string) => {
+        await window.universalAPI.retry(id);
+        setActiveDownloads(prev => {
+            const newMap = new Map(prev);
+            if (newMap.has(id)) {
+                const item = newMap.get(id);
+                if (item) newMap.set(id, { ...item, state: 'queued' });
+            }
+            return newMap;
+        });
+        success('Retrying Download', 'Attempting to restart the download process...');
+    };
+
+
     const handleReorderQueue = async (id: string, direction: 'up' | 'down') => {
         const index = queuedDownloads.findIndex(q => q.id === id);
         if (index === -1) return;
@@ -528,7 +542,7 @@ export default function UniversalDownloader() {
         >
             {/* Drag Overlay */}
             {isDragging && (
-                <div className="absolute inset-x-0 -top-4 -bottom-4 z-50 bg-indigo-500/20 backdrop-blur-sm border-2 border-dashed border-indigo-400 rounded-3xl flex flex-col items-center justify-center animate-in fade-in duration-200 pointer-events-none">
+                <div className="absolute inset-x-0 -top-4 -bottom-4 z-50 bg-indigo-500/10 dark:bg-indigo-500/20 backdrop-blur-sm border-2 border-dashed border-indigo-500 rounded-3xl flex flex-col items-center justify-center animate-in fade-in duration-200 pointer-events-none">
                     <div className="bg-glass-panel p-6 rounded-2xl shadow-2xl border border-border-glass flex flex-col items-center gap-4">
                         <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center animate-bounce">
                             <MousePointer2 className="w-8 h-8 text-indigo-400" />
@@ -555,12 +569,12 @@ export default function UniversalDownloader() {
                     </div>
 
                     {/* Input Mode Toggle */}
-                    <div className="flex items-center gap-2 p-1 bg-white/5 w-fit rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2 p-1 bg-foreground-primary/5 w-fit rounded-lg border border-border-glass">
                         <button
                             onClick={() => setInputMode('single')}
                             className={cn(
                                 "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                                inputMode === 'single' ? "bg-indigo-500/20 text-indigo-300 shadow-sm" : "text-foreground-secondary hover:text-foreground"
+                                inputMode === 'single' ? "bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 shadow-sm" : "text-foreground-secondary hover:text-foreground"
                             )}
                         >
                             Single URL
@@ -569,7 +583,7 @@ export default function UniversalDownloader() {
                             onClick={() => setInputMode('batch')}
                             className={cn(
                                 "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                                inputMode === 'batch' ? "bg-indigo-500/20 text-indigo-300 shadow-sm" : "text-foreground-secondary hover:text-foreground"
+                                inputMode === 'batch' ? "bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 shadow-sm" : "text-foreground-secondary hover:text-foreground"
                             )}
                         >
                             Batch Mode
@@ -583,7 +597,7 @@ export default function UniversalDownloader() {
                             onChange={(e) => setUrl(e.target.value)}
                             icon={Link}
                             fullWidth
-                            className="h-12 text-base bg-background/50 border-input"
+                            className="h-12 text-base bg-background/30 dark:bg-background/50 border-input"
                             autoFocus
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && url) {
@@ -641,7 +655,7 @@ export default function UniversalDownloader() {
                     <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2 text-xs">
                             {detectedPlatform !== 'other' && (
-                                <span className={cn("font-bold uppercase tracking-wide flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/10", getPlatformColor(detectedPlatform))}>
+                                <span className={cn("font-bold uppercase tracking-wide flex items-center gap-1.5 px-2 py-1 rounded-md bg-foreground-primary/5 border border-border-glass", getPlatformColor(detectedPlatform))}>
                                     <Globe className="w-3 h-3" />
                                     {getPlatformName(detectedPlatform)}
                                 </span>
@@ -775,7 +789,7 @@ export default function UniversalDownloader() {
                     </p>
                     <div className="flex flex-wrap justify-center gap-2 max-w-2xl text-xs">
                         {['YouTube', 'TikTok', 'Instagram', 'Facebook', 'Twitter', 'Twitch', 'Reddit', 'Vimeo', 'Pinterest', 'Dailymotion', 'Soundcloud'].map(p => (
-                            <span key={p} className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-foreground-secondary hover:bg-white/10 transition-colors">
+                            <span key={p} className="bg-foreground-primary/5 px-3 py-1.5 rounded-lg border border-border-glass text-foreground-secondary hover:bg-foreground-primary/10 transition-colors">
                                 {p}
                             </span>
                         ))}
@@ -795,7 +809,7 @@ export default function UniversalDownloader() {
                 {diskSpace && (
                     <div className={cn(
                         "p-3 rounded-xl border flex items-center justify-between text-xs",
-                        diskSpace.warning ? "bg-amber-500/10 border-amber-500/30 text-amber-400" : "bg-white/5 border-white/10 text-foreground-secondary"
+                        diskSpace.warning ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400" : "bg-foreground-primary/5 border-border-glass text-foreground-secondary"
                     )}>
                         <div className="flex items-center gap-2">
                             <HardDrive className="w-4 h-4" />
@@ -844,7 +858,8 @@ export default function UniversalDownloader() {
                                     }}
                                     onCancel={() => window.universalAPI.cancel(progress.id!)}
                                     onPause={() => handlePauseDownload(progress.id!)}
-                                    onResume={() => handleResumeDownload(progress.id!)}
+                                    onResume={progress.state === 'error' ? () => handleRetryDownload(progress.id!) : () => handleResumeDownload(progress.id!)}
+
 
                                     isPlaylist={false}
                                 />
@@ -858,19 +873,19 @@ export default function UniversalDownloader() {
                                             <button 
                                                 disabled={index === 0}
                                                 onClick={() => handleReorderQueue(item.id, 'up')}
-                                                className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:hover:bg-transparent"
+                                                className="p-1 hover:bg-foreground-primary/10 rounded disabled:opacity-30 disabled:hover:bg-transparent"
                                             >
                                                 <ChevronUp className="w-4 h-4 text-foreground-tertiary" />
                                             </button>
                                             <button 
                                                 disabled={index === queuedList.length - 1}
                                                 onClick={() => handleReorderQueue(item.id, 'down')}
-                                                className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:hover:bg-transparent"
+                                                className="p-1 hover:bg-foreground-primary/10 rounded disabled:opacity-30 disabled:hover:bg-transparent"
                                             >
                                                 <ChevronDown className="w-4 h-4 text-foreground-tertiary" />
                                             </button>
                                         </div>
-                                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                                        <div className="p-2 rounded-lg bg-foreground-primary/5 border border-border-glass">
                                             <Clock className="w-4 h-4 text-foreground-muted" />
                                         </div>
                                         <div>
@@ -902,7 +917,7 @@ export default function UniversalDownloader() {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-semibold text-foreground-primary">History</h3>
-                            <span className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-foreground-tertiary">
+                            <span className="text-[10px] bg-foreground-primary/5 px-1.5 py-0.5 rounded text-foreground-tertiary">
                                 {filteredHistory.length} items
                             </span>
                         </div>
@@ -1124,7 +1139,7 @@ export default function UniversalDownloader() {
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-foreground-secondary">Default Format</label>
                         <select
-                            className="w-full bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                            className="w-full bg-background/30 dark:bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
                             value={settings.defaultFormat}
                             onChange={(e) => handleSaveSettings({ ...settings, defaultFormat: e.target.value as 'video' | 'audio' })}
                         >
@@ -1136,7 +1151,7 @@ export default function UniversalDownloader() {
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-foreground-secondary">Default Quality</label>
                         <select
-                            className="w-full bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
+                            className="w-full bg-background/30 dark:bg-background/50 border-input rounded-lg p-2.5 text-sm text-foreground-primary focus:ring-2 focus:ring-primary/50 outline-none border"
                             value={settings.defaultQuality}
                             onChange={(e) => handleSaveSettings({ ...settings, defaultQuality: e.target.value as 'best' | 'medium' | 'low' })}
                         >
@@ -1147,7 +1162,7 @@ export default function UniversalDownloader() {
                     </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="mt-4 pt-4 border-t border-border-glass grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-foreground-secondary">
                             Browser Cookies Source
@@ -1195,7 +1210,7 @@ export default function UniversalDownloader() {
                     <p>Universal Downloader supports downloading from 1000+ websites including:</p>
                     <div className="flex flex-wrap gap-2 mt-3">
                         {['YouTube', 'Instagram', 'Facebook', 'TikTok', 'Twitter', 'Twitch', 'Reddit', 'Vimeo', 'Dailymotion', 'Soundcloud'].map(platform => (
-                            <span key={platform} className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-xs">
+                            <span key={platform} className="bg-foreground-primary/5 px-3 py-1.5 rounded-lg border border-border-glass text-xs">
                                 {platform}
                             </span>
                         ))}
