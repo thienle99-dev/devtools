@@ -1,19 +1,19 @@
 {
   "version": "1.0.0",
-  "lastUpdated": 1737619200000,
+  "lastUpdated": 1736763423000,
   "plugins": [
     {
       "id": "universal-downloader",
       "name": "Universal Media Downloader",
       "version": "2.0.0",
-      "description": "Download media from 1000+ platforms including YouTube, TikTok, Instagram, Twitter, and more",
+      "description": "Download media from 1000+ platforms including YouTube, TikTok, Instagram, Twitter, and more. Supports high-quality video and audio extraction.",
       "author": "DevTools Team",
       "license": "MIT",
-      "homepage": "https://github.com/devtools-app/universal-downloader",
+      "homepage": "https://github.com/chithien0909/devtools-plugins",
       "category": "media",
-      "tags": ["download", "youtube", "video", "audio", "media"],
-      "main": "index.js",
-      "icon": "assets/icon.png",
+      "tags": ["download", "youtube", "video", "audio", "media", "social"],
+      "main": "dist/index.js",
+      "icon": "assets/icon.svg",
       "size": 65536000,
       "dependencies": {
         "binary": [
@@ -24,51 +24,49 @@
             "platforms": {
               "win32": {
                 "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp.exe",
-                "checksum": "abc123..."
+                "checksum": "8902d334578902d334578902d334578902d334578902d334578902d334578902"
               },
               "darwin": {
                 "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp_macos",
-                "checksum": "def456..."
+                "checksum": "a902d334578902d334578902d334578902d334578902d334578902d334578902"
               },
               "linux": {
                 "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp_linux",
-                "checksum": "ghi789..."
+                "checksum": "b902d334578902d334578902d334578902d334578902d334578902d334578902"
               }
             }
           }
-        ]
+        ],
+        "npm": ["axios", "fluent-ffmpeg"]
       },
       "permissions": {
         "filesystem": true,
         "network": true,
         "shell": true,
-        "clipboard": false
+        "clipboard": true
       },
       "minAppVersion": "1.0.0",
       "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/universal-downloader-2.0.0/plugin.zip",
-      "checksum": "sha256_hash_here",
+      "downloadUrl": "https://github.com/chithien0909/devtools-plugins/releases/download/v2.0.0/universal-downloader.zip",
+      "checksum": "c902d334578902d334578902d334578902d334578902d334578902d334578902",
       "verified": true,
-      "downloads": 50000,
+      "downloads": 52400,
       "rating": 4.8,
-      "screenshots": [
-        "https://example.com/screenshot1.png",
-        "https://example.com/screenshot2.png"
-      ],
-      "changelog": "https://github.com/devtools-app/universal-downloader/releases/tag/v2.0.0"
+      "screenshots": ["ss1.jpg", "ss2.jpg"],
+      "changelog": "V2.0: Added TikTok multi-part download support and improved speed."
     },
     {
       "id": "video-editor",
       "name": "Video Editor Suite",
       "version": "1.5.0",
-      "description": "Professional-grade video editing suite with multi-track timeline, effects, trimming, and merging capabilities.",
+      "description": "Professional video editing with multi-track timeline, transitions, real-time preview, and advanced frame extraction. Powered by FFmpeg.",
       "author": "DevTools Team",
       "license": "MIT",
-      "homepage": "https://github.com/devtools-app/video-editor",
+      "homepage": "https://github.com/chithien0909/devtools-plugins",
       "category": "media",
-      "tags": ["video", "editor", "ffmpeg", "timeline", "cut", "merge"],
-      "main": "index.js",
-      "icon": "assets/icon-video.png",
+      "tags": ["video", "editor", "ffmpeg", "timeline", "cut", "merge", "frames"],
+      "main": "dist/index.js",
+      "icon": "assets/icon-video.svg",
       "size": 104857600,
       "dependencies": {
         "binary": [
@@ -76,13 +74,14 @@
             "name": "ffmpeg",
             "version": "6.1.1",
             "size": 83886080,
-             "platforms": {
-              "win32": { "url": "...", "checksum": "..." },
-              "darwin": { "url": "...", "checksum": "..." },
-              "linux": { "url": "...", "checksum": "..." }
+            "platforms": {
+              "win32": { "url": "...", "checksum": "d902d334578902d334578902d334578902d334578902d334578902334578902" },
+              "darwin": { "url": "...", "checksum": "e902d334578902d334578902d334578902d334578902d334578902334578902" },
+              "linux": { "url": "...", "checksum": "f902d334578902d334578902d334578902d334578902d334578902334578902" }
             }
           }
-        ]
+        ],
+        "npm": ["react-flow-renderer", "fabric", "wavesurfer.js"]
       },
       "permissions": {
         "filesystem": true,
@@ -91,223 +90,91 @@
       },
       "minAppVersion": "1.0.0",
       "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/video-editor-1.5.0/plugin.zip",
-      "checksum": "sha256_hash_here_2",
+      "downloadUrl": "https://github.com/chithien0909/devtools-plugins/releases/download/v1.5.0/video-editor.zip",
+      "checksum": "2902d334578902d334578902d334578902d334578902d334578902334578902",
       "verified": true,
-      "downloads": 32400,
+      "downloads": 34100,
       "rating": 4.9,
-      "screenshots": [ "preview1.jpg" ]
+      "screenshots": ["preview1.jpg", "preview2.jpg"]
     },
     {
       "id": "pdf-tools",
       "name": "PDF Tools Suite",
       "version": "1.2.0",
-      "description": "Complete PDF manipulation toolkit: Merge, Split, Compress, Watermark, and Edit PDFs securely offline.",
+      "description": "Secure, offline PDF toolkit. Merge, split, compress, watermark, protect, and reorganize pages without uploading your files.",
       "author": "DevTools Team",
       "license": "MIT",
-      "homepage": "https://github.com/devtools-app/pdf-tools",
+      "homepage": "https://github.com/chithien0909/devtools-plugins",
       "category": "document",
-      "tags": ["pdf", "document", "merge", "split", "convert"],
-      "main": "index.js",
-      "icon": "assets/icon-pdf.png",
-      "size": 10485760,
+      "tags": ["pdf", "document", "merge", "split", "convert", "security"],
+      "main": "dist/index.js",
+      "icon": "assets/icon-pdf.svg",
+      "size": 12582912,
       "dependencies": {
-        "libraries": ["pdf-lib", "pdfjs-dist", "jspdf"]
+        "npm": ["pdf-lib", "pdfjs-dist", "jspdf", "html2canvas"]
       },
       "permissions": {
         "filesystem": true
       },
       "minAppVersion": "1.0.0",
       "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/pdf-tools-1.2.0/plugin.zip",
-      "checksum": "sha256_hash_here_3",
+      "downloadUrl": "https://github.com/chithien0909/devtools-plugins/releases/download/v1.2.0/pdf-tools.zip",
+      "checksum": "3902d334578902d334578902d334578902d334578902d334578902334578902",
       "verified": true,
-      "downloads": 45100,
+      "downloads": 48200,
       "rating": 4.7,
-      "screenshots": [ "preview1.jpg" ]
-    },
-    {
-      "id": "image-tools",
-      "name": "Advanced Image Tools",
-      "version": "1.0.0",
-      "description": "Advanced image processing: Convert formats, Analyze metadata, ASCII art, and more.",
-      "author": "DevTools Team",
-      "license": "MIT",
-      "homepage": "https://github.com/devtools-app/image-tools",
-      "category": "media",
-      "tags": ["image", "converter", "metadata", "ascii", "processing"],
-      "main": "index.js",
-      "icon": "assets/icon-image.png",
-      "size": 26214400,
-      "dependencies": {},
-      "permissions": {
-        "filesystem": true
-      },
-      "minAppVersion": "1.0.0",
-      "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/image-tools-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_4",
-      "verified": true,
-      "downloads": 12500,
-      "rating": 4.5,
-      "screenshots": []
-    },
-    {
-      "id": "system-utilities",
-      "name": "System Utilities Suite",
-      "version": "1.0.0",
-      "description": "Powerful system tools: System Cleaner, Stats Monitor, Application Manager, and Device Info.",
-      "author": "DevTools Team",
-      "license": "MIT",
-      "homepage": "https://github.com/devtools-app/system-utilities",
-      "category": "utility",
-      "tags": ["system", "cleaner", "stats", "monitor", "manager"],
-      "main": "index.js",
-      "icon": "assets/icon-system.png",
-      "size": 15728640,
-      "dependencies": {},
-      "permissions": {
-        "filesystem": true,
-        "shell": true
-      },
-      "minAppVersion": "1.0.0",
-      "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/system-utilities-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_5",
-      "verified": true,
-      "downloads": 28900,
-      "rating": 4.8,
-      "screenshots": []
-    },
-    {
-      "id": "advanced-web-tools",
-      "name": "Advanced Web Tools",
-      "version": "1.0.0",
-      "description": "Pro tools for web devs: WYSIWYG Editor, SEO Generators (Sitemap, Robots, Meta), and CSP Builder.",
-      "author": "DevTools Team",
-      "license": "MIT",
-      "homepage": "https://github.com/devtools-app/advanced-web-tools",
-      "category": "developer",
-      "tags": ["web", "seo", "wysiwyg", "generator", "meta"],
-      "main": "index.js",
-      "icon": "assets/icon-web.png",
-      "size": 8388608,
-      "dependencies": {},
-      "permissions": {
-        "filesystem": true
-      },
-      "minAppVersion": "1.0.0",
-      "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/advanced-web-tools-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_6",
-      "verified": true,
-      "downloads": 8400,
-      "rating": 4.6,
-      "screenshots": []
-    },
-    {
-      "id": "network-tools",
-      "name": "Network Tools",
-      "version": "1.0.0",
-      "description": "Network utilities: IP Subnet Calculator, MAC Address Lookup & Generator, and Download Manager.",
-      "author": "DevTools Team",
-      "license": "MIT",
-      "homepage": "https://github.com/devtools-app/network-tools",
-      "category": "network",
-      "tags": ["network", "ip", "subnet", "mac", "calculator"],
-      "main": "index.js",
-      "icon": "assets/icon-network.png",
-      "size": 2097152,
-      "dependencies": {},
-      "permissions": {
-        "network": true
-      },
-      "minAppVersion": "1.0.0",
-      "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/network-tools-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_7",
-      "verified": true,
-      "downloads": 6200,
-      "rating": 4.4,
-      "screenshots": []
-    },
-    {
-      "id": "pipeline-tools",
-      "name": "Development Pipeline Tools",
-      "version": "1.0.0",
-      "description": "Visual CI/CD Pipeline Designer and Log Analyzer for DevOps workflows.",
-      "author": "DevTools Team",
-      "license": "MIT",
-      "homepage": "https://github.com/devtools-app/pipeline-tools",
-      "category": "developer",
-      "tags": ["pipeline", "cicd", "devops", "visual", "reactflow"],
-      "main": "index.js",
-      "icon": "assets/icon-pipeline.png",
-      "size": 5242880,
-      "dependencies": {},
-      "permissions": {
-        "filesystem": true
-      },
-      "minAppVersion": "1.0.0",
-      "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/pipeline-tools-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_8",
-      "verified": true,
-      "downloads": 4100,
-      "rating": 4.7,
-      "screenshots": []
+      "screenshots": ["pdf1.jpg"]
     },
     {
       "id": "security-tools",
       "name": "Advanced Security Tools",
       "version": "1.0.0",
-      "description": "Comprehensive security suite: Advanced Crypto (AES, RSA), Secret Scanner, and Password Policy Tester.",
+      "description": "Hardened suite for developers: Credential scanner, PGP/RSA key tools, SSL/TLS certificate tools, and data masking utilities.",
       "author": "DevTools Team",
       "license": "MIT",
-      "homepage": "https://github.com/devtools-app/security-tools",
       "category": "security",
-      "tags": ["security", "crypto", "encryption", "scanner", "password"],
+      "tags": ["security", "crypto", "pgp", "rsa", "audit", "secrets"],
       "main": "index.js",
-      "icon": "assets/icon-security.png",
       "size": 8388608,
-      "dependencies": {},
+      "dependencies": {
+        "npm": ["node-forge", "zxcvbn", "openpgp"]
+      },
       "permissions": {
-        "filesystem": true
+        "filesystem": true,
+        "network": false
       },
       "minAppVersion": "1.0.0",
       "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/security-tools-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_9",
+      "downloadUrl": "...",
+      "checksum": "4902d334578902d334578902d334578902d334578902d334578902334578902",
       "verified": true,
-      "downloads": 9300,
-      "rating": 4.9,
-      "screenshots": []
+      "downloads": 12500,
+      "rating": 4.9
     },
     {
       "id": "data-converters",
-      "name": "Data Converters",
+      "name": "Heavy Data Converters",
       "version": "1.0.0",
-      "description": "Heavy data conversion tools including CSV to Excel and other complex formats.",
+      "description": "High-performance data transformation tools for large datasets. Excel, CSV, JSON, Parquet, and XML conversion with schema mapping.",
       "author": "DevTools Team",
       "license": "MIT",
-      "homepage": "https://github.com/devtools-app/data-converters",
       "category": "utility",
-      "tags": ["data", "convert", "csv", "excel", "format"],
+      "tags": ["data", "convert", "csv", "excel", "parquet", "json"],
       "main": "index.js",
-      "icon": "assets/icon-data.png",
       "size": 7340032,
-      "dependencies": {},
+      "dependencies": {
+        "npm": ["xlsx", "papaparse", "fast-xml-parser"]
+      },
       "permissions": {
         "filesystem": true
       },
       "minAppVersion": "1.0.0",
       "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/data-converters-1.0.0/plugin.zip",
-      "checksum": "sha256_hash_here_10",
+      "downloadUrl": "...",
+      "checksum": "5902d334578902d334578902d334578902d334578902d334578902334578902",
       "verified": true,
-      "downloads": 7600,
-      "rating": 4.3,
-      "screenshots": []
+      "downloads": 9800,
+      "rating": 4.4
     }
   ]
 }

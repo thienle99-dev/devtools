@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { PluginManifest } from '@/types/plugin';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
-import { X, Download, BadgeCheck, Github, Globe, HardDrive } from 'lucide-react';
+import { X, Download, BadgeCheck, Github, Globe, HardDrive, Box } from 'lucide-react';
 import { getTagColor } from '../tag-utils';
 import { cn } from '@utils/cn';
 
@@ -140,6 +140,44 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
                             )}
                         </div>
                     </div>
+
+                    {/* Dependencies Section */}
+                    {(plugin.dependencies?.binary || plugin.dependencies?.npm) && (
+                        <div>
+                            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Requirements & Dependencies</h3>
+                            <div className="grid grid-cols-1 gap-3">
+                                {plugin.dependencies?.binary?.map((bin, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-md bg-blue-500/20 flex items-center justify-center">
+                                                <Box className="w-4 h-4 text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-medium text-foreground">{bin.name}</div>
+                                                <div className="text-[10px] text-muted-foreground">External Binary · v{bin.version}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground bg-background/50 px-2 py-1 rounded">
+                                            {(bin.size / (1024 * 1024)).toFixed(1)} MB
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {plugin.dependencies?.npm && plugin.dependencies.npm.length > 0 && (
+                                    <div className="p-3 rounded-lg bg-secondary/20 border border-border">
+                                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Bundled Libraries</div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {plugin.dependencies.npm.map((pkg, idx) => (
+                                                <span key={idx} className="px-2 py-0.5 bg-background/50 border border-border rounded text-[10px] font-mono text-muted-foreground">
+                                                    {pkg}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                    
                    {/* Description / Readme Content could go here */}
 
