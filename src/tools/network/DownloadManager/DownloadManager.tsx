@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
     Settings,
     Trash2,
@@ -40,6 +40,40 @@ export default function DownloadManager() {
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [speedHistory, setSpeedHistory] = useState<number[]>(new Array(20).fill(0));
+    const lastClipboardUrl = useRef<string>('');
+
+    // Clipboard Monitoring
+    useEffect(() => {
+        if (!settings?.monitorClipboard) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const text = await (window as any).ipcRenderer.invoke('clipboard-read-text');
+                if (!text || text === lastClipboardUrl.current) return;
+                
+                lastClipboardUrl.current = text;
+
+                // Simple URL validation
+                if (text.startsWith('http://') || text.startsWith('https://')) {
+                    // Check if ends with common download extensions (optional but safer)
+                    const isDownloadLink = /\.(zip|exe|dmg|pkg|mp4|mkv|iso|rar|7z|pdf|jpg|png|mp3)$/i.test(text);
+                    
+                    if (isDownloadLink) {
+                        success('Link Detected', 'Would you like to download the link from clipboard?', {
+                            action: {
+                                label: 'Download Now',
+                                onClick: () => handleCreateDownload(text)
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                // Silently fail clipboard errors
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [settings?.monitorClipboard]);
 
     const [sortBy, setSortBy] = useState<'date' | 'name' | 'size'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');

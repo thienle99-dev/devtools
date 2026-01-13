@@ -10,6 +10,10 @@ export interface ToastProps {
     title: string;
     message?: string;
     duration?: number;
+    action?: {
+        label: string;
+        onClick: () => void;
+    };
     onClose: (id: string) => void;
 }
 
@@ -19,6 +23,7 @@ export const Toast: React.FC<ToastProps> = ({
     title,
     message,
     duration = 5000,
+    action,
     onClose,
 }) => {
     useEffect(() => {
@@ -56,7 +61,11 @@ export const Toast: React.FC<ToastProps> = ({
                 styles[type]
             )}
         >
-            <div className={cn("absolute inset-y-0 left-0 w-1", styles[type].split(' ')[1].replace('border-', 'bg-').replace('/50', ''))} />
+            <div className={cn("absolute inset-y-0 left-0 w-1", 
+                type === 'success' ? 'bg-emerald-500' : 
+                type === 'error' ? 'bg-rose-500' :
+                type === 'info' ? 'bg-blue-500' : 'bg-amber-500'
+            )} />
             <Icon className="w-6 h-6 flex-shrink-0 mt-0.5 animate-pulse" />
             <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-semibold text-foreground-primary mb-1">
@@ -66,6 +75,17 @@ export const Toast: React.FC<ToastProps> = ({
                     <p className="text-xs text-foreground-secondary">
                         {message}
                     </p>
+                )}
+                {action && (
+                    <button
+                        onClick={() => {
+                            action.onClick();
+                            onClose(id);
+                        }}
+                        className="mt-3 px-3 py-1.5 bg-foreground-primary/10 hover:bg-foreground-primary/20 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border border-foreground-primary/10"
+                    >
+                        {action.label}
+                    </button>
                 )}
             </div>
             <button
@@ -101,11 +121,16 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose 
 export const useToast = () => {
     const [toasts, setToasts] = React.useState<ToastProps[]>([]);
 
+    const removeToast = React.useCallback((id: string) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, []);
+
     const showToast = React.useCallback((
         type: ToastType,
         title: string,
         message?: string,
-        duration?: number
+        duration?: number,
+        action?: { label: string; onClick: () => void }
     ) => {
         const id = `toast-${Date.now()}-${Math.random()}`;
         const toast: ToastProps = {
@@ -114,38 +139,47 @@ export const useToast = () => {
             title,
             message,
             duration,
+            action,
             onClose: removeToast,
         };
 
         setToasts((prev) => [...prev, toast]);
         return id;
-    }, []);
-
-    const removeToast = React.useCallback((id: string) => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, []);
+    }, [removeToast]);
 
     const success = React.useCallback(
-        (title: string, message?: string, duration?: number) =>
-            showToast('success', title, message, duration),
+        (title: string, message?: string, durationOrOptions?: number | { duration?: number; action?: { label: string; onClick: () => void } }) => {
+            const duration = typeof durationOrOptions === 'number' ? durationOrOptions : durationOrOptions?.duration;
+            const action = typeof durationOrOptions === 'object' ? durationOrOptions?.action : undefined;
+            return showToast('success', title, message, duration, action);
+        },
         [showToast]
     );
 
     const error = React.useCallback(
-        (title: string, message?: string, duration?: number) =>
-            showToast('error', title, message, duration),
+        (title: string, message?: string, durationOrOptions?: number | { duration?: number; action?: { label: string; onClick: () => void } }) => {
+            const duration = typeof durationOrOptions === 'number' ? durationOrOptions : durationOrOptions?.duration;
+            const action = typeof durationOrOptions === 'object' ? durationOrOptions?.action : undefined;
+            return showToast('error', title, message, duration, action);
+        },
         [showToast]
     );
 
     const info = React.useCallback(
-        (title: string, message?: string, duration?: number) =>
-            showToast('info', title, message, duration),
+        (title: string, message?: string, durationOrOptions?: number | { duration?: number; action?: { label: string; onClick: () => void } }) => {
+            const duration = typeof durationOrOptions === 'number' ? durationOrOptions : durationOrOptions?.duration;
+            const action = typeof durationOrOptions === 'object' ? durationOrOptions?.action : undefined;
+            return showToast('info', title, message, duration, action);
+        },
         [showToast]
     );
 
     const warning = React.useCallback(
-        (title: string, message?: string, duration?: number) =>
-            showToast('warning', title, message, duration),
+        (title: string, message?: string, durationOrOptions?: number | { duration?: number; action?: { label: string; onClick: () => void } }) => {
+            const duration = typeof durationOrOptions === 'number' ? durationOrOptions : durationOrOptions?.duration;
+            const action = typeof durationOrOptions === 'object' ? durationOrOptions?.action : undefined;
+            return showToast('warning', title, message, duration, action);
+        },
         [showToast]
     );
 
@@ -158,4 +192,3 @@ export const useToast = () => {
         warning,
     };
 };
-

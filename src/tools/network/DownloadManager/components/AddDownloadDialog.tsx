@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Download, Link, Folder, Shield } from 'lucide-react';
+import { Download, Link, Folder, Shield, FileText, Music, Video, Archive, FileImage, Binary, FileCode } from 'lucide-react';
 import { Modal } from '@components/ui/Modal';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
+import { cn } from '@utils/cn';
 
 interface AddDownloadDialogProps {
     isOpen: boolean;
@@ -19,6 +20,24 @@ export const AddDownloadDialog: React.FC<AddDownloadDialogProps> = ({
     const [url, setUrl] = useState('');
     const [filename, setFilename] = useState('');
     const [advanced, setAdvanced] = useState(false);
+
+    const getCategoryInfo = (url: string) => {
+        const ext = url.split(/[#?]/)[0].split('.').pop()?.toLowerCase();
+        if (!ext) return { icon: Link, label: 'Detecting...', color: 'text-foreground-tertiary' };
+
+        if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return { icon: Music, label: 'Audio', color: 'text-pink-500' };
+        if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return { icon: Video, label: 'Video', color: 'text-purple-500' };
+        if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return { icon: Archive, label: 'Archive', color: 'text-orange-500' };
+        if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) return { icon: FileImage, label: 'Image', color: 'text-amber-500' };
+        if (['exe', 'msi', 'dmg', 'pkg'].includes(ext)) return { icon: Binary, label: 'Program', color: 'text-emerald-500' };
+        if (['pdf', 'doc', 'docx', 'txt', 'rtf'].includes(ext)) return { icon: FileText, label: 'Document', color: 'text-blue-500' };
+        if (['html', 'js', 'css', 'json', 'ts', 'tsx'].includes(ext)) return { icon: FileCode, label: 'Code', color: 'text-indigo-500' };
+
+        return { icon: Download, label: 'File', color: 'text-foreground-tertiary' };
+    };
+
+    const category = getCategoryInfo(url);
+    const CategoryIcon = category.icon;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,6 +70,12 @@ export const AddDownloadDialog: React.FC<AddDownloadDialogProps> = ({
                             autoFocus
                             className="h-11 bg-glass-input"
                         />
+                        <div className="flex items-center gap-2 mt-2 ml-1">
+                            <CategoryIcon className={cn("w-3.5 h-3.5", category.color)} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground-tertiary">
+                                Detected Category: <span className={category.color}>{category.label}</span>
+                            </span>
+                        </div>
                     </div>
 
                     {advanced && (

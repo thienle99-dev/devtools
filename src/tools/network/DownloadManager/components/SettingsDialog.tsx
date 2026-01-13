@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, Zap, Layers, PlayCircle } from 'lucide-react';
+import { Folder, Zap, Layers, PlayCircle, Link } from 'lucide-react';
 import { Modal } from '@components/ui/Modal';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
@@ -22,6 +22,9 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
     const [maxConcurrent, setMaxConcurrent] = useState(settings.maxConcurrentDownloads);
     const [segments, setSegments] = useState(settings.segmentsPerDownload);
     const [autoStart, setAutoStart] = useState(settings.autoStart);
+    const [monitorClipboard, setMonitorClipboard] = useState(settings.monitorClipboard);
+    const [autoUnzip, setAutoUnzip] = useState(settings.autoUnzip);
+    const [autoOpenFolder, setAutoOpenFolder] = useState(settings.autoOpenFolder);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,7 +32,10 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
             downloadPath,
             maxConcurrentDownloads: Number(maxConcurrent),
             segmentsPerDownload: Number(segments),
-            autoStart
+            autoStart,
+            monitorClipboard,
+            autoUnzip,
+            autoOpenFolder
         });
         onClose();
     };
@@ -96,18 +102,62 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 mt-4">
-                        <input
-                            type="checkbox"
-                            id="autoStart"
-                            checked={autoStart}
-                            onChange={(e) => setAutoStart(e.target.checked)}
-                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-blue-500/20"
-                        />
-                        <label htmlFor="autoStart" className="text-sm font-medium text-foreground-primary cursor-pointer flex items-center gap-2">
-                            <PlayCircle className="w-4 h-4 text-blue-400" />
-                            Start downloads immediately after adding
-                        </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
+                            <input
+                                type="checkbox"
+                                id="autoStart"
+                                checked={autoStart}
+                                onChange={(e) => setAutoStart(e.target.checked)}
+                                className="w-4 h-4 rounded border-border-glass bg-bg-glass-panel text-blue-500 focus:ring-blue-500/20"
+                            />
+                            <label htmlFor="autoStart" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
+                                <PlayCircle className="w-4 h-4 text-blue-400" />
+                                Auto Start
+                            </label>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
+                            <input
+                                type="checkbox"
+                                id="monitorClipboard"
+                                checked={monitorClipboard}
+                                onChange={(e) => setMonitorClipboard(e.target.checked)}
+                                className="w-4 h-4 rounded border-border-glass bg-bg-glass-panel text-blue-500 focus:ring-blue-500/20"
+                            />
+                            <label htmlFor="monitorClipboard" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
+                                <Link className="w-4 h-4 text-blue-400" />
+                                Clipboard Monitor
+                            </label>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
+                            <input
+                                type="checkbox"
+                                id="autoOpenFolder"
+                                checked={autoOpenFolder}
+                                onChange={(e) => setAutoOpenFolder(e.target.checked)}
+                                className="w-4 h-4 rounded border-border-glass bg-bg-glass-panel text-blue-500 focus:ring-blue-500/20"
+                            />
+                            <label htmlFor="autoOpenFolder" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
+                                <Folder className="w-4 h-4 text-emerald-400" />
+                                Auto Open Folder
+                            </label>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
+                            <input
+                                type="checkbox"
+                                id="autoUnzip"
+                                checked={autoUnzip}
+                                onChange={(e) => setAutoUnzip(e.target.checked)}
+                                className="w-4 h-4 rounded border-border-glass bg-bg-glass-panel text-blue-500 focus:ring-blue-500/20"
+                            />
+                            <label htmlFor="autoUnzip" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
+                                <Layers className="w-4 h-4 text-purple-400" />
+                                Auto Unzip
+                            </label>
+                        </div>
                     </div>
                 </div>
 

@@ -38,7 +38,10 @@ export class DownloadManager extends EventEmitter {
                     downloadPath: app.getPath('downloads'),
                     maxConcurrentDownloads: 5,
                     segmentsPerDownload: 32,
-                    autoStart: true
+                    autoStart: true,
+                    monitorClipboard: true,
+                    autoUnzip: false,
+                    autoOpenFolder: true
                 }
             }
         });
@@ -362,9 +365,9 @@ export class DownloadManager extends EventEmitter {
                 task.completedAt = Date.now();
                 task.speed = 0;
                 this.saveTask(task);
-                this.emitProgress(task);
                 this.closeTaskFd(taskId);
                 this.activeTasks.delete(taskId);
+                this.handlePostProcessing(task);
                 this.checkQueue();
             }
         }).catch(err => {
@@ -593,6 +596,27 @@ export class DownloadManager extends EventEmitter {
         // Only clear non-active tasks
         this.history = this.history.filter(t => this.activeTasks.has(t.id));
         this.persistHistory();
+    }
+
+    private async handlePostProcessing(task: DownloadTask) {
+        const settings = this.getSettings();
+        
+        // 1. Auto Open Folder
+        if (settings.autoOpenFolder) {
+            try {
+                const { shell } = require('electron');
+                shell.showItemInFolder(task.filepath);
+            } catch (err) {
+                console.error('Failed to auto-open folder:', err);
+            }
+        }
+
+        // 2. Auto Unzip
+        if (settings.autoUnzip && task.category === 'compressed') {
+            // This would require an unzip library like adm-zip or similar
+            // For now we'll just log and maybe open it
+            console.log('Auto-unzip triggered for:', task.filename);
+        }
     }
 
     private getCategory(filename: string): DownloadTask['category'] {

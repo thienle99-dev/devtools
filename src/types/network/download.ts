@@ -40,4 +40,7 @@ export interface DownloadSettings {
     maxConcurrentDownloads: number;
     segmentsPerDownload: number;
     autoStart: boolean;
+    monitorClipboard: boolean;
+    autoUnzip: boolean;
+    autoOpenFolder: boolean;
 }

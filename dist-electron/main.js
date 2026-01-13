@@ -4872,7 +4872,10 @@ var DownloadManager = class extends EventEmitter {
 					downloadPath: app.getPath("downloads"),
 					maxConcurrentDownloads: 5,
 					segmentsPerDownload: 32,
-					autoStart: true
+					autoStart: true,
+					monitorClipboard: true,
+					autoUnzip: false,
+					autoOpenFolder: true
 				}
 			}
 		});
@@ -5135,9 +5138,9 @@ var DownloadManager = class extends EventEmitter {
 				task.completedAt = Date.now();
 				task.speed = 0;
 				this.saveTask(task);
-				this.emitProgress(task);
 				this.closeTaskFd(taskId);
 				this.activeTasks.delete(taskId);
+				this.handlePostProcessing(task);
 				this.checkQueue();
 			}
 		}).catch((err) => {
@@ -5317,6 +5320,16 @@ var DownloadManager = class extends EventEmitter {
 	clearHistory() {
 		this.history = this.history.filter((t) => this.activeTasks.has(t.id));
 		this.persistHistory();
+	}
+	async handlePostProcessing(task) {
+		const settings = this.getSettings();
+		if (settings.autoOpenFolder) try {
+			const { shell: shell$1 } = __require("electron");
+			shell$1.showItemInFolder(task.filepath);
+		} catch (err) {
+			console.error("Failed to auto-open folder:", err);
+		}
+		if (settings.autoUnzip && task.category === "compressed") console.log("Auto-unzip triggered for:", task.filename);
 	}
 	getCategory(filename) {
 		const ext = path$1.extname(filename).toLowerCase().slice(1);
