@@ -6237,7 +6237,7 @@ var PluginManager = class {
 		const userDataPath = app.getPath("userData");
 		this.pluginsDir = path$1.join(userDataPath, "plugins");
 		this.binariesDir = path$1.join(userDataPath, "binaries");
-		this.registryUrl = "https://raw.githubusercontent.com/devtools-app/plugin-registry/main/registry.json";
+		this.registryUrl = "https://raw.githubusercontent.com/devtools-app/plugins/main/registry.json";
 		this.store = new Store({
 			name: "plugin-manager",
 			defaults: {
@@ -6272,7 +6272,8 @@ var PluginManager = class {
 			console.log("[PluginManager] Registry updated:", response.data.plugins.length, "plugins available");
 		} catch (error) {
 			console.error("[PluginManager] Failed to update registry:", error.message);
-			if (!this.store.get("registry")) await this.loadEmbeddedRegistry();
+			if (!this.store.get("registry") || force) await this.loadEmbeddedRegistry();
+			else console.log("[PluginManager] Using cached registry");
 		}
 	}
 	async loadEmbeddedRegistry() {

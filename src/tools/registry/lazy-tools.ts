@@ -14,21 +14,22 @@ export const DateConverter = React.lazy(() => import('@tools/converters/DateConv
 export const CsvExcelConverter = React.lazy(() => import('@tools/converters/CsvExcelConverter').then(m => ({ default: m.CsvExcelConverter })));
 
 // PDF Tools
-export const ImagesToPdfConverter = React.lazy(() => import('@tools/pdf/ImagesToPdfConverter').then(m => ({ default: m.ImagesToPdfConverter })));
-export const PdfMerger = React.lazy(() => import('@tools/pdf/PdfMerger').then(m => ({ default: m.PdfMerger })));
-export const PdfSplitter = React.lazy(() => import('@tools/pdf/PdfSplitter').then(m => ({ default: m.PdfSplitter })));
-export const PdfPageExtractor = React.lazy(() => import('@tools/pdf/PdfPageExtractor').then(m => ({ default: m.PdfPageExtractor })));
-export const PdfPageRotator = React.lazy(() => import('@tools/pdf/PdfPageRotator').then(m => ({ default: m.PdfPageRotator })));
-export const PdfMetadata = React.lazy(() => import('@tools/pdf/PdfMetadata').then(m => ({ default: m.PdfMetadata })));
-export const PdfBase64 = React.lazy(() => import('@tools/pdf/PdfBase64').then(m => ({ default: m.PdfBase64 })));
-export const PdfCompressor = React.lazy(() => import('@tools/pdf/PdfCompressor').then(m => ({ default: m.PdfCompressor })));
-export const PdfValidator = React.lazy(() => import('@tools/pdf/PdfValidator').then(m => ({ default: m.PdfValidator })));
-export const PdfPageReorder = React.lazy(() => import('@tools/pdf/PdfPageReorder').then(m => ({ default: m.PdfPageReorder })));
-export const PdfWatermarker = React.lazy(() => import('@tools/pdf/PdfWatermarker').then(m => ({ default: m.PdfWatermarker })));
-export const PdfPageNumbering = React.lazy(() => import('@tools/pdf/PdfPageNumbering').then(m => ({ default: m.PdfPageNumbering })));
-export const HtmlToPdf = React.lazy(() => import('@tools/pdf/HtmlToPdf').then(m => ({ default: m.HtmlToPdf })));
-export const MarkdownToPdf = React.lazy(() => import('@tools/pdf/MarkdownToPdf').then(m => ({ default: m.MarkdownToPdf })));
-export const PdfMetadataRemover = React.lazy(() => import('@tools/pdf/PdfMetadataRemover').then(m => ({ default: m.PdfMetadataRemover })));
+// PDF Tools - Migrated to Plugin
+// export const ImagesToPdfConverter = React.lazy(() => import('@tools/pdf/ImagesToPdfConverter').then(m => ({ default: m.ImagesToPdfConverter })));
+// export const PdfMerger = React.lazy(() => import('@tools/pdf/PdfMerger').then(m => ({ default: m.PdfMerger })));
+// export const PdfSplitter = React.lazy(() => import('@tools/pdf/PdfSplitter').then(m => ({ default: m.PdfSplitter })));
+// export const PdfPageExtractor = React.lazy(() => import('@tools/pdf/PdfPageExtractor').then(m => ({ default: m.PdfPageExtractor })));
+// export const PdfPageRotator = React.lazy(() => import('@tools/pdf/PdfPageRotator').then(m => ({ default: m.PdfPageRotator })));
+// export const PdfMetadata = React.lazy(() => import('@tools/pdf/PdfMetadata').then(m => ({ default: m.PdfMetadata })));
+// export const PdfBase64 = React.lazy(() => import('@tools/pdf/PdfBase64').then(m => ({ default: m.PdfBase64 })));
+// export const PdfCompressor = React.lazy(() => import('@tools/pdf/PdfCompressor').then(m => ({ default: m.PdfCompressor })));
+// export const PdfValidator = React.lazy(() => import('@tools/pdf/PdfValidator').then(m => ({ default: m.PdfValidator })));
+// export const PdfPageReorder = React.lazy(() => import('@tools/pdf/PdfPageReorder').then(m => ({ default: m.PdfPageReorder })));
+// export const PdfWatermarker = React.lazy(() => import('@tools/pdf/PdfWatermarker').then(m => ({ default: m.PdfWatermarker })));
+// export const PdfPageNumbering = React.lazy(() => import('@tools/pdf/PdfPageNumbering').then(m => ({ default: m.PdfPageNumbering })));
+// export const HtmlToPdf = React.lazy(() => import('@tools/pdf/HtmlToPdf').then(m => ({ default: m.HtmlToPdf })));
+// export const MarkdownToPdf = React.lazy(() => import('@tools/pdf/MarkdownToPdf').then(m => ({ default: m.MarkdownToPdf })));
+// export const PdfMetadataRemover = React.lazy(() => import('@tools/pdf/PdfMetadataRemover').then(m => ({ default: m.PdfMetadataRemover })));
 
 // Crypto
 export const HashGenerator = React.lazy(() => import('@tools/crypto/HashGenerator').then(m => ({ default: m.HashGenerator })));
@@ -101,11 +102,11 @@ export const SystemCleaner = React.lazy(() => import('@tools/utilities/system-cl
 
 // Screenshot & Media
 export const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
-export const VideoStudio = React.lazy(() => import('@tools/media/VideoStudio'));
+// export const VideoStudio = React.lazy(() => import('@tools/media/VideoStudio'));
 export const VoiceRecorder = React.lazy(() => import('@tools/media/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
 export const Camera = React.lazy(() => import('@tools/media/Camera').then(m => ({ default: m.Camera })));
-export const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
-export const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
+// export const UniversalDownloader = React.lazy(() => import('@tools/media/UniversalDownloader'));
+// export const AudioExtractor = React.lazy(() => import('@tools/media/AudioExtractor'));
 
 // Image
 export const QrCodeGenerator = React.lazy(() => import('@tools/image/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));

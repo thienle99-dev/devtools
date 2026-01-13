@@ -114,7 +114,11 @@ export class PluginManager {
     this.binariesDir = path.join(userDataPath, 'binaries');
     
     // Plugin registry URL (embedded in app, can be updated)
-    this.registryUrl = 'https://raw.githubusercontent.com/devtools-app/plugin-registry/main/registry.json';
+    // Plugin registry URL (embedded in app, can be updated)
+    // For now, use a stable dummy URL or point to the actual repo if it exists. 
+    // Since the repo might not be public/exist yet, we'll rely on the local fallback mostly for now.
+    // Ideally this should point to: 'https://raw.githubusercontent.com/devtools-app/plugins/main/registry.json'
+    this.registryUrl = 'https://raw.githubusercontent.com/devtools-app/plugins/main/registry.json';
     
     this.store = new Store<PluginStoreSchema>({
       name: 'plugin-manager',
@@ -177,10 +181,13 @@ export class PluginManager {
       console.error('[PluginManager] Failed to update registry:', error.message);
       
       // Use cached registry if available
+      // Use cached registry if available, OTHERWISE load embedded
       const cachedRegistry = this.store.get('registry');
-      if (!cachedRegistry) {
+      if (!cachedRegistry || force) {
         // Fallback to embedded registry
         await this.loadEmbeddedRegistry();
+      } else {
+         console.log('[PluginManager] Using cached registry');
       }
     }
   }
