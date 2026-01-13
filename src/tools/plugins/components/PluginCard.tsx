@@ -35,16 +35,30 @@ export const PluginCard: React.FC<PluginCardProps> = ({
     return `${mb.toFixed(1)} MB`;
   }, [plugin.size]);
 
-  const categoryColors: Record<string, string> = {
-    media: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
-    document: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
-    developer: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
-    security: "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400",
-    network: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
-    utility: "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400",
-  };
+  const getTagColor = (tag: string) => {
+    const t = tag.toLowerCase();
+    // Specific mappings
+    if (['media', 'video', 'audio', 'music'].some(k => t.includes(k))) return "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400";
+    if (['document', 'pdf', 'text', 'format'].some(k => t.includes(k))) return "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400";
+    if (['developer', 'code', 'git', 'debug', 'json'].some(k => t.includes(k))) return "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400";
+    if (['security', 'crypto', 'auth', 'hash'].some(k => t.includes(k))) return "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400";
+    if (['network', 'web', 'http', 'api'].some(k => t.includes(k))) return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400";
+    if (['ai', 'bot', 'smart', 'model'].some(k => t.includes(k))) return "bg-fuchsia-500/10 text-fuchsia-600 border-fuchsia-500/20 dark:text-fuchsia-400";
+    if (['utility', 'system', 'clean', 'os'].some(k => t.includes(k))) return "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400";
+    if (['download', 'upload', 'file'].some(k => t.includes(k))) return "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400";
 
-  const categoryColor = categoryColors[plugin.category as string] || "bg-primary/5 text-primary border-primary/10";
+    // Hash-based fallback for others
+    const colors = [
+      "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400",
+      "bg-lime-500/10 text-lime-600 border-lime-500/20 dark:text-lime-400",
+      "bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:text-indigo-400",
+      "bg-pink-500/10 text-pink-600 border-pink-500/20 dark:text-pink-400",
+      "bg-teal-500/10 text-teal-600 border-teal-500/20 dark:text-teal-400",
+    ];
+    let hash = 0;
+    for (let i = 0; i < t.length; i++) hash = t.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   return (
     <motion.div
@@ -102,11 +116,11 @@ export const PluginCard: React.FC<PluginCardProps> = ({
 
         {/* Tags - Redesigned */}
         <div className="flex flex-wrap gap-1.5 mb-5 h-[22px] overflow-hidden">
-          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize", categoryColor)}>
+          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize", getTagColor(plugin.category))}>
             {plugin.category}
           </span>
           {plugin.tags.slice(0, 2).map(tag => (
-            <span key={tag} className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-[10px] border border-border/50">
+            <span key={tag} className={cn("px-2 py-0.5 rounded-full text-[10px] border", getTagColor(tag))}>
               {tag}
             </span>
           ))}
