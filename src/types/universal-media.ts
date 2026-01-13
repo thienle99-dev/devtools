@@ -45,6 +45,19 @@ export interface UniversalDownloadOptions {
     audioFormat?: 'mp3' | 'm4a' | 'wav' | 'flac'; // New: Output audio format
 }
 
+export interface DownloadErrorInfo {
+    code: string;
+    message: string;
+    suggestions?: Array<{
+        title: string;
+        description: string;
+        action?: string;
+    }>;
+    retryable: boolean;
+    retryAt?: number;
+    errorId?: string;
+}
+
 export interface UniversalDownloadProgress {
     id?: string;
     percent: number;
@@ -53,10 +66,10 @@ export interface UniversalDownloadProgress {
     speed: number;
     eta: number;
     state: 'downloading' | 'processing' | 'complete' | 'error' | 'paused' | 'queued';
-
     filename?: string;
     filePath?: string;
     platform?: SupportedPlatform;
+    error?: DownloadErrorInfo;
 }
 
 export interface UniversalHistoryItem {

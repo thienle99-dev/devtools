@@ -18,6 +18,7 @@ import { randomUUID as randomUUID$1 } from "crypto";
 import { exec as exec$1, execSync, spawn } from "child_process";
 import { promisify as promisify$1 } from "util";
 import https from "https";
+import fs$2 from "fs/promises";
 import http from "http";
 import { EventEmitter } from "events";
 var execAsync$1 = promisify(exec);
@@ -2621,12 +2622,12 @@ var YouTubeDownloader = class {
 		try {
 			const filesystems = await si.fsSize();
 			const root = path$1.parse(path$1.resolve(directory)).root.toLowerCase();
-			const fs$2 = filesystems.find((d) => {
+			const fs$3 = filesystems.find((d) => {
 				const mount = d.mount.toLowerCase();
 				return root.startsWith(mount) || mount.startsWith(root.replace(/\\/g, ""));
 			});
-			if (fs$2) {
-				if (fs$2.available < requiredBytes + 100 * 1024 * 1024) throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs$2.available / 1024 / 1024).toFixed(2)} MB`);
+			if (fs$3) {
+				if (fs$3.available < requiredBytes + 100 * 1024 * 1024) throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs$3.available / 1024 / 1024).toFixed(2)} MB`);
 			}
 		} catch (error) {
 			console.warn("Disk space check failed:", error);
@@ -3184,6 +3185,462 @@ var TikTokDownloader = class {
 	}
 };
 const tiktokDownloader = new TikTokDownloader();
+let ErrorCode = /* @__PURE__ */ function(ErrorCode$1) {
+	ErrorCode$1["NETWORK_ERROR"] = "NETWORK_ERROR";
+	ErrorCode$1["CONNECTION_TIMEOUT"] = "CONNECTION_TIMEOUT";
+	ErrorCode$1["DNS_LOOKUP_FAILED"] = "DNS_LOOKUP_FAILED";
+	ErrorCode$1["NO_INTERNET"] = "NO_INTERNET";
+	ErrorCode$1["AUTH_REQUIRED"] = "AUTH_REQUIRED";
+	ErrorCode$1["LOGIN_REQUIRED"] = "LOGIN_REQUIRED";
+	ErrorCode$1["INVALID_CREDENTIALS"] = "INVALID_CREDENTIALS";
+	ErrorCode$1["COOKIES_EXPIRED"] = "COOKIES_EXPIRED";
+	ErrorCode$1["VIDEO_UNAVAILABLE"] = "VIDEO_UNAVAILABLE";
+	ErrorCode$1["PRIVATE_VIDEO"] = "PRIVATE_VIDEO";
+	ErrorCode$1["DELETED_VIDEO"] = "DELETED_VIDEO";
+	ErrorCode$1["GEO_RESTRICTED"] = "GEO_RESTRICTED";
+	ErrorCode$1["AGE_RESTRICTED"] = "AGE_RESTRICTED";
+	ErrorCode$1["SERVER_ERROR"] = "SERVER_ERROR";
+	ErrorCode$1["RATE_LIMITED"] = "RATE_LIMITED";
+	ErrorCode$1["SERVICE_UNAVAILABLE"] = "SERVICE_UNAVAILABLE";
+	ErrorCode$1["DISK_FULL"] = "DISK_FULL";
+	ErrorCode$1["PERMISSION_DENIED"] = "PERMISSION_DENIED";
+	ErrorCode$1["INVALID_PATH"] = "INVALID_PATH";
+	ErrorCode$1["NO_FORMATS_AVAILABLE"] = "NO_FORMATS_AVAILABLE";
+	ErrorCode$1["UNSUPPORTED_FORMAT"] = "UNSUPPORTED_FORMAT";
+	ErrorCode$1["EXTRACTION_FAILED"] = "EXTRACTION_FAILED";
+	ErrorCode$1["UNKNOWN_ERROR"] = "UNKNOWN_ERROR";
+	return ErrorCode$1;
+}({});
+var DownloadError = class extends Error {
+	constructor(message, code = ErrorCode.UNKNOWN_ERROR, options = {}) {
+		super(message);
+		this.name = "DownloadError";
+		this.code = code;
+		this.recoverable = options.recoverable ?? false;
+		this.retryable = options.retryable ?? true;
+		this.suggestions = options.suggestions ?? [];
+		this.metadata = {
+			timestamp: Date.now(),
+			...options.metadata
+		};
+		if (options.cause) this.stack = `${this.stack}\nCaused by: ${options.cause.stack}`;
+	}
+	toJSON() {
+		return {
+			name: this.name,
+			message: this.message,
+			code: this.code,
+			recoverable: this.recoverable,
+			retryable: this.retryable,
+			suggestions: this.suggestions,
+			metadata: this.metadata,
+			stack: this.stack
+		};
+	}
+};
+var NetworkError = class extends DownloadError {
+	constructor(message, metadata) {
+		super(message, ErrorCode.NETWORK_ERROR, {
+			retryable: true,
+			recoverable: true,
+			suggestions: [
+				{
+					title: "Check Your Internet Connection",
+					description: "Make sure you are connected to the internet",
+					action: "retry"
+				},
+				{
+					title: "Try Again Later",
+					description: "The network might be temporarily unavailable",
+					action: "retry-later"
+				},
+				{
+					title: "Check Firewall/VPN",
+					description: "Your firewall or VPN might be blocking the connection"
+				}
+			],
+			metadata
+		});
+	}
+};
+var ConnectionTimeoutError = class extends DownloadError {
+	constructor(message, metadata) {
+		super(message, ErrorCode.CONNECTION_TIMEOUT, {
+			retryable: true,
+			recoverable: true,
+			suggestions: [{
+				title: "Retry Download",
+				description: "The connection timed out, try downloading again",
+				action: "retry"
+			}, {
+				title: "Check Network Speed",
+				description: "Your internet connection might be slow"
+			}],
+			metadata
+		});
+	}
+};
+var LoginRequiredError = class extends DownloadError {
+	constructor(message, platform, metadata) {
+		super(message, ErrorCode.LOGIN_REQUIRED, {
+			retryable: false,
+			recoverable: true,
+			suggestions: [{
+				title: "Login Required",
+				description: `You need to be logged in to ${platform || "this platform"} to download this content`,
+				action: "open-settings"
+			}, {
+				title: "Enable Browser Cookies",
+				description: "In Settings, enable browser cookies to use your logged-in session",
+				action: "open-settings"
+			}],
+			metadata: {
+				...metadata,
+				platform
+			}
+		});
+	}
+};
+var ContentUnavailableError = class extends DownloadError {
+	constructor(message, reason, metadata) {
+		const codeMap = {
+			"private": ErrorCode.PRIVATE_VIDEO,
+			"deleted": ErrorCode.DELETED_VIDEO,
+			"geo-restricted": ErrorCode.GEO_RESTRICTED,
+			"age-restricted": ErrorCode.AGE_RESTRICTED,
+			"unavailable": ErrorCode.VIDEO_UNAVAILABLE
+		};
+		super(message, codeMap[reason], {
+			retryable: reason === "unavailable",
+			recoverable: false,
+			suggestions: {
+				"private": [{
+					title: "Content is Private",
+					description: "This content is private and cannot be downloaded"
+				}, {
+					title: "Request Access",
+					description: "You may need to request access from the content owner"
+				}],
+				"deleted": [{
+					title: "Content Removed",
+					description: "This content has been deleted by the owner or platform"
+				}, {
+					title: "Check URL",
+					description: "Verify the URL is correct and the content still exists"
+				}],
+				"geo-restricted": [{
+					title: "Not Available in Your Region",
+					description: "This content is geo-restricted and not available in your country"
+				}, {
+					title: "Try Using VPN",
+					description: "You might need a VPN to access this content"
+				}],
+				"age-restricted": [{
+					title: "Age Restricted Content",
+					description: "You need to be logged in to download age-restricted content",
+					action: "open-settings"
+				}],
+				"unavailable": [{
+					title: "Content Unavailable",
+					description: "This content is currently unavailable"
+				}, {
+					title: "Try Again Later",
+					description: "The content might be temporarily unavailable",
+					action: "retry-later"
+				}]
+			}[reason],
+			metadata
+		});
+	}
+};
+var RateLimitError = class extends DownloadError {
+	constructor(message, retryAfter, metadata) {
+		super(message, ErrorCode.RATE_LIMITED, {
+			retryable: true,
+			recoverable: true,
+			suggestions: [{
+				title: "Too Many Requests",
+				description: retryAfter ? `You've made too many requests. Please wait ${Math.ceil(retryAfter / 60)} minutes before trying again.` : "You've made too many requests. Please wait a few minutes before trying again.",
+				action: "retry-later"
+			}, {
+				title: "Reduce Concurrent Downloads",
+				description: "Try downloading fewer files at once",
+				action: "open-settings"
+			}],
+			metadata: {
+				...metadata,
+				retryAfter
+			}
+		});
+	}
+};
+var ServerError = class extends DownloadError {
+	constructor(message, statusCode, metadata) {
+		super(message, ErrorCode.SERVER_ERROR, {
+			retryable: statusCode ? statusCode >= 500 : true,
+			recoverable: true,
+			suggestions: [
+				{
+					title: "Server Error",
+					description: "The server encountered an error while processing your request"
+				},
+				{
+					title: "Try Again Later",
+					description: "The platform's servers might be experiencing issues",
+					action: "retry-later"
+				},
+				{
+					title: "Check Platform Status",
+					description: "Visit the platform's status page to see if there are known issues"
+				}
+			],
+			metadata: {
+				...metadata,
+				statusCode
+			}
+		});
+	}
+};
+var DiskFullError = class extends DownloadError {
+	constructor(message, availableSpace, metadata) {
+		super(message, ErrorCode.DISK_FULL, {
+			retryable: false,
+			recoverable: true,
+			suggestions: [
+				{
+					title: "Insufficient Disk Space",
+					description: availableSpace ? `You have only ${(availableSpace / (1024 * 1024 * 1024)).toFixed(2)} GB available. Free up some space and try again.` : "Your disk is full. Free up some space and try again."
+				},
+				{
+					title: "Clean Up Downloads Folder",
+					description: "Delete old downloads to free up space"
+				},
+				{
+					title: "Change Download Location",
+					description: "Choose a different drive with more space",
+					action: "open-settings"
+				}
+			],
+			metadata
+		});
+	}
+};
+var ErrorParser = class {
+	static parse(error, metadata) {
+		const message = typeof error === "string" ? error : error.message;
+		const lowerMsg = message.toLowerCase();
+		if (lowerMsg.includes("network error") || lowerMsg.includes("enotfound") || lowerMsg.includes("getaddrinfo") || lowerMsg.includes("unable to download") || lowerMsg.includes("nodename nor servname")) return new NetworkError(message, metadata);
+		if (lowerMsg.includes("timeout") || lowerMsg.includes("timed out")) return new ConnectionTimeoutError(message, metadata);
+		if (lowerMsg.includes("login required")) return new LoginRequiredError(message, metadata?.platform, metadata);
+		if (lowerMsg.includes("private video") || lowerMsg.includes("this video is private")) return new ContentUnavailableError(message, "private", metadata);
+		if (lowerMsg.includes("video unavailable") || lowerMsg.includes("has been removed")) return new ContentUnavailableError(message, "deleted", metadata);
+		if (lowerMsg.includes("geographic") || lowerMsg.includes("not available in your country")) return new ContentUnavailableError(message, "geo-restricted", metadata);
+		if (lowerMsg.includes("age") && lowerMsg.includes("restrict")) return new ContentUnavailableError(message, "age-restricted", metadata);
+		if (lowerMsg.includes("429") || lowerMsg.includes("too many requests")) {
+			const retryMatch = message.match(/retry after (\d+)/i);
+			return new RateLimitError(message, retryMatch ? parseInt(retryMatch[1]) : void 0, metadata);
+		}
+		if (lowerMsg.includes("500") || lowerMsg.includes("502") || lowerMsg.includes("503") || lowerMsg.includes("server error")) {
+			const statusMatch = message.match(/(\d{3})/);
+			return new ServerError(message, statusMatch ? parseInt(statusMatch[1]) : void 0, metadata);
+		}
+		if (lowerMsg.includes("no space left") || lowerMsg.includes("disk full") || lowerMsg.includes("enospc")) return new DiskFullError(message, void 0, metadata);
+		return new DownloadError(message, ErrorCode.UNKNOWN_ERROR, {
+			retryable: true,
+			suggestions: [
+				{
+					title: "Unknown Error",
+					description: "An unexpected error occurred"
+				},
+				{
+					title: "Try Again",
+					description: "Retry the download to see if the issue persists",
+					action: "retry"
+				},
+				{
+					title: "Report Issue",
+					description: "If this error keeps occurring, please report it",
+					action: "export-log"
+				}
+			],
+			metadata
+		});
+	}
+};
+var ErrorLogger = class {
+	constructor() {
+		this.maxEntries = 500;
+		this.retentionDays = 30;
+		this.store = new Store({
+			name: "error-log",
+			defaults: {
+				errors: [],
+				stats: {
+					totalErrors: 0,
+					errorsByCode: {},
+					lastCleanup: Date.now()
+				}
+			}
+		});
+		this.cleanupOldErrors();
+	}
+	log(error, downloadId) {
+		const entry = {
+			id: this.generateId(),
+			timestamp: Date.now(),
+			downloadId,
+			url: error.metadata.url,
+			platform: error.metadata.platform,
+			errorCode: error.code,
+			errorMessage: error.message,
+			errorStack: error.stack,
+			retryCount: error.metadata.retryCount || 0,
+			resolved: false,
+			metadata: error.metadata
+		};
+		const errors = this.store.get("errors", []);
+		errors.unshift(entry);
+		if (errors.length > this.maxEntries) errors.splice(this.maxEntries);
+		this.store.set("errors", errors);
+		this.updateStats(error.code);
+		console.error(`[ErrorLogger] Logged error ${entry.id}: ${error.code} - ${error.message}`);
+		return entry.id;
+	}
+	markResolved(errorId, userAction) {
+		const errors = this.store.get("errors", []);
+		const error = errors.find((e) => e.id === errorId);
+		if (error) {
+			error.resolved = true;
+			error.userAction = userAction;
+			this.store.set("errors", errors);
+			console.log(`[ErrorLogger] Marked error ${errorId} as resolved (${userAction})`);
+		}
+	}
+	getRecentErrors(limit = 50) {
+		return this.store.get("errors", []).slice(0, limit);
+	}
+	getErrorsByDownload(downloadId) {
+		return this.store.get("errors", []).filter((e) => e.downloadId === downloadId);
+	}
+	getErrorsByCode(code) {
+		return this.store.get("errors", []).filter((e) => e.errorCode === code);
+	}
+	getUnresolvedErrors() {
+		return this.store.get("errors", []).filter((e) => !e.resolved);
+	}
+	getStats() {
+		const stats = this.store.get("stats");
+		const errors = this.store.get("errors", []);
+		const oneDayAgo = Date.now() - 1440 * 60 * 1e3;
+		const recentErrors = errors.filter((e) => e.timestamp > oneDayAgo);
+		const errorCounts = {};
+		errors.forEach((e) => {
+			errorCounts[e.errorCode] = (errorCounts[e.errorCode] || 0) + 1;
+		});
+		const mostCommon = Object.entries(errorCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([code, count]) => ({
+			code,
+			count
+		}));
+		return {
+			total: stats.totalErrors,
+			stored: errors.length,
+			recent24h: recentErrors.length,
+			unresolved: errors.filter((e) => !e.resolved).length,
+			byCode: stats.errorsByCode,
+			mostCommon,
+			lastCleanup: new Date(stats.lastCleanup)
+		};
+	}
+	async exportToFile(format) {
+		const errors = this.store.get("errors", []);
+		const filename = `error-log-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.${format}`;
+		const filePath = path$1.join(app.getPath("downloads"), filename);
+		let content = "";
+		if (format === "json") content = JSON.stringify({
+			exported: (/* @__PURE__ */ new Date()).toISOString(),
+			stats: this.getStats(),
+			errors
+		}, null, 2);
+		else if (format === "csv") {
+			content = [
+				"Timestamp",
+				"Error Code",
+				"Error Message",
+				"URL",
+				"Platform",
+				"Retry Count",
+				"Resolved",
+				"User Action"
+			].join(",") + "\n";
+			errors.forEach((e) => {
+				const row = [
+					new Date(e.timestamp).toISOString(),
+					e.errorCode,
+					`"${e.errorMessage.replace(/"/g, "\"\"")}"`,
+					e.url || "",
+					e.platform || "",
+					e.retryCount,
+					e.resolved,
+					e.userAction || ""
+				];
+				content += row.join(",") + "\n";
+			});
+		} else {
+			content = `Error Log Export\n`;
+			content += `Generated: ${(/* @__PURE__ */ new Date()).toISOString()}\n`;
+			content += `Total Errors: ${errors.length}\n`;
+			content += `\n${"=".repeat(80)}\n\n`;
+			errors.forEach((e, i) => {
+				content += `Error #${i + 1}\n`;
+				content += `Timestamp: ${new Date(e.timestamp).toLocaleString()}\n`;
+				content += `Code: ${e.errorCode}\n`;
+				content += `Message: ${e.errorMessage}\n`;
+				if (e.url) content += `URL: ${e.url}\n`;
+				if (e.platform) content += `Platform: ${e.platform}\n`;
+				content += `Retry Count: ${e.retryCount}\n`;
+				content += `Resolved: ${e.resolved ? "Yes" : "No"}\n`;
+				if (e.userAction) content += `User Action: ${e.userAction}\n`;
+				if (e.errorStack) content += `\nStack Trace:\n${e.errorStack}\n`;
+				content += `\n${"-".repeat(80)}\n\n`;
+			});
+		}
+		await fs$2.writeFile(filePath, content, "utf-8");
+		console.log(`[ErrorLogger] Exported ${errors.length} errors to ${filePath}`);
+		return filePath;
+	}
+	clearAll() {
+		this.store.set("errors", []);
+		console.log("[ErrorLogger] Cleared all errors");
+	}
+	clearResolved() {
+		const errors = this.store.get("errors", []);
+		const unresolved = errors.filter((e) => !e.resolved);
+		this.store.set("errors", unresolved);
+		console.log(`[ErrorLogger] Cleared ${errors.length - unresolved.length} resolved errors`);
+	}
+	cleanupOldErrors() {
+		const errors = this.store.get("errors", []);
+		const cutoffDate = Date.now() - this.retentionDays * 24 * 60 * 60 * 1e3;
+		const filtered = errors.filter((e) => e.timestamp > cutoffDate);
+		if (filtered.length < errors.length) {
+			this.store.set("errors", filtered);
+			const stats = this.store.get("stats");
+			stats.lastCleanup = Date.now();
+			this.store.set("stats", stats);
+			console.log(`[ErrorLogger] Cleaned up ${errors.length - filtered.length} old errors`);
+		}
+	}
+	updateStats(errorCode) {
+		const stats = this.store.get("stats");
+		stats.totalErrors++;
+		stats.errorsByCode[errorCode] = (stats.errorsByCode[errorCode] || 0) + 1;
+		this.store.set("stats", stats);
+	}
+	generateId() {
+		return `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+	}
+};
+const errorLogger = new ErrorLogger();
 var require$1 = createRequire(import.meta.url);
 var UniversalDownloader = class {
 	constructor() {
@@ -3431,14 +3888,12 @@ var UniversalDownloader = class {
 				size: info.filesize || info.filesize_approx
 			};
 		} catch (error) {
-			let msg = error.message || String(error);
-			if (msg.includes("nodename nor servname provided") || msg.includes("getaddrinfo") || msg.includes("ENOTFOUND") || msg.includes("Unable to download webpage") || msg.includes("Unable to download API page")) throw new Error("Network error: Please check your internet connection");
-			if (msg.includes("Video unavailable")) msg = "Video is unavailable or private";
-			if (msg.includes("Login required")) msg = "Login required to access this content";
-			if (msg.includes("Private video")) msg = "This video is private";
-			if (msg.includes("HTTP Error 429")) msg = "Too many requests. Please try again later";
-			if (msg.includes("Geographic restriction")) msg = "This video is not available in your country";
-			throw new Error(`Failed to get media info: ${msg}`);
+			const downloadError = ErrorParser.parse(error, {
+				url,
+				platform: this.detectPlatform(url)
+			});
+			errorLogger.log(downloadError);
+			throw downloadError;
 		}
 	}
 	async downloadMedia(options, progressCallback) {
@@ -6613,6 +7068,12 @@ app.on("activate", () => {
 });
 app.on("before-quit", () => {
 	app.isQuitting = true;
+	try {
+		const pendingCount = universalDownloader.prepareForShutdown();
+		console.log(`💾 Saved ${pendingCount} pending downloads before quit`);
+	} catch (error) {
+		console.error("Failed to save download state:", error);
+	}
 	if (win) win.webContents.send("check-clear-clipboard-on-quit");
 });
 app.whenReady().then(() => {
@@ -7104,6 +7565,17 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("universal:get-queue", async () => {
 		return universalDownloader.getQueue();
+	});
+	ipcMain.handle("universal:get-pending-count", async () => {
+		return universalDownloader.getPendingDownloadsCount();
+	});
+	ipcMain.handle("universal:resume-pending", async () => {
+		universalDownloader.resumePendingDownloads();
+		return { success: true };
+	});
+	ipcMain.handle("universal:clear-pending", async () => {
+		universalDownloader.clearPendingDownloads();
+		return { success: true };
 	});
 	ipcMain.handle("universal:pause", async (_, id) => {
 		return await universalDownloader.pauseDownload(id);

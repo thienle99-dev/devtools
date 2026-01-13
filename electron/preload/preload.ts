@@ -206,6 +206,10 @@ contextBridge.exposeInMainWorld('universalAPI', {
   getPendingCount: () => ipcRenderer.invoke('universal:get-pending-count'),
   resumePending: () => ipcRenderer.invoke('universal:resume-pending'),
   clearPending: () => ipcRenderer.invoke('universal:clear-pending'),
+  getErrorLog: (limit?: number) => ipcRenderer.invoke('universal:get-error-log', limit),
+  exportErrorLog: (format: 'json' | 'csv' | 'txt') => ipcRenderer.invoke('universal:export-error-log', format),
+  getErrorStats: () => ipcRenderer.invoke('universal:get-error-stats'),
+  clearErrorLog: (type: 'all' | 'resolved') => ipcRenderer.invoke('universal:clear-error-log', type),
 })
 
 

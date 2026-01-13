@@ -1913,6 +1913,24 @@ app.whenReady().then(() => {
     return { success: true };
   });
 
+  // Error Management Handlers
+  ipcMain.handle('universal:get-error-log', async (_, limit?: number) => {
+    return universalDownloader.getErrorLog(limit);
+  });
+
+  ipcMain.handle('universal:export-error-log', async (_, format: 'json' | 'csv' | 'txt') => {
+    return await universalDownloader.exportErrorLog(format);
+  });
+
+  ipcMain.handle('universal:get-error-stats', async () => {
+    return universalDownloader.getErrorStats();
+  });
+
+  ipcMain.handle('universal:clear-error-log', async (_, type: 'all' | 'resolved') => {
+    universalDownloader.clearErrorLog(type);
+    return { success: true };
+  });
+
   ipcMain.handle('universal:pause', async (_, id: string) => {
     return await universalDownloader.pauseDownload(id);
   });

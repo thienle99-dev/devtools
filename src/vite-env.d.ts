@@ -61,6 +61,10 @@ interface Window {
         getPendingCount: () => Promise<number>;
         resumePending: () => Promise<{ success: boolean }>;
         clearPending: () => Promise<{ success: boolean }>;
+        getErrorLog: (limit?: number) => Promise<any[]>;
+        exportErrorLog: (format: 'json' | 'csv' | 'txt') => Promise<string>;
+        getErrorStats: () => Promise<any>;
+        clearErrorLog: (type: 'all' | 'resolved') => Promise<{ success: boolean }>;
     };
 
     audioAPI: {

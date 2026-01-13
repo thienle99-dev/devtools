@@ -53,11 +53,12 @@
   - [ ] Check disk space trước khi chọn quality
   - [ ] Remember user preferences
 
-- [ ] **Better Error Handling**
-  - [ ] Retry button với exponential backoff
-  - [ ] Detailed error messages
-  - [ ] Suggestions for common errors
-  - [ ] Error log export
+- [x] **Better Error Handling** ✅ (Backend Complete - Jan 13, 2026)
+  - [x] Retry mechanism với exponential backoff
+  - [x] Detailed error messages with error codes
+  - [x] Suggestions for common errors
+  - [x] Error log export (JSON/CSV/TXT)
+  - [ ] UI components for error display (In Progress)
 
 ### Performance
 

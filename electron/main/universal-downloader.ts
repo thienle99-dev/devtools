@@ -12,6 +12,9 @@ import type {
     UniversalDownloadProgress,
     SupportedPlatform
 } from '../../src/types/universal-media';
+import { DownloadError, ErrorParser } from './errors/DownloadError';
+import { errorLogger } from './errors/ErrorLogger';
+import { retryManager } from './errors/RetryManager';
 
 const require = createRequire(import.meta.url);
 
@@ -187,6 +190,138 @@ export class UniversalDownloader {
             item.state === 'downloading'
         );
         this.saveQueuePersistently();
+    }
+
+    /**
+     * Handle download error with retry logic
+     */
+    private handleDownloadError(
+        error: Error | DownloadError,
+        downloadId: string,
+        url: string,
+        platform: SupportedPlatform,
+        progressCallback?: (progress: UniversalDownloadProgress) => void
+    ): DownloadError {
+        // Convert to DownloadError if needed
+        const downloadError = error instanceof DownloadError 
+            ? error 
+            : ErrorParser.parse(error, { url, platform });
+
+        // Update retry count in metadata
+        const retryState = retryManager.getRetryState(downloadId);
+        if (retryState) {
+            downloadError.metadata.retryCount = retryState.attemptCount;
+        }
+
+        // Log the error
+        const errorId = errorLogger.log(downloadError, downloadId);
+
+        console.error(
+            `[Download Error] ${downloadId}: ${downloadError.code} - ${downloadError.message}`,
+            `(Retry: ${downloadError.metadata.retryCount || 0})`
+        );
+
+        // Notify frontend of error
+        if (progressCallback) {
+            progressCallback({
+                id: downloadId,
+                percent: 0,
+                downloaded: 0,
+                total: 0,
+                speed: 0,
+                eta: 0,
+                state: 'error',
+                filename: url,
+                platform,
+                error: {
+                    code: downloadError.code,
+                    message: downloadError.message,
+                    suggestions: downloadError.suggestions,
+                    retryable: downloadError.retryable,
+                    errorId
+                } as any
+            });
+        }
+
+        // Schedule retry if applicable
+        if (downloadError.retryable) {
+            const options = this.activeOptions.get(downloadId);
+            if (options) {
+                const retryResult = retryManager.scheduleRetry(
+                    downloadId,
+                    async () => {
+                        await this.executeDownload(options, progressCallback);
+                    },
+                    downloadError
+                );
+
+                if (retryResult.scheduled) {
+                    console.log(
+                        `[Retry Scheduled] ${downloadId} will retry in ${(retryResult.delay! / 1000).toFixed(1)}s`
+                    );
+                    
+                    // Update progress with retry info
+                    if (progressCallback) {
+                        progressCallback({
+                            id: downloadId,
+                            percent: 0,
+                            downloaded: 0,
+                            total: 0,
+                            speed: 0,
+                            eta: retryResult.delay! / 1000,
+                            state: 'error',
+                            filename: url,
+                            platform,
+                            error: {
+                                code: downloadError.code,
+                                message: `${downloadError.message} - Retrying in ${(retryResult.delay! / 1000).toFixed(0)}s...`,
+                                suggestions: downloadError.suggestions,
+                                retryable: true,
+                                retryAt: retryResult.retryAt,
+                                errorId
+                            } as any
+                        });
+                    }
+                }
+            }
+        }
+
+        return downloadError;
+    }
+
+    /**
+     * Get error log
+     */
+    getErrorLog(limit?: number) {
+        return errorLogger.getRecentErrors(limit);
+    }
+
+    /**
+     * Export error log
+     */
+    async exportErrorLog(format: 'json' | 'csv' | 'txt'): Promise<string> {
+        return await errorLogger.exportToFile(format);
+    }
+
+    /**
+     * Get error statistics
+     */
+    getErrorStats() {
+        return {
+            errorLog: errorLogger.getStats(),
+            retryManager: retryManager.getStats()
+        };
+    }
+
+    /**
+     * Clear error log
+     */
+    clearErrorLog(type: 'all' | 'resolved' = 'resolved') {
+        if (type === 'all') {
+            errorLogger.clearAll();
+        } else {
+            errorLogger.clearResolved();
+        }
     }
 
 
@@ -397,25 +532,16 @@ export class UniversalDownloader {
                 size: info.filesize || info.filesize_approx
             };
         } catch (error: any) {
-            let msg = error.message || String(error);
+            // Parse error into structured DownloadError
+            const downloadError = ErrorParser.parse(error, {
+                url,
+                platform: this.detectPlatform(url)
+            });
 
-            // Network errors
-            if (msg.includes('nodename nor servname provided') ||
-                msg.includes('getaddrinfo') ||
-                msg.includes('ENOTFOUND') ||
-                msg.includes('Unable to download webpage') ||
-                msg.includes('Unable to download API page')) {
-                throw new Error('Network error: Please check your internet connection');
-            }
+            // Log the error
+            errorLogger.log(downloadError);
 
-            // Content errors
-            if (msg.includes('Video unavailable')) msg = 'Video is unavailable or private';
-            if (msg.includes('Login required')) msg = 'Login required to access this content';
-            if (msg.includes('Private video')) msg = 'This video is private';
-            if (msg.includes('HTTP Error 429')) msg = 'Too many requests. Please try again later';
-            if (msg.includes('Geographic restriction')) msg = 'This video is not available in your country';
-
-            throw new Error(`Failed to get media info: ${msg}`);
+            throw downloadError;
         }
     }
     async downloadMedia(
@@ -857,97 +983,47 @@ export class UniversalDownloader {
                         resolve(finalPath);
                     } else if (code === null) {
                         // Process was killed/terminated
-                        console.error('yt-dlp process terminated unexpectedly');
-                        if (stderrOutput) {
-                            console.error('stderr output:', stderrOutput);
-                        }
-
                         const errorMsg = stderrOutput
                             ? `Download terminated: ${stderrOutput.substring(0, 200)}`
                             : 'Download was cancelled or terminated unexpectedly';
 
-                        if (progressCallback) {
-                            progressCallback({
-                                id: downloadId,
-                                percent: 0,
-                                downloaded: downloadedBytes,
-                                total: totalBytes,
-                                speed: 0,
-                                eta: 0,
-                                state: 'error',
-                                filename: displayFilename,
-                                platform: info.platform
-                            });
-                        }
+                        const error = this.handleDownloadError(
+                            new Error(errorMsg),
+                            downloadId,
+                            url,
+                            info.platform,
+                            progressCallback
+                        );
 
-                        reject(new Error(errorMsg));
+                        reject(error);
                     } else {
-                        // Non-zero exit code
-                        console.error(`yt-dlp exited with code ${code}`);
-                        if (stderrOutput) {
-                            console.error('stderr output:', stderrOutput);
-                        }
+                        // Non-zero exit code - parse error from stderr
+                        const errorMsg = stderrOutput || `Download failed (exit code: ${code})`;
+                        
+                        const error = this.handleDownloadError(
+                            new Error(errorMsg),
+                            downloadId,
+                            url,
+                            info.platform,
+                            progressCallback
+                        );
 
-                        // Parse common error messages
-                        let errorMsg = `Download failed (exit code: ${code})`;
-                        if (stderrOutput.includes('Video unavailable')) {
-                            errorMsg = 'Video is unavailable or has been removed';
-                        } else if (stderrOutput.includes('Private video')) {
-                            errorMsg = 'Video is private';
-                        } else if (stderrOutput.includes('Login required')) {
-                            errorMsg = 'Login required to access this content';
-                        } else if (stderrOutput.includes('HTTP Error 429')) {
-                            errorMsg = 'Too many requests. Please try again later';
-                        } else if (stderrOutput.includes('No space left')) {
-                            errorMsg = 'No space left on device';
-                        } else if (stderrOutput) {
-                            // Include first line of stderr for context
-                            const firstErrorLine = stderrOutput.split('\n').find(line => line.trim());
-                            if (firstErrorLine) {
-                                errorMsg = firstErrorLine.substring(0, 150);
-                            }
-                        }
-
-                        if (progressCallback) {
-                            progressCallback({
-                                id: downloadId,
-                                percent: 0,
-                                downloaded: downloadedBytes,
-                                total: totalBytes,
-                                speed: 0,
-                                eta: 0,
-                                state: 'error',
-                                filename: displayFilename,
-                                platform: info.platform
-                            });
-                        }
-
-                        reject(new Error(errorMsg));
+                        reject(error);
                     }
                 });
 
                 process.on('error', (err: Error) => {
                     this.activeProcesses.delete(downloadId);
-                    console.error('yt-dlp process error:', err);
-                    if (stderrOutput) {
-                        console.error('stderr output:', stderrOutput);
-                    }
+                    
+                    const error = this.handleDownloadError(
+                        err,
+                        downloadId,
+                        url,
+                        info.platform,
+                        progressCallback
+                    );
 
-                    if (progressCallback) {
-                        progressCallback({
-                            id: downloadId,
-                            percent: 0,
-                            downloaded: downloadedBytes,
-                            total: totalBytes,
-                            speed: 0,
-                            eta: 0,
-                            state: 'error',
-                            filename: displayFilename,
-                            platform: info.platform
-                        });
-                    }
-
-                    reject(new Error(`Download process error: ${err.message}`));
+                    reject(error);
                 });
 
                 // Timeout protection (1 hour max for downloads)
