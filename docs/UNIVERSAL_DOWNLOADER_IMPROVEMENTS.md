@@ -1,5 +1,10 @@
 # Universal Downloader - Cải Tiến
 
+**⚠️ Lưu Ý**: App đang chuyển sang kiến trúc plugin-based. Xem `PLUGIN_SYSTEM_IMPLEMENTATION_PLAN.md` để biết thêm chi tiết.  
+**⚠️ Note**: The app is transitioning to a plugin-based architecture. See `PLUGIN_SYSTEM_IMPLEMENTATION_PLAN.md` for details.
+
+---
+
 ## 🎯 High Priority
 
 ### Tính Năng Cốt Lõi
