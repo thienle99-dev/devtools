@@ -186,7 +186,11 @@ electron.contextBridge.exposeInMainWorld("universalAPI", {
 	retry: (id) => electron.ipcRenderer.invoke("universal:retry", id),
 	getPendingCount: () => electron.ipcRenderer.invoke("universal:get-pending-count"),
 	resumePending: () => electron.ipcRenderer.invoke("universal:resume-pending"),
-	clearPending: () => electron.ipcRenderer.invoke("universal:clear-pending")
+	clearPending: () => electron.ipcRenderer.invoke("universal:clear-pending"),
+	getErrorLog: (limit) => electron.ipcRenderer.invoke("universal:get-error-log", limit),
+	exportErrorLog: (format) => electron.ipcRenderer.invoke("universal:export-error-log", format),
+	getErrorStats: () => electron.ipcRenderer.invoke("universal:get-error-stats"),
+	clearErrorLog: (type) => electron.ipcRenderer.invoke("universal:clear-error-log", type)
 });
 electron.contextBridge.exposeInMainWorld("audioAPI", {
 	getInfo: (filePath) => electron.ipcRenderer.invoke("audio:get-info", filePath),
@@ -297,4 +301,17 @@ electron.contextBridge.exposeInMainWorld("downloadAPI", {
 		electron.ipcRenderer.on("download:task-completed", listener);
 		return () => electron.ipcRenderer.removeListener("download:task-completed", listener);
 	}
+});
+electron.contextBridge.exposeInMainWorld("pluginAPI", {
+	getAvailablePlugins: () => electron.ipcRenderer.invoke("plugins:get-available"),
+	getInstalledPlugins: () => electron.ipcRenderer.invoke("plugins:get-installed"),
+	installPlugin: (pluginId) => electron.ipcRenderer.invoke("plugins:install", pluginId),
+	uninstallPlugin: (pluginId) => electron.ipcRenderer.invoke("plugins:uninstall", pluginId),
+	togglePlugin: (pluginId, active) => electron.ipcRenderer.invoke("plugins:toggle", pluginId, active),
+	onPluginProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("plugins:progress", listener);
+		return () => electron.ipcRenderer.removeListener("plugins:progress", listener);
+	},
+	updateRegistry: () => electron.ipcRenderer.invoke("plugins:update-registry")
 });

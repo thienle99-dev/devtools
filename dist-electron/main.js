@@ -1,4 +1,4 @@
-import { i as __require } from "./chunk-B2qFFjWa.js";
+import { t as __require } from "./chunk-C6JYzw3a.js";
 import { BrowserWindow, Menu, Notification, Tray, app, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, protocol, screen, shell } from "electron";
 import path, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,13 +14,15 @@ import { createRequire } from "module";
 import fs$1 from "fs";
 import path$1 from "path";
 import Store from "electron-store";
-import { randomUUID as randomUUID$1 } from "crypto";
+import { createHash as createHash$1, randomUUID as randomUUID$1 } from "crypto";
 import { exec as exec$1, execSync, spawn } from "child_process";
 import { promisify as promisify$1 } from "util";
 import https from "https";
 import fs$2 from "fs/promises";
 import http from "http";
 import { EventEmitter } from "events";
+import AdmZip from "adm-zip";
+import axios from "axios";
 var execAsync$1 = promisify(exec);
 var dirSizeCache = /* @__PURE__ */ new Map();
 var CACHE_TTL = 300 * 1e3;
@@ -2375,7 +2377,7 @@ function setupScreenshotHandlers(win$1) {
 		}
 	});
 }
-var require$3 = createRequire(import.meta.url);
+var require$4 = createRequire(import.meta.url);
 var YouTubeDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -2404,7 +2406,7 @@ var YouTubeDownloader = class {
 	}
 	async initYtDlp() {
 		try {
-			const ytDlpModule = require$3("yt-dlp-wrap");
+			const ytDlpModule = require$4("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary to:", this.binaryPath);
@@ -2417,7 +2419,7 @@ var YouTubeDownloader = class {
 				}
 			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			const ffmpegPath = FFmpegHelper.getFFmpegPath();
 			if (ffmpegPath) {
 				this.ffmpegPath = ffmpegPath;
@@ -2931,7 +2933,7 @@ var YouTubeDownloader = class {
 	}
 };
 const youtubeDownloader = new YouTubeDownloader();
-var require$2 = createRequire(import.meta.url);
+var require$3 = createRequire(import.meta.url);
 var TikTokDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -2957,14 +2959,14 @@ var TikTokDownloader = class {
 	}
 	async init() {
 		try {
-			const ytDlpModule = require$2("yt-dlp-wrap");
+			const ytDlpModule = require$3("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary (TikTok)...");
 				await YTDlpWrap.downloadFromGithub(this.binaryPath);
 			}
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			const ffmpegPath = FFmpegHelper.getFFmpegPath();
 			if (ffmpegPath) {
 				this.ffmpegPath = ffmpegPath;
@@ -3641,7 +3643,130 @@ var ErrorLogger = class {
 	}
 };
 const errorLogger = new ErrorLogger();
-var require$1 = createRequire(import.meta.url);
+var RetryManager = class {
+	constructor() {
+		this.retryStates = /* @__PURE__ */ new Map();
+		this.retryTimers = /* @__PURE__ */ new Map();
+		this.defaultConfig = {
+			maxRetries: 3,
+			initialDelay: 2e3,
+			maxDelay: 6e4,
+			backoffMultiplier: 2,
+			jitter: true
+		};
+	}
+	shouldRetry(downloadId, error, config) {
+		const cfg = {
+			...this.defaultConfig,
+			...config
+		};
+		const state = this.retryStates.get(downloadId);
+		if (!error.retryable) {
+			console.log(`[RetryManager] Error ${error.code} is not retryable`);
+			return false;
+		}
+		if ((state?.attemptCount || 0) >= cfg.maxRetries) {
+			console.log(`[RetryManager] Max retries (${cfg.maxRetries}) reached for ${downloadId}`);
+			return false;
+		}
+		return true;
+	}
+	calculateDelay(attemptCount, config) {
+		const cfg = {
+			...this.defaultConfig,
+			...config
+		};
+		let delay = cfg.initialDelay * Math.pow(cfg.backoffMultiplier, attemptCount);
+		delay = Math.min(delay, cfg.maxDelay);
+		if (cfg.jitter) {
+			const jitterAmount = delay * .25 * Math.random();
+			delay += jitterAmount;
+		}
+		return Math.floor(delay);
+	}
+	scheduleRetry(downloadId, retryCallback, error, config) {
+		if (!this.shouldRetry(downloadId, error, config)) return { scheduled: false };
+		const state = this.retryStates.get(downloadId) || {
+			downloadId,
+			attemptCount: 0,
+			totalWaitTime: 0
+		};
+		state.attemptCount++;
+		state.lastError = error;
+		const delay = this.calculateDelay(state.attemptCount - 1, config);
+		const retryAt = Date.now() + delay;
+		state.nextRetryAt = retryAt;
+		state.totalWaitTime += delay;
+		this.retryStates.set(downloadId, state);
+		console.log(`[RetryManager] Scheduling retry ${state.attemptCount}/${this.defaultConfig.maxRetries} for ${downloadId} in ${(delay / 1e3).toFixed(1)}s`);
+		const existingTimer = this.retryTimers.get(downloadId);
+		if (existingTimer) clearTimeout(existingTimer);
+		const timer = setTimeout(async () => {
+			console.log(`[RetryManager] Executing retry ${state.attemptCount} for ${downloadId}`);
+			this.retryTimers.delete(downloadId);
+			try {
+				await retryCallback();
+				this.clearRetryState(downloadId);
+			} catch (error$1) {
+				console.error(`[RetryManager] Retry failed for ${downloadId}:`, error$1);
+			}
+		}, delay);
+		this.retryTimers.set(downloadId, timer);
+		return {
+			scheduled: true,
+			retryAt,
+			delay
+		};
+	}
+	getRetryState(downloadId) {
+		return this.retryStates.get(downloadId);
+	}
+	getTimeUntilRetry(downloadId) {
+		const state = this.retryStates.get(downloadId);
+		if (!state || !state.nextRetryAt) return null;
+		const remaining = state.nextRetryAt - Date.now();
+		return remaining > 0 ? remaining : 0;
+	}
+	cancelRetry(downloadId) {
+		const timer = this.retryTimers.get(downloadId);
+		if (timer) {
+			clearTimeout(timer);
+			this.retryTimers.delete(downloadId);
+			console.log(`[RetryManager] Cancelled retry for ${downloadId}`);
+		}
+		this.retryStates.delete(downloadId);
+	}
+	clearRetryState(downloadId) {
+		this.retryStates.delete(downloadId);
+		const timer = this.retryTimers.get(downloadId);
+		if (timer) {
+			clearTimeout(timer);
+			this.retryTimers.delete(downloadId);
+		}
+		console.log(`[RetryManager] Cleared retry state for ${downloadId}`);
+	}
+	getActiveRetries() {
+		return Array.from(this.retryStates.values());
+	}
+	clearAll() {
+		this.retryTimers.forEach((timer) => clearTimeout(timer));
+		this.retryTimers.clear();
+		this.retryStates.clear();
+		console.log("[RetryManager] Cleared all retries");
+	}
+	getStats() {
+		const states = Array.from(this.retryStates.values());
+		return {
+			activeRetries: states.length,
+			totalRetryAttempts: states.reduce((sum, s) => sum + s.attemptCount, 0),
+			averageRetryCount: states.length > 0 ? states.reduce((sum, s) => sum + s.attemptCount, 0) / states.length : 0,
+			totalWaitTime: states.reduce((sum, s) => sum + s.totalWaitTime, 0),
+			nextRetry: states.filter((s) => s.nextRetryAt).sort((a, b) => (a.nextRetryAt || 0) - (b.nextRetryAt || 0))[0]
+		};
+	}
+};
+const retryManager = new RetryManager();
+var require$2 = createRequire(import.meta.url);
 var UniversalDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -3726,16 +3851,91 @@ var UniversalDownloader = class {
 		this.downloadQueue = this.downloadQueue.filter((item) => item.state === "downloading");
 		this.saveQueuePersistently();
 	}
+	handleDownloadError(error, downloadId, url, platform, progressCallback) {
+		const downloadError = error instanceof DownloadError ? error : ErrorParser.parse(error, {
+			url,
+			platform
+		});
+		const retryState = retryManager.getRetryState(downloadId);
+		if (retryState) downloadError.metadata.retryCount = retryState.attemptCount;
+		const errorId = errorLogger.log(downloadError, downloadId);
+		console.error(`[Download Error] ${downloadId}: ${downloadError.code} - ${downloadError.message}`, `(Retry: ${downloadError.metadata.retryCount || 0})`);
+		if (progressCallback) progressCallback({
+			id: downloadId,
+			percent: 0,
+			downloaded: 0,
+			total: 0,
+			speed: 0,
+			eta: 0,
+			state: "error",
+			filename: url,
+			platform,
+			error: {
+				code: downloadError.code,
+				message: downloadError.message,
+				suggestions: downloadError.suggestions,
+				retryable: downloadError.retryable,
+				errorId
+			}
+		});
+		if (downloadError.retryable) {
+			const options = this.activeOptions.get(downloadId);
+			if (options) {
+				const retryResult = retryManager.scheduleRetry(downloadId, async () => {
+					await this.executeDownload(options, progressCallback);
+				}, downloadError);
+				if (retryResult.scheduled) {
+					console.log(`[Retry Scheduled] ${downloadId} will retry in ${(retryResult.delay / 1e3).toFixed(1)}s`);
+					if (progressCallback) progressCallback({
+						id: downloadId,
+						percent: 0,
+						downloaded: 0,
+						total: 0,
+						speed: 0,
+						eta: retryResult.delay / 1e3,
+						state: "error",
+						filename: url,
+						platform,
+						error: {
+							code: downloadError.code,
+							message: `${downloadError.message} - Retrying in ${(retryResult.delay / 1e3).toFixed(0)}s...`,
+							suggestions: downloadError.suggestions,
+							retryable: true,
+							retryAt: retryResult.retryAt,
+							errorId
+						}
+					});
+				}
+			}
+		}
+		return downloadError;
+	}
+	getErrorLog(limit) {
+		return errorLogger.getRecentErrors(limit);
+	}
+	async exportErrorLog(format) {
+		return await errorLogger.exportToFile(format);
+	}
+	getErrorStats() {
+		return {
+			errorLog: errorLogger.getStats(),
+			retryManager: retryManager.getStats()
+		};
+	}
+	clearErrorLog(type = "resolved") {
+		if (type === "all") errorLogger.clearAll();
+		else errorLogger.clearResolved();
+	}
 	async init() {
 		try {
-			const ytDlpModule = require$1("yt-dlp-wrap");
+			const ytDlpModule = require$2("yt-dlp-wrap");
 			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 			if (!fs$1.existsSync(this.binaryPath)) {
 				console.log("Downloading yt-dlp binary (Universal)...");
 				await YTDlpWrap.downloadFromGithub(this.binaryPath);
 			}
 			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			const ffmpegPath = FFmpegHelper.getFFmpegPath();
 			if (ffmpegPath) {
 				this.ffmpegPath = ffmpegPath;
@@ -4218,64 +4418,19 @@ var UniversalDownloader = class {
 						});
 						resolve(finalPath);
 					} else if (code === null) {
-						console.error("yt-dlp process terminated unexpectedly");
-						if (stderrOutput) console.error("stderr output:", stderrOutput);
 						const errorMsg = stderrOutput ? `Download terminated: ${stderrOutput.substring(0, 200)}` : "Download was cancelled or terminated unexpectedly";
-						if (progressCallback) progressCallback({
-							id: downloadId,
-							percent: 0,
-							downloaded: downloadedBytes,
-							total: totalBytes,
-							speed: 0,
-							eta: 0,
-							state: "error",
-							filename: displayFilename,
-							platform: info.platform
-						});
-						reject(new Error(errorMsg));
+						const error = this.handleDownloadError(new Error(errorMsg), downloadId, url, info.platform, progressCallback);
+						reject(error);
 					} else {
-						console.error(`yt-dlp exited with code ${code}`);
-						if (stderrOutput) console.error("stderr output:", stderrOutput);
-						let errorMsg = `Download failed (exit code: ${code})`;
-						if (stderrOutput.includes("Video unavailable")) errorMsg = "Video is unavailable or has been removed";
-						else if (stderrOutput.includes("Private video")) errorMsg = "Video is private";
-						else if (stderrOutput.includes("Login required")) errorMsg = "Login required to access this content";
-						else if (stderrOutput.includes("HTTP Error 429")) errorMsg = "Too many requests. Please try again later";
-						else if (stderrOutput.includes("No space left")) errorMsg = "No space left on device";
-						else if (stderrOutput) {
-							const firstErrorLine = stderrOutput.split("\n").find((line) => line.trim());
-							if (firstErrorLine) errorMsg = firstErrorLine.substring(0, 150);
-						}
-						if (progressCallback) progressCallback({
-							id: downloadId,
-							percent: 0,
-							downloaded: downloadedBytes,
-							total: totalBytes,
-							speed: 0,
-							eta: 0,
-							state: "error",
-							filename: displayFilename,
-							platform: info.platform
-						});
-						reject(new Error(errorMsg));
+						const errorMsg = stderrOutput || `Download failed (exit code: ${code})`;
+						const error = this.handleDownloadError(new Error(errorMsg), downloadId, url, info.platform, progressCallback);
+						reject(error);
 					}
 				});
 				process$1.on("error", (err) => {
 					this.activeProcesses.delete(downloadId);
-					console.error("yt-dlp process error:", err);
-					if (stderrOutput) console.error("stderr output:", stderrOutput);
-					if (progressCallback) progressCallback({
-						id: downloadId,
-						percent: 0,
-						downloaded: downloadedBytes,
-						total: totalBytes,
-						speed: 0,
-						eta: 0,
-						state: "error",
-						filename: displayFilename,
-						platform: info.platform
-					});
-					reject(/* @__PURE__ */ new Error(`Download process error: ${err.message}`));
+					const error = this.handleDownloadError(err, downloadId, url, info.platform, progressCallback);
+					reject(error);
 				});
 				const timeout = setTimeout(() => {
 					if (this.activeProcesses.has(downloadId)) {
@@ -4352,7 +4507,7 @@ var AudioExtractor = class {
 	}
 	async initFFmpeg() {
 		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			const ffmpegPath = FFmpegHelper.getFFmpegPath();
 			if (ffmpegPath) {
 				this.ffmpegPath = ffmpegPath;
@@ -4514,7 +4669,7 @@ var VideoMerger = class {
 	}
 	async initFFmpeg() {
 		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			const ffmpegPath = FFmpegHelper.getFFmpegPath();
 			if (ffmpegPath) {
 				this.ffmpegPath = ffmpegPath;
@@ -4962,7 +5117,7 @@ var AudioManager = class {
 	}
 	async initFFmpeg() {
 		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
 		} catch (e) {
 			console.warn("FFmpeg setup failed for Audio Manager:", e);
@@ -5095,7 +5250,7 @@ var VideoTrimmer = class {
 	}
 	async initFFmpeg() {
 		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
 		} catch (e) {
 			console.warn("FFmpeg setup failed for Video Trimmer:", e);
@@ -5208,7 +5363,7 @@ var VideoEffects = class {
 	}
 	async initFFmpeg() {
 		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-D9RH3mTJ.js");
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
 			const ffmpegPath = FFmpegHelper.getFFmpegPath();
 			if (ffmpegPath) {
 				this.ffmpegPath = ffmpegPath;
@@ -6075,6 +6230,320 @@ function setupDownloadManagerHandlers() {
 		return { success: true };
 	});
 }
+var require$1 = createRequire(import.meta.url);
+var PluginManager = class {
+	constructor() {
+		this.loadedPlugins = /* @__PURE__ */ new Map();
+		const userDataPath = app.getPath("userData");
+		this.pluginsDir = path$1.join(userDataPath, "plugins");
+		this.binariesDir = path$1.join(userDataPath, "binaries");
+		this.registryUrl = "https://raw.githubusercontent.com/devtools-app/plugin-registry/main/registry.json";
+		this.store = new Store({
+			name: "plugin-manager",
+			defaults: {
+				installed: {},
+				registry: null,
+				lastRegistryUpdate: 0
+			}
+		});
+		this.ensureDirectories();
+	}
+	async ensureDirectories() {
+		await fs$2.mkdir(this.pluginsDir, { recursive: true });
+		await fs$2.mkdir(this.binariesDir, { recursive: true });
+	}
+	async initialize() {
+		console.log("[PluginManager] Initializing...");
+		await this.updateRegistry();
+		await this.loadInstalledPlugins();
+		console.log("[PluginManager] Initialized with", this.loadedPlugins.size, "active plugins");
+	}
+	async updateRegistry(force = false) {
+		const lastUpdate = this.store.get("lastRegistryUpdate");
+		if (!force && Date.now() - lastUpdate < 3600 * 1e3) {
+			console.log("[PluginManager] Registry is up to date");
+			return;
+		}
+		try {
+			console.log("[PluginManager] Fetching plugin registry...");
+			const response = await axios.get(this.registryUrl, { timeout: 1e4 });
+			this.store.set("registry", response.data);
+			this.store.set("lastRegistryUpdate", Date.now());
+			console.log("[PluginManager] Registry updated:", response.data.plugins.length, "plugins available");
+		} catch (error) {
+			console.error("[PluginManager] Failed to update registry:", error.message);
+			if (!this.store.get("registry")) await this.loadEmbeddedRegistry();
+		}
+	}
+	async loadEmbeddedRegistry() {
+		try {
+			let registryPath = "";
+			if (app.isPackaged) registryPath = path$1.join(process.resourcesPath, "plugin-registry.json");
+			else registryPath = path$1.join(app.getAppPath(), "resources", "plugin-registry.json");
+			console.log("[PluginManager] Loading registry from:", registryPath);
+			const data = await fs$2.readFile(registryPath, "utf-8");
+			const registry = JSON.parse(data);
+			this.store.set("registry", registry);
+			console.log("[PluginManager] Loaded embedded registry");
+		} catch (error) {
+			console.error("[PluginManager] Failed to load embedded registry:", error);
+		}
+	}
+	getRegistry() {
+		return this.store.get("registry");
+	}
+	getAvailablePlugins() {
+		return this.store.get("registry")?.plugins || [];
+	}
+	async installPlugin(pluginId, onProgress) {
+		console.log("[PluginManager] Installing plugin:", pluginId);
+		const manifest = this.getPluginManifest(pluginId);
+		if (!manifest) throw new Error(`Plugin not found in registry: ${pluginId}`);
+		if (this.store.get("installed")[pluginId]) throw new Error(`Plugin already installed: ${pluginId}`);
+		this.checkCompatibility(manifest);
+		try {
+			onProgress?.({
+				stage: "download",
+				percent: 0,
+				message: "Downloading plugin..."
+			});
+			const pluginZipPath = await this.downloadFile(manifest.downloadUrl, path$1.join(app.getPath("temp"), `${pluginId}.zip`), (percent) => onProgress?.({
+				stage: "download",
+				percent,
+				message: `Downloading... ${percent}%`
+			}));
+			onProgress?.({
+				stage: "verify",
+				percent: 50,
+				message: "Verifying integrity..."
+			});
+			await this.verifyChecksum(pluginZipPath, manifest.checksum);
+			onProgress?.({
+				stage: "extract",
+				percent: 60,
+				message: "Extracting files..."
+			});
+			const pluginPath = path$1.join(this.pluginsDir, pluginId);
+			await this.extractZip(pluginZipPath, pluginPath);
+			if (manifest.dependencies?.binary && manifest.dependencies.binary.length > 0) {
+				onProgress?.({
+					stage: "dependencies",
+					percent: 70,
+					message: "Installing dependencies..."
+				});
+				await this.installBinaryDependencies(manifest.dependencies.binary, onProgress);
+			}
+			onProgress?.({
+				stage: "validate",
+				percent: 90,
+				message: "Validating plugin..."
+			});
+			await this.validatePlugin(pluginPath, manifest);
+			onProgress?.({
+				stage: "register",
+				percent: 95,
+				message: "Registering plugin..."
+			});
+			const installedPlugin = {
+				manifest,
+				installPath: pluginPath,
+				installedAt: Date.now(),
+				active: true
+			};
+			const updatedInstalled = {
+				...this.store.get("installed"),
+				[pluginId]: installedPlugin
+			};
+			this.store.set("installed", updatedInstalled);
+			onProgress?.({
+				stage: "complete",
+				percent: 100,
+				message: "Plugin installed successfully!"
+			});
+			await this.loadPlugin(pluginId);
+			await fs$2.unlink(pluginZipPath).catch(() => {});
+			console.log("[PluginManager] Plugin installed successfully:", pluginId);
+		} catch (error) {
+			console.error("[PluginManager] Installation failed:", error);
+			const pluginPath = path$1.join(this.pluginsDir, pluginId);
+			await fs$2.rm(pluginPath, {
+				recursive: true,
+				force: true
+			}).catch(() => {});
+			throw new Error(`Installation failed: ${error.message}`);
+		}
+	}
+	async uninstallPlugin(pluginId) {
+		console.log("[PluginManager] Uninstalling plugin:", pluginId);
+		const installed = this.store.get("installed");
+		const plugin = installed[pluginId];
+		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
+		try {
+			this.unloadPlugin(pluginId);
+			await fs$2.rm(plugin.installPath, {
+				recursive: true,
+				force: true
+			});
+			if (plugin.manifest.dependencies?.binary) await this.cleanupDependencies(plugin.manifest.dependencies.binary);
+			const { [pluginId]: removed, ...remaining } = installed;
+			this.store.set("installed", remaining);
+			console.log("[PluginManager] Plugin uninstalled:", pluginId);
+		} catch (error) {
+			console.error("[PluginManager] Uninstallation failed:", error);
+			throw new Error(`Uninstallation failed: ${error.message}`);
+		}
+	}
+	async loadInstalledPlugins() {
+		const installed = this.store.get("installed");
+		for (const [pluginId, plugin] of Object.entries(installed)) if (plugin.active) try {
+			await this.loadPlugin(pluginId);
+		} catch (error) {
+			console.error(`[PluginManager] Failed to load plugin ${pluginId}:`, error.message);
+		}
+	}
+	async loadPlugin(pluginId) {
+		const plugin = this.store.get("installed")[pluginId];
+		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
+		try {
+			const pluginModule = require$1(path$1.join(plugin.installPath, plugin.manifest.main));
+			if (pluginModule.activate) await pluginModule.activate();
+			this.loadedPlugins.set(pluginId, pluginModule);
+			console.log("[PluginManager] Plugin loaded:", pluginId);
+		} catch (error) {
+			console.error(`[PluginManager] Failed to load plugin ${pluginId}:`, error);
+			throw error;
+		}
+	}
+	unloadPlugin(pluginId) {
+		const pluginModule = this.loadedPlugins.get(pluginId);
+		if (pluginModule?.deactivate) try {
+			pluginModule.deactivate();
+		} catch (error) {
+			console.error(`[PluginManager] Error during plugin deactivation:`, error);
+		}
+		this.loadedPlugins.delete(pluginId);
+		console.log("[PluginManager] Plugin unloaded:", pluginId);
+	}
+	async installBinaryDependencies(dependencies, onProgress) {
+		const platform = process.platform;
+		for (let i = 0; i < dependencies.length; i++) {
+			const dep = dependencies[i];
+			const platformInfo = dep.platforms[platform];
+			if (!platformInfo) {
+				console.warn(`[PluginManager] Binary ${dep.name} not available for ${platform}`);
+				continue;
+			}
+			const binaryPath = path$1.join(this.binariesDir, dep.name);
+			if (await this.fileExists(binaryPath)) {
+				console.log(`[PluginManager] Binary ${dep.name} already exists`);
+				continue;
+			}
+			const basePercent = 70 + i / dependencies.length * 20;
+			onProgress?.({
+				stage: "dependencies",
+				percent: basePercent,
+				message: `Installing ${dep.name}...`
+			});
+			const tempPath = path$1.join(app.getPath("temp"), `${dep.name}.zip`);
+			await this.downloadFile(platformInfo.url, tempPath);
+			await this.verifyChecksum(tempPath, platformInfo.checksum);
+			await this.extractZip(tempPath, this.binariesDir);
+			if (platform !== "win32") await fs$2.chmod(binaryPath, 493);
+			await fs$2.unlink(tempPath).catch(() => {});
+			console.log(`[PluginManager] Binary installed: ${dep.name}`);
+		}
+	}
+	async cleanupDependencies(dependencies) {
+		const installed = this.store.get("installed");
+		for (const dep of dependencies) {
+			let inUse = false;
+			for (const plugin of Object.values(installed)) if (plugin.manifest.dependencies?.binary?.some((d) => d.name === dep.name)) {
+				inUse = true;
+				break;
+			}
+			if (!inUse) {
+				const binaryPath = path$1.join(this.binariesDir, dep.name);
+				await fs$2.rm(binaryPath, {
+					force: true,
+					recursive: true
+				}).catch(() => {});
+				console.log(`[PluginManager] Removed unused binary: ${dep.name}`);
+			}
+		}
+	}
+	getPluginManifest(pluginId) {
+		return this.store.get("registry")?.plugins.find((p) => p.id === pluginId) || null;
+	}
+	checkCompatibility(manifest) {
+		if (!manifest.platforms.includes(process.platform)) throw new Error(`Plugin not compatible with ${process.platform}`);
+		if (app.getVersion() < manifest.minAppVersion) throw new Error(`Plugin requires app version ${manifest.minAppVersion} or higher`);
+	}
+	async downloadFile(url, destination, onProgress) {
+		const response = await axios({
+			method: "GET",
+			url,
+			responseType: "stream",
+			timeout: 3e5
+		});
+		const totalSize = parseInt(response.headers["content-length"], 10);
+		let downloadedSize = 0;
+		const writer = require$1("fs").createWriteStream(destination);
+		response.data.on("data", (chunk) => {
+			downloadedSize += chunk.length;
+			const percent = Math.round(downloadedSize / totalSize * 100);
+			onProgress?.(percent);
+		});
+		response.data.pipe(writer);
+		return new Promise((resolve, reject) => {
+			writer.on("finish", () => resolve(destination));
+			writer.on("error", reject);
+		});
+	}
+	async verifyChecksum(filePath, expectedChecksum) {
+		const fileBuffer = await fs$2.readFile(filePath);
+		if (createHash$1("sha256").update(fileBuffer).digest("hex") !== expectedChecksum) throw new Error("Checksum verification failed - file may be corrupted");
+	}
+	async extractZip(zipPath, destination) {
+		new AdmZip(zipPath).extractAllTo(destination, true);
+	}
+	async validatePlugin(pluginPath, manifest) {
+		const mainPath = path$1.join(pluginPath, manifest.main);
+		if (!await this.fileExists(mainPath)) throw new Error(`Plugin main file not found: ${manifest.main}`);
+		const manifestPath = path$1.join(pluginPath, "manifest.json");
+		if (!await this.fileExists(manifestPath)) throw new Error("Plugin manifest.json not found");
+	}
+	async fileExists(filePath) {
+		try {
+			await fs$2.access(filePath);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+	getInstalledPlugins() {
+		const installed = this.store.get("installed");
+		return Object.values(installed);
+	}
+	isInstalled(pluginId) {
+		return pluginId in this.store.get("installed");
+	}
+	getPlugin(pluginId) {
+		return this.loadedPlugins.get(pluginId);
+	}
+	getBinaryPath(binaryName) {
+		return path$1.join(this.binariesDir, binaryName);
+	}
+	async togglePlugin(pluginId, active) {
+		const installed = this.store.get("installed");
+		const plugin = installed[pluginId];
+		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
+		if (active && !plugin.active) await this.loadPlugin(pluginId);
+		else if (!active && plugin.active) this.unloadPlugin(pluginId);
+		plugin.active = active;
+		this.store.set("installed", installed);
+	}
+};
+const pluginManager = new PluginManager();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -7577,6 +8046,19 @@ app.whenReady().then(() => {
 		universalDownloader.clearPendingDownloads();
 		return { success: true };
 	});
+	ipcMain.handle("universal:get-error-log", async (_, limit) => {
+		return universalDownloader.getErrorLog(limit);
+	});
+	ipcMain.handle("universal:export-error-log", async (_, format) => {
+		return await universalDownloader.exportErrorLog(format);
+	});
+	ipcMain.handle("universal:get-error-stats", async () => {
+		return universalDownloader.getErrorStats();
+	});
+	ipcMain.handle("universal:clear-error-log", async (_, type) => {
+		universalDownloader.clearErrorLog(type);
+		return { success: true };
+	});
 	ipcMain.handle("universal:pause", async (_, id) => {
 		return await universalDownloader.pauseDownload(id);
 	});
@@ -7773,6 +8255,27 @@ app.whenReady().then(() => {
 			}]
 		});
 		return result.canceled ? [] : result.filePaths;
+	});
+	pluginManager.initialize().catch(console.error);
+	ipcMain.handle("plugins:get-available", () => {
+		return pluginManager.getAvailablePlugins();
+	});
+	ipcMain.handle("plugins:get-installed", () => {
+		return pluginManager.getInstalledPlugins();
+	});
+	ipcMain.handle("plugins:install", async (event, pluginId) => {
+		await pluginManager.installPlugin(pluginId, (progress) => {
+			event.sender.send("plugins:progress", progress);
+		});
+	});
+	ipcMain.handle("plugins:uninstall", async (_event, pluginId) => {
+		await pluginManager.uninstallPlugin(pluginId);
+	});
+	ipcMain.handle("plugins:toggle", async (_event, pluginId, active) => {
+		await pluginManager.togglePlugin(pluginId, active);
+	});
+	ipcMain.handle("plugins:update-registry", async () => {
+		await pluginManager.updateRegistry(true);
 	});
 	async function getDirSize$1(dirPath) {
 		try {

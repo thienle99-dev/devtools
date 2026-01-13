@@ -3,8 +3,11 @@ import { app } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
 import { createHash } from 'crypto';
+import { createRequire } from 'module';
 import AdmZip from 'adm-zip';
 import axios from 'axios';
+
+const require = createRequire(import.meta.url);
 
 // ============================================================
 // TYPES & INTERFACES

@@ -28,4 +28,5 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'text', name: 'Text Tools', icon: Type, color: 'text-indigo-400' },
     { id: 'math', name: 'Math Tools', icon: Percent, color: 'text-emerald-400' },
     { id: 'media', name: 'Media Tools', icon: Film, color: 'text-indigo-400' },
+    { id: 'plugins', name: 'Plugins', icon: Box, color: 'text-blue-500' },
 ];

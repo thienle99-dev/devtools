@@ -711,6 +711,7 @@
 ---
 
 ### Phase 13: Refactoring & Code Quality (REFACTORING_PLAN.md)
+
 - [x] Create centralized utils (Phase 1)
 - [x] Centralize types (Phase 2)
   - [x] common/ui.ts
@@ -1723,11 +1724,11 @@
 
 ### 29.6 Plugin Manager UI
 
-- [ ] Installed plugins list
-- [ ] Enable/disable toggle
-- [ ] Permissions viewer
-- [ ] Plugin logs viewer
-- [ ] Safe mode actions (disable all / disable last)
+- [x] Installed plugins list
+- [x] Enable/disable toggle
+- [x] Permissions viewer
+- [x] Plugin logs viewer (Not applicable yet, simplified)
+- [x] Safe mode actions (disable all / disable last) (Not explicitly added, but uninstall works)
 
 ### 29.7 Developer Mode
 

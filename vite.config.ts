@@ -37,7 +37,11 @@ export default defineConfig({
                 'util',
                 'path',
                 'fs',
-                'os'
+                'os',
+                'adm-zip',
+                'axios',
+                'fluent-ffmpeg',
+                'ffmpeg-static'
               ],
             },
           },
