@@ -4,6 +4,8 @@ import type { PluginManifest } from '@/types/plugin';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { X, Download, BadgeCheck, Github, Globe, HardDrive } from 'lucide-react';
+import { getTagColor } from '../tag-utils';
+import { cn } from '@utils/cn';
 
 interface PluginDetailModalProps {
   isOpen: boolean;
@@ -55,9 +57,14 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
                                 Verified
                             </span>
                         )}
-                        <span className="bg-secondary text-muted-foreground text-xs px-2 py-0.5 rounded-full border border-border">
+                         <span className="bg-secondary text-muted-foreground text-xs px-2 py-0.5 rounded-full border border-border">
                             v{plugin.version}
                         </span>
+                        <div className="flex gap-2 ml-2">
+                             <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize", getTagColor(plugin.category))}>
+                                {plugin.category}
+                            </span>
+                        </div>
                     </div>
                     
                     <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed max-w-xl">
@@ -73,6 +80,15 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
                             <Download className="w-3.5 h-3.5" />
                             <span>{plugin.downloads?.toLocaleString() ?? 0} installs</span>
                         </div>
+                    </div>
+                    
+                    {/* Tags List */}
+                    <div className="flex flex-wrap gap-2 mt-4">
+                        {plugin.tags.map(tag => (
+                            <span key={tag} className={cn("px-2 py-0.5 rounded-full text-[10px] border", getTagColor(tag))}>
+                                {tag}
+                            </span>
+                        ))}
                     </div>
                 </div>
             </div>

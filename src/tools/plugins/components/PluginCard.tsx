@@ -5,6 +5,7 @@ import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { BadgeCheck, Download, Trash2, RotateCw, HardDrive } from 'lucide-react';
 import { cn } from '@utils/cn';
+import { getTagColor } from '../tag-utils';
 
 interface PluginCardProps {
   plugin: PluginManifest;
@@ -34,31 +35,6 @@ export const PluginCard: React.FC<PluginCardProps> = ({
     if (mb < 1) return `${(plugin.size / 1024).toFixed(1)} KB`;
     return `${mb.toFixed(1)} MB`;
   }, [plugin.size]);
-
-  const getTagColor = (tag: string) => {
-    const t = tag.toLowerCase();
-    // Specific mappings
-    if (['media', 'video', 'audio', 'music'].some(k => t.includes(k))) return "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400";
-    if (['document', 'pdf', 'text', 'format'].some(k => t.includes(k))) return "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400";
-    if (['developer', 'code', 'git', 'debug', 'json'].some(k => t.includes(k))) return "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400";
-    if (['security', 'crypto', 'auth', 'hash'].some(k => t.includes(k))) return "bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400";
-    if (['network', 'web', 'http', 'api'].some(k => t.includes(k))) return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400";
-    if (['ai', 'bot', 'smart', 'model'].some(k => t.includes(k))) return "bg-fuchsia-500/10 text-fuchsia-600 border-fuchsia-500/20 dark:text-fuchsia-400";
-    if (['utility', 'system', 'clean', 'os'].some(k => t.includes(k))) return "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400";
-    if (['download', 'upload', 'file'].some(k => t.includes(k))) return "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400";
-
-    // Hash-based fallback for others
-    const colors = [
-      "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400",
-      "bg-lime-500/10 text-lime-600 border-lime-500/20 dark:text-lime-400",
-      "bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:text-indigo-400",
-      "bg-pink-500/10 text-pink-600 border-pink-500/20 dark:text-pink-400",
-      "bg-teal-500/10 text-teal-600 border-teal-500/20 dark:text-teal-400",
-    ];
-    let hash = 0;
-    for (let i = 0; i < t.length; i++) hash = t.charCodeAt(i) + ((hash << 5) - hash);
-    return colors[Math.abs(hash) % colors.length];
-  };
 
   return (
     <motion.div
@@ -108,7 +84,6 @@ export const PluginCard: React.FC<PluginCardProps> = ({
           )}
         </div>
 
-        {/* Description */}
         {/* Description */}
         <p className="text-xs text-muted-foreground mb-4 line-clamp-2 leading-relaxed h-10">
           {plugin.description}
