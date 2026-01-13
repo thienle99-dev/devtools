@@ -1,8 +1,7 @@
-import { Fingerprint, ShieldCheck, Shield, ScanLine, Key, Lock, KeyRound } from 'lucide-react';
+import { Fingerprint, ShieldCheck, ScanLine, Key, KeyRound } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../crypto/logic';
-import { process as aesProcess } from '../../crypto/SymmetricEncryptor';
 
 export const cryptoTools: ToolDefinition[] = [
     {
@@ -33,20 +32,7 @@ export const cryptoTools: ToolDefinition[] = [
         outputTypes: ['text'],
         process: (input, options) => Logic.generateHmac(input, options?.key || '', options?.algorithm || 'sha256')
     },
-    {
-        id: 'bcrypt',
-        name: 'Bcrypt Hash',
-        path: '/bcrypt',
-        description: 'Generate and compare Bcrypt hashes',
-        category: 'crypto',
-        icon: Shield,
-        color: 'text-pink-500',
-        component: Lazy.BcryptGenerator,
-        keywords: ['bcrypt', 'password', 'hash', 'salt'],
-        inputTypes: ['text'],
-        outputTypes: ['text'],
-        process: (input, options) => Logic.bcryptHash(input, options?.rounds || 10)
-    },
+
     {
         id: 'uuid',
         name: 'UUID / ULID',
@@ -87,29 +73,5 @@ export const cryptoTools: ToolDefinition[] = [
         outputTypes: ['text'],
         process: (options) => Logic.generateBearerToken(options?.length || 32)
     },
-    {
-        id: 'symmetric-encryptor',
-        name: 'Symmetric Encryptor',
-        path: '/symmetric-encryptor',
-        description: 'Encrypt/Decrypt using AES, TripleDES, Rabbit, RC4',
-        category: 'crypto',
-        icon: Lock,
-        color: 'text-emerald-500',
-        component: Lazy.SymmetricEncryptor,
-        keywords: ['aes', 'des', 'rabbit', 'rc4', 'encrypt', 'decrypt', 'cipher'],
-        inputTypes: ['text', 'json'],
-        outputTypes: ['text'],
-        process: (input, options) => aesProcess(input, options)
-    },
-    {
-        id: 'rsa-generator',
-        name: 'RSA Tools',
-        path: '/rsa-generator',
-        description: 'Generate RSA keys, encrypt, decrypt, sign, verify',
-        category: 'crypto',
-        icon: Key,
-        color: 'text-orange-500',
-        component: Lazy.RsaGenerator,
-        keywords: ['rsa', 'key', 'pair', 'encrypt', 'decrypt', 'sign', 'verify', 'crypto']
-    },
+
 ];

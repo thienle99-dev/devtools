@@ -1,20 +1,10 @@
-import { Percent, Clock, Lock, Container, Settings, GitBranch, Database, Code, FileSearch } from 'lucide-react';
+import { Percent, Clock, Lock, Container, Settings, Database, Code } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../development/logic';
 
 export const developmentTools: ToolDefinition[] = [
-    {
-        id: 'pipeline-designer',
-        name: 'Pipeline Mode',
-        path: '/pipeline',
-        description: 'Chain tools together for automated workflows',
-        category: 'development',
-        icon: GitBranch,
-        color: 'text-indigo-400',
-        component: Lazy.PipelineDesigner,
-        keywords: ['pipeline', 'workflow', 'chain', 'automation', 'sequence']
-    },
+
     {
         id: 'regex-tester',
         name: 'Regex Tester',
@@ -62,20 +52,7 @@ export const developmentTools: ToolDefinition[] = [
         outputTypes: ['text'],
         process: (input) => Logic.convertDockerRun(input)
     },
-    {
-        id: 'log-analyzer',
-        name: 'Log Analyzer',
-        path: '/log-analyzer',
-        description: 'Highlight and analyze server logs',
-        category: 'development',
-        icon: FileSearch,
-        color: 'text-indigo-400',
-        component: Lazy.LogAnalyzer,
-        keywords: ['log', 'analyze', 'debug', 'error', 'highlight'],
-        inputTypes: ['text'],
-        outputTypes: ['json'],
-        process: (input) => Logic.analyzeLogs(input)
-    },
+
     {
         id: 'mock-data-generator',
         name: 'Mock Data Generator',

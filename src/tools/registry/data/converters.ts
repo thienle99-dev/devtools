@@ -79,22 +79,5 @@ export const converters: ToolDefinition[] = [
         outputTypes: ['text'],
         process: (input, options) => Logic.convertDate(input, options?.format || 'iso')
     },
-    {
-        id: 'csv-excel',
-        name: 'CSV <> Excel',
-        path: '/csv-excel',
-        description: 'Convert between CSV and Excel formats',
-        category: 'converters',
-        icon: ArrowRightLeft,
-        color: 'text-emerald-400',
-        component: Lazy.CsvExcelConverter,
-        keywords: ['csv', 'excel', 'spreadsheet', 'convert', 'parse'],
-        inputTypes: ['csv', 'excel', 'json'],
-        outputTypes: ['csv', 'excel', 'json'],
-        process: (input, options) => {
-            if (options?.mode === 'csv-json') return Logic.csvToJson(input);
-            if (options?.mode === 'json-csv') return Logic.jsonToCsv(input);
-            return input;
-        }
-    }
+
 ];

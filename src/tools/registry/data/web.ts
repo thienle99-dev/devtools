@@ -1,4 +1,4 @@
-import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Tag, Activity, Hash, Keyboard, Bot, KeyRound, Edit3, Map, Zap, Cookie } from 'lucide-react';
+import { Link, Globe, ShieldCheck, Smartphone, Lock, Server, FileCode, ArrowRightLeft, Keyboard, KeyRound, Cookie } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../web/logic';
@@ -29,17 +29,7 @@ export const webTools: ToolDefinition[] = [
         component: Lazy.OtpGenerator,
         keywords: ['otp', 'totp', '2fa', 'authenticator']
     },
-    {
-        id: 'html-wysiwyg',
-        name: 'HTML Editor',
-        path: '/html-wysiwyg',
-        description: 'Visual HTML editor',
-        category: 'web',
-        icon: Edit3,
-        color: 'text-cyan-500',
-        component: Lazy.HtmlWysiwyg,
-        keywords: ['html', 'editor', 'wysiwyg', 'visual']
-    },
+
     {
         id: 'url-parser',
         name: 'URL Parser',
@@ -144,48 +134,7 @@ export const webTools: ToolDefinition[] = [
         inputTypes: ['json', 'text'],
         outputTypes: ['json']
     },
-    {
-        id: 'meta-tags',
-        name: 'Meta Tags',
-        path: '/meta-tags',
-        description: 'Generate standard SEO meta tags',
-        category: 'web',
-        icon: Tag,
-        color: 'text-orange-400',
-        component: Lazy.MetaTagsGenerator,
-        keywords: ['meta', 'seo', 'tags', 'html'],
-        inputTypes: ['json'],
-        outputTypes: ['text'],
-        process: (_, options) => Logic.generateMetaTags(options)
-    },
-    {
-        id: 'open-graph',
-        name: 'Open Graph',
-        path: '/open-graph',
-        description: 'Generate Open Graph meta tags',
-        category: 'web',
-        icon: Activity,
-        color: 'text-blue-500',
-        component: Lazy.OpenGraphGenerator,
-        keywords: ['og', 'facebook', 'twitter', 'social'],
-        inputTypes: ['json'],
-        outputTypes: ['text'],
-        process: (_, options) => Logic.generateOpenGraph(options)
-    },
-    {
-        id: 'utm-builder',
-        name: 'UTM Builder',
-        path: '/utm-builder',
-        description: 'Build UTM tracking URLs',
-        category: 'web',
-        icon: Hash,
-        color: 'text-pink-500',
-        component: Lazy.UtmBuilder,
-        keywords: ['utm', 'url', 'marketing', 'tracking'],
-        inputTypes: ['text'],
-        outputTypes: ['text'],
-        process: (input, options) => Logic.generateUtmUrl(input, options)
-    },
+
     {
         id: 'keycode',
         name: 'Keycode Info',
@@ -197,20 +146,7 @@ export const webTools: ToolDefinition[] = [
         component: Lazy.KeycodeInfo,
         keywords: ['key', 'code', 'keyboard', 'event']
     },
-    {
-        id: 'robots-txt',
-        name: 'Robots.txt',
-        path: '/robots-txt',
-        description: 'Generate robots.txt file',
-        category: 'web',
-        icon: Bot,
-        color: 'text-green-500',
-        component: Lazy.RobotsTxtGenerator,
-        keywords: ['robots', 'seo', 'crawler', 'bot'],
-        inputTypes: ['json'],
-        outputTypes: ['text'],
-        process: (_, options) => Logic.generateRobotsTxt(options)
-    },
+
     {
         id: 'safelink',
         name: 'Safelink Decoder',
@@ -264,67 +200,7 @@ export const webTools: ToolDefinition[] = [
         outputTypes: ['json'],
         process: (input) => Logic.parseHttpHeaders(input)
     },
-    {
-        id: 'csp-generator',
-        name: 'CSP Generator',
-        path: '/csp-generator',
-        description: 'Generate Content Security Policy headers',
-        category: 'web',
-        icon: ShieldCheck,
-        color: 'text-purple-500',
-        component: Lazy.CspGenerator,
-        keywords: ['csp', 'security', 'header', 'policy', 'content']
-    },
-    {
-        id: 'structured-data',
-        name: 'Structured Data',
-        path: '/structured-data',
-        description: 'Generate JSON-LD structured data',
-        category: 'web',
-        icon: FileCode,
-        color: 'text-yellow-500',
-        component: Lazy.StructuredDataGenerator,
-        keywords: ['seo', 'json-ld', 'schema', 'google', 'rich'],
-        inputTypes: ['json'],
-        outputTypes: ['json'],
-        process: (_, options) => Logic.generateJsonLd(options)
-    },
-    {
-        id: 'manifest-generator',
-        name: 'Manifest Generator',
-        path: '/manifest-generator',
-        description: 'Generate Web App Manifest.json (PWA)',
-        category: 'web',
-        icon: Smartphone,
-        color: 'text-cyan-500',
-        component: Lazy.ManifestGenerator,
-        keywords: ['pwa', 'manifest', 'json', 'web', 'app']
-    },
-    {
-        id: 'sitemap-generator',
-        name: 'Sitemap Generator',
-        path: '/sitemap-generator',
-        description: 'Generate XML sitemaps for SEO',
-        category: 'web',
-        icon: Map,
-        color: 'text-indigo-400',
-        component: Lazy.SitemapGenerator,
-        keywords: ['sitemap', 'xml', 'seo', 'google', 'crawl'],
-        inputTypes: ['json'],
-        outputTypes: ['text'],
-        process: (_, options) => Logic.generateSitemap(options)
-    },
-    {
-        id: 'service-worker-generator',
-        name: 'Service Worker',
-        path: '/service-worker-generator',
-        description: 'Generate PWA Service Worker (Workbox)',
-        category: 'web',
-        icon: Zap,
-        color: 'text-amber-400',
-        component: Lazy.ServiceWorkerGenerator,
-        keywords: ['service', 'worker', 'pwa', 'offline', 'cache', 'workbox']
-    },
+
     {
         id: 'set-cookie-generator',
         name: 'Set-Cookie Gen',
@@ -336,17 +212,7 @@ export const webTools: ToolDefinition[] = [
         component: Lazy.SetCookieGenerator,
         keywords: ['cookie', 'set-cookie', 'header', 'http']
     },
-    {
-        id: 'canonical-url',
-        name: 'Canonical URL',
-        path: '/canonical-url',
-        description: 'Generate canonical link tags',
-        category: 'web',
-        icon: Link,
-        color: 'text-green-500',
-        component: Lazy.CanonicalUrlGenerator,
-        keywords: ['canonical', 'url', 'seo', 'link']
-    },
+
     {
         id: 'content-type-parser',
         name: 'Content-Type Parser',
