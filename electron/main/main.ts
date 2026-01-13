@@ -1276,6 +1276,14 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   (app as any).isQuitting = true;
 
+  // Save download state before quitting
+  try {
+    const pendingCount = universalDownloader.prepareForShutdown();
+    console.log(`💾 Saved ${pendingCount} pending downloads before quit`);
+  } catch (error) {
+    console.error('Failed to save download state:', error);
+  }
+
   // Clear clipboard on quit if setting is enabled
   if (win) {
     win.webContents.send('check-clear-clipboard-on-quit');
@@ -1889,6 +1897,20 @@ app.whenReady().then(() => {
 
   ipcMain.handle('universal:get-queue', async () => {
     return universalDownloader.getQueue();
+  });
+
+  ipcMain.handle('universal:get-pending-count', async () => {
+    return universalDownloader.getPendingDownloadsCount();
+  });
+
+  ipcMain.handle('universal:resume-pending', async () => {
+    universalDownloader.resumePendingDownloads();
+    return { success: true };
+  });
+
+  ipcMain.handle('universal:clear-pending', async () => {
+    universalDownloader.clearPendingDownloads();
+    return { success: true };
   });
 
   ipcMain.handle('universal:pause', async (_, id: string) => {

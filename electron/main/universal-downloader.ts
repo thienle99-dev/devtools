@@ -103,6 +103,92 @@ export class UniversalDownloader {
         this.store.set('queue', toSave);
     }
 
+    /**
+     * Prepare for app shutdown - save all active downloads to queue
+     */
+    prepareForShutdown() {
+        console.log('🔄 Preparing downloads for shutdown...');
+        
+        // Convert all active downloads to paused state in queue
+        this.activeProcesses.forEach((process, downloadId) => {
+            const options = this.activeOptions.get(downloadId);
+            if (options) {
+                // Add to queue if not already there
+                const existsInQueue = this.downloadQueue.some(item => item.options.id === downloadId);
+                if (!existsInQueue) {
+                    this.downloadQueue.push({
+                        options,
+                        run: () => this.executeDownload(options),
+                        resolve: () => {},
+                        reject: () => {},
+                        state: 'paused'
+                    });
+                } else {
+                    // Update state to paused
+                    const queueItem = this.downloadQueue.find(item => item.options.id === downloadId);
+                    if (queueItem) {
+                        queueItem.state = 'paused';
+                    }
+                }
+            }
+            
+            // Kill the process
+            if (process.ytDlpProcess) {
+                process.ytDlpProcess.kill('SIGTERM');
+            }
+        });
+        
+        // Save the queue
+        this.saveQueuePersistently();
+        
+        const pendingCount = this.downloadQueue.filter(item => 
+            item.state === 'queued' || item.state === 'paused'
+        ).length;
+        
+        console.log(`✅ Saved ${pendingCount} pending downloads`);
+        return pendingCount;
+    }
+
+    /**
+     * Get count of pending downloads that can be resumed
+     */
+    getPendingDownloadsCount(): number {
+        const persisted = this.store.get('queue') || [];
+        return persisted.filter(item => 
+            item.state === 'queued' || item.state === 'paused'
+        ).length;
+    }
+
+    /**
+     * Resume all pending downloads from previous session
+     */
+    resumePendingDownloads() {
+        console.log('🔄 Resuming pending downloads...');
+        const pending = this.downloadQueue.filter(item => 
+            item.state === 'queued' || item.state === 'paused'
+        );
+        
+        pending.forEach(item => {
+            item.state = 'queued';
+        });
+        
+        this.saveQueuePersistently();
+        this.processQueue();
+        
+        console.log(`✅ Resumed ${pending.length} downloads`);
+    }
+
+    /**
+     * Clear all pending downloads (user chose not to resume)
+     */
+    clearPendingDownloads() {
+        console.log('🗑️ Clearing pending downloads...');
+        this.downloadQueue = this.downloadQueue.filter(item => 
+            item.state === 'downloading'
+        );
+        this.saveQueuePersistently();
+    }
+
 
     private async init(): Promise<void> {
         try {

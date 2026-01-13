@@ -30,6 +30,7 @@ import {
 import { UniversalVideoInfo } from './components/UniversalVideoInfo';
 import { UniversalFormatSelector } from './components/UniversalFormatSelector';
 import { DownloadProgress } from './components/DownloadProgress';
+import { ResumeDownloadsDialog } from './components/ResumeDownloadsDialog';
 import { detectPlatform, getPlatformName, getPlatformColor } from './utils/platform-detector';
 import { cn } from '@utils/cn';
 import type { UniversalMediaInfo, UniversalDownloadProgress, UniversalHistoryItem, SupportedPlatform } from '@/types/universal-media';
@@ -72,6 +73,10 @@ export default function UniversalDownloader() {
     const [historySort, setHistorySort] = useState<'newest' | 'oldest' | 'size' | 'platform'>('newest');
     const [isDragging, setIsDragging] = useState(false);
 
+    // Resume dialog state
+    const [showResumeDialog, setShowResumeDialog] = useState(false);
+    const [pendingDownloadsCount, setPendingDownloadsCount] = useState(0);
+
 
     const { toasts, removeToast, success, error, info } = useToast();
 
@@ -100,6 +105,9 @@ export default function UniversalDownloader() {
         loadHistory();
         loadSettings();
         checkDiskSpace();
+
+        // Check for pending downloads from previous session
+        checkPendingDownloads();
 
         // Listen for progress
         const cleanup = window.universalAPI.onProgress((progress: UniversalDownloadProgress) => {
@@ -151,6 +159,41 @@ export default function UniversalDownloader() {
             setDownloadPath(settingsData.downloadPath || '');
             setFormat(settingsData.defaultFormat || 'video');
             setQuality(settingsData.defaultQuality || 'best');
+        }
+    };
+
+    const checkPendingDownloads = async () => {
+        try {
+            const pendingCount = await window.universalAPI.getPendingCount();
+            
+            if (pendingCount > 0) {
+                setPendingDownloadsCount(pendingCount);
+                setShowResumeDialog(true);
+            }
+        } catch (err) {
+            console.error('Failed to check pending downloads:', err);
+        }
+    };
+
+    const handleResumeDownloads = async () => {
+        try {
+            await window.universalAPI.resumePending();
+            info('Downloads Resumed', `Resuming ${pendingDownloadsCount} download${pendingDownloadsCount > 1 ? 's' : ''}...`);
+            setShowResumeDialog(false);
+            setView('downloads'); // Switch to downloads view
+            loadQueue();
+        } catch (err: any) {
+            error('Resume Failed', err.message);
+        }
+    };
+
+    const handleClearPending = async () => {
+        try {
+            await window.universalAPI.clearPending();
+            info('Queue Cleared', 'Pending downloads have been removed');
+            setShowResumeDialog(false);
+        } catch (err: any) {
+            error('Clear Failed', err.message);
         }
     };
 
@@ -1227,6 +1270,16 @@ export default function UniversalDownloader() {
         >
             <div className="h-full flex flex-col">
                 <ToastContainer toasts={toasts} onClose={removeToast} />
+
+                {/* Resume Downloads Dialog */}
+                {showResumeDialog && (
+                    <ResumeDownloadsDialog
+                        pendingCount={pendingDownloadsCount}
+                        onResume={handleResumeDownloads}
+                        onClear={handleClearPending}
+                        onClose={() => setShowResumeDialog(false)}
+                    />
+                )}
 
                 {/* Navigation Tabs */}
                 <div className="px-6 border-b border-border-glass bg-glass-panel/50 backdrop-blur-sm sticky top-0 z-10">

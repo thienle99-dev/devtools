@@ -58,6 +58,9 @@ interface Window {
         resume: (id: string) => Promise<void>;
         reorderQueue: (id: string, newIndex: number) => Promise<void>;
         retry: (id: string) => Promise<void>;
+        getPendingCount: () => Promise<number>;
+        resumePending: () => Promise<{ success: boolean }>;
+        clearPending: () => Promise<{ success: boolean }>;
     };
 
     audioAPI: {

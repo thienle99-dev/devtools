@@ -3229,6 +3229,46 @@ var UniversalDownloader = class {
 		}));
 		this.store.set("queue", toSave);
 	}
+	prepareForShutdown() {
+		console.log("🔄 Preparing downloads for shutdown...");
+		this.activeProcesses.forEach((process$1, downloadId) => {
+			const options = this.activeOptions.get(downloadId);
+			if (options) if (!this.downloadQueue.some((item) => item.options.id === downloadId)) this.downloadQueue.push({
+				options,
+				run: () => this.executeDownload(options),
+				resolve: () => {},
+				reject: () => {},
+				state: "paused"
+			});
+			else {
+				const queueItem = this.downloadQueue.find((item) => item.options.id === downloadId);
+				if (queueItem) queueItem.state = "paused";
+			}
+			if (process$1.ytDlpProcess) process$1.ytDlpProcess.kill("SIGTERM");
+		});
+		this.saveQueuePersistently();
+		const pendingCount = this.downloadQueue.filter((item) => item.state === "queued" || item.state === "paused").length;
+		console.log(`✅ Saved ${pendingCount} pending downloads`);
+		return pendingCount;
+	}
+	getPendingDownloadsCount() {
+		return (this.store.get("queue") || []).filter((item) => item.state === "queued" || item.state === "paused").length;
+	}
+	resumePendingDownloads() {
+		console.log("🔄 Resuming pending downloads...");
+		const pending = this.downloadQueue.filter((item) => item.state === "queued" || item.state === "paused");
+		pending.forEach((item) => {
+			item.state = "queued";
+		});
+		this.saveQueuePersistently();
+		this.processQueue();
+		console.log(`✅ Resumed ${pending.length} downloads`);
+	}
+	clearPendingDownloads() {
+		console.log("🗑️ Clearing pending downloads...");
+		this.downloadQueue = this.downloadQueue.filter((item) => item.state === "downloading");
+		this.saveQueuePersistently();
+	}
 	async init() {
 		try {
 			const ytDlpModule = require$1("yt-dlp-wrap");

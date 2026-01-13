@@ -41,8 +41,7 @@
 - [x] **Resume/Pause Downloads**
   - [x] Pause individual downloads
   - [x] Resume from paused state
-
-  - [ ] Save state khi đóng app
+  - [x] Save state khi đóng app ✅ (Completed Jan 13, 2026)
 
 - [ ] **Selective Playlist Download**
   - [ ] Chọn video cụ thể từ playlist
