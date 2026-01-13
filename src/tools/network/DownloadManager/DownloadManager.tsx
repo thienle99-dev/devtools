@@ -39,8 +39,24 @@ export default function DownloadManager() {
     const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+    const [speedHistory, setSpeedHistory] = useState<number[]>(new Array(20).fill(0));
+
     const [sortBy, setSortBy] = useState<'date' | 'name' | 'size'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    const totalSpeed = useMemo(() => {
+        return history
+            .filter(t => t.status === 'downloading')
+            .reduce((sum, t) => sum + (t.speed || 0), 0);
+    }, [history]);
+
+    // Update Speed History for Sparkline
+    useEffect(() => {
+        setSpeedHistory(prev => {
+            const next = [...prev.slice(1), totalSpeed];
+            return next;
+        });
+    }, [totalSpeed]);
 
     const { toasts, removeToast, success, error } = useToast();
 
@@ -81,11 +97,6 @@ export default function DownloadManager() {
         return cleanup;
     }, [loadData]);
 
-    const totalSpeed = useMemo(() => {
-        return history
-            .filter(t => t.status === 'downloading')
-            .reduce((sum, t) => sum + (t.speed || 0), 0);
-    }, [history]);
 
     const handleCreateDownload = async (url: string, filename?: string) => {
         try {
@@ -241,12 +252,34 @@ export default function DownloadManager() {
                                 </div>
                             </div>
                             
-                            <div className="space-y-1">
-                                <div className="text-2xl font-black text-foreground tabular-nums tracking-tighter">
-                                    {formatBytes(totalSpeed)}<span className="text-xs font-bold text-foreground-tertiary ml-1">/s</span>
+                            <div className="flex items-end justify-between gap-4">
+                                <div className="space-y-1 shrink-0">
+                                    <div className="text-2xl font-black text-foreground tabular-nums tracking-tighter">
+                                        {formatBytes(totalSpeed)}<span className="text-xs font-bold text-foreground-tertiary ml-1">/s</span>
+                                    </div>
+                                    <div className="text-[9px] text-foreground-tertiary font-bold uppercase tracking-wider opacity-80">
+                                        Overall Speed
+                                    </div>
                                 </div>
-                                <div className="text-[9px] text-foreground-tertiary font-bold uppercase tracking-wider opacity-80">
-                                    Overall Speed
+
+                                {/* Mini Speed Sparkline */}
+                                <div className="flex-1 h-10 flex items-end gap-[1px] pt-2">
+                                    {speedHistory.map((speed, i) => {
+                                        const maxSpeed = Math.max(...speedHistory, 1024 * 1024); // Min 1MB for scale
+                                        const height = (speed / maxSpeed) * 100;
+                                        return (
+                                            <div 
+                                                key={i}
+                                                className="flex-1 bg-blue-500/20 rounded-full relative group/bar transition-all duration-300"
+                                                style={{ height: `${Math.max(height, 4)}%` }}
+                                            >
+                                                <div 
+                                                    className="absolute inset-0 bg-blue-500 rounded-full opacity-40 group-hover/bar:opacity-100 transition-opacity"
+                                                    style={{ height: '100%' }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
