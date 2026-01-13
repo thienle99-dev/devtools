@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": 1737619200000,
+  "plugins": [
+    {
+      "id": "universal-downloader",
+      "name": "Universal Media Downloader",
+      "version": "2.0.0",
+      "description": "Download media from 1000+ platforms including YouTube, TikTok, Instagram, Twitter, and more",
+      "author": "DevTools Team",
+      "license": "MIT",
+      "homepage": "https://github.com/devtools-app/universal-downloader",
+      "category": "media",
+      "tags": ["download", "youtube", "video", "audio", "media"],
+      "main": "index.js",
+      "icon": "assets/icon.png",
+      "size": 65536000,
+      "dependencies": {
+        "binary": [
+          {
+            "name": "yt-dlp",
+            "version": "2024.12.06",
+            "size": 52428800,
+            "platforms": {
+              "win32": {
+                "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp.exe",
+                "checksum": "abc123..."
+              },
+              "darwin": {
+                "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp_macos",
+                "checksum": "def456..."
+              },
+              "linux": {
+                "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp_linux",
+                "checksum": "ghi789..."
+              }
+            }
+          }
+        ]
+      },
+      "permissions": {
+        "filesystem": true,
+        "network": true,
+        "shell": true,
+        "clipboard": false
+      },
+      "minAppVersion": "1.0.0",
+      "platforms": ["win32", "darwin", "linux"],
+      "downloadUrl": "https://github.com/devtools-app/plugins/releases/download/universal-downloader-2.0.0/plugin.zip",
+      "checksum": "sha256_hash_here",
+      "verified": true,
+      "downloads": 50000,
+      "rating": 4.8,
+      "screenshots": [
+        "https://example.com/screenshot1.png",
+        "https://example.com/screenshot2.png"
+      ],
+      "changelog": "https://github.com/devtools-app/universal-downloader/releases/tag/v2.0.0"
+    }
+  ]
+}

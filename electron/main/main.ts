@@ -23,6 +23,7 @@ import { videoEffects } from './video-effects'
 import si from 'systeminformation'
 import Store from 'electron-store'
 import { setupDownloadManagerHandlers } from './download-manager-handlers'
+import { pluginManager } from './plugin-manager'
 
 const execAsync = promisify(exec)
 
@@ -2112,6 +2113,39 @@ app.whenReady().then(() => {
       ]
     });
     return result.canceled ? [] : result.filePaths;
+  });
+
+  // ============================================================
+  // PLUGIN MANAGER IPC HANDLERS
+  // ============================================================
+
+  // Initialize plugin manager
+  pluginManager.initialize().catch(console.error);
+
+  ipcMain.handle('plugins:get-available', () => {
+    return pluginManager.getAvailablePlugins();
+  });
+
+  ipcMain.handle('plugins:get-installed', () => {
+    return pluginManager.getInstalledPlugins();
+  });
+
+  ipcMain.handle('plugins:install', async (event, pluginId) => {
+    await pluginManager.installPlugin(pluginId, (progress) => {
+      event.sender.send('plugins:progress', progress);
+    });
+  });
+
+  ipcMain.handle('plugins:uninstall', async (_event, pluginId) => {
+    await pluginManager.uninstallPlugin(pluginId);
+  });
+
+  ipcMain.handle('plugins:toggle', async (_event, pluginId, active) => {
+    await pluginManager.togglePlugin(pluginId, active);
+  });
+
+  ipcMain.handle('plugins:update-registry', async () => {
+    await pluginManager.updateRegistry(true);
   });
 
   // Helper functions

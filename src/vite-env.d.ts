@@ -107,4 +107,5 @@ interface Window {
         onProgress: (taskId: string, callback: (progress: import('./types/network/download').DownloadProgress) => void) => () => void;
         onAnyProgress: (callback: (progress: import('./types/network/download').DownloadProgress) => void) => () => void;
     };
+    pluginAPI: import('./types/plugin').PluginAPI;
 }

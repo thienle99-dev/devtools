@@ -326,3 +326,17 @@ contextBridge.exposeInMainWorld('downloadAPI', {
     return () => ipcRenderer.removeListener('download:task-completed', listener);
   }
 })
+
+contextBridge.exposeInMainWorld('pluginAPI', {
+  getAvailablePlugins: () => ipcRenderer.invoke('plugins:get-available'),
+  getInstalledPlugins: () => ipcRenderer.invoke('plugins:get-installed'),
+  installPlugin: (pluginId: string) => ipcRenderer.invoke('plugins:install', pluginId),
+  uninstallPlugin: (pluginId: string) => ipcRenderer.invoke('plugins:uninstall', pluginId),
+  togglePlugin: (pluginId: string, active: boolean) => ipcRenderer.invoke('plugins:toggle', pluginId, active),
+  onPluginProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('plugins:progress', listener);
+    return () => ipcRenderer.removeListener('plugins:progress', listener);
+  },
+  updateRegistry: () => ipcRenderer.invoke('plugins:update-registry'),
+})
