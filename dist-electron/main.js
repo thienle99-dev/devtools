@@ -5,10 +5,13 @@ import { createHash, randomUUID } from "node:crypto";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 import os from "node:os";
 import Store from "electron-store";
 import path$1 from "path";
-import fs$1 from "fs/promises";
+import fs$1 from "fs";
+import fsp from "fs/promises";
 import { createHash as createHash$1 } from "crypto";
 import { createRequire } from "module";
 import AdmZip from "adm-zip";
@@ -32,8 +35,8 @@ var PluginManager = class {
 		this.ensureDirectories();
 	}
 	async ensureDirectories() {
-		await fs$1.mkdir(this.pluginsDir, { recursive: true });
-		await fs$1.mkdir(this.binariesDir, { recursive: true });
+		await fsp.mkdir(this.pluginsDir, { recursive: true });
+		await fsp.mkdir(this.binariesDir, { recursive: true });
 	}
 	async initialize() {
 		console.log("[PluginManager] Initializing...");
@@ -65,7 +68,7 @@ var PluginManager = class {
 			if (app.isPackaged) registryPath = path$1.join(process.resourcesPath, "plugin-registry.json");
 			else registryPath = path$1.join(app.getAppPath(), "resources", "plugin-registry.json");
 			console.log("[PluginManager] Loading registry from:", registryPath);
-			const data = await fs$1.readFile(registryPath, "utf-8");
+			const data = await fsp.readFile(registryPath, "utf-8");
 			const registry = JSON.parse(data);
 			this.store.set("registry", registry);
 			console.log("[PluginManager] Loaded embedded registry");
@@ -145,12 +148,12 @@ var PluginManager = class {
 				message: "Plugin installed successfully!"
 			});
 			await this.loadPlugin(pluginId);
-			await fs$1.unlink(pluginZipPath).catch(() => {});
+			await fsp.unlink(pluginZipPath).catch(() => {});
 			console.log("[PluginManager] Plugin installed successfully:", pluginId);
 		} catch (error) {
 			console.error("[PluginManager] Installation failed:", error);
 			const pluginPath = path$1.join(this.pluginsDir, pluginId);
-			await fs$1.rm(pluginPath, {
+			await fsp.rm(pluginPath, {
 				recursive: true,
 				force: true
 			}).catch(() => {});
@@ -164,7 +167,7 @@ var PluginManager = class {
 		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
 		try {
 			this.unloadPlugin(pluginId);
-			await fs$1.rm(plugin.installPath, {
+			await fsp.rm(plugin.installPath, {
 				recursive: true,
 				force: true
 			});
@@ -232,8 +235,8 @@ var PluginManager = class {
 			await this.downloadFile(platformInfo.url, tempPath);
 			await this.verifyChecksum(tempPath, platformInfo.checksum);
 			await this.extractZip(tempPath, this.binariesDir);
-			if (platform !== "win32") await fs$1.chmod(binaryPath, 493);
-			await fs$1.unlink(tempPath).catch(() => {});
+			if (platform !== "win32") await fsp.chmod(binaryPath, 493);
+			await fsp.unlink(tempPath).catch(() => {});
 			console.log(`[PluginManager] Binary installed: ${dep.name}`);
 		}
 	}
@@ -247,7 +250,7 @@ var PluginManager = class {
 			}
 			if (!inUse) {
 				const binaryPath = path$1.join(this.binariesDir, dep.name);
-				await fs$1.rm(binaryPath, {
+				await fsp.rm(binaryPath, {
 					force: true,
 					recursive: true
 				}).catch(() => {});
@@ -269,22 +272,31 @@ var PluginManager = class {
 			responseType: "stream",
 			timeout: 3e5
 		});
-		const totalSize = parseInt(response.headers["content-length"], 10);
+		const totalSize = parseInt(response.headers["content-length"], 10) || 0;
 		let downloadedSize = 0;
-		const writer = require("fs").createWriteStream(destination);
-		response.data.on("data", (chunk) => {
-			downloadedSize += chunk.length;
-			const percent = Math.round(downloadedSize / totalSize * 100);
-			onProgress?.(percent);
-		});
-		response.data.pipe(writer);
+		const writer = fs$1.createWriteStream(destination);
 		return new Promise((resolve, reject) => {
+			response.data.on("data", (chunk) => {
+				downloadedSize += chunk.length;
+				if (totalSize > 0) {
+					const percent = Math.round(downloadedSize / totalSize * 100);
+					onProgress?.(percent);
+				}
+			});
+			response.data.pipe(writer);
 			writer.on("finish", () => resolve(destination));
-			writer.on("error", reject);
+			writer.on("error", (err) => {
+				writer.close();
+				reject(err);
+			});
+			response.data.on("error", (err) => {
+				writer.close();
+				reject(err);
+			});
 		});
 	}
 	async verifyChecksum(filePath, expectedChecksum) {
-		const fileBuffer = await fs$1.readFile(filePath);
+		const fileBuffer = await fsp.readFile(filePath);
 		if (createHash$1("sha256").update(fileBuffer).digest("hex") !== expectedChecksum) throw new Error("Checksum verification failed - file may be corrupted");
 	}
 	async extractZip(zipPath, destination) {
@@ -298,7 +310,7 @@ var PluginManager = class {
 	}
 	async fileExists(filePath) {
 		try {
-			await fs$1.access(filePath);
+			await fsp.access(filePath);
 			return true;
 		} catch {
 			return false;
@@ -835,19 +847,6 @@ function toggleWindow() {
 		updateTrayMenu();
 	}
 }
-function formatBytes(bytes) {
-	if (bytes === 0) return "0 B";
-	const k = 1024;
-	const sizes = [
-		"B",
-		"KB",
-		"MB",
-		"GB",
-		"TB"
-	];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
 function updateTrayMenu() {
 	if (!tray) return;
 	const template = [
@@ -1336,14 +1335,6 @@ function createWindow() {
 			};
 		}
 	}
-	ipcMain.on("tray-update-menu", (_event, items) => {
-		recentTools = items || [];
-		updateTrayMenu();
-	});
-	ipcMain.on("tray-update-clipboard", (_event, items) => {
-		clipboardItems = (items || []).sort((a, b) => b.timestamp - a.timestamp);
-		updateTrayMenu();
-	});
 	ipcMain.handle("clipboard-read-text", () => {
 		try {
 			return clipboard.readText();
@@ -1361,96 +1352,6 @@ function createWindow() {
 			console.error("Failed to read clipboard image:", error);
 			return null;
 		}
-	});
-	ipcMain.on("sync-clipboard-monitoring", (_event, enabled) => {
-		clipboardMonitoringEnabled = enabled;
-		updateTrayMenu();
-	});
-	ipcMain.on("stats-update-tray", (_event, data) => {
-		statsMenuData = data;
-		updateTrayMenu();
-	});
-	ipcMain.on("health-update-tray", (_event, data) => {
-		healthMenuData = data;
-		updateTrayMenu();
-	});
-	ipcMain.handle("health-start-monitoring", async () => {
-		if (healthMonitoringInterval) clearInterval(healthMonitoringInterval);
-		const updateHealth = async () => {
-			try {
-				const mem = await si.mem();
-				const load = await si.currentLoad();
-				const disk = await si.fsSize();
-				const battery = await si.battery().catch(() => null);
-				const alerts = [];
-				const rootDisk = disk.find((d) => d.mount === "/" || d.mount === "C:") || disk[0];
-				if (rootDisk) {
-					const freePercent = rootDisk.available / rootDisk.size * 100;
-					if (freePercent < 10) alerts.push({
-						type: "low_space",
-						severity: "critical",
-						message: `Low disk space: ${formatBytes(rootDisk.available)} free`
-					});
-					else if (freePercent < 20) alerts.push({
-						type: "low_space",
-						severity: "warning",
-						message: `Disk space getting low: ${formatBytes(rootDisk.available)} free`
-					});
-				}
-				if (load.currentLoad > 90) alerts.push({
-					type: "high_cpu",
-					severity: "warning",
-					message: `High CPU usage: ${load.currentLoad.toFixed(1)}%`
-				});
-				const memPercent = mem.used / mem.total * 100;
-				if (memPercent > 90) alerts.push({
-					type: "memory_pressure",
-					severity: "warning",
-					message: `High memory usage: ${memPercent.toFixed(1)}%`
-				});
-				healthMenuData = {
-					cpu: load.currentLoad,
-					ram: {
-						used: mem.used,
-						total: mem.total,
-						percentage: memPercent
-					},
-					disk: rootDisk ? {
-						free: rootDisk.available,
-						total: rootDisk.size,
-						percentage: (rootDisk.size - rootDisk.available) / rootDisk.size * 100
-					} : null,
-					battery: battery ? {
-						level: battery.percent,
-						charging: battery.isCharging || false
-					} : null,
-					alerts
-				};
-				updateTrayMenu();
-				const criticalAlerts = alerts.filter((a) => a.severity === "critical");
-				if (criticalAlerts.length > 0 && win) criticalAlerts.forEach((alert) => {
-					new Notification({
-						title: "⚠️ System Alert",
-						body: alert.message,
-						silent: false
-					}).show();
-				});
-			} catch (e) {
-				console.error("Health monitoring error:", e);
-			}
-		};
-		updateHealth();
-		healthMonitoringInterval = setInterval(updateHealth, 5e3);
-		return { success: true };
-	});
-	ipcMain.handle("health-stop-monitoring", () => {
-		if (healthMonitoringInterval) {
-			clearInterval(healthMonitoringInterval);
-			healthMonitoringInterval = null;
-		}
-		healthMenuData = null;
-		updateTrayMenu();
-		return { success: true };
 	});
 	ipcMain.on("window-minimize", () => {
 		win?.minimize();
@@ -1480,117 +1381,17 @@ app.on("activate", () => {
 });
 app.on("before-quit", () => {
 	app.isQuitting = true;
-	try {
-		const pendingCount = universalDownloader.prepareForShutdown();
-		console.log(`💾 Saved ${pendingCount} pending downloads before quit`);
-	} catch (error) {
-		console.error("Failed to save download state:", error);
-	}
 	if (win) win.webContents.send("check-clear-clipboard-on-quit");
 });
 app.whenReady().then(() => {
-	setTimeout(() => {
-		if (win) win.webContents.executeJavaScript(`
-        (async () => {
-          if (window.cleanerAPI?.startHealthMonitoring) {
-            await window.cleanerAPI.startHealthMonitoring();
-          }
-        })()
-      `).catch(() => {});
-	}, 2e3);
 	try {
 		globalShortcut.register("CommandOrControl+Shift+D", () => {
 			toggleWindow();
-		});
-		globalShortcut.register("CommandOrControl+Shift+C", () => {
-			win?.show();
-			win?.webContents.send("open-clipboard-manager");
 		});
 	} catch (e) {
 		console.error("Failed to register global shortcut", e);
 	}
 	setLoginItemSettingsSafely(store.get("launchAtLogin") === true);
-	ipcMain.handle("get-cpu-stats", async () => {
-		const [cpu, currentLoad] = await Promise.all([si.cpu(), si.currentLoad()]);
-		return {
-			manufacturer: cpu.manufacturer,
-			brand: cpu.brand,
-			speed: cpu.speed,
-			cores: cpu.cores,
-			physicalCores: cpu.physicalCores,
-			load: currentLoad
-		};
-	});
-	ipcMain.handle("get-memory-stats", async () => {
-		return await si.mem();
-	});
-	ipcMain.handle("get-network-stats", async () => {
-		const [stats, interfaces] = await Promise.all([si.networkStats(), si.networkInterfaces()]);
-		return {
-			stats,
-			interfaces
-		};
-	});
-	ipcMain.handle("get-disk-stats", async () => {
-		try {
-			const [fsSize, ioStatsRaw] = await Promise.all([si.fsSize(), si.disksIO()]);
-			let ioStats = null;
-			if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
-				const firstDisk = ioStatsRaw[0];
-				ioStats = {
-					rIO: firstDisk.rIO || 0,
-					wIO: firstDisk.wIO || 0,
-					tIO: firstDisk.tIO || 0,
-					rIO_sec: firstDisk.rIO_sec || 0,
-					wIO_sec: firstDisk.wIO_sec || 0,
-					tIO_sec: firstDisk.tIO_sec || 0
-				};
-			} else if (ioStatsRaw && typeof ioStatsRaw === "object" && !Array.isArray(ioStatsRaw)) ioStats = {
-				rIO: ioStatsRaw.rIO || 0,
-				wIO: ioStatsRaw.wIO || 0,
-				tIO: ioStatsRaw.tIO || 0,
-				rIO_sec: ioStatsRaw.rIO_sec || 0,
-				wIO_sec: ioStatsRaw.wIO_sec || 0,
-				tIO_sec: ioStatsRaw.tIO_sec || 0
-			};
-			return {
-				fsSize,
-				ioStats
-			};
-		} catch (error) {
-			console.error("Error fetching disk stats:", error);
-			return {
-				fsSize: await si.fsSize().catch(() => []),
-				ioStats: null
-			};
-		}
-	});
-	ipcMain.handle("get-gpu-stats", async () => {
-		return await si.graphics();
-	});
-	ipcMain.handle("get-battery-stats", async () => {
-		try {
-			const battery = await si.battery();
-			let powerConsumptionRate;
-			let chargingPower;
-			if ("powerConsumptionRate" in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === "number") powerConsumptionRate = battery.powerConsumptionRate;
-			if (battery.voltage && battery.voltage > 0) {
-				if (!battery.isCharging && battery.timeRemaining > 0 && battery.currentCapacity > 0) {
-					const estimatedCurrent = battery.currentCapacity / battery.timeRemaining * 60;
-					powerConsumptionRate = battery.voltage * estimatedCurrent;
-				}
-				if (battery.isCharging && battery.voltage > 0) chargingPower = battery.voltage * 2e3;
-			}
-			return {
-				...battery,
-				powerConsumptionRate,
-				chargingPower
-			};
-		} catch (error) {
-			console.error("Error fetching battery stats:", error);
-			return null;
-		}
-	});
 	pluginManager.initialize().catch(console.error);
 	ipcMain.handle("plugins:get-available", () => {
 		return pluginManager.getAvailablePlugins();

@@ -1,5 +1,5 @@
 import { useClipboardStore } from '../store/clipboardStore';
-import { useClipboardMonitor } from '../tools/utilities/hooks/useClipboardMonitor';
+import { useClipboardMonitor } from '../hooks/useClipboardMonitor';
 
 /**
  * Global clipboard monitor component

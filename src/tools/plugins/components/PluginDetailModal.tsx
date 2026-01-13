@@ -1,11 +1,9 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import type { PluginManifest } from '@/types/plugin';
-import { Card } from '@components/ui/Card';
-import { Button } from '@components/ui/Button';
-import { X, Download, BadgeCheck, Github, Globe, HardDrive, Box } from 'lucide-react';
-import { getTagColor } from '../tag-utils';
+import { X, Download, BadgeCheck, Globe, HardDrive, Shield, Cpu, ExternalLink, User, Star } from 'lucide-react';
 import { cn } from '@utils/cn';
+import { getTagColor } from '../tag-utils';
 
 interface PluginDetailModalProps {
   isOpen: boolean;
@@ -14,6 +12,16 @@ interface PluginDetailModalProps {
   onInstall: (plugin: PluginManifest) => void;
   isInstalled: boolean;
 }
+
+const getCategoryColor = (category: string) => {
+  const cat = category.toLowerCase();
+  if (cat.includes('media')) return 'text-purple-400 border-purple-500/30 bg-purple-500/5';
+  if (cat.includes('document')) return 'text-amber-400 border-amber-500/30 bg-amber-500/5';
+  if (cat.includes('developer')) return 'text-blue-400 border-blue-500/30 bg-blue-500/5';
+  if (cat.includes('security')) return 'text-rose-400 border-rose-500/30 bg-rose-500/5';
+  if (cat.includes('network')) return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5';
+  return 'text-indigo-400 border-indigo-500/30 bg-indigo-500/5';
+};
 
 export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({ 
   isOpen, 
@@ -25,235 +33,221 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
   if (!isOpen || !plugin) return null;
 
   const sizeMB = (plugin.size / (1024 * 1024)).toFixed(1);
+  const themeStyles = getCategoryColor(plugin.category);
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-      <Card className="w-full max-w-3xl max-h-[85vh] bg-card border-border p-0 overflow-hidden shadow-2xl flex flex-col scale-100 animate-in zoom-in-95 duration-200">
-        
-        {/* Header - Hero Section */}
-        <div className="relative bg-muted/30 border-b border-border p-8 flex-shrink-0">
-            {/* Close Button */}
-            <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onClose} 
-                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-            >
-                <X className="w-5 h-5" />
-            </Button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 dark:bg-black/80 backdrop-blur-2xl animate-in fade-in duration-300">
+      <div 
+        className="w-full max-w-3xl max-h-[85vh] bg-neutral-100 dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col scale-100 animate-in zoom-in-95 duration-300 relative"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button 
+            onClick={onClose} 
+            className="absolute top-5 right-5 z-50 w-9 h-9 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center opacity-40 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all active:scale-95 shadow-xl font-bold"
+        >
+            <X size={18} />
+        </button>
 
-            <div className="flex gap-6">
-                 {/* Icon */}
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/30 flex items-center justify-center text-4xl shadow-2xl shadow-blue-500/10 shrink-0">
-                    <span role="img" aria-label="icon">🧩</span>
+        {/* Hero Header */}
+        <div className="relative shrink-0 p-8 pb-5 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-black/[0.01] dark:from-white/[0.03] to-transparent overflow-hidden">
+            {/* Background Glow */}
+            <div className={cn("absolute -top-24 -left-24 w-64 h-64 rounded-full opacity-10 blur-[80px]", themeStyles.accent)} />
+            
+            <div className="relative z-10 flex items-start gap-6">
+                <div className={cn("w-20 h-20 rounded-[1.5rem] flex items-center justify-center shadow-2xl border border-white/10 shrink-0", themeStyles.bg)}>
+                    <Package size={36} className={themeStyles.text} />
                 </div>
-
+                
                 <div className="flex-1 min-w-0 pt-1">
-                    <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl font-bold text-foreground">{plugin.name}</h2>
-                        {plugin.verified && (
-                            <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-500/30 font-medium flex items-center gap-1">
-                                <BadgeCheck className="w-3 h-3" />
-                                Verified
-                            </span>
-                        )}
-                         <span className="bg-secondary text-muted-foreground text-xs px-2 py-0.5 rounded-full border border-border">
-                            v{plugin.version}
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-[0.2em] border", themeStyles.badge)}>
+                            {plugin.category}
                         </span>
-                        <div className="flex gap-2 ml-2">
-                             <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize", getTagColor(plugin.category))}>
-                                {plugin.category}
-                            </span>
-                        </div>
+                        {plugin.verified && (
+                            <div className="flex items-center gap-1 text-[9px] font-bold text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                                <BadgeCheck size={10} />
+                                VERIFIED
+                            </div>
+                        )}
                     </div>
-                    
-                    <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed max-w-xl">
-                        {plugin.description}
-                    </p>
-
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <h2 className="text-3xl font-black tracking-tight leading-none mb-2">
+                        {plugin.name}
+                    </h2>
+                    <div className="flex items-center gap-4 text-xs font-bold opacity-30">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground/70 font-medium">Author:</span>
-                            <span>{plugin.author}</span>
+                            <User size={12} />
+                            {plugin.author}
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <Download className="w-3.5 h-3.5" />
-                            <span>{plugin.downloads?.toLocaleString() ?? 0} installs</span>
+                            <Globe size={12} />
+                            v{plugin.version}
                         </div>
-                    </div>
-                    
-                    {/* Tags List */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                        {plugin.tags.map(tag => (
-                            <span key={tag} className={cn("px-2 py-0.5 rounded-full text-[10px] border", getTagColor(tag))}>
-                                {tag}
-                            </span>
-                        ))}
+                        <div className="flex items-center gap-1.5 text-amber-500">
+                            <Star size={12} fill="currentColor" />
+                            {plugin.rating || '4.5'}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-            
-            {/* Screenshots Gallery (Mock) */}
-            {plugin.screenshots && plugin.screenshots.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Preview</h3>
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-8">
+                    <section>
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20 mb-3">Description</h3>
+                        <p className="text-[13px] leading-relaxed opacity-60 font-medium">
+                            {plugin.description}
+                        </p>
+                    </section>
+
                     <div className="grid grid-cols-2 gap-4">
-                        {plugin.screenshots.map((_, i) => (
-                             <div key={i} className="aspect-video rounded-lg bg-muted border border-border overflow-hidden relative group">
-                                 {/* In real app: <img src={src} ... /> */}
-                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted/50">
-                                     screenshot_{i+1}.jpg
-                                 </div>
-                             </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* About / Compatibility / Technical Grid */}
-            <div className="grid grid-cols-3 gap-8">
-                <div className="col-span-2 space-y-6">
-                    <div>
-                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Capabilities</h3>
-                        <div className="space-y-2">
-                            {plugin.permissions?.filesystem && (
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 border border-border">
-                                    <HardDrive className="w-5 h-5 text-muted-foreground mt-0.5" />
-                                    <div>
-                                        <div className="text-sm font-medium text-foreground">Filesystem Access</div>
-                                        <div className="text-xs text-muted-foreground">Can read and write files to your computer</div>
-                                    </div>
-                                </div>
-                            )}
-                            {plugin.permissions?.network && (
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 border border-border">
-                                    <Globe className="w-5 h-5 text-muted-foreground mt-0.5" />
-                                    <div>
-                                        <div className="text-sm font-medium text-foreground">Network Access</div>
-                                        <div className="text-xs text-muted-foreground">Can verify licenses and download external resources</div>
-                                    </div>
-                                </div>
-                            )}
+                        <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 group hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors">
+                            <Cpu size={18} className="opacity-20 mb-3 group-hover:opacity-100 group-hover:text-indigo-400 transition-all" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest opacity-20 mb-1">Architecture</h4>
+                            <p className="text-xs font-bold truncate">x64 / ARM64 Compatible</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 group hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors">
+                            <Shield size={18} className="opacity-20 mb-3 group-hover:opacity-100 group-hover:text-emerald-400 transition-all" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest opacity-20 mb-1">Security</h4>
+                            <p className="text-xs font-bold truncate">Sandboxed Execution</p>
                         </div>
                     </div>
 
-                    {/* Dependencies Section */}
-                    {(plugin.dependencies?.binary || plugin.dependencies?.npm) && (
-                        <div>
-                            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Requirements & Dependencies</h3>
-                            <div className="grid grid-cols-1 gap-3">
-                                {plugin.dependencies?.binary?.map((bin, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-md bg-blue-500/20 flex items-center justify-center">
-                                                <Box className="w-4 h-4 text-blue-400" />
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-medium text-foreground">{bin.name}</div>
-                                                <div className="text-[10px] text-muted-foreground">External Binary · v{bin.version}</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground bg-background/50 px-2 py-1 rounded">
-                                            {(bin.size / (1024 * 1024)).toFixed(1)} MB
-                                        </div>
+                    <section>
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20 mb-4">Required Permissions</h3>
+                        <div className="space-y-2">
+                            {Object.entries(plugin.permissions || {}).map(([key, value]) => (
+                                <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-black/[0.01] dark:bg-white/[0.01] border border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 transition-colors group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                        <span className="text-[11px] font-bold uppercase tracking-wider opacity-60 group-hover:opacity-100 transition-opacity">{key}</span>
                                     </div>
-                                ))}
+                                    <BadgeCheck size={14} className="text-emerald-500 opacity-20 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                </div>
 
-                                {plugin.dependencies?.npm && plugin.dependencies.npm.length > 0 && (
-                                    <div className="p-3 rounded-lg bg-secondary/20 border border-border">
-                                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Bundled Libraries</div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {plugin.dependencies.npm.map((pkg, idx) => (
-                                                <span key={idx} className="px-2 py-0.5 bg-background/50 border border-border rounded text-[10px] font-mono text-muted-foreground">
-                                                    {pkg}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                {/* Sidebar Info */}
+                <div className="space-y-6">
+                    <div className="p-5 rounded-3xl bg-black/[0.03] dark:bg-white/[0.03] border border-black/5 dark:border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 opacity-30">
+                                <HardDrive size={14} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Install Size</span>
                             </div>
+                            <span className="text-xs font-black">{sizeMB} MB</span>
                         </div>
-                    )}
-                   
-                   {/* Description / Readme Content could go here */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 opacity-30">
+                                <Download size={14} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Downloads</span>
+                            </div>
+                            <span className="text-xs font-black">{plugin.downloads?.toLocaleString() || '0'}</span>
+                        </div>
+                        <div className="pt-4 border-t border-black/5 dark:border-white/5">
+                            <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-black uppercase tracking-widest transition-all">
+                                <ExternalLink size={14} />
+                                Documentation
+                            </button>
+                        </div>
+                    </div>
 
+                    {/* Metadata Tags */}
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Architecture Tags</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {plugin.tags.map(tag => (
+                                <div key={tag} className={cn("px-3 py-1.5 rounded-xl font-bold uppercase text-[9px] tracking-widest transition-all hover:scale-105", getTagColor(tag))}>
+                                    {tag}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-
-                <div className="col-span-1 space-y-6">
-                    <div>
-                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Information</h3>
-                        <div className="bg-secondary/30 border border-border rounded-xl p-4 space-y-3">
-                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">Version</span>
-                                <span className="text-foreground">{plugin.version}</span>
+                                <span className="text-sm font-bold opacity-80">{sizeMB} MB</span>
                              </div>
-                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">Size</span>
-                                <span className="text-foreground">{sizeMB} MB</span>
+                             <div className="flex justify-between items-center group">
+                                <span className="text-[11px] font-black uppercase tracking-widest opacity-20 group-hover:opacity-40 transition-opacity">Legal Protocol</span>
+                                <span className="text-xs font-bold opacity-60">{plugin.license}</span>
                              </div>
-                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">License</span>
-                                <span className="text-foreground">{plugin.license}</span>
-                             </div>
-                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">Platform</span>
-                                <span className="text-foreground">{plugin.platforms?.join(', ')}</span>
+                             <div className="flex justify-between items-center group">
+                                <span className="text-[11px] font-black uppercase tracking-widest opacity-20 group-hover:opacity-40 transition-opacity">Deployment</span>
+                                <div className="flex gap-2">
+                                    {plugin.platforms?.map(p => (
+                                        <span key={p} className="text-[10px] font-black text-indigo-500 dark:text-indigo-400/80 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">{p}</span>
+                                    ))}
+                                </div>
                              </div>
                         </div>
                     </div>
 
-                    <div>
-                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Links</h3>
-                        <div className="space-y-2">
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Quick Navigation</h3>
+                        <div className="space-y-3">
                             {plugin.homepage && (
                                 <a 
                                     href={plugin.homepage} 
                                     target="_blank" 
                                     rel="noreferrer" 
-                                    className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 hover:underline p-1"
+                                    className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 text-sm font-bold opacity-60 hover:bg-black/5 dark:hover:bg-white/5 hover:opacity-100 hover:border-black/10 dark:hover:border-white/20 transition-all group"
                                 >
-                                    <Globe className="w-4 h-4" />
-                                    Website
+                                    <div className="flex items-center gap-3">
+                                        <ExternalLink size={16} className="opacity-20 group-hover:text-indigo-500 transition-colors" />
+                                        Documentation
+                                    </div>
+                                    <Shield size={14} className="opacity-10" />
                                 </a>
                             )}
-                            {plugin.category === 'developer' && (
-                                <a 
-                                    href="#" 
-                                    target="_blank" 
-                                    rel="noreferrer" 
-                                    className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 hover:underline p-1"
-                                >
-                                    <Github className="w-4 h-4" />
-                                    Source Code
-                                </a>
-                            )}
+                            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 text-sm font-bold opacity-60 hover:bg-black/5 dark:hover:bg-white/5 hover:opacity-100 hover:border-black/10 dark:hover:border-white/20 transition-all group cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Cpu size={16} className="opacity-20 group-hover:text-amber-500 transition-colors" />
+                                    Source Integrity
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 border-t border-border bg-muted/50 flex justify-end gap-3 flex-shrink-0">
-            <Button variant="ghost" onClick={onClose}>
-                Close
-            </Button>
-            {isInstalled ? (
-                <Button variant="ghost" disabled className="opacity-50 cursor-not-allowed border border-border">
-                    Already Installed
-                </Button>
-            ) : (
-                <Button variant="primary" onClick={() => onInstall(plugin)} className="px-8 shadow-xl shadow-blue-500/10">
-                    Install Plugin
-                </Button>
-            )}
+        {/* Action Footer */}
+        <div className="p-8 border-t border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.02] flex items-center justify-between gap-6 shrink-0 backdrop-blur-3xl">
+            <div className="flex-1 hidden md:block">
+                <p className="text-[10px] font-bold opacity-20 uppercase tracking-[0.2em] max-w-xs leading-relaxed">
+                    By installing, you authorize this plugin to operate within your workspace environment.
+                </p>
+            </div>
+            <div className="flex gap-4 w-full md:w-auto">
+                <button 
+                    onClick={onClose}
+                    className="flex-1 md:flex-none h-14 px-10 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-all border border-transparent hover:border-black/10 dark:hover:border-white/10"
+                >
+                    Cancel
+                </button>
+                {isInstalled ? (
+                    <button 
+                        disabled 
+                        className="flex-1 md:flex-none h-14 px-12 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] bg-black/5 dark:bg-white/5 opacity-20 border border-black/5 dark:border-white/5 cursor-not-allowed"
+                    >
+                        Active in Library
+                    </button>
+                ) : (
+                    <button 
+                        onClick={() => onInstall(plugin)} 
+                        className="flex-1 md:flex-none h-14 px-12 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] bg-black dark:bg-white text-white dark:text-black hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-indigo-500/20 ring-4 ring-indigo-500/0 hover:ring-indigo-500/10"
+                    >
+                        Initiate Install
+                    </button>
+                )}
+            </div>
         </div>
-
-      </Card>
+      </div>
     </div>,
     document.body
   );

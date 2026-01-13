@@ -16,6 +16,8 @@ import {
 import { cn } from '@utils/cn';
 import { CATEGORIES, getToolsByCategory, getToolById } from '@tools/registry';
 import { useSettingsStore } from '@store/settingsStore';
+import { usePluginStore } from '@store/pluginStore';
+import { getCategoryIcon, getCategoryColor } from '@tools/plugins/plugin-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Sidebar: React.FC = React.memo(() => {
@@ -50,35 +52,97 @@ export const Sidebar: React.FC = React.memo(() => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const filteredContent = useMemo(() => {
-        if (!searchQuery.trim()) return null;
+    const activePlugins = usePluginStore(state => state.activePlugins);
+    const fetchActivePlugins = usePluginStore(state => state.fetchActivePlugins);
 
-        const query = searchQuery.toLowerCase();
-        const allCategories = CATEGORIES.map(c => getToolsByCategory(c.id)).flat();
-        const uniqueTools = Array.from(new Set(allCategories.map(t => t.id)))
-            .map(id => allCategories.find(t => t.id === id)!)
+    useEffect(() => {
+        fetchActivePlugins();
+        
+        // Listen for progress to refresh sidebar
+        const cleanup = window.pluginAPI.onPluginProgress((progress) => {
+            if (progress.stage === 'complete') {
+                fetchActivePlugins();
+            }
+        });
+
+        return () => cleanup();
+    }, []);
+
+    const filteredContent = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return null;
+
+        const allCoreTools = CATEGORIES.map(c => getToolsByCategory(c.id)).flat();
+        const pluginTools = activePlugins.map(p => ({
+            id: p.manifest.id,
+            name: p.manifest.name,
+            description: p.manifest.description,
+            path: `/plugin/${p.manifest.id}`,
+            icon: getCategoryIcon(p.manifest.category),
+            color: getCategoryColor(p.manifest.category),
+            category: 'Plugin',
+            isPlugin: true
+        }));
+
+        const allTools = [...allCoreTools, ...pluginTools];
+        const uniqueTools = Array.from(new Set(allTools.map(t => t.id)))
+            .map(id => allTools.find(t => t.id === id)!)
             .filter(t => t.id !== 'settings' && t.id !== 'dashboard');
 
         const results = uniqueTools.filter(tool =>
             tool.name.toLowerCase().includes(query) ||
             tool.description.toLowerCase().includes(query) ||
-            tool.keywords?.some(k => k.toLowerCase().includes(query))
+            (tool as any).keywords?.some((k: string) => k.toLowerCase().includes(query))
         );
 
         return results.sort((a, b) => a.name.localeCompare(b.name));
-    }, [searchQuery]);
+    }, [searchQuery, activePlugins]);
 
     const categoriesWithTools = useMemo(() => {
         const mapped = CATEGORIES.map(category => {
-            let tools;
+            let tools: any[];
             if (category.id === 'favorites') {
                 const uniqueFavorites = Array.from(new Set(favorites));
                 tools = uniqueFavorites.map(id => getToolById(id)).filter((t): t is any => Boolean(t));
+                
+                // Add favorite plugins
+                const favPlugins = activePlugins
+                    .filter(p => favorites.includes(p.manifest.id))
+                    .map(p => ({
+                        id: p.manifest.id,
+                        name: p.manifest.name,
+                        description: p.manifest.description,
+                        path: `/plugin/${p.manifest.id}`,
+                        icon: getCategoryIcon(p.manifest.category),
+                        color: getCategoryColor(p.manifest.category),
+                        category: 'Plugin',
+                        isPlugin: true
+                    }));
+                tools = [...tools, ...favPlugins];
+
             } else if (category.id === 'recent') {
                 // Unique based on tool ID, limited to 5
                 const seen = new Set<string>();
                 tools = history
-                    .map(h => getToolById(h.id))
+                    .map(h => {
+                        const tool = getToolById(h.id);
+                        if (tool) return tool;
+                        
+                        const plugin = activePlugins.find(p => p.manifest.id === h.id);
+                        if (plugin) {
+                            return {
+                                id: plugin.manifest.id,
+                                name: plugin.manifest.name,
+                                description: plugin.manifest.description,
+                                path: `/plugin/${plugin.manifest.id}`,
+                                icon: getCategoryIcon(plugin.manifest.category),
+                                color: getCategoryColor(plugin.manifest.category),
+                                category: 'Plugin',
+                                isPlugin: true
+                            };
+                        }
+                        return null;
+                    })
                     .filter((t): t is any => {
                         if (!t || seen.has(t.id)) return false;
                         seen.add(t.id);
@@ -87,6 +151,22 @@ export const Sidebar: React.FC = React.memo(() => {
                     .slice(0, 5);
             } else {
                 tools = getToolsByCategory(category.id);
+                
+                // Add plugins belonging to this category
+                const matchingPlugins = activePlugins
+                    .filter(p => p.manifest.category === category.id || (category.id === 'plugins' && !CATEGORIES.some(c => c.id === p.manifest.category)))
+                    .map(p => ({
+                        id: p.manifest.id,
+                        name: p.manifest.name,
+                        description: p.manifest.description,
+                        path: `/plugin/${p.manifest.id}`,
+                        icon: getCategoryIcon(p.manifest.category),
+                        color: getCategoryColor(p.manifest.category),
+                        category: category.name,
+                        isPlugin: true
+                    }));
+                
+                tools = [...tools, ...matchingPlugins];
             }
             return { ...category, tools: tools.filter((t: any) => t.id !== 'settings' && t.id !== 'dashboard') };
         });
@@ -101,7 +181,7 @@ export const Sidebar: React.FC = React.memo(() => {
             if (indexB === -1) return -1;
             return indexA - indexB;
         });
-    }, [favorites, history, categoryOrder]);
+    }, [favorites, history, categoryOrder, activePlugins]);
 
     return (
         <motion.aside
