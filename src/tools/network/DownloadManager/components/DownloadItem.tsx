@@ -6,10 +6,13 @@ import {
     Folder,
     Clock,
     Zap,
-    CheckCircle2,
-    AlertCircle,
     FileText,
-    ExternalLink
+    ExternalLink,
+    Music,
+    Video,
+    Box,
+    Cpu,
+    FileCode
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { formatBytes, formatTime } from '@utils/format';
@@ -39,149 +42,190 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
 
     const progress = (task.downloadedSize / task.totalSize) * 100 || 0;
 
+    const getCategoryIcon = () => {
+        switch (task.category) {
+            case 'music': return Music;
+            case 'video': return Video;
+            case 'document': return FileText;
+            case 'program': return Cpu;
+            case 'compressed': return Box;
+            default: return FileCode;
+        }
+    };
+
+    const CategoryIcon = getCategoryIcon();
+
     return (
         <div className={cn(
-            "group relative bg-glass-panel border rounded-xl p-4 transition-all duration-300",
-            isDownloading ? "border-blue-500/30 bg-blue-500/5" : "border-border-glass hover:border-white/20"
+            "group relative bg-bg-glass-panel backdrop-blur-xl border rounded-2xl p-4 transition-all duration-500",
+            isDownloading
+                ? "border-blue-500/40 ring-1 ring-blue-500/10 shadow-[0_0_25px_rgba(59,130,246,0.15)]"
+                : "border-border-glass hover:border-white/15 hover:bg-white/5 active:scale-[0.99]"
         )}>
-            <div className="flex items-start gap-4">
-                {/* File Icon */}
-                <div className={cn(
-                    "p-3 rounded-lg flex items-center justify-center",
-                    isCompleted ? "bg-green-500/10 text-green-400" :
-                        isFailed ? "bg-red-500/10 text-red-400" :
-                            isDownloading ? "bg-blue-500/10 text-blue-400" :
-                                "bg-white/5 text-foreground-muted"
-                )}>
-                    {isCompleted ? <CheckCircle2 className="w-6 h-6" /> :
-                        isFailed ? <AlertCircle className="w-6 h-6" /> :
-                            <FileText className="w-6 h-6" />}
+            {/* Background Accent */}
+            <div className={cn(
+                "absolute inset-0 rounded-2xl opacity-0 truncate group-hover:opacity-100 transition-opacity duration-700 pointer-events-none",
+                "bg-gradient-to-br from-blue-500/5 via-transparent to-transparent"
+            )} />
+
+            <div className="relative flex items-center gap-5">
+                {/* File Icon with Status Ring */}
+                <div className="relative shrink-0">
+                    <div className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500",
+                        isCompleted ? "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20" :
+                            isFailed ? "bg-rose-500/10 text-rose-400 group-hover:bg-rose-500/20" :
+                                isDownloading ? "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20" :
+                                    "bg-foreground-muted/10 text-foreground-tertiary group-hover:bg-foreground-muted/20"
+                    )}>
+                        <CategoryIcon className="w-6 h-6" />
+                    </div>
+
+                    {/* Status Dot */}
+                    {isDownloading && (
+                        <div className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 border-2 border-[#161b22]"></span>
+                        </div>
+                    )}
                 </div>
 
-                {/* Info */}
+                {/* Main Content Area */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                        <h4 className="text-sm font-bold text-foreground-primary truncate pr-4" title={task.filename}>
-                            {task.filename}
-                        </h4>
-                        <div className="flex items-center gap-1 shrink-0">
-                            {isDownloading && (
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                        <div className="min-w-0">
+                            <h4 className="text-[14px] font-bold text-foreground-primary truncate pr-4 leading-tight mb-0.5" title={task.filename}>
+                                {task.filename}
+                            </h4>
+                            <div className="flex items-center gap-2 text-[10px] text-foreground-tertiary font-medium">
+                                <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </span>
+                                <span>•</span>
+                                <span className="uppercase tracking-wider opacity-80">{task.category}</span>
+                            </div>
+                        </div>
+
+                        {/* Controls - macOS Style Rounded Pill */}
+                        <div className="flex items-center bg-foreground-muted/5 rounded-full p-0.5 border border-border-glass hidden group-hover:flex transition-all">
+                            {isDownloading ? (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 text-foreground-secondary hover:text-foreground"
+                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-white/10"
                                     onClick={() => onPause(task.id)}
                                 >
-                                    <Pause className="w-4 h-4" />
+                                    <Pause className="w-3.5 h-3.5" />
                                 </Button>
-                            )}
-                            {(isPaused || isQueued || isFailed) && (
+                            ) : (isPaused || isQueued || isFailed) && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
+                                    className="h-8 w-8 rounded-full text-blue-400 hover:bg-blue-400/10"
                                     onClick={() => onStart(task.id)}
                                 >
-                                    <Play className="w-4 h-4 ml-0.5" />
+                                    <Play className="w-3.5 h-3.5 ml-0.5" />
                                 </Button>
                             )}
+
                             {isCompleted ? (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 text-foreground-secondary hover:text-foreground"
+                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:bg-white/10"
                                     onClick={() => onOpenFolder(task.filepath)}
                                 >
-                                    <Folder className="w-4 h-4" />
+                                    <Folder className="w-3.5 h-3.5" />
                                 </Button>
                             ) : (
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 text-foreground-secondary hover:text-red-400"
+                                    className="h-8 w-8 rounded-full text-foreground-secondary hover:text-rose-400 hover:bg-rose-400/10"
                                     onClick={() => onCancel(task.id)}
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="w-3.5 h-3.5" />
                                 </Button>
                             )}
                         </div>
+
+                        {/* Status Label (Visible when not hoving) */}
+                        <div className="group-hover:hidden flex items-center shrink-0">
+                            {isCompleted && <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">Done</span>}
+                            {isFailed && <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20">Error</span>}
+                            {isPaused && <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold border border-amber-500/20">Pause</span>}
+                            {isQueued && <span className="px-2 py-0.5 rounded-full bg-foreground-tertiary/10 text-foreground-tertiary text-[10px] font-bold border border-border-glass">Queue</span>}
+                            {isDownloading && <span className="text-blue-400 text-[10px] font-bold tabular-nums tracking-tight">{progress.toFixed(1)}%</span>}
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3 text-[11px] text-foreground-muted mb-3">
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {new Date(task.createdAt).toLocaleDateString()}
-                        </span>
-                        <span>•</span>
-                        <span>{formatBytes(task.totalSize)}</span>
+                    {/* Meta Stats Row */}
+                    <div className="flex items-center gap-3 text-[11px] mb-3">
+                        <span className="font-bold text-foreground-secondary">{formatBytes(task.downloadedSize)} / {formatBytes(task.totalSize)}</span>
+
                         {isDownloading && (
-                            <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1 text-blue-400">
-                                    <Zap className="w-3.5 h-3.5" />
+                            <div className="flex items-center gap-3 ml-auto animate-in fade-in slide-in-from-right-2">
+                                <span className="flex items-center gap-1 text-blue-400 font-bold">
+                                    <Zap className="w-3 h-3" />
                                     {formatBytes(task.speed || 0)}/s
                                 </span>
-                                <span>•</span>
-                                <span>{formatTime(task.eta || 0)} left</span>
-                            </>
-                        )}
-                        {isCompleted && (
-                            <>
-                                <span>•</span>
-                                <span className="text-green-500 font-medium">Completed</span>
-                            </>
-                        )}
-                        {isFailed && (
-                            <>
-                                <span>•</span>
-                                <span className="text-red-500 font-medium">Failed</span>
-                            </>
-                        )}
-                        {isPaused && (
-                            <>
-                                <span>•</span>
-                                <span className="text-yellow-500 font-medium">Paused</span>
-                            </>
+                                <span className="text-foreground-tertiary font-medium">{formatTime(task.eta || 0)} left</span>
+                            </div>
                         )}
                     </div>
 
-                    {/* Progress Bar */}
+                    {/* Ultra-Smooth Progress Bar */}
                     {!isCompleted && !isFailed && (
-                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
+                        <div className="relative w-full h-1 bg-white/5 rounded-full overflow-hidden">
                             <div
                                 className={cn(
-                                    "h-full transition-all duration-300 ease-out",
-                                    isDownloading ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-foreground-muted"
+                                    "absolute top-0 left-0 h-full transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                                    isDownloading ? "bg-blue-500" : "bg-foreground-muted"
                                 )}
                                 style={{ width: `${progress}%` }}
                             />
+                            {/* Glass overlay on progress */}
+                            <div className="absolute inset-0 opacity-20 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse pointer-events-none" />
                         </div>
                     )}
-
-                    {/* URL */}
-                    <div className="flex items-center gap-1.5 text-[10px] text-foreground-tertiary truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ExternalLink className="w-3 h-3" />
-                        <span className="truncate">{task.url}</span>
-                    </div>
                 </div>
             </div>
 
-            {/* Segments Visualization (Subtle) */}
+            {/* Futuristic Segments Visualization */}
             {isDownloading && task.segments && task.segments.length > 0 && (
-                <div className="mt-3 flex gap-0.5 h-1 px-1">
-                    {task.segments.map((segment: DownloadSegment, i: number) => {
-                        const segProgress = (segment.downloaded / (segment.end - segment.start)) * 100 || 0;
-                        return (
-                            <div key={i} className="flex-1 bg-white/5 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-blue-400 opacity-60"
-                                    style={{ width: `${segProgress}%` }}
-                                />
-                            </div>
-                        );
-                    })}
+                <div className="mt-4 pt-3 border-t border-border-glass">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-foreground-tertiary">Segment Grid</span>
+                        <div className="flex gap-0.5">
+                            <span className="w-1 h-1 rounded-full bg-blue-500/50" />
+                            <span className="w-1 h-1 rounded-full bg-blue-500/30" />
+                        </div>
+                    </div>
+                    <div className="flex gap-1 h-1.5">
+                        {task.segments.map((segment: DownloadSegment, i: number) => {
+                            const segProgress = (segment.downloaded / (segment.end - segment.start)) * 100 || 0;
+                            return (
+                                <div key={i} className="flex-1 bg-white/[0.03] rounded-sm overflow-hidden border border-white/[0.05]">
+                                    <div
+                                        className={cn(
+                                            "h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.3)]",
+                                            segment.status === 'completed' ? "bg-emerald-500/40" : "bg-blue-400"
+                                        )}
+                                        style={{ width: `${segProgress}%` }}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
+
+            {/* Hover URL Peek */}
+            <div className="mt-2 flex items-center gap-1.5 text-[9px] text-foreground-tertiary truncate opacity-0 group-hover:opacity-40 transition-all duration-500 delay-150">
+                <ExternalLink className="w-2.5 h-2.5" />
+                <span className="truncate tracking-wide">{task.url}</span>
+            </div>
         </div>
     );
 };

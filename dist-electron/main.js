@@ -19,6 +19,7 @@ import { exec as exec$1, execSync, spawn } from "child_process";
 import { promisify as promisify$1 } from "util";
 import https from "https";
 import http from "http";
+import { EventEmitter } from "events";
 var execAsync$1 = promisify(exec);
 var dirSizeCache = /* @__PURE__ */ new Map();
 var CACHE_TTL = 300 * 1e3;
@@ -4727,8 +4728,9 @@ var VideoEffects = class {
 	}
 };
 const videoEffects = new VideoEffects();
-var DownloadManager = class {
+var DownloadManager = class extends EventEmitter {
 	constructor() {
+		super();
 		this.activeTasks = /* @__PURE__ */ new Map();
 		this.store = new Store({
 			name: "download-manager-history",
@@ -4742,26 +4744,43 @@ var DownloadManager = class {
 				}
 			}
 		});
+		this.history = this.store.get("history", []);
 	}
 	getSettings() {
 		return this.store.get("settings");
 	}
 	saveSettings(settings) {
-		const current = this.getSettings();
-		this.store.set("settings", {
-			...current,
+		const updated = {
+			...this.getSettings(),
 			...settings
-		});
+		};
+		this.store.set("settings", updated);
+		this.checkQueue();
 	}
 	getHistory() {
-		return this.store.get("history", []);
+		return this.history;
 	}
 	saveTask(task) {
-		const history = this.getHistory();
-		const index = history.findIndex((t) => t.id === task.id);
-		if (index > -1) history[index] = task;
-		else history.unshift(task);
-		this.store.set("history", history.slice(0, 500));
+		const index = this.history.findIndex((t) => t.id === task.id);
+		if (index > -1) this.history[index] = { ...task };
+		else this.history.unshift({ ...task });
+		this.persistHistory();
+	}
+	persistHistory() {
+		this.store.set("history", this.history.slice(0, 500));
+	}
+	emitProgress(task) {
+		const progress = {
+			taskId: task.id,
+			downloadedSize: task.downloadedSize,
+			totalSize: task.totalSize,
+			speed: task.speed,
+			eta: task.eta,
+			progress: task.totalSize > 0 ? task.downloadedSize / task.totalSize * 100 : 0,
+			status: task.status,
+			segments: task.segments
+		};
+		this.emit("progress", progress);
 	}
 	async createDownload(url, customFilename) {
 		const info = await this.getFileInfo(url);
@@ -4769,6 +4788,7 @@ var DownloadManager = class {
 		const filename = customFilename || info.filename || path$1.basename(parsedUrl.pathname) || "download";
 		const settings = this.getSettings();
 		const filepath = path$1.join(settings.downloadPath, filename);
+		const category = this.getCategory(filename);
 		const task = {
 			id: randomUUID$1(),
 			url,
@@ -4777,10 +4797,11 @@ var DownloadManager = class {
 			totalSize: info.size,
 			downloadedSize: 0,
 			segments: [],
-			status: settings.autoStart ? "downloading" : "queued",
+			status: "queued",
 			speed: 0,
 			eta: 0,
 			priority: 5,
+			category,
 			createdAt: Date.now()
 		};
 		if (info.acceptRanges && info.size > 0 && settings.segmentsPerDownload > 1) {
@@ -4804,27 +4825,62 @@ var DownloadManager = class {
 			status: "pending"
 		});
 		this.saveTask(task);
-		if (settings.autoStart) this.startDownload(task.id);
+		this.checkQueue();
 		return task;
 	}
 	async getFileInfo(url, limit = 5) {
 		if (limit <= 0) throw new Error("Too many redirects");
 		return new Promise((resolve, reject) => {
-			const protocol$1 = new URL(url).protocol === "https:" ? https : http;
-			const options = {
-				method: "HEAD",
-				headers: {
-					"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-					"Accept": "*/*"
-				}
-			};
-			const req = protocol$1.request(url, options, (res) => {
-				if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-					const redirectUrl = new URL(res.headers.location, url).toString();
-					resolve(this.getFileInfo(redirectUrl, limit - 1));
-					return;
-				}
-				if (res.statusCode === 405 || res.statusCode === 403 || res.statusCode === 404) {
+			try {
+				const protocol$1 = new URL(url).protocol === "https:" ? https : http;
+				const options = {
+					method: "HEAD",
+					headers: {
+						"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+						"Accept": "*/*"
+					}
+				};
+				const req = protocol$1.request(url, options, (res) => {
+					if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+						const redirectUrl = new URL(res.headers.location, url).toString();
+						resolve(this.getFileInfo(redirectUrl, limit - 1));
+						return;
+					}
+					if (res.statusCode === 405 || res.statusCode === 403 || res.statusCode === 404) {
+						const getOptions = {
+							...options,
+							method: "GET",
+							headers: {
+								...options.headers,
+								"Range": "bytes=0-0"
+							}
+						};
+						const getReq = protocol$1.request(url, getOptions, (getRes) => {
+							const size$1 = this.parseContentRange(getRes.headers["content-range"]) || parseInt(getRes.headers["content-length"] || "0", 10);
+							const acceptRanges$1 = getRes.headers["accept-ranges"] === "bytes" || !!getRes.headers["content-range"];
+							const contentDisposition$1 = getRes.headers["content-disposition"];
+							const filename = this.parseFilename(contentDisposition$1);
+							getRes.resume();
+							resolve({
+								size: size$1,
+								acceptRanges: acceptRanges$1,
+								filename
+							});
+						});
+						getReq.on("error", reject);
+						getReq.end();
+						return;
+					}
+					const size = parseInt(res.headers["content-length"] || "0", 10);
+					const acceptRanges = res.headers["accept-ranges"] === "bytes";
+					const contentDisposition = res.headers["content-disposition"];
+					resolve({
+						size,
+						acceptRanges,
+						filename: this.parseFilename(contentDisposition)
+					});
+				});
+				req.on("error", (err) => {
 					const getOptions = {
 						...options,
 						method: "GET",
@@ -4834,59 +4890,28 @@ var DownloadManager = class {
 						}
 					};
 					const getReq = protocol$1.request(url, getOptions, (getRes) => {
-						const size$1 = this.parseContentRange(getRes.headers["content-range"]) || parseInt(getRes.headers["content-length"] || "0", 10);
-						const acceptRanges$1 = getRes.headers["accept-ranges"] === "bytes" || !!getRes.headers["content-range"];
-						const contentDisposition$1 = getRes.headers["content-disposition"];
-						const filename = this.parseFilename(contentDisposition$1);
+						const size = this.parseContentRange(getRes.headers["content-range"]) || parseInt(getRes.headers["content-length"] || "0", 10);
+						const acceptRanges = getRes.headers["accept-ranges"] === "bytes" || !!getRes.headers["content-range"];
+						const contentDisposition = getRes.headers["content-disposition"];
+						const filename = this.parseFilename(contentDisposition);
 						getRes.resume();
 						resolve({
-							size: size$1,
-							acceptRanges: acceptRanges$1,
+							size,
+							acceptRanges,
 							filename
 						});
 					});
-					getReq.on("error", reject);
+					getReq.on("error", () => reject(err));
 					getReq.end();
-					return;
-				}
-				const size = parseInt(res.headers["content-length"] || "0", 10);
-				const acceptRanges = res.headers["accept-ranges"] === "bytes";
-				const contentDisposition = res.headers["content-disposition"];
-				resolve({
-					size,
-					acceptRanges,
-					filename: this.parseFilename(contentDisposition)
 				});
-			});
-			req.on("error", (err) => {
-				const getOptions = {
-					...options,
-					method: "GET",
-					headers: {
-						...options.headers,
-						"Range": "bytes=0-0"
-					}
-				};
-				const getReq = protocol$1.request(url, getOptions, (getRes) => {
-					const size = this.parseContentRange(getRes.headers["content-range"]) || parseInt(getRes.headers["content-length"] || "0", 10);
-					const acceptRanges = getRes.headers["accept-ranges"] === "bytes" || !!getRes.headers["content-range"];
-					const contentDisposition = getRes.headers["content-disposition"];
-					const filename = this.parseFilename(contentDisposition);
-					getRes.resume();
-					resolve({
-						size,
-						acceptRanges,
-						filename
-					});
+				req.setTimeout(15e3, () => {
+					req.destroy();
+					reject(/* @__PURE__ */ new Error("Request timeout during getFileInfo"));
 				});
-				getReq.on("error", () => reject(err));
-				getReq.end();
-			});
-			req.setTimeout(1e4, () => {
-				req.destroy();
-				reject(/* @__PURE__ */ new Error("Request timeout"));
-			});
-			req.end();
+				req.end();
+			} catch (err) {
+				reject(err);
+			}
 		});
 	}
 	parseContentRange(range) {
@@ -4899,11 +4924,25 @@ var DownloadManager = class {
 		const match = disposition.match(/filename=['"]?([^'"]+)['"]?/);
 		return match ? match[1] : void 0;
 	}
-	async startDownload(taskId, progressCallback) {
-		const task = this.getHistory().find((t) => t.id === taskId);
-		if (!task || task.status === "downloading" || task.status === "completed") return;
+	checkQueue() {
+		const settings = this.getSettings();
+		if ([...this.activeTasks.values()].filter((a) => a.task.status === "downloading").length >= settings.maxConcurrentDownloads) return;
+		const nextTask = this.history.find((t) => t.status === "queued");
+		if (nextTask) this.startDownload(nextTask.id);
+	}
+	async startDownload(taskId) {
+		const task = this.history.find((t) => t.id === taskId);
+		if (!task || task.status === "completed" || task.status === "downloading") return;
+		const settings = this.getSettings();
+		if ([...this.activeTasks.values()].filter((a) => a.task.status === "downloading").length >= settings.maxConcurrentDownloads) {
+			task.status = "queued";
+			this.saveTask(task);
+			return;
+		}
 		task.status = "downloading";
+		task.error = void 0;
 		this.saveTask(task);
+		this.emitProgress(task);
 		const abortControllers = [];
 		this.activeTasks.set(taskId, {
 			task,
@@ -4913,57 +4952,75 @@ var DownloadManager = class {
 		if (!fs$1.existsSync(dir)) fs$1.mkdirSync(dir, { recursive: true });
 		try {
 			if (!fs$1.existsSync(task.filepath)) if (task.totalSize > 0) {
-				fs$1.writeFileSync(task.filepath, Buffer.alloc(0));
-				fs$1.truncateSync(task.filepath, task.totalSize);
+				const fd = fs$1.openSync(task.filepath, "w");
+				fs$1.ftruncateSync(fd, task.totalSize);
+				fs$1.closeSync(fd);
 			} else fs$1.writeFileSync(task.filepath, Buffer.alloc(0));
 		} catch (err) {
-			console.error("Failed to pre-allocate file:", err);
-			if (!fs$1.existsSync(task.filepath)) fs$1.closeSync(fs$1.openSync(task.filepath, "w"));
+			console.error("File allocation error:", err);
 		}
 		const promises = task.segments.map((segment) => {
 			if (segment.status === "completed") return Promise.resolve();
-			return this.downloadSegment(task, segment, abortControllers, progressCallback);
+			return this.downloadSegment(task, segment, abortControllers);
 		});
 		Promise.all(promises).then(() => {
 			if (task.status === "downloading") {
 				task.status = "completed";
 				task.completedAt = Date.now();
+				task.speed = 0;
 				this.saveTask(task);
+				this.emitProgress(task);
 				this.activeTasks.delete(taskId);
+				this.checkQueue();
 			}
 		}).catch((err) => {
-			if (err.name === "AbortError") return;
+			if (err.name === "AbortError" || task.status === "paused") return;
+			console.error(`Download failed for ${task.filename}:`, err);
 			task.status = "failed";
 			task.error = err.message;
+			task.speed = 0;
 			this.saveTask(task);
+			this.emitProgress(task);
 			this.activeTasks.delete(taskId);
+			this.checkQueue();
 		});
 	}
-	downloadSegment(task, segment, abortControllers, progressCallback) {
+	downloadSegment(task, segment, abortControllers) {
 		return new Promise((resolve, reject) => {
 			const controller = new AbortController();
 			abortControllers.push(controller);
 			const startPos = segment.start + segment.downloaded;
 			const endPos = segment.end;
+			if (startPos > endPos && endPos !== -1) {
+				segment.status = "completed";
+				return resolve();
+			}
 			const protocol$1 = task.url.startsWith("https") ? https : http;
 			const headers = {
 				"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-				"Accept": "*/*"
+				"Accept": "*/*",
+				"Connection": "keep-alive"
 			};
 			if (endPos !== -1) headers["Range"] = `bytes=${startPos}-${endPos}`;
-			protocol$1.get(task.url, {
+			let fileStream = null;
+			const req = protocol$1.get(task.url, {
 				headers,
 				signal: controller.signal
 			}, (res) => {
 				if (res.statusCode !== 200 && res.statusCode !== 206) {
-					reject(/* @__PURE__ */ new Error(`Server returned status code ${res.statusCode}`));
+					reject(/* @__PURE__ */ new Error(`Server returned ${res.statusCode} for segment ${segment.id}`));
 					return;
 				}
 				segment.status = "downloading";
-				const fileStream = fs$1.createWriteStream(task.filepath, {
-					flags: "r+",
-					start: startPos
-				});
+				try {
+					fileStream = fs$1.createWriteStream(task.filepath, {
+						flags: "r+",
+						start: startPos
+					});
+				} catch (e) {
+					reject(e);
+					return;
+				}
 				res.pipe(fileStream);
 				let lastUpdateTime = Date.now();
 				let downloadedSinceLastUpdate = 0;
@@ -4976,63 +5033,139 @@ var DownloadManager = class {
 					if (diff >= 1e3) {
 						task.speed = Math.floor(downloadedSinceLastUpdate * 1e3 / diff);
 						task.eta = task.totalSize > 0 ? (task.totalSize - task.downloadedSize) / task.speed : 0;
-						if (progressCallback) progressCallback({
-							taskId: task.id,
-							downloadedSize: task.downloadedSize,
-							totalSize: task.totalSize,
-							speed: task.speed,
-							eta: task.eta,
-							progress: task.totalSize > 0 ? task.downloadedSize / task.totalSize * 100 : 0,
-							status: task.status
-						});
+						this.emitProgress(task);
 						lastUpdateTime = now;
 						downloadedSinceLastUpdate = 0;
-						this.saveTask(task);
 					}
 				});
 				res.on("end", () => {
-					segment.status = "completed";
-					resolve();
+					if (fileStream) fileStream.end(() => {
+						segment.status = "completed";
+						resolve();
+					});
+					else {
+						segment.status = "completed";
+						resolve();
+					}
 				});
 				res.on("error", (err) => {
 					segment.status = "failed";
+					if (fileStream) fileStream.destroy();
 					reject(err);
 				});
-				fileStream.on("error", (err) => {
-					segment.status = "failed";
-					reject(err);
-				});
-			}).on("error", (err) => {
+			});
+			req.on("error", (err) => {
 				segment.status = "failed";
+				if (fileStream) fileStream.destroy();
 				reject(err);
+			});
+			req.setTimeout(3e4, () => {
+				req.destroy();
+				reject(/* @__PURE__ */ new Error("Segment download timeout"));
 			});
 		});
 	}
 	pauseDownload(taskId) {
 		const active = this.activeTasks.get(taskId);
 		if (active) {
-			active.abortControllers.forEach((c) => c.abort());
 			active.task.status = "paused";
+			active.task.speed = 0;
+			active.abortControllers.forEach((c) => c.abort());
 			this.saveTask(active.task);
+			this.emitProgress(active.task);
 			this.activeTasks.delete(taskId);
+			this.checkQueue();
+		} else {
+			const task = this.history.find((t) => t.id === taskId);
+			if (task && task.status === "queued") {
+				task.status = "paused";
+				this.saveTask(task);
+				this.emitProgress(task);
+			}
 		}
 	}
-	resumeDownload(taskId, progressCallback) {
-		this.startDownload(taskId, progressCallback);
+	resumeDownload(taskId) {
+		const task = this.history.find((t) => t.id === taskId);
+		if (task) {
+			task.status = "queued";
+			this.saveTask(task);
+			this.checkQueue();
+		}
 	}
 	cancelDownload(taskId) {
 		this.pauseDownload(taskId);
-		const history = this.getHistory();
-		const index = history.findIndex((t) => t.id === taskId);
+		const index = this.history.findIndex((t) => t.id === taskId);
 		if (index > -1) {
-			const task = history[index];
-			if (fs$1.existsSync(task.filepath)) fs$1.unlinkSync(task.filepath);
-			history.splice(index, 1);
-			this.store.set("history", history);
+			const task = this.history[index];
+			if (fs$1.existsSync(task.filepath) && task.status !== "completed") try {
+				fs$1.unlinkSync(task.filepath);
+			} catch (e) {
+				console.error("Failed to delete partial file:", e);
+			}
+			this.history.splice(index, 1);
+			this.persistHistory();
+			this.checkQueue();
 		}
 	}
 	clearHistory() {
-		this.store.set("history", []);
+		this.history = this.history.filter((t) => this.activeTasks.has(t.id));
+		this.persistHistory();
+	}
+	getCategory(filename) {
+		const ext = path$1.extname(filename).toLowerCase().slice(1);
+		for (const [cat, extensions] of Object.entries({
+			music: [
+				"mp3",
+				"wav",
+				"ogg",
+				"m4a",
+				"flac",
+				"aac"
+			],
+			video: [
+				"mp4",
+				"mkv",
+				"avi",
+				"mov",
+				"wmv",
+				"flv",
+				"webm",
+				"mpeg",
+				"mpg"
+			],
+			document: [
+				"pdf",
+				"doc",
+				"docx",
+				"xls",
+				"xlsx",
+				"ppt",
+				"pptx",
+				"txt",
+				"epub",
+				"csv"
+			],
+			program: [
+				"exe",
+				"msi",
+				"dmg",
+				"pkg",
+				"app",
+				"sh",
+				"bat",
+				"bin"
+			],
+			compressed: [
+				"zip",
+				"rar",
+				"7z",
+				"tar",
+				"gz",
+				"bz2",
+				"iso"
+			]
+		})) if (extensions.includes(ext)) return cat;
+		return "other";
 	}
 };
 const downloadManager = new DownloadManager();
