@@ -18,8 +18,15 @@ import {
     Info,
     Music,
     Video,
-    Film
+    Film,
+    Clipboard,
+    MousePointer2,
+    ChevronUp,
+    ChevronDown
 } from 'lucide-react';
+
+
+
 import { UniversalVideoInfo } from './components/UniversalVideoInfo';
 import { UniversalFormatSelector } from './components/UniversalFormatSelector';
 import { DownloadProgress } from './components/DownloadProgress';
@@ -63,6 +70,8 @@ export default function UniversalDownloader() {
     const [historySearch, setHistorySearch] = useState('');
     const [historyFilter, setHistoryFilter] = useState<SupportedPlatform | 'all'>('all');
     const [historySort, setHistorySort] = useState<'newest' | 'oldest' | 'size' | 'platform'>('newest');
+    const [isDragging, setIsDragging] = useState(false);
+
 
     const { toasts, removeToast, success, error, info } = useToast();
 
@@ -248,6 +257,87 @@ export default function UniversalDownloader() {
         }
     };
 
+    const handlePasteFromClipboard = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                // Extract URLs
+                const urls = text.match(/https?:\/\/[^\s"',]+/g);
+                if (urls && urls.length > 0) {
+                    const newUrls = urls.join('\n');
+                    setBatchUrls(prev => prev ? prev + '\n' + newUrls : newUrls);
+                    setInputMode('batch');
+                    success('Pasted from Clipboard', `Found ${urls.length} URLs`);
+                } else {
+                    error('No URLs found', 'Clipboard does not contain any valid URLs');
+                }
+            }
+        } catch (err) {
+            error('Clipboard error', 'Failed to read from clipboard');
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const text = e.dataTransfer.getData('text');
+        const files = Array.from(e.dataTransfer.files);
+
+        if (text) {
+            const urls = text.match(/https?:\/\/[^\s"',]+/g);
+            if (urls && urls.length > 0) {
+                if (urls.length === 1) {
+                    setUrl(urls[0]);
+                    setInputMode('single');
+                    success('URL Dropped', 'URL successfully added');
+                } else {
+                    const newUrls = urls.join('\n');
+                    setBatchUrls(prev => prev ? prev + '\n' + newUrls : newUrls);
+                    setInputMode('batch');
+                    success('Multiple URLs Dropped', `Added ${urls.length} URLs to batch`);
+                }
+                return;
+            }
+        }
+
+        if (files.length > 0) {
+            let foundTotal = 0;
+            for (const file of files) {
+                if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.csv')) {
+                    const text = await file.text();
+                    const urls = text.match(/https?:\/\/[^\s"',]+/g);
+                    if (urls && urls.length > 0) {
+                        const newUrls = urls.join('\n');
+                        setBatchUrls(prev => prev ? prev + '\n' + newUrls : newUrls);
+                        foundTotal += urls.length;
+                    }
+                }
+            }
+
+            if (foundTotal > 0) {
+                setInputMode('batch');
+                success('File(s) Dropped', `Imported ${foundTotal} URLs from files`);
+            } else {
+                error('Invalid File', 'No valid URLs found in the dropped file(s)');
+            }
+        }
+    };
+
+
     const queueDownloadInput = async (downloadUrl: string, overrideQuality?: string) => {
         // Check disk space before starting
         const space = await window.universalAPI.checkDiskSpace(downloadPath);
@@ -337,6 +427,44 @@ export default function UniversalDownloader() {
         }
     };
 
+    const handlePauseDownload = async (id: string) => {
+        await window.universalAPI.pause(id);
+        setActiveDownloads(prev => {
+            const newMap = new Map(prev);
+            const item = newMap.get(id);
+            if (item) {
+                newMap.set(id, { ...item, state: 'paused' });
+            }
+            return newMap;
+        });
+        info('Download Paused', 'You can resume it later');
+    };
+
+    const handleResumeDownload = async (id: string) => {
+        await window.universalAPI.resume(id);
+        setActiveDownloads(prev => {
+            const newMap = new Map(prev);
+            const item = newMap.get(id);
+            if (item) {
+                newMap.set(id, { ...item, state: 'processing' });
+            }
+            return newMap;
+        });
+        success('Download Resumed', 'Restarting download process...');
+    };
+
+    const handleReorderQueue = async (id: string, direction: 'up' | 'down') => {
+        const index = queuedDownloads.findIndex(q => q.id === id);
+        if (index === -1) return;
+
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= queuedDownloads.length) return;
+
+        await window.universalAPI.reorderQueue(id, newIndex);
+        loadQueue();
+    };
+
+
     const handleSaveSettings = async (newSettings: typeof settings) => {
         setSettings(newSettings);
         await window.universalAPI.saveSettings(newSettings);
@@ -392,7 +520,27 @@ export default function UniversalDownloader() {
     // --- Render ---
 
     const renderNewDownload = () => (
-        <div className="mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div 
+            className="mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            {/* Drag Overlay */}
+            {isDragging && (
+                <div className="absolute inset-x-0 -top-4 -bottom-4 z-50 bg-indigo-500/20 backdrop-blur-sm border-2 border-dashed border-indigo-400 rounded-3xl flex flex-col items-center justify-center animate-in fade-in duration-200 pointer-events-none">
+                    <div className="bg-glass-panel p-6 rounded-2xl shadow-2xl border border-border-glass flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center animate-bounce">
+                            <MousePointer2 className="w-8 h-8 text-indigo-400" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-foreground-primary">Drop to Import</h3>
+                            <p className="text-foreground-secondary text-sm">URLs or text files containing URLs</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* URL Input Card */}
             <Card className="p-6 bg-glass-panel border-border-glass">
                 <div className="space-y-4">
@@ -457,19 +605,29 @@ export default function UniversalDownloader() {
                                 </span>
                                 <div className="flex gap-2">
                                     <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handlePasteFromClipboard}
+                                        className="text-foreground-secondary hover:text-foreground"
+                                    >
+                                        <Clipboard className="w-4 h-4 mr-2" />
+                                        Paste from Clipboard
+                                    </Button>
+
+                                    <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={handleImportFile}
                                         className="border-white/10 hover:bg-white/5"
                                     >
                                         <FolderOpen className="w-4 h-4 mr-2" />
-                                        Import
+                                        Import File
                                     </Button>
                                     <Button
                                         size="sm"
                                         onClick={handleBatchDownload}
                                         disabled={!batchUrls.trim()}
-                                        className="bg-indigo-600 hover:bg-indigo-700"
+                                        className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"
                                     >
                                         <Download className="w-4 h-4 mr-2" />
                                         Download All
@@ -478,6 +636,7 @@ export default function UniversalDownloader() {
                             </div>
                         </div>
                     )}
+
 
                     <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2 text-xs">
@@ -662,13 +821,18 @@ export default function UniversalDownloader() {
                         </h3>
 
                         <div className="grid gap-3">
-                            {/* Active */}
-                            {activeList.map(progress => (
+                            {/* Active & Processing */}
+                            {Array.from(activeDownloads.values())
+                                .filter(d => ['downloading', 'processing', 'paused', 'error'].includes(d.state))
+                                .map(progress => (
                                 <DownloadProgress
                                     key={progress.id}
                                     status={{
-                                        status: 'downloading',
-                                        message: progress.state === 'processing' ? 'Processing...' : `Downloading... ${progress.percent?.toFixed(1) || 0}%`,
+                                        status: progress.state as any,
+                                        message: progress.state === 'processing' ? 'Processing...' : 
+                                                 progress.state === 'paused' ? 'Paused' :
+                                                 progress.state === 'error' ? 'Error occurred' :
+                                                 `Downloading... ${progress.percent?.toFixed(1) || 0}%`,
                                         progress: progress.percent,
                                         speed: progress.speed,
                                         eta: progress.eta,
@@ -678,21 +842,42 @@ export default function UniversalDownloader() {
                                         filename: progress.filename,
                                         platform: progress.platform
                                     }}
-                                    onCancel={() => window.universalAPI.cancel(progress.id)}
+                                    onCancel={() => window.universalAPI.cancel(progress.id!)}
+                                    onPause={() => handlePauseDownload(progress.id!)}
+                                    onResume={() => handleResumeDownload(progress.id!)}
+
                                     isPlaylist={false}
                                 />
                             ))}
 
                             {/* Queued */}
-                            {queuedList.map(item => (
-                                <div key={item.id} className="bg-glass-panel border border-border-glass rounded-xl p-4 flex items-center justify-between group">
+                            {queuedList.map((item, index) => (
+                                <div key={item.id} className="bg-glass-panel border border-border-glass rounded-xl p-4 flex items-center justify-between group animate-in fade-in slide-in-from-left-4 duration-300">
                                     <div className="flex items-center gap-3">
+                                        <div className="flex flex-col gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                disabled={index === 0}
+                                                onClick={() => handleReorderQueue(item.id, 'up')}
+                                                className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:hover:bg-transparent"
+                                            >
+                                                <ChevronUp className="w-4 h-4 text-foreground-tertiary" />
+                                            </button>
+                                            <button 
+                                                disabled={index === queuedList.length - 1}
+                                                onClick={() => handleReorderQueue(item.id, 'down')}
+                                                className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:hover:bg-transparent"
+                                            >
+                                                <ChevronDown className="w-4 h-4 text-foreground-tertiary" />
+                                            </button>
+                                        </div>
                                         <div className="p-2 rounded-lg bg-white/5 border border-white/10">
                                             <Clock className="w-4 h-4 text-foreground-muted" />
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-medium text-foreground-primary truncate max-w-md">{item.url}</h4>
-                                            <p className="text-[10px] text-foreground-muted uppercase tracking-wider font-bold mt-0.5">In Queue</p>
+                                            <p className="text-[10px] text-foreground-muted uppercase tracking-wider font-bold mt-0.5">
+                                                Position: #{index + 1} • In Queue
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -710,6 +895,7 @@ export default function UniversalDownloader() {
                         </div>
                     </div>
                 )}
+
 
                 {/* History Section */}
                 <div className="space-y-4">

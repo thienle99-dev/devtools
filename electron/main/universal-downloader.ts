@@ -32,7 +32,9 @@ interface StoreSchema {
 export class UniversalDownloader {
     private ytDlp: any;
     private activeProcesses: Map<string, any> = new Map();
+    private activeOptions: Map<string, UniversalDownloadOptions> = new Map();
     private binaryPath: string;
+
     private initPromise: Promise<void>;
     private store: Store<StoreSchema>;
     private ffmpegPath: string | null = null;
@@ -317,6 +319,31 @@ export class UniversalDownloader {
         });
     }
 
+    async pauseDownload(id: string): Promise<void> {
+        const proc = this.activeProcesses.get(id);
+        if (proc && proc.ytDlpProcess) {
+            proc.ytDlpProcess.kill('SIGTERM');
+            // We'll update the state in the process loop or here
+            // Note: the 'close' event will trigger and we can see it was killed
+        }
+    }
+
+    async resumeDownload(id: string): Promise<void> {
+        const options = this.activeOptions.get(id);
+        if (options) {
+            // Re-add to queue at the front
+            this.downloadQueue.unshift({
+                options,
+                run: () => this.executeDownload(options),
+                resolve: () => {}, // Handled by the first call usually, but we need to satisfy the type
+                reject: () => {},
+                state: 'queued'
+            });
+            this.processQueue();
+        }
+    }
+
+
     async checkDiskSpace(downloadPath?: string): Promise<{ available: number; total: number; warning: boolean }> {
         try {
             const targetPath = downloadPath || this.store.get('settings.downloadPath') || app.getPath('downloads');
@@ -359,6 +386,15 @@ export class UniversalDownloader {
         }));
     }
 
+    reorderQueue(id: string, newIndex: number): void {
+        const index = this.downloadQueue.findIndex(item => item.options.id === id);
+        if (index !== -1 && newIndex >= 0 && newIndex < this.downloadQueue.length) {
+            const item = this.downloadQueue.splice(index, 1)[0];
+            this.downloadQueue.splice(newIndex, 0, item);
+        }
+    }
+
+
     private async processQueue() {
         const settings = this.getSettings();
         const maxConcurrent = settings.maxConcurrentDownloads || 3;
@@ -395,8 +431,22 @@ export class UniversalDownloader {
 
         const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems, audioFormat } = options;
         const downloadId = id || randomUUID();
+        this.activeOptions.set(downloadId, options);
+
+
+        // Check disk space before starting
+        try {
+            const space = await this.checkDiskSpace(outputPath);
+            if (space.warning && space.available < 100 * 1024 * 1024) { // Less than 100MB
+                throw new Error('Not enough disk space to start download.');
+            }
+        } catch (e) {
+            console.warn('Disk space check failed:', e);
+        }
 
         try {
+
+
             // Get info again or use provided info to determine filename
             // For playlists, we need to be careful with titles
             const info = await this.getMediaInfo(url);
@@ -573,8 +623,12 @@ export class UniversalDownloader {
 
                 process.on('close', (code: number | null) => {
                     this.activeProcesses.delete(downloadId);
+                    // Don't delete options yet, we might need them for resume
+                    // this.activeOptions.delete(downloadId); 
 
                     if (code === 0) {
+                        this.activeOptions.delete(downloadId); // Done
+
                         // verify file exists (if single file)
                         const finalPath = (isPlaylist || info.isPlaylist) ? path.join(downloadsPath, sanitizedTitle) : outputTemplate;
 

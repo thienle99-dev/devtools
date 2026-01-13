@@ -54,7 +54,11 @@ interface Window {
         showInFolder: (path: string) => Promise<void>;
         checkDiskSpace: (path?: string) => Promise<{ available: number; total: number; warning: boolean }>;
         getQueue: () => Promise<any[]>;
+        pause: (id: string) => Promise<void>;
+        resume: (id: string) => Promise<void>;
+        reorderQueue: (id: string, newIndex: number) => Promise<void>;
     };
+
     audioAPI: {
         getInfo: (filePath: string) => Promise<any>;
         extract: (options: any) => Promise<string>;

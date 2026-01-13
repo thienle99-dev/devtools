@@ -199,7 +199,12 @@ contextBridge.exposeInMainWorld('universalAPI', {
   showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
   checkDiskSpace: (path?: string) => ipcRenderer.invoke('universal:check-disk-space', path),
   getQueue: () => ipcRenderer.invoke('universal:get-queue'),
+  pause: (id: string) => ipcRenderer.invoke('universal:pause', id),
+  resume: (id: string) => ipcRenderer.invoke('universal:resume', id),
+  reorderQueue: (id: string, newIndex: number) => ipcRenderer.invoke('universal:reorder-queue', id, newIndex),
 })
+
+
 
 contextBridge.exposeInMainWorld('audioAPI', {
   getInfo: (filePath: string) => ipcRenderer.invoke('audio:get-info', filePath),

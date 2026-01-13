@@ -52,7 +52,8 @@ export interface UniversalDownloadProgress {
     total: number;
     speed: number;
     eta: number;
-    state: 'downloading' | 'processing' | 'complete' | 'error';
+    state: 'downloading' | 'processing' | 'complete' | 'error' | 'paused' | 'queued';
+
     filename?: string;
     filePath?: string;
     platform?: SupportedPlatform;

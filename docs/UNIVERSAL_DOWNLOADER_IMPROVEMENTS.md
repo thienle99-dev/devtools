@@ -3,15 +3,17 @@
 ## 🎯 High Priority
 
 ### Tính Năng Cốt Lõi
-- [ ] **Batch Download** - Tải nhiều URL cùng lúc
-  - [ ] Paste nhiều URL (mỗi dòng một URL)
-  - [ ] Drag & drop text file chứa URLs
-  - [ ] Import từ clipboard history
 
-- [ ] **Queue Management UI**
+- [x] **Batch Download** - Tải nhiều URL cùng lúc
+  - [x] Paste nhiều URL (mỗi dòng một URL)
+  - [x] Drag & drop text file chứa URLs
+  - [x] Import từ clipboard (Paste from Clipboard)
+
+- [x] **Queue Management UI**
   - [x] Hiển thị queue visualization
-  - [ ] Drag để sắp xếp priority
+  - [x] Drag (hoặc nút bấm) để sắp xếp priority
   - [x] Pause/Resume/Cancel từng item
+
   - [x] Clear completed downloads
 
 - [x] **Disk Space Check**
@@ -25,19 +27,21 @@
   - [ ] Bulk operations (delete, re-download)
   - [x] Export history to CSV/JSON
 
-- [ ] **Drag & Drop URL Support**
-  - [ ] Drag URL vào input area
-  - [ ] Drag file chứa URLs
-  - [ ] Visual feedback khi drag
+- [x] **Drag & Drop URL Support**
+  - [x] Drag URL vào input area
+  - [x] Drag file chứa URLs
+  - [x] Visual feedback khi drag
 
 ---
 
 ## 🔥 Medium Priority
 
 ### UX Improvements
-- [ ] **Resume/Pause Downloads**
-  - [ ] Pause individual downloads
-  - [ ] Resume from interrupted state
+
+- [x] **Resume/Pause Downloads**
+  - [x] Pause individual downloads
+  - [x] Resume from paused state
+
   - [ ] Save state khi đóng app
 
 - [ ] **Selective Playlist Download**
@@ -57,6 +61,7 @@
   - [ ] Error log export
 
 ### Performance
+
 - [ ] **Download Statistics**
   - [ ] Total downloads counter
   - [ ] Size by platform
@@ -73,6 +78,7 @@
 ## 💡 Low Priority
 
 ### Advanced Features
+
 - [ ] **Scheduled Downloads**
   - [ ] Lên lịch download theo thời gian
   - [ ] Download khi có WiFi
@@ -99,6 +105,7 @@
   - [ ] Per-platform proxy settings
 
 ### Platform-Specific
+
 - [ ] **YouTube Enhancements**
   - [ ] Download comments
   - [ ] Download thumbnails
@@ -118,6 +125,7 @@
 ## 🔧 Code Quality
 
 ### Refactoring
+
 - [ ] **Type Safety**
   - [ ] Tạo enums thay vì string literals
   - [ ] Strict typing cho all functions
@@ -134,6 +142,7 @@
   - [ ] Better error messages
 
 ### Testing
+
 - [ ] Unit tests cho core functions
 - [ ] Integration tests cho download flow
 - [ ] E2E tests cho UI interactions
@@ -205,11 +214,13 @@
 ## 📝 Notes
 
 ### Priority Order Rationale:
+
 1. **High Priority** - Những tính năng cải thiện trải nghiệm người dùng ngay lập tức
 2. **Medium Priority** - Tính năng nâng cao user experience và performance
 3. **Low Priority** - Nice-to-have features và platform-specific optimizations
 
 ### Next Steps:
+
 1. Review và prioritize với team
 2. Estimate effort cho từng task
 3. Break down thành sprints/milestones
@@ -217,5 +228,5 @@
 
 ---
 
-**Last Updated:** Jan 8, 2026
-**Version:** 1.0
+**Last Updated:** Jan 13, 2026
+**Version:** 1.1

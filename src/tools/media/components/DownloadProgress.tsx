@@ -1,10 +1,12 @@
 import React from 'react';
 import { Button } from '@components/ui/Button';
-import { Download, Clock, HardDrive, XCircle, ExternalLink, FolderOpen, CheckCircle2, Copy } from 'lucide-react';
+import { Download, Clock, HardDrive, XCircle, ExternalLink, FolderOpen, CheckCircle2, Copy, Pause, Play } from 'lucide-react';
+
 import { formatSpeed, formatBytes as formatFileSize, formatDuration } from '@utils/format';
 
 interface DownloadStatus {
-    status: 'idle' | 'downloading' | 'success' | 'error';
+    status: 'idle' | 'downloading' | 'success' | 'error' | 'paused' | 'processing';
+
     progress?: number;
     speed?: number;
     eta?: number;
@@ -21,7 +23,10 @@ interface DownloadStatus {
 interface DownloadProgressProps {
     status: DownloadStatus;
     onCancel: () => void;
+    onPause?: () => void;
+    onResume?: () => void;
     isPlaylist?: boolean;
+
     currentItem?: number;
     totalItems?: number;
     onOpenFile?: () => void;
@@ -31,15 +36,21 @@ interface DownloadProgressProps {
 export const DownloadProgress: React.FC<DownloadProgressProps> = ({
     status,
     onCancel,
+    onPause,
+    onResume,
     onOpenFile,
     onShowFolder
 }) => {
+
     // Determine progress bar style
     const progressBarStyle = status.status === 'success' 
         ? 'bg-gradient-to-r from-green-500 to-emerald-500'
         : status.status === 'error'
             ? 'bg-red-500'
-            : 'bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 animate-gradient-x';
+            : status.status === 'paused'
+                ? 'bg-amber-500'
+                : 'bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 animate-gradient-x';
+
 
     return (
         <div className="group relative bg-background-tertiary/30 border border-white/5 rounded-lg p-3 hover:bg-background-tertiary/50 transition-all">
@@ -49,12 +60,17 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                         status.status === 'downloading' ? 'bg-blue-500/10 text-blue-400' :
                         status.status === 'success' ? 'bg-green-500/10 text-green-400' :
+                        status.status === 'paused' ? 'bg-amber-500/10 text-amber-400' :
+                        status.status === 'processing' ? 'bg-purple-500/10 text-purple-400' :
                         'bg-red-500/10 text-red-400'
                     }`}>
                         {status.status === 'downloading' ? <Download className="w-5 h-5 animate-pulse" /> :
                          status.status === 'success' ? <CheckCircle2 className="w-5 h-5" /> :
+                         status.status === 'paused' ? <Pause className="w-5 h-5" /> :
+                         status.status === 'processing' ? <Clock className="w-5 h-5 animate-spin" /> :
                          <XCircle className="w-5 h-5" />}
                     </div>
+
                 </div>
 
                 {/* Main Info */}
@@ -132,17 +148,43 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {status.status === 'downloading' && (
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={onCancel}
-                            className="h-8 w-8 hover:bg-red-500/10 text-foreground-secondary hover:text-red-400 rounded-full"
-                            title="Cancel Download"
-                        >
-                            <XCircle className="w-4 h-4" />
-                        </Button>
+                    {(status.status === 'downloading' || status.status === 'processing' || status.status === 'paused' || status.status === 'error') && (
+                        <div className="flex gap-1">
+                            {status.status === 'downloading' && onPause && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={onPause}
+                                    className="h-8 w-8 hover:bg-amber-500/10 text-foreground-secondary hover:text-amber-400 rounded-full"
+                                    title="Pause"
+                                >
+                                    <Pause className="w-4 h-4" />
+                                </Button>
+                            )}
+                            {(status.status === 'paused' || status.status === 'error') && onResume && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={onResume}
+                                    className="h-8 w-8 hover:bg-green-500/10 text-foreground-secondary hover:text-green-400 rounded-full"
+                                    title="Resume"
+                                >
+                                    <Play className="w-4 h-4" />
+                                </Button>
+                            )}
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={onCancel}
+                                className="h-8 w-8 hover:bg-red-500/10 text-foreground-secondary hover:text-red-400 rounded-full"
+                                title="Cancel"
+                            >
+                                <XCircle className="w-4 h-4" />
+                            </Button>
+                        </div>
                     )}
+
+
                     {status.status === 'success' && (
                         <>
                             <Button

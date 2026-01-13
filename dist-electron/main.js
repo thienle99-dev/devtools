@@ -3188,6 +3188,7 @@ var require$1 = createRequire(import.meta.url);
 var UniversalDownloader = class {
 	constructor() {
 		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.activeOptions = /* @__PURE__ */ new Map();
 		this.ffmpegPath = null;
 		this.downloadQueue = [];
 		this.activeDownloadsCount = 0;
@@ -3400,6 +3401,23 @@ var UniversalDownloader = class {
 			this.processQueue();
 		});
 	}
+	async pauseDownload(id) {
+		const proc = this.activeProcesses.get(id);
+		if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill("SIGTERM");
+	}
+	async resumeDownload(id) {
+		const options = this.activeOptions.get(id);
+		if (options) {
+			this.downloadQueue.unshift({
+				options,
+				run: () => this.executeDownload(options),
+				resolve: () => {},
+				reject: () => {},
+				state: "queued"
+			});
+			this.processQueue();
+		}
+	}
 	async checkDiskSpace(downloadPath) {
 		try {
 			const targetPath = downloadPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
@@ -3439,6 +3457,13 @@ var UniversalDownloader = class {
 			filename: item.options.url
 		}));
 	}
+	reorderQueue(id, newIndex) {
+		const index = this.downloadQueue.findIndex((item) => item.options.id === id);
+		if (index !== -1 && newIndex >= 0 && newIndex < this.downloadQueue.length) {
+			const item = this.downloadQueue.splice(index, 1)[0];
+			this.downloadQueue.splice(newIndex, 0, item);
+		}
+	}
 	async processQueue() {
 		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
 		if ((await this.checkDiskSpace()).available < 500 * 1024 * 1024) {
@@ -3461,6 +3486,13 @@ var UniversalDownloader = class {
 		await this.ensureInitialized();
 		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems, audioFormat } = options;
 		const downloadId = id || randomUUID$1();
+		this.activeOptions.set(downloadId, options);
+		try {
+			const space = await this.checkDiskSpace(outputPath);
+			if (space.warning && space.available < 100 * 1024 * 1024) throw new Error("Not enough disk space to start download.");
+		} catch (e) {
+			console.warn("Disk space check failed:", e);
+		}
 		try {
 			const info = await this.getMediaInfo(url);
 			const sanitizedTitle = this.sanitizeFilename(info.title);
@@ -3579,6 +3611,7 @@ var UniversalDownloader = class {
 				process$1.on("close", (code) => {
 					this.activeProcesses.delete(downloadId);
 					if (code === 0) {
+						this.activeOptions.delete(downloadId);
 						const finalPath = isPlaylist || info.isPlaylist ? path$1.join(downloadsPath, sanitizedTitle) : outputTemplate;
 						if (progressCallback) progressCallback({
 							id: downloadId,
@@ -6698,6 +6731,15 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("universal:get-queue", async () => {
 		return universalDownloader.getQueue();
+	});
+	ipcMain.handle("universal:pause", async (_, id) => {
+		return await universalDownloader.pauseDownload(id);
+	});
+	ipcMain.handle("universal:resume", async (_, id) => {
+		return await universalDownloader.resumeDownload(id);
+	});
+	ipcMain.handle("universal:reorder-queue", async (_, id, newIndex) => {
+		return universalDownloader.reorderQueue(id, newIndex);
 	});
 	ipcMain.handle("universal:open-file", async (_, path$2) => {
 		const { shell: shell$1 } = await import("electron");

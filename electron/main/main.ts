@@ -1891,6 +1891,20 @@ app.whenReady().then(() => {
     return universalDownloader.getQueue();
   });
 
+  ipcMain.handle('universal:pause', async (_, id: string) => {
+    return await universalDownloader.pauseDownload(id);
+  });
+
+  ipcMain.handle('universal:resume', async (_, id: string) => {
+    return await universalDownloader.resumeDownload(id);
+  });
+
+  ipcMain.handle('universal:reorder-queue', async (_, id: string, newIndex: number) => {
+    return universalDownloader.reorderQueue(id, newIndex);
+  });
+
+
+
   ipcMain.handle('universal:open-file', async (_, path: string) => {
     const { shell } = await import('electron');
     // Check if file exists first to avoid cryptic errors
