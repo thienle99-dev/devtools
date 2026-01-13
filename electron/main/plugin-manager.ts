@@ -1,7 +1,8 @@
 import Store from 'electron-store';
 import { app } from 'electron';
 import path from 'path';
-import fs from 'fs/promises';
+import fs from 'fs';
+import fsp from 'fs/promises';
 import { createHash } from 'crypto';
 import { createRequire } from 'module';
 import AdmZip from 'adm-zip';
@@ -137,8 +138,8 @@ export class PluginManager {
   // ============================================================
   
   private async ensureDirectories() {
-    await fs.mkdir(this.pluginsDir, { recursive: true });
-    await fs.mkdir(this.binariesDir, { recursive: true });
+    await fsp.mkdir(this.pluginsDir, { recursive: true });
+    await fsp.mkdir(this.binariesDir, { recursive: true });
   }
   
   async initialize(): Promise<void> {
@@ -205,7 +206,7 @@ export class PluginManager {
       }
       
       console.log('[PluginManager] Loading registry from:', registryPath);
-      const data = await fs.readFile(registryPath, 'utf-8');
+      const data = await fsp.readFile(registryPath, 'utf-8');
       const registry: PluginRegistry = JSON.parse(data);
       
       this.store.set('registry', registry);
@@ -294,7 +295,7 @@ export class PluginManager {
       await this.loadPlugin(pluginId);
       
       // Cleanup
-      await fs.unlink(pluginZipPath).catch(() => {});
+      await fsp.unlink(pluginZipPath).catch(() => {});
       
       console.log('[PluginManager] Plugin installed successfully:', pluginId);
     } catch (error: any) {
@@ -302,7 +303,7 @@ export class PluginManager {
       
       // Cleanup on failure
       const pluginPath = path.join(this.pluginsDir, pluginId);
-      await fs.rm(pluginPath, { recursive: true, force: true }).catch(() => {});
+      await fsp.rm(pluginPath, { recursive: true, force: true }).catch(() => {});
       
       throw new Error(`Installation failed: ${error.message}`);
     }
@@ -327,7 +328,7 @@ export class PluginManager {
       this.unloadPlugin(pluginId);
       
       // Remove plugin files
-      await fs.rm(plugin.installPath, { recursive: true, force: true });
+      await fsp.rm(plugin.installPath, { recursive: true, force: true });
       
       // Cleanup dependencies (if not used by other plugins)
       if (plugin.manifest.dependencies?.binary) {
@@ -451,11 +452,11 @@ export class PluginManager {
       
       // Make executable (Unix systems)
       if (platform !== 'win32') {
-        await fs.chmod(binaryPath, 0o755);
+        await fsp.chmod(binaryPath, 0o755);
       }
       
       // Cleanup
-      await fs.unlink(tempPath).catch(() => {});
+      await fsp.unlink(tempPath).catch(() => {});
       
       console.log(`[PluginManager] Binary installed: ${dep.name}`);
     }
@@ -477,7 +478,7 @@ export class PluginManager {
       
       if (!inUse) {
         const binaryPath = path.join(this.binariesDir, dep.name);
-        await fs.rm(binaryPath, { force: true, recursive: true }).catch(() => {});
+        await fsp.rm(binaryPath, { force: true, recursive: true }).catch(() => {});
         console.log(`[PluginManager] Removed unused binary: ${dep.name}`);
       }
     }
@@ -517,27 +518,36 @@ export class PluginManager {
       timeout: 300000, // 5 minutes
     });
     
-    const totalSize = parseInt(response.headers['content-length'], 10);
+    const totalSize = parseInt(response.headers['content-length'], 10) || 0;
     let downloadedSize = 0;
     
-    const writer = require('fs').createWriteStream(destination);
-    
-    response.data.on('data', (chunk: Buffer) => {
-      downloadedSize += chunk.length;
-      const percent = Math.round((downloadedSize / totalSize) * 100);
-      onProgress?.(percent);
-    });
-    
-    response.data.pipe(writer);
+    const writer = fs.createWriteStream(destination);
     
     return new Promise((resolve, reject) => {
+      response.data.on('data', (chunk: Buffer) => {
+        downloadedSize += chunk.length;
+        if (totalSize > 0) {
+          const percent = Math.round((downloadedSize / totalSize) * 100);
+          onProgress?.(percent);
+        }
+      });
+      
+      response.data.pipe(writer);
+      
       writer.on('finish', () => resolve(destination));
-      writer.on('error', reject);
+      writer.on('error', (err) => {
+        writer.close();
+        reject(err);
+      });
+      response.data.on('error', (err: any) => {
+        writer.close();
+        reject(err);
+      });
     });
   }
   
   private async verifyChecksum(filePath: string, expectedChecksum: string): Promise<void> {
-    const fileBuffer = await fs.readFile(filePath);
+    const fileBuffer = await fsp.readFile(filePath);
     const hash = createHash('sha256').update(fileBuffer).digest('hex');
     
     if (hash !== expectedChecksum) {
@@ -570,7 +580,7 @@ export class PluginManager {
   
   private async fileExists(filePath: string): Promise<boolean> {
     try {
-      await fs.access(filePath);
+      await fsp.access(filePath);
       return true;
     } catch {
       return false;
