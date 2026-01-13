@@ -288,13 +288,16 @@ contextBridge.exposeInMainWorld('downloadAPI', {
   getHistory: () => ipcRenderer.invoke('download:get-history'),
   getSettings: () => ipcRenderer.invoke('download:get-settings'),
   saveSettings: (settings: any) => ipcRenderer.invoke('download:save-settings', settings),
-  create: (options: { url: string, filename?: string }) => ipcRenderer.invoke('download:create', options),
+  create: (options: any) => ipcRenderer.invoke('download:create', options),
   start: (taskId: string) => ipcRenderer.invoke('download:start', taskId),
   pause: (taskId: string) => ipcRenderer.invoke('download:pause', taskId),
   resume: (taskId: string) => ipcRenderer.invoke('download:resume', taskId),
   cancel: (taskId: string) => ipcRenderer.invoke('download:cancel', taskId),
   openFolder: (filePath: string) => ipcRenderer.invoke('download:open-folder', filePath),
   clearHistory: () => ipcRenderer.invoke('download:clear-history'),
+  saveHistory: (history: any[]) => ipcRenderer.invoke('download:save-history', history),
+  reorder: (startIndex: number, endIndex: number) => ipcRenderer.invoke('download:reorder', { startIndex, endIndex }),
+  verifyChecksum: (taskId: string) => ipcRenderer.invoke('download:verify-checksum', taskId),
   onProgress: (taskId: string, callback: (progress: any) => void) => {
     const listener = (_event: any, progress: any) => callback(progress);
     ipcRenderer.on(`download:progress:${taskId}`, listener);
@@ -304,5 +307,15 @@ contextBridge.exposeInMainWorld('downloadAPI', {
     const listener = (_event: any, progress: any) => callback(progress);
     ipcRenderer.on('download:any-progress', listener);
     return () => ipcRenderer.removeListener('download:any-progress', listener);
+  },
+  onStarted: (callback: (task: any) => void) => {
+    const listener = (_event: any, task: any) => callback(task);
+    ipcRenderer.on('download:task-started', listener);
+    return () => ipcRenderer.removeListener('download:task-started', listener);
+  },
+  onCompleted: (callback: (task: any) => void) => {
+    const listener = (_event: any, task: any) => callback(task);
+    ipcRenderer.on('download:task-completed', listener);
+    return () => ipcRenderer.removeListener('download:task-completed', listener);
   }
 })

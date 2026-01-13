@@ -363,22 +363,7 @@ body {
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  .glass-button-secondary:hover {
-    /* Hover effects handled by Tailwind */
-  }
 
-  .glass-button-secondary:active {
-    /* Active effects handled by Tailwind */
-  }
-
-  /* Light mode for secondary */
-  :root.light .glass-button-secondary {
-    /* Light mode handled by Tailwind */
-  }
-
-  :root.light .glass-button-secondary:hover {
-    /* Light mode hover handled by Tailwind */
-  }
 
   /* Outline Button - macOS Style (Background transparent → Border nổi bật) */
   .glass-button-outline {
@@ -445,13 +430,6 @@ body {
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  .glass-button-primary:hover {
-    /* Hover effects handled by Tailwind */
-  }
-
-  .glass-button-primary:active {
-    /* Active effects handled by Tailwind */
-  }
 
   /* Glass Inputs */
   .glass-input {

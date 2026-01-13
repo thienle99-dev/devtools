@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Folder, Zap, Layers, PlayCircle, Link } from 'lucide-react';
+import { Folder, Zap, Layers, PlayCircle, Link, Fingerprint, Volume2 } from 'lucide-react';
 import { Modal } from '@components/ui/Modal';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
+import { cn } from '@utils/cn';
 import type { DownloadSettings } from '@/types/network/download';
 
 interface DownloadSettingsDialogProps {
@@ -25,6 +26,9 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
     const [monitorClipboard, setMonitorClipboard] = useState(settings.monitorClipboard);
     const [autoUnzip, setAutoUnzip] = useState(settings.autoUnzip);
     const [autoOpenFolder, setAutoOpenFolder] = useState(settings.autoOpenFolder);
+    const [autoVerifyChecksum, setAutoVerifyChecksum] = useState(settings.autoVerifyChecksum);
+    const [enableSounds, setEnableSounds] = useState(settings.enableSounds);
+    const [speedLimit, setSpeedLimit] = useState(settings.speedLimit);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,7 +39,10 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
             autoStart,
             monitorClipboard,
             autoUnzip,
-            autoOpenFolder
+            autoOpenFolder,
+            autoVerifyChecksum,
+            enableSounds,
+            speedLimit
         });
         onClose();
     };
@@ -102,7 +109,37 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                    <div className="space-y-3 mt-6">
+                        <div className="flex items-center justify-between px-1">
+                            <label className="text-[11px] font-black uppercase tracking-wider text-foreground-secondary">
+                                Bandwidth Limit
+                            </label>
+                            <span className="text-[11px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                                {speedLimit === 0 ? 'Unlimited' : `${settings.speedLimit / (1024 * 1024) >= 1 ? `${(speedLimit / (1024 * 1024)).toFixed(0)} MB/s` : `${(speedLimit / 1024).toFixed(0)} KB/s`}`}
+                                {speedLimit === 0 ? '' : ' / task'}
+                            </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-4 gap-2">
+                            {[0, 256 * 1024, 1024 * 1024, 5 * 1024 * 1024, 10 * 1024 * 1024].map((val) => (
+                                <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setSpeedLimit(val)}
+                                    className={cn(
+                                        "py-2 rounded-xl border text-[10px] font-bold transition-all",
+                                        speedLimit === val 
+                                            ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20" 
+                                            : "bg-foreground-primary/5 border-border-glass text-foreground-tertiary hover:bg-foreground-primary/10"
+                                    )}
+                                >
+                                    {val === 0 ? 'Off' : val < 1024 * 1024 ? `${val / 1024}K` : `${val / (1024 * 1024)}M`}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
                         <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
                             <input
                                 type="checkbox"
@@ -156,6 +193,34 @@ export const DownloadSettingsDialog: React.FC<DownloadSettingsDialogProps> = ({
                             <label htmlFor="autoUnzip" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
                                 <Layers className="w-4 h-4 text-purple-400" />
                                 Auto Unzip
+                            </label>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
+                            <input
+                                type="checkbox"
+                                id="autoVerifyChecksum"
+                                checked={autoVerifyChecksum}
+                                onChange={(e) => setAutoVerifyChecksum(e.target.checked)}
+                                className="w-4 h-4 rounded border-border-glass bg-bg-glass-panel text-blue-500 focus:ring-blue-500/20"
+                            />
+                            <label htmlFor="autoVerifyChecksum" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
+                                <Fingerprint className="w-4 h-4 text-amber-400" />
+                                Auto Verify
+                            </label>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 bg-foreground-primary/5 rounded-xl border border-border-glass">
+                            <input
+                                type="checkbox"
+                                id="enableSounds"
+                                checked={enableSounds}
+                                onChange={(e) => setEnableSounds(e.target.checked)}
+                                className="w-4 h-4 rounded border-border-glass bg-bg-glass-panel text-blue-500 focus:ring-blue-500/20"
+                            />
+                            <label htmlFor="enableSounds" className="text-[11px] font-black uppercase tracking-wider text-foreground-primary cursor-pointer flex items-center gap-2">
+                                <Volume2 className="w-4 h-4 text-blue-400" />
+                                Notification Sounds
                             </label>
                         </div>
                     </div>

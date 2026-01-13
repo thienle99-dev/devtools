@@ -22,6 +22,15 @@ export interface DownloadTask {
     createdAt: number;
     completedAt?: number;
     error?: string;
+    checksum?: {
+        algorithm: 'md5' | 'sha1' | 'sha256';
+        value: string;
+        verified?: boolean;
+    };
+    credentials?: {
+        username?: string;
+        password?: string;
+    };
 }
 
 export interface DownloadProgress {
@@ -43,4 +52,7 @@ export interface DownloadSettings {
     monitorClipboard: boolean;
     autoUnzip: boolean;
     autoOpenFolder: boolean;
+    autoVerifyChecksum: boolean;
+    enableSounds: boolean;
+    speedLimit: number; // in bytes per second, 0 for unlimited
 }

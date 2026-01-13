@@ -4863,6 +4863,8 @@ var COMMON_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 var DownloadManager = class extends EventEmitter {
 	constructor() {
 		super();
+		this.globalDownloadedInLastSecond = 0;
+		this.lastSpeedCheck = Date.now();
 		this.activeTasks = /* @__PURE__ */ new Map();
 		this.store = new Store({
 			name: "download-manager-history",
@@ -4875,8 +4877,12 @@ var DownloadManager = class extends EventEmitter {
 					autoStart: true,
 					monitorClipboard: true,
 					autoUnzip: false,
-					autoOpenFolder: true
-				}
+					autoOpenFolder: true,
+					autoVerifyChecksum: true,
+					enableSounds: true,
+					speedLimit: 0
+				},
+				savedCredentials: {}
 			}
 		});
 		this.history = this.store.get("history", []);
@@ -4917,8 +4923,21 @@ var DownloadManager = class extends EventEmitter {
 		};
 		this.emit("progress", progress);
 	}
-	async createDownload(url, customFilename) {
-		const info = await this.getFileInfo(url);
+	async createDownload(url, customFilename, options) {
+		if (!options?.credentials) {
+			const domain = new URL(url).hostname;
+			const saved = this.store.get("savedCredentials", {});
+			if (saved[domain]) options = {
+				...options,
+				credentials: saved[domain]
+			};
+		} else {
+			const domain = new URL(url).hostname;
+			const saved = this.store.get("savedCredentials", {});
+			saved[domain] = options.credentials;
+			this.store.set("savedCredentials", saved);
+		}
+		const info = await this.getFileInfo(url, 5, options?.credentials);
 		const settings = this.getSettings();
 		let filename = customFilename || info.filename || path$1.basename(new URL(info.finalUrl).pathname) || "download";
 		filename = this.sanitizeFilename(filename);
@@ -4937,7 +4956,9 @@ var DownloadManager = class extends EventEmitter {
 			eta: 0,
 			priority: 5,
 			category,
-			createdAt: Date.now()
+			createdAt: Date.now(),
+			checksum: options?.checksum,
+			credentials: options?.credentials
 		};
 		if (info.acceptRanges && info.size > 0 && settings.segmentsPerDownload > 1) {
 			const segmentSize = Math.ceil(info.size / settings.segmentsPerDownload);
@@ -4963,7 +4984,7 @@ var DownloadManager = class extends EventEmitter {
 		this.checkQueue();
 		return task;
 	}
-	async getFileInfo(url, limit = 5) {
+	async getFileInfo(url, limit = 5, credentials) {
 		if (limit <= 0) throw new Error("Too many redirects");
 		return new Promise((resolve, reject) => {
 			try {
@@ -4975,13 +4996,14 @@ var DownloadManager = class extends EventEmitter {
 					headers: {
 						"User-Agent": COMMON_USER_AGENT,
 						"Accept": "*/*",
-						"Connection": "keep-alive"
+						"Connection": "keep-alive",
+						...credentials?.username || credentials?.password ? { "Authorization": `Basic ${Buffer.from(`${credentials.username || ""}:${credentials.password || ""}`).toString("base64")}` } : {}
 					}
 				};
 				const req = protocol$1.request(url, options, (res) => {
 					if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
 						const redirectUrl = new URL(res.headers.location, url).toString();
-						resolve(this.getFileInfo(redirectUrl, limit - 1));
+						resolve(this.getFileInfo(redirectUrl, limit - 1, credentials));
 						return;
 					}
 					if (res.statusCode === 405 || res.statusCode === 403 || res.statusCode === 404) {
@@ -5099,6 +5121,7 @@ var DownloadManager = class extends EventEmitter {
 		task.error = void 0;
 		this.saveTask(task);
 		this.emitProgress(task);
+		this.emit("task-started", task);
 		const abortControllers = [];
 		this.activeTasks.set(taskId, {
 			task,
@@ -5185,6 +5208,7 @@ var DownloadManager = class extends EventEmitter {
 				"Referer": new URL(task.url).origin
 			};
 			if (endPos !== -1) headers["Range"] = `bytes=${startPos}-${endPos}`;
+			if (task.credentials?.username || task.credentials?.password) headers["Authorization"] = `Basic ${Buffer.from(`${task.credentials.username || ""}:${task.credentials.password || ""}`).toString("base64")}`;
 			const download = (currentUrl, redirectLimit, retryCount = 0) => {
 				if (redirectLimit <= 0) {
 					reject(/* @__PURE__ */ new Error("Too many redirects in segment download"));
@@ -5220,6 +5244,20 @@ var DownloadManager = class extends EventEmitter {
 						const writePos = segment.start + segment.downloaded;
 						segment.downloaded += chunk.length;
 						task.downloadedSize += chunk.length;
+						const settings = this.getSettings();
+						if (settings.speedLimit > 0) {
+							this.globalDownloadedInLastSecond += chunk.length;
+							if (this.globalDownloadedInLastSecond >= settings.speedLimit) {
+								res.pause();
+								const elapsed = Date.now() - this.lastSpeedCheck;
+								const wait = Math.max(0, 1e3 - elapsed);
+								setTimeout(() => {
+									this.globalDownloadedInLastSecond = 0;
+									this.lastSpeedCheck = Date.now();
+									res.resume();
+								}, wait);
+							}
+						}
 						isWriting = true;
 						fs$1.write(fd, chunk, 0, chunk.length, writePos, (err) => {
 							isWriting = false;
@@ -5317,8 +5355,40 @@ var DownloadManager = class extends EventEmitter {
 			this.checkQueue();
 		}
 	}
+	async verifyChecksum(taskId) {
+		const task = this.history.find((t) => t.id === taskId);
+		if (!task || !task.checksum || task.status !== "completed") return false;
+		const hash = __require("crypto").createHash(task.checksum.algorithm);
+		try {
+			const stream = fs$1.createReadStream(task.filepath);
+			return new Promise((resolve) => {
+				stream.on("data", (data) => hash.update(data));
+				stream.on("end", () => {
+					const verified = hash.digest("hex").toLowerCase() === task.checksum.value.trim().toLowerCase();
+					task.checksum.verified = verified;
+					this.saveTask(task);
+					this.emitProgress(task);
+					resolve(verified);
+				});
+				stream.on("error", () => resolve(false));
+			});
+		} catch (err) {
+			return false;
+		}
+	}
 	clearHistory() {
 		this.history = this.history.filter((t) => this.activeTasks.has(t.id));
+		this.persistHistory();
+	}
+	reorderHistory(startIndex, endIndex) {
+		const result = Array.from(this.history);
+		const [removed] = result.splice(startIndex, 1);
+		result.splice(endIndex, 0, removed);
+		this.history = result;
+		this.persistHistory();
+	}
+	saveHistory(history) {
+		this.history = history;
 		this.persistHistory();
 	}
 	async handlePostProcessing(task) {
@@ -5330,6 +5400,33 @@ var DownloadManager = class extends EventEmitter {
 			console.error("Failed to auto-open folder:", err);
 		}
 		if (settings.autoUnzip && task.category === "compressed") console.log("Auto-unzip triggered for:", task.filename);
+		if (settings.autoVerifyChecksum && task.checksum) this.verifyChecksum(task.id);
+		this.showCompletedNotification(task);
+		this.emit("task-completed", task);
+	}
+	showCompletedNotification(task) {
+		const { Notification: Notification$1, shell: shell$1 } = __require("electron");
+		const notification = new Notification$1({
+			title: "Download Completed",
+			body: `${task.filename} has been downloaded successfully.`,
+			silent: true,
+			timeoutType: "default",
+			...process.platform === "darwin" ? { actions: [{
+				type: "button",
+				text: "Open File"
+			}, {
+				type: "button",
+				text: "Show in Folder"
+			}] } : {}
+		});
+		notification.on("click", () => {
+			shell$1.showItemInFolder(task.filepath);
+		});
+		notification.on("action", (_event, index) => {
+			if (index === 0) shell$1.openPath(task.filepath);
+			else if (index === 1) shell$1.showItemInFolder(task.filepath);
+		});
+		notification.show();
 	}
 	getCategory(filename) {
 		const ext = path$1.extname(filename).toLowerCase().slice(1);
@@ -5424,6 +5521,16 @@ function setupDownloadManagerHandlers() {
 			}
 		});
 	});
+	downloadManager.on("task-started", (task) => {
+		BrowserWindow.getAllWindows().forEach((win$1) => {
+			if (!win$1.isDestroyed()) win$1.webContents.send("download:task-started", task);
+		});
+	});
+	downloadManager.on("task-completed", (task) => {
+		BrowserWindow.getAllWindows().forEach((win$1) => {
+			if (!win$1.isDestroyed()) win$1.webContents.send("download:task-completed", task);
+		});
+	});
 	ipcMain.handle("download:get-history", () => {
 		return downloadManager.getHistory();
 	});
@@ -5434,8 +5541,11 @@ function setupDownloadManagerHandlers() {
 		downloadManager.saveSettings(settings);
 		return { success: true };
 	});
-	ipcMain.handle("download:create", async (_event, { url, filename }) => {
-		return await downloadManager.createDownload(url, filename);
+	ipcMain.handle("download:create", async (_event, options) => {
+		return await downloadManager.createDownload(options.url, options.filename, options);
+	});
+	ipcMain.handle("download:verify-checksum", async (_event, taskId) => {
+		return await downloadManager.verifyChecksum(taskId);
 	});
 	ipcMain.handle("download:start", async (_event, taskId) => {
 		downloadManager.startDownload(taskId);
@@ -5459,6 +5569,14 @@ function setupDownloadManagerHandlers() {
 	});
 	ipcMain.handle("download:clear-history", () => {
 		downloadManager.clearHistory();
+		return { success: true };
+	});
+	ipcMain.handle("download:reorder", (_event, { startIndex, endIndex }) => {
+		downloadManager.reorderHistory(startIndex, endIndex);
+		return { success: true };
+	});
+	ipcMain.handle("download:save-history", (_event, history) => {
+		downloadManager.saveHistory(history);
 		return { success: true };
 	});
 }
@@ -7227,6 +7345,7 @@ app.whenReady().then(() => {
 			return new Response("Error loading media: " + e.message, { status: 500 });
 		}
 	});
+	if (process.platform === "win32") app.setAppUserModelId("com.devtools.app");
 	createTray();
 	createWindow();
 });

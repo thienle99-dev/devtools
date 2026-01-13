@@ -18,6 +18,7 @@ import {
     Layers,
     Zap
 } from 'lucide-react';
+import { Reorder } from 'framer-motion';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Button } from '@components/ui/Button';
 import { useToast, ToastContainer } from '@components/ui/Toast';
@@ -62,7 +63,7 @@ export default function DownloadManager() {
                         success('Link Detected', 'Would you like to download the link from clipboard?', {
                             action: {
                                 label: 'Download Now',
-                                onClick: () => handleCreateDownload(text)
+                                onClick: () => handleCreateDownload([text])
                             }
                         });
                     }
@@ -130,12 +131,47 @@ export default function DownloadManager() {
 
         return cleanup;
     }, [loadData]);
+    
+    // Notification Sounds
+    useEffect(() => {
+        if (!settings?.enableSounds) return;
+
+        const startSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        const completeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
+        
+        startSound.volume = 0.4;
+        completeSound.volume = 0.5;
+
+        const cleanupStarted = (window as any).downloadAPI.onStarted(() => {
+            startSound.play().catch(() => {}); // Catch play() errors (browser policy)
+        });
+
+        const cleanupCompleted = (window as any).downloadAPI.onCompleted(() => {
+            completeSound.play().catch(() => {});
+        });
+
+        return () => {
+            cleanupStarted();
+            cleanupCompleted();
+        };
+    }, [settings?.enableSounds]);
 
 
-    const handleCreateDownload = async (url: string, filename?: string) => {
+    const handleCreateDownload = async (urls: string[], options?: { 
+        filename?: string, 
+        checksum?: { algorithm: 'md5' | 'sha1' | 'sha256', value: string },
+        credentials?: { username?: string, password?: string }
+    }) => {
         try {
-            const task = await window.downloadAPI.create({ url, filename });
-            success('Download Queued', `Created task for ${task.filename}`);
+            for (const url of urls) {
+                await (window as any).downloadAPI.create({ 
+                    url, 
+                    filename: options?.filename,
+                    checksum: options?.checksum,
+                    credentials: options?.credentials
+                });
+            }
+            success('Download Queued', `Created ${urls.length} task(s)`);
             loadData();
         } catch (err: any) {
             error('Failed to Create Download', err.message);
@@ -168,6 +204,20 @@ export default function DownloadManager() {
             } catch (err: any) {
                 error('Failed to Cancel', err.message);
             }
+        }
+    };
+
+    const handleVerifyChecksum = async (id: string) => {
+        try {
+            const verified = await (window as any).downloadAPI.verifyChecksum(id);
+            if (verified) {
+                success('Verification Successful', 'The file integrity has been verified.');
+            } else {
+                error('Verification Failed', 'The file hash does not match the provided checksum.');
+            }
+            loadData();
+        } catch (err: any) {
+            error('Verification Error', err.message);
         }
     };
 
@@ -453,22 +503,47 @@ export default function DownloadManager() {
                     {/* Scrollable Feed - High Density */}
                     <div className="flex-1 min-h-0 overflow-y-auto p-4 custom-scrollbar">
                         {filteredTasks.length > 0 ? (
-                            <div className={cn(
-                                "grid transition-all duration-700",
-                                viewMode === 'list' ? "grid-cols-1 gap-1.5" : "grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-2"
-                            )}>
-                            {filteredTasks.map(task => (
-                                <DownloadItem
-                                    key={task.id}
-                                    task={task}
-                                    onStart={handleStart}
-                                    onPause={handlePause}
-                                    onCancel={handleCancel}
-                                    onOpenFolder={openFolder}
-                                    viewMode={viewMode}
-                                />
-                            ))}
-                        </div>
+                             <Reorder.Group 
+                                axis="y" 
+                                values={filteredTasks} 
+                                onReorder={async (newOrder) => {
+                                    // Local update for immediate feedback
+                                    setHistory(prev => {
+                                        const otherTasks = prev.filter(t => !filteredTasks.some(ft => ft.id === t.id));
+                                        return [...newOrder, ...otherTasks];
+                                    });
+                                    
+                                    // Find which item actually moved for the backend IPC
+                                    // This is a bit complex with filtering, so we'll just send the new order to a new IPC or use start/end index
+                                    // Actually, let's just implement a simple reorder in DownloadManager.tsx for now
+                                    // and then sync the full history.
+                                    
+                                    // For simplicity, we'll sync the full history.
+                                    await (window as any).downloadAPI.saveHistory(newOrder);
+                                }}
+                                className={cn(
+                                    "grid transition-all duration-700",
+                                    viewMode === 'list' ? "grid-cols-1 gap-1.5" : "grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-2"
+                                )}
+                            >
+                                {filteredTasks.map(task => (
+                                    <Reorder.Item 
+                                        key={task.id} 
+                                        value={task}
+                                        dragListener={viewMode === 'list'} // Only drag in list view for better UX
+                                    >
+                                    <DownloadItem
+                                        task={task}
+                                        onStart={handleStart}
+                                        onPause={handlePause}
+                                        onCancel={handleCancel}
+                                        onOpenFolder={openFolder}
+                                        onVerifyChecksum={handleVerifyChecksum}
+                                        viewMode={viewMode}
+                                    />
+                                    </Reorder.Item>
+                                ))}
+                            </Reorder.Group>
                     ) : (
                         <div className="group relative flex flex-col items-center justify-center py-32 text-center bg-glass-panel border-2 border-dashed border-border-glass rounded-[40px] animate-in fade-in zoom-in duration-1000 overflow-hidden">
                             {/* Animated Background Glow */}

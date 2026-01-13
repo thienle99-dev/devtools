@@ -268,6 +268,12 @@ electron.contextBridge.exposeInMainWorld("downloadAPI", {
 	cancel: (taskId) => electron.ipcRenderer.invoke("download:cancel", taskId),
 	openFolder: (filePath) => electron.ipcRenderer.invoke("download:open-folder", filePath),
 	clearHistory: () => electron.ipcRenderer.invoke("download:clear-history"),
+	saveHistory: (history) => electron.ipcRenderer.invoke("download:save-history", history),
+	reorder: (startIndex, endIndex) => electron.ipcRenderer.invoke("download:reorder", {
+		startIndex,
+		endIndex
+	}),
+	verifyChecksum: (taskId) => electron.ipcRenderer.invoke("download:verify-checksum", taskId),
 	onProgress: (taskId, callback) => {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on(`download:progress:${taskId}`, listener);
@@ -277,5 +283,15 @@ electron.contextBridge.exposeInMainWorld("downloadAPI", {
 		const listener = (_event, progress) => callback(progress);
 		electron.ipcRenderer.on("download:any-progress", listener);
 		return () => electron.ipcRenderer.removeListener("download:any-progress", listener);
+	},
+	onStarted: (callback) => {
+		const listener = (_event, task) => callback(task);
+		electron.ipcRenderer.on("download:task-started", listener);
+		return () => electron.ipcRenderer.removeListener("download:task-started", listener);
+	},
+	onCompleted: (callback) => {
+		const listener = (_event, task) => callback(task);
+		electron.ipcRenderer.on("download:task-completed", listener);
+		return () => electron.ipcRenderer.removeListener("download:task-completed", listener);
 	}
 });

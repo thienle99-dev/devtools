@@ -15,7 +15,11 @@ import {
     FileImage,
     FileAudio,
     FileVideo,
-    Binary
+    Binary,
+    Lock,
+    Fingerprint,
+    ShieldCheck,
+    ShieldAlert
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { formatBytes, formatTime } from '@utils/format';
@@ -28,6 +32,7 @@ interface DownloadItemProps {
     onPause: (id: string) => void;
     onCancel: (id: string) => void;
     onOpenFolder: (path: string) => void;
+    onVerifyChecksum: (id: string) => void;
     viewMode?: 'list' | 'grid';
 }
 
@@ -37,6 +42,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
     onPause,
     onCancel,
     onOpenFolder,
+    onVerifyChecksum,
     viewMode = 'list'
 }) => {
     const isDownloading = task.status === 'downloading';
@@ -110,6 +116,18 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                              <span className={cn("opacity-80 transition-colors", categoryColor)}>{task.category}</span>
                              <span className="opacity-40">•</span>
                              <span className="tabular-nums">{formatBytes(task.downloadedSize)} / {formatBytes(task.totalSize)}</span>
+                             {task.credentials && (
+                                 <>
+                                     <span className="opacity-40">•</span>
+                                     <Lock className="w-2.5 h-2.5 text-amber-500" />
+                                 </>
+                             )}
+                             {task.checksum && (
+                                 <>
+                                     <span className="opacity-40">•</span>
+                                     <Fingerprint className={cn("w-2.5 h-2.5", task.checksum.verified === true ? "text-emerald-500" : task.checksum.verified === false ? "text-rose-500" : "text-blue-500")} />
+                                 </>
+                             )}
                         </div>
                     </div>
 
@@ -171,6 +189,22 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
 
                 {/* 3. Actions - Always visible, Compact Pills */}
                 <div className="flex items-center gap-1 shrink-0">
+                    {isCompleted && task.checksum && (
+                        <button
+                            onClick={() => onVerifyChecksum(task.id)}
+                            title={task.checksum.verified === true ? "Verified" : task.checksum.verified === false ? "Verification Failed" : "Verify Integrity"}
+                            className={cn(
+                                "w-7 h-7 flex items-center justify-center rounded-lg transition-all border border-transparent",
+                                task.checksum.verified === true ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" :
+                                task.checksum.verified === false ? "text-rose-500 bg-rose-500/10 border-rose-500/20" :
+                                "text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/20"
+                            )}
+                        >
+                            {task.checksum.verified === true ? <ShieldCheck className="w-4 h-4" /> : 
+                             task.checksum.verified === false ? <ShieldAlert className="w-4 h-4" /> : 
+                             <Fingerprint className="w-3.5 h-3.5" />}
+                        </button>
+                    )}
                     {!isCompleted && !isFailed && (
                         <button
                             onClick={() => isDownloading ? onPause(task.id) : onStart(task.id)}

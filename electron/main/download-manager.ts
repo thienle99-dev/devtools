@@ -11,6 +11,7 @@ import type { DownloadTask, DownloadSegment, DownloadProgress, DownloadSettings 
 interface StoreSchema {
     history: DownloadTask[];
     settings: DownloadSettings;
+    savedCredentials: Record<string, { username?: string, password?: string }>;
 }
 
 const HTTP_AGENT = new http.Agent({ keepAlive: true, maxSockets: 128, keepAliveMsecs: 10000 });
@@ -20,6 +21,8 @@ const COMMON_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit
 export class DownloadManager extends EventEmitter {
     private store: Store<StoreSchema>;
     private history: DownloadTask[];
+    private globalDownloadedInLastSecond = 0;
+    private lastSpeedCheck = Date.now();
     private activeTasks: Map<string, {
         task: DownloadTask;
         abortControllers: AbortController[];
@@ -41,8 +44,12 @@ export class DownloadManager extends EventEmitter {
                     autoStart: true,
                     monitorClipboard: true,
                     autoUnzip: false,
-                    autoOpenFolder: true
-                }
+                    autoOpenFolder: true,
+                    autoVerifyChecksum: true,
+                    enableSounds: true,
+                    speedLimit: 0 
+                },
+                savedCredentials: {}
             }
         });
         this.history = this.store.get('history', []);
@@ -94,8 +101,23 @@ export class DownloadManager extends EventEmitter {
         this.emit('progress', progress);
     }
 
-    async createDownload(url: string, customFilename?: string): Promise<DownloadTask> {
-        const info = await this.getFileInfo(url);
+    async createDownload(url: string, customFilename?: string, options?: any): Promise<DownloadTask> {
+        // Auto-fill credentials from store if not provided
+        if (!options?.credentials) {
+            const domain = new URL(url).hostname;
+            const saved = this.store.get('savedCredentials', {}) as Record<string, any>;
+            if (saved[domain]) {
+                options = { ...options, credentials: saved[domain] };
+            }
+        } else {
+            // Save new credentials
+            const domain = new URL(url).hostname;
+            const saved = this.store.get('savedCredentials', {}) as Record<string, any>;
+            saved[domain] = options.credentials;
+            this.store.set('savedCredentials', saved);
+        }
+
+        const info = await this.getFileInfo(url, 5, options?.credentials);
 
         const settings = this.getSettings();
         // Use custom filename, or filename from headers, or from final URL path
@@ -118,7 +140,9 @@ export class DownloadManager extends EventEmitter {
             eta: 0,
             priority: 5,
             category,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            checksum: options?.checksum,
+            credentials: options?.credentials
         };
 
         if (info.acceptRanges && info.size > 0 && settings.segmentsPerDownload > 1) {
@@ -150,7 +174,7 @@ export class DownloadManager extends EventEmitter {
         return task;
     }
 
-    private async getFileInfo(url: string, limit = 5): Promise<{ size: number, acceptRanges: boolean, filename?: string, finalUrl: string }> {
+    private async getFileInfo(url: string, limit = 5, credentials?: { username?: string, password?: string }): Promise<{ size: number, acceptRanges: boolean, filename?: string, finalUrl: string }> {
         if (limit <= 0) {
             throw new Error('Too many redirects');
         }
@@ -166,7 +190,10 @@ export class DownloadManager extends EventEmitter {
                     headers: {
                         'User-Agent': COMMON_USER_AGENT,
                         'Accept': '*/*',
-                        'Connection': 'keep-alive'
+                        'Connection': 'keep-alive',
+                        ...(credentials?.username || credentials?.password ? {
+                            'Authorization': `Basic ${Buffer.from(`${credentials.username || ''}:${credentials.password || ''}`).toString('base64')}`
+                        } : {})
                     }
                 };
 
@@ -174,7 +201,7 @@ export class DownloadManager extends EventEmitter {
                     // Handle redirects
                     if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                         const redirectUrl = new URL(res.headers.location, url).toString();
-                        resolve(this.getFileInfo(redirectUrl, limit - 1));
+                        resolve(this.getFileInfo(redirectUrl, limit - 1, credentials));
                         return;
                     }
 
@@ -310,13 +337,14 @@ export class DownloadManager extends EventEmitter {
         task.error = undefined;
         this.saveTask(task);
         this.emitProgress(task);
+        this.emit('task-started', task);
 
         const abortControllers: AbortController[] = [];
         this.activeTasks.set(taskId, { 
             task, 
             abortControllers, 
             lastUpdate: Date.now(), 
-            lastDownloaded: task.downloadedSize 
+            lastDownloaded: task.downloadedSize
         });
 
         // Ensure directory exists
@@ -429,6 +457,11 @@ export class DownloadManager extends EventEmitter {
                 headers['Range'] = `bytes=${startPos}-${endPos}`;
             }
 
+            if (task.credentials?.username || task.credentials?.password) {
+                const auth = Buffer.from(`${task.credentials.username || ''}:${task.credentials.password || ''}`).toString('base64');
+                headers['Authorization'] = `Basic ${auth}`;
+            }
+
             const download = (currentUrl: string, redirectLimit: number, retryCount: number = 0) => {
                 if (redirectLimit <= 0) {
                     reject(new Error('Too many redirects in segment download'));
@@ -472,6 +505,24 @@ export class DownloadManager extends EventEmitter {
                         // Increment metrics
                         segment.downloaded += chunk.length;
                         task.downloadedSize += chunk.length;
+
+                        // Speed Limiter logic (Global)
+                        const settings = this.getSettings();
+                        if (settings.speedLimit > 0) {
+                            this.globalDownloadedInLastSecond += chunk.length;
+                            if (this.globalDownloadedInLastSecond >= settings.speedLimit) {
+                                res.pause();
+                                const now = Date.now();
+                                const elapsed = now - this.lastSpeedCheck;
+                                const wait = Math.max(0, 1000 - elapsed);
+                                
+                                setTimeout(() => {
+                                    this.globalDownloadedInLastSecond = 0;
+                                    this.lastSpeedCheck = Date.now();
+                                    res.resume();
+                                }, wait);
+                            }
+                        }
 
                         // Perform direct write using the task's shared file descriptor
                         isWriting = true;
@@ -592,9 +643,48 @@ export class DownloadManager extends EventEmitter {
         }
     }
 
+    async verifyChecksum(taskId: string): Promise<boolean> {
+        const task = this.history.find(t => t.id === taskId);
+        if (!task || !task.checksum || task.status !== 'completed') return false;
+        
+        const crypto = require('crypto');
+        const hash = crypto.createHash(task.checksum.algorithm);
+        
+        try {
+            const stream = fs.createReadStream(task.filepath);
+            return new Promise((resolve) => {
+                stream.on('data', (data) => hash.update(data));
+                stream.on('end', () => {
+                    const calculated = hash.digest('hex');
+                    const verified = calculated.toLowerCase() === task.checksum!.value.trim().toLowerCase();
+                    task.checksum!.verified = verified;
+                    this.saveTask(task);
+                    this.emitProgress(task);
+                    resolve(verified);
+                });
+                stream.on('error', () => resolve(false));
+            });
+        } catch (err) {
+            return false;
+        }
+    }
+
     clearHistory(): void {
         // Only clear non-active tasks
         this.history = this.history.filter(t => this.activeTasks.has(t.id));
+        this.persistHistory();
+    }
+
+    reorderHistory(startIndex: number, endIndex: number) {
+        const result = Array.from(this.history);
+        const [removed] = result.splice(startIndex, 1);
+        result.splice(endIndex, 0, removed);
+        this.history = result;
+        this.persistHistory();
+    }
+
+    saveHistory(history: DownloadTask[]): void {
+        this.history = history;
         this.persistHistory();
     }
 
@@ -617,6 +707,50 @@ export class DownloadManager extends EventEmitter {
             // For now we'll just log and maybe open it
             console.log('Auto-unzip triggered for:', task.filename);
         }
+
+        // 3. Auto Verify Checksum
+        if (settings.autoVerifyChecksum && task.checksum) {
+            this.verifyChecksum(task.id);
+        }
+
+        // 4. System Notification
+        this.showCompletedNotification(task);
+        
+        // 5. Sound Event
+        this.emit('task-completed', task);
+    }
+
+    private showCompletedNotification(task: DownloadTask) {
+        const { Notification, shell } = require('electron');
+        
+        const notification = new Notification({
+            title: 'Download Completed',
+            body: `${task.filename} has been downloaded successfully.`,
+            silent: true, // We handle our own sounds
+            timeoutType: 'default',
+            // On macOS, we can add actions
+            ...(process.platform === 'darwin' ? {
+                actions: [
+                    { type: 'button', text: 'Open File' },
+                    { type: 'button', text: 'Show in Folder' }
+                ]
+            } : {})
+        });
+
+        notification.on('click', () => {
+            shell.showItemInFolder(task.filepath);
+        });
+
+        // Handle macOS actions
+        notification.on('action', (_event: any, index: number) => {
+            if (index === 0) {
+                shell.openPath(task.filepath);
+            } else if (index === 1) {
+                shell.showItemInFolder(task.filepath);
+            }
+        });
+
+        notification.show();
     }
 
     private getCategory(filename: string): DownloadTask['category'] {

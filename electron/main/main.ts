@@ -2201,6 +2201,10 @@ app.whenReady().then(() => {
     }
   })
 
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.devtools.app');
+  }
+
   createTray();
   createWindow();
 })

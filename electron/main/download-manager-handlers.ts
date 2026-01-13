@@ -13,6 +13,22 @@ export function setupDownloadManagerHandlers() {
         });
     });
 
+    downloadManager.on('task-started', (task) => {
+        BrowserWindow.getAllWindows().forEach(win => {
+            if (!win.isDestroyed()) {
+                win.webContents.send('download:task-started', task);
+            }
+        });
+    });
+
+    downloadManager.on('task-completed', (task) => {
+        BrowserWindow.getAllWindows().forEach(win => {
+            if (!win.isDestroyed()) {
+                win.webContents.send('download:task-completed', task);
+            }
+        });
+    });
+
     ipcMain.handle('download:get-history', () => {
         return downloadManager.getHistory();
     });
@@ -26,9 +42,13 @@ export function setupDownloadManagerHandlers() {
         return { success: true };
     });
 
-    ipcMain.handle('download:create', async (_event, { url, filename }: { url: string, filename?: string }) => {
-        const task = await downloadManager.createDownload(url, filename);
+    ipcMain.handle('download:create', async (_event, options: any) => {
+        const task = await downloadManager.createDownload(options.url, options.filename, options);
         return task;
+    });
+
+    ipcMain.handle('download:verify-checksum', async (_event, taskId: string) => {
+        return await downloadManager.verifyChecksum(taskId);
     });
 
     ipcMain.handle('download:start', async (_event, taskId: string) => {
@@ -58,6 +78,16 @@ export function setupDownloadManagerHandlers() {
 
     ipcMain.handle('download:clear-history', () => {
         downloadManager.clearHistory();
+        return { success: true };
+    });
+
+    ipcMain.handle('download:reorder', (_event, { startIndex, endIndex }: { startIndex: number, endIndex: number }) => {
+        downloadManager.reorderHistory(startIndex, endIndex);
+        return { success: true };
+    });
+
+    ipcMain.handle('download:save-history', (_event, history: any[]) => {
+        downloadManager.saveHistory(history);
         return { success: true };
     });
 }
