@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import type { PluginManifest } from '@/types/plugin';
-import { X, Download, BadgeCheck, Globe, HardDrive, Shield, Cpu, ExternalLink, User, Star } from 'lucide-react';
+import { X, Download, BadgeCheck, Globe, HardDrive, Shield, Cpu, ExternalLink, User, Star, Package } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { getTagColor } from '../tag-utils';
 
@@ -15,12 +15,48 @@ interface PluginDetailModalProps {
 
 const getCategoryColor = (category: string) => {
   const cat = category.toLowerCase();
-  if (cat.includes('media')) return 'text-purple-400 border-purple-500/30 bg-purple-500/5';
-  if (cat.includes('document')) return 'text-amber-400 border-amber-500/30 bg-amber-500/5';
-  if (cat.includes('developer')) return 'text-blue-400 border-blue-500/30 bg-blue-500/5';
-  if (cat.includes('security')) return 'text-rose-400 border-rose-500/30 bg-rose-500/5';
-  if (cat.includes('network')) return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5';
-  return 'text-indigo-400 border-indigo-500/30 bg-indigo-500/5';
+  if (cat.includes('media')) return {
+    text: 'text-purple-400',
+    border: 'border-purple-500/30',
+    bg: 'bg-purple-500/10',
+    badge: 'text-purple-400 border-purple-500/30 bg-purple-500/10',
+    accent: 'bg-purple-500'
+  };
+  if (cat.includes('document')) return {
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
+    bg: 'bg-amber-500/10',
+    badge: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+    accent: 'bg-amber-500'
+  };
+  if (cat.includes('developer')) return {
+    text: 'text-blue-400',
+    border: 'border-blue-500/30',
+    bg: 'bg-blue-500/10',
+    badge: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
+    accent: 'bg-blue-500'
+  };
+  if (cat.includes('security')) return {
+    text: 'text-rose-400',
+    border: 'border-rose-500/30',
+    bg: 'bg-rose-500/10',
+    badge: 'text-rose-400 border-rose-500/30 bg-rose-500/10',
+    accent: 'bg-rose-500'
+  };
+  if (cat.includes('network')) return {
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/30',
+    bg: 'bg-emerald-500/10',
+    badge: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+    accent: 'bg-emerald-500'
+  };
+  return {
+    text: 'text-indigo-400',
+    border: 'border-indigo-500/30',
+    bg: 'bg-indigo-500/10',
+    badge: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10',
+    accent: 'bg-indigo-500'
+  };
 };
 
 export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({ 
@@ -150,34 +186,14 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
                             </div>
                             <span className="text-xs font-black">{plugin.downloads?.toLocaleString() || '0'}</span>
                         </div>
-                        <div className="pt-4 border-t border-black/5 dark:border-white/5">
-                            <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-black uppercase tracking-widest transition-all">
-                                <ExternalLink size={14} />
-                                Documentation
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Metadata Tags */}
-                    <div className="space-y-4">
-                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Architecture Tags</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {plugin.tags.map(tag => (
-                                <div key={tag} className={cn("px-3 py-1.5 rounded-xl font-bold uppercase text-[9px] tracking-widest transition-all hover:scale-105", getTagColor(tag))}>
-                                    {tag}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                                <span className="text-sm font-bold opacity-80">{sizeMB} MB</span>
-                             </div>
+                        
+                        <div className="pt-4 border-t border-black/5 dark:border-white/5 space-y-3">
                              <div className="flex justify-between items-center group">
-                                <span className="text-[11px] font-black uppercase tracking-widest opacity-20 group-hover:opacity-40 transition-opacity">Legal Protocol</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-20 group-hover:opacity-40 transition-opacity">Legal Protocol</span>
                                 <span className="text-xs font-bold opacity-60">{plugin.license}</span>
                              </div>
                              <div className="flex justify-between items-center group">
-                                <span className="text-[11px] font-black uppercase tracking-widest opacity-20 group-hover:opacity-40 transition-opacity">Deployment</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-20 group-hover:opacity-40 transition-opacity">Deployment</span>
                                 <div className="flex gap-2">
                                     {plugin.platforms?.map(p => (
                                         <span key={p} className="text-[10px] font-black text-indigo-500 dark:text-indigo-400/80 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">{p}</span>
@@ -188,7 +204,18 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Quick Navigation</h3>
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Architecture Tags</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {plugin.tags.map(tag => (
+                                <div key={tag} className={cn("px-3 py-1.5 rounded-xl font-bold uppercase text-[9px] tracking-widest transition-all hover:scale-105", getTagColor(tag))}>
+                                    {tag}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Resources</h3>
                         <div className="space-y-3">
                             {plugin.homepage && (
                                 <a 
