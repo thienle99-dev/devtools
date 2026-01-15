@@ -1,6 +1,10 @@
 {
   "name": "devtools-app",
   "private": true,
+  "author": {
+    "name": "Thien Le",
+    "email": "chithien0909@gmail.com"
+  },
   "version": "1.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
