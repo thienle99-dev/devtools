@@ -135,11 +135,11 @@ export default defineConfig({
       'zustand',
       'lucide-react',
       'sonner',
-      'zxcvbn',      // Password strength checker
     ],
     exclude: [
       'tesseract.js', // Lazy load
       'fabric',       // Lazy load
+      'zxcvbn',
     ]
   },
 })

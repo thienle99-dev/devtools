@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 import { Shield, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
-import zxcvbn from 'zxcvbn';
+// import zxcvbn from 'zxcvbn'; // Lazy loaded
 
 const TOOL_ID = 'password-policy';
 
 export const PasswordPolicyTester: React.FC = () => {
     const { clearToolData } = useToolState(TOOL_ID);
     const [password, setPassword] = useState('');
+    const [zxcvbn, setZxcvbn] = useState<any>(null);
+
+    useEffect(() => {
+        import('zxcvbn').then(m => setZxcvbn((m as any).default || m));
+    }, []);
 
     const [policy, setPolicy] = useState({
         minLength: 8,
@@ -20,7 +25,12 @@ export const PasswordPolicyTester: React.FC = () => {
 
     const results = (() => {
         if (!password) return null;
-        const analysis = zxcvbn(password);
+        let analysis = { score: 0, feedback: { warning: '', suggestions: [] } };
+        
+        if (zxcvbn) {
+             analysis = zxcvbn(password);
+        }
+
         return {
             length: password.length >= policy.minLength,
             upper: /[A-Z]/.test(password),

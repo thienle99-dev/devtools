@@ -4,7 +4,7 @@ import { Checkbox } from '@components/ui/Checkbox';
 import { TextArea } from '@components/ui/TextArea';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
-import zxcvbn from 'zxcvbn';
+// import zxcvbn from 'zxcvbn'; // Lazy loaded
 
 const TOOL_ID = 'token-generator';
 
@@ -39,6 +39,11 @@ export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
     };
 
     const { options, output, meta } = data;
+    const [zxcvbn, setZxcvbn] = React.useState<any>(null);
+
+    useEffect(() => {
+        import('zxcvbn').then(m => setZxcvbn((m as any).default || m));
+    }, []);
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -83,7 +88,7 @@ export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
 
         // Analyze strength of the first token (if length > 0)
         let strengthResult = null;
-        if (tokens.length > 0 && result.length > 0) {
+        if (tokens.length > 0 && result.length > 0 && zxcvbn) {
             strengthResult = zxcvbn(tokens[0]);
         }
 
