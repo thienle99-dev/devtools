@@ -1,66 +1,69 @@
 appId: com.devtools.app
 productName: DevTools App
-copyright: Copyright © 2026 DevTools App
+copyright: >
+  Copyright © 2026 DevTools
 
-# OPTIMIZATION: Maximum compression
-compression: maximum
-asar: true
+# Global build optimizations for production
+compression: maximum          # Best compression for installers
+asar: true                    # Pack app into asar archive
 asarUnpack:
-  - "**/*.node"
-  - "**/ffmpeg*"
-  - "resources/bin/**/*"
+  - '**/*.node'               # Native modules
+  - 'resources/bin/**'        # FFmpeg binaries, helpers, etc.
 
 directories:
-  output: dist-electron/pack
+  output: dist-electron/pack  # All installers/output go here
   buildResources: build
 
+# Files to include in production app
 files:
-  - "dist/**/*"
-  - "dist-electron/**/*"
-  - "resources/**/*"
-  - "package.json"
-  # Comprehensive exclusions for smaller build
-  - "!**/*.{ts,tsx,jsx,map,md}"
-  - "!**/.{git,github,vscode,idea}"
-  - "!**/node_modules/*/{test,tests,*.test.*,*.spec.*}"
-  - "!**/node_modules/*/{README,LICENSE,CHANGELOG}*"
-  - "!**/node_modules/*/*.{md,markdown,txt}"
-  - "!**/node_modules/**/{example,examples,demo,demos,doc,docs}"
-  - "!node_modules/**/*"
-  - "!src/**/*"
-  - "!electron/**/*"
-  - "!docs/**/*"
-  - "!debug_scripts/**/*"
-  - "!video/**/*"
-  - "!build/**/*"
-  - "!scripts/**/*"
-  - "!*.{md,yml,yaml,log}"
-  - "!*.json"
-  - "!tmpfs*"
-  - "!dummy"
-  - "package.json"
+  - 'dist/**'                 # Vite renderer bundle
+  - 'dist-electron/**'        # Electron main/preload bundle
+  - 'resources/**'            # Extra resources (ffmpeg, plugin registry, etc.)
+  - 'package.json'
 
-# Windows Configuration (x64 ONLY)
+  # Exclude source, tooling, and heavy dev-only content
+  - '!src/**'
+  - '!electron/**'
+  - '!docs/**'
+  - '!debug_scripts/**'
+  - '!video/**'
+  - '!build/**'
+  - '!scripts/**'
+
+  # Generic exclusions to reduce size
+  - '!**/*.{ts,tsx,jsx,map,md}'
+  - '!**/.{git,github,vscode,idea}'
+  - '!**/node_modules/*/{test,tests,__tests__,*.test.*,*.spec.*}'
+  - '!**/node_modules/*/{README,LICENSE,CHANGELOG}*'
+  - '!**/node_modules/*/*.{md,markdown,txt}'
+  - '!**/node_modules/**/{example,examples,demo,demos,doc,docs}'
+  - '!**/node_modules/*.d.ts'
+  - '!**/node_modules/.bin'
+  - '!*.{yml,yaml,log}'
+  - '!tmpfs*'
+
+# Windows Configuration (x64)
 win:
   target:
-    # NSIS Installer (exe installer)
+    # 1) Standard NSIS installer (.exe)
     - target: nsis
       arch:
         - x64
-    # Portable Executable (single exe, no install)
+    # 2) Portable executable (single .exe, no install)
     - target: portable
       arch:
         - x64
-    # ZIP Archive (portable zip)
+    # 3) ZIP archive (portable folder)
     - target: zip
       arch:
         - x64
+
   icon: public/icon.png
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  artifactName: '${productName}-${version}-${arch}.${ext}'
   requestedExecutionLevel: asInvoker
   signAndEditExecutable: false
 
-# NSIS Installer Configuration
+# NSIS installer
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -69,35 +72,30 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: DevTools App
   deleteAppDataOnUninstall: false
-  differentialPackage: true  # Smaller updates
-  artifactName: ${productName}-${version}-Setup-${arch}.${ext}
+  differentialPackage: true
+  artifactName: '${productName}-${version}-Setup-${arch}.${ext}'
 
-# Portable Executable Configuration
+# Portable exe
 portable:
-  artifactName: ${productName}-${version}-Portable-${arch}.${ext}
+  artifactName: '${productName}-${version}-Portable-${arch}.${ext}'
   requestExecutionLevel: user
-
-# ZIP Archive Configuration
-zip:
-  artifactName: ${productName}-${version}-Portable-${arch}.zip
 
 # macOS Configuration
 mac:
   target:
     - target: dmg
       arch:
-        - universal  # Universal binary (smaller than separate builds)
+        - universal
   icon: public/icon.png
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  artifactName: ${productName}-${version}.${ext}
+  artifactName: '${productName}-${version}-${arch}.${ext}'
 
-# DMG Configuration
 dmg:
-  title: ${productName} ${version}
+  title: '${productName} ${version}'
   icon: public/icon.png
   contents:
     - x: 130
@@ -109,7 +107,7 @@ dmg:
   window:
     width: 540
     height: 380
-  format: UDZO  # Maximum compression
+  format: UDZO
 
 # Linux Configuration
 linux:
@@ -117,5 +115,5 @@ linux:
     - AppImage
   icon: public/icon.png
   category: Development
-  synopsis: Developer Tools Application
+  synopsis: DevTools App
   description: A comprehensive developer tools application with multiple utilities

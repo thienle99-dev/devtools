@@ -9,7 +9,7 @@ interface PluginHostProps {
     pluginId?: string; // If coming from definition
 }
 
-export const PluginHost: React.FC<PluginHostProps> = ({ tabId, pluginId }) => {
+export const PluginHost: React.FC<PluginHostProps> = ({ pluginId }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +73,7 @@ export const PluginHost: React.FC<PluginHostProps> = ({ tabId, pluginId }) => {
     if (error) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-12 overflow-y-auto">
-                 <motion.div 
+                <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="max-w-md w-full"
@@ -115,9 +115,34 @@ export const PluginHost: React.FC<PluginHostProps> = ({ tabId, pluginId }) => {
         );
     }
 
-    if (PluginComponent) {
-        return <PluginComponent tabId={tabId} />;
-    }
-
-    return null;
+    // Tạm thời UI placeholder khi chưa có PluginComponent thực sự
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center p-12 overflow-y-auto">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-md w-full"
+            >
+                <Card className="p-8 border border-border bg-background/60 backdrop-blur-md">
+                    <div className="flex flex-col items-center text-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                            <Package className="w-8 h-8 text-primary" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-foreground">Plugin đang chờ UI</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Logic của plugin đã được cài đặt. Giao diện tương tác sẽ được cập nhật trong các phiên bản tiếp theo.
+                            </p>
+                        </div>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => window.location.href = '#/marketplace'}
+                        >
+                            Quay lại Marketplace
+                        </Button>
+                    </div>
+                </Card>
+            </motion.div>
+        </div>
+    );
 };

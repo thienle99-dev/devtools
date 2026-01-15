@@ -3,13 +3,12 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { Slider } from '@components/ui/Slider';
-import { Label } from '@components/ui/Label';
 import { 
-    Upload, Download, RefreshCcw, Image as ImageIcon,
+    Upload, Download, RefreshCcw,
     Crop, Maximize2, RotateCw, Wand2, Droplet,
-    Type, Frame, Sun, Contrast, Eraser
+    Frame, Sun, Contrast, Eraser
 } from 'lucide-react';
-import ReactCrop, { Crop as CropType, PixelCrop } from 'react-image-crop';
+import ReactCrop, { type Crop as CropType, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { toast } from 'sonner';
 
@@ -39,26 +38,29 @@ const DEFAULT_STATE: EditorState = {
 
 export const ImageEditor: React.FC = () => {
     const { data: toolData, setToolData, clearToolData } = useToolState(TOOL_ID);
-    const [imageSrc, setImageSrc] = useState<string | null>(toolData?.imageSrc || null);
+    const persistedMeta = (toolData?.meta as any) || {};
+    const [imageSrc, setImageSrc] = useState<string | null>(persistedMeta.imageSrc ?? null);
     const [crop, setCrop] = useState<CropType>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-    const [history, setHistory] = useState<string[]>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1);
-    
     // Editor values
-    const [state, setState] = useState<EditorState>(toolData?.state || DEFAULT_STATE);
+    const [state, setState] = useState<EditorState>(persistedMeta.state ?? DEFAULT_STATE);
     const [activeTab, setActiveTab] = useState<'adjust' | 'filter' | 'crop'>('adjust');
 
     const imgRef = useRef<HTMLImageElement>(null);
-    const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Persist state
+    // Persist state into tool meta
     useEffect(() => {
         if (imageSrc) {
-            setToolData(TOOL_ID, { imageSrc, state });
+            setToolData(TOOL_ID, { 
+                meta: { 
+                    ...(toolData?.meta || {}), 
+                    imageSrc, 
+                    state 
+                } 
+            });
         }
-    }, [imageSrc, state, setToolData]);
+    }, [imageSrc, state, setToolData, toolData?.meta]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -69,8 +71,6 @@ export const ImageEditor: React.FC = () => {
                 setImageSrc(result);
                 // Reset state for new image
                 setState(DEFAULT_STATE);
-                setHistory(result ? [result] : []);
-                setHistoryIndex(0);
             });
             reader.readAsDataURL(file);
         }
@@ -82,15 +82,6 @@ export const ImageEditor: React.FC = () => {
 
     const getFilterString = () => {
         return `brightness(${state.brightness}%) contrast(${state.contrast}%) saturate(${state.saturation}%) blur(${state.blur}px) grayscale(${state.grayscale}%) sepia(${state.sepia}%)`;
-    };
-
-    const canvasToBlob = async (canvas: HTMLCanvasElement): Promise<Blob> => {
-        return new Promise((resolve, reject) => {
-            canvas.toBlob((blob) => {
-                if (blob) resolve(blob);
-                else reject(new Error('Canvas is empty'));
-            }, 'image/png');
-        });
     };
 
     const downloadImage = async () => {
@@ -168,7 +159,7 @@ export const ImageEditor: React.FC = () => {
         toast.info('Edits reset');
     };
 
-    const FilterSlider = ({ label, value, min, max, onChange, icon: Icon }: any) => (
+    const FilterSlider = ({ label, value, min, max, step = 1, onChange, icon: Icon }: any) => (
         <div className="space-y-3">
             <div className="flex justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-foreground-muted uppercase tracking-wider">
@@ -177,9 +168,11 @@ export const ImageEditor: React.FC = () => {
                 <span className="text-xs font-mono text-foreground-secondary">{value}</span>
             </div>
             <Slider
+                label={label}
                 value={value}
                 min={min}
                 max={max}
+                step={step}
                 onChange={onChange}
                 className="w-full"
             />
