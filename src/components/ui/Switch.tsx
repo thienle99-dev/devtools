@@ -1,6 +1,6 @@
 import React, { type InputHTMLAttributes } from 'react';
 import { cn } from '@utils/cn';
-import { motion } from 'framer-motion';
+
 
 export interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
     label?: string;
@@ -65,21 +65,14 @@ export const Switch: React.FC<SwitchProps> = ({
                     checked && "bg-indigo-500 hover:bg-indigo-600 border-indigo-500 group-hover:border-indigo-600 group-hover:bg-indigo-600"
                 )}>
                     {/* Switch Thumb */}
-                    <motion.div 
-                        initial={false}
-                        animate={{ 
-                            x: checked ? 20 : 0, 
-                            scale: checked ? 1 : 0.85 
-                        }}
-                        transition={{ 
-                            type: "spring", 
-                            stiffness: 500, 
-                            damping: 30 
-                        }}
+                    <div 
                         className={cn(
-                            "absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-colors",
-                            checked ? "bg-white" : "bg-white/50"
+                            "absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                            checked ? "bg-white translate-x-5 scale-100" : "bg-white/50 translate-x-0 scale-90"
                         )}
+                        style={{
+                            transitionTimingFunction: "cubic-bezier(0.175, 0.885, 0.32, 1.275)" // Spring-like feel
+                        }}
                     />
                 </div>
             </div>

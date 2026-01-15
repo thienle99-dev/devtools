@@ -1,6 +1,6 @@
 import React, { type InputHTMLAttributes } from 'react';
 import { cn } from '@utils/cn';
-import { motion } from 'framer-motion';
+
 
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
     label?: string;
@@ -49,11 +49,10 @@ export const Checkbox: React.FC<CheckboxProps> = ({
                     checked && "bg-indigo-500 border-indigo-500 hover:bg-indigo-600 hover:border-indigo-600 shadow-sm"
                 )}>
                     {checked && (
-                        <motion.svg 
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                            className="w-full h-full text-white pointer-events-none p-0.5" 
+                        <svg 
+                            className={cn(
+                                "w-full h-full text-white pointer-events-none p-0.5 animate-in zoom-in-50 duration-150 ease-out",
+                            )}
                             viewBox="0 0 24 24" 
                             fill="none" 
                             stroke="currentColor" 
@@ -62,7 +61,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
                             strokeLinejoin="round"
                         >
                             <polyline points="20 6 9 17 4 12" />
-                        </motion.svg>
+                        </svg>
                     )}
                 </div>
             </div>
