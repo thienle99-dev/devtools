@@ -8,8 +8,9 @@ import {
     Crop, Maximize2, RotateCw, Wand2, Droplet,
     Frame, Sun, Contrast, Eraser
 } from 'lucide-react';
-import ReactCrop, { type Crop as CropType, type PixelCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import type { Crop as CropType, PixelCrop } from 'react-image-crop';
+// import ReactCrop from 'react-image-crop'; // Lazy loaded
+// import 'react-image-crop/dist/ReactCrop.css'; // Lazy loaded
 import { toast } from 'sonner';
 
 const TOOL_ID = 'image-editor';
@@ -45,6 +46,22 @@ export const ImageEditor: React.FC = () => {
     // Editor values
     const [state, setState] = useState<EditorState>(persistedMeta.state ?? DEFAULT_STATE);
     const [activeTab, setActiveTab] = useState<'adjust' | 'filter' | 'crop'>('adjust');
+    const [ReactCropComponent, setReactCropComponent] = useState<any>(null);
+
+    // Lazy load ReactCrop
+    useEffect(() => {
+        if (activeTab === 'crop' && !ReactCropComponent) {
+            Promise.all([
+                import('react-image-crop'),
+                import('react-image-crop/dist/ReactCrop.css')
+            ]).then(([module]) => {
+                setReactCropComponent(() => module.default);
+            }).catch(err => {
+                console.error("Failed to load ReactCrop", err);
+                toast.error("Failed to load crop tool");
+            });
+        }
+    }, [activeTab, ReactCropComponent]);
 
     const imgRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -210,11 +227,11 @@ export const ImageEditor: React.FC = () => {
                                  transition: 'transform 0.2s, filter 0.2s'
                              }}
                         >
-                            {activeTab === 'crop' ? (
-                                <ReactCrop
+                            {activeTab === 'crop' && ReactCropComponent ? (
+                                <ReactCropComponent
                                     crop={crop}
-                                    onChange={(c) => setCrop(c)}
-                                    onComplete={(c) => setCompletedCrop(c)}
+                                    onChange={(c: CropType) => setCrop(c)}
+                                    onComplete={(c: PixelCrop) => setCompletedCrop(c)}
                                     aspect={undefined}
                                 >
                                     <img 
@@ -222,9 +239,9 @@ export const ImageEditor: React.FC = () => {
                                         src={imageSrc} 
                                         alt="Edit" 
                                         className="max-w-full max-h-[70vh] object-contain"
-                                        style={activeTab === 'crop' ? { filter: getFilterString() } : undefined}
+                                        style={{ filter: getFilterString() }}
                                     />
-                                </ReactCrop>
+                                </ReactCropComponent>
                             ) : (
                                 <img 
                                     ref={imgRef}
