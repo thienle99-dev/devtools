@@ -1,7 +1,7 @@
 import { AlignLeft, BarChart3, FileDiff, Lock, Type } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import { process as obfuscatorProcess } from '../../text/StringObfuscator';
+// import { process as obfuscatorProcess } from '../../text/StringObfuscator'; // Lazy loaded in process function
 import figlet from 'figlet';
 
 export const textTools: ToolDefinition[] = [
@@ -108,7 +108,10 @@ export const textTools: ToolDefinition[] = [
         keywords: ['text', 'obfuscate', 'encode', 'rot13', 'base64', 'hex'],
         inputTypes: ['text'],
         outputTypes: ['text'],
-        process: (input, options) => obfuscatorProcess(input, options)
+        process: async (input, options) => {
+            const { process: obfuscatorProcess } = await import('../../text/StringObfuscator');
+            return obfuscatorProcess(input, options);
+        }
     },
     {
         id: 'ascii-art',
