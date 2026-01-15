@@ -2,7 +2,7 @@
  * Screenshot Tool Type Definitions
  */
 
-export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url';
+export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url' | 'upload';
 
 export interface CaptureSource {
     id: string;

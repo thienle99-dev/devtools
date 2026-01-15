@@ -93,7 +93,7 @@ DevTools App is transitioning from a monolithic architecture to a **Plugin-Based
 - [x] Annotations (Arrow, Text, Shapes)
 - [x] Privacy (Redaction, Blur)
 - [x] Backgrounds (Gradient, Blur)
-- [ ] Quick Actions (Drag-drop)
+- [x] Quick Actions (Drag-drop)
 - [ ] AI Background Suggestions
 
 #### 3.10 - 3.11 Data & PDF Tools

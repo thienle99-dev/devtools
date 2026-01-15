@@ -6,7 +6,7 @@ import type { AnnotationType, AnnotationConfig } from '../tools/screenshot/utils
 import { DEFAULT_ANNOTATION_CONFIG } from '../tools/screenshot/utils/annotations';
 import type { CropBounds } from '../tools/screenshot/utils/crop';
 
-export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url';
+export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url' | 'upload';
 export type ExportFormat = 'png' | 'jpg' | 'webp';
 
 export interface Screenshot {

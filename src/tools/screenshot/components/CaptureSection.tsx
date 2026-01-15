@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Monitor, Square, MousePointer2, Camera, Clock, Globe } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Monitor, Square, MousePointer2, Camera, Clock, Globe, Upload } from 'lucide-react';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { CaptureMode, CaptureSource } from '../types';
 import { cn } from '@utils/cn';
@@ -26,6 +26,8 @@ export const CaptureSection: React.FC = () => {
     const [isLoadingSources, setIsLoadingSources] = useState(false);
     const [urlInput, setUrlInput] = useState('');
     const [countdown, setCountdown] = useState<number | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Load available capture sources (screens and windows)
     const loadSources = async () => {
@@ -53,6 +55,65 @@ export const CaptureSection: React.FC = () => {
             loadSources();
         }
     }, [captureMode]);
+
+    const processFile = async (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file');
+            return;
+        }
+
+        try {
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const img = new Image();
+            img.onload = () => {
+                const screenshotData = {
+                    id: Date.now().toString(),
+                    dataUrl,
+                    width: img.width,
+                    height: img.height,
+                    timestamp: Date.now(),
+                    format: file.type.split('/')[1] as any,
+                };
+                setCurrentScreenshot(screenshotData);
+                addToHistory(screenshotData);
+                setShowPreview(true);
+                toast.success('Image uploaded!');
+            };
+            img.src = dataUrl;
+        } catch (err) {
+            console.error('Failed to process image:', err);
+            toast.error('Failed to load image');
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) processFile(file);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file) processFile(file);
+    };
 
     const captureWeb = async () => {
         try {
@@ -172,11 +233,15 @@ export const CaptureSection: React.FC = () => {
     };
 
     const handleCapture = () => {
+        if (captureMode === 'upload') {
+            fileInputRef.current?.click();
+            return;
+        }
         // Just a wrapper to trigger async
         performCapture();
     };
 
-    const captureModes: Array<{ mode: CaptureMode; icon: any; label: string; description: string }> = [
+    const captureModes: Array<{ mode: CaptureMode | 'upload'; icon: any; label: string; description: string }> = [
         {
             mode: 'fullscreen',
             icon: Monitor,
@@ -201,25 +266,58 @@ export const CaptureSection: React.FC = () => {
             label: 'Web Page',
             description: 'Capture full scrolling page',
         },
+        {
+            mode: 'upload',
+            icon: Upload,
+            label: 'Upload',
+            description: 'Import image file',
+        },
     ];
 
     const delayOptions = [0, 3, 5, 10];
 
     return (
-        <div className="space-y-8">
+        <div 
+            className={cn(
+                "space-y-8 min-h-[500px] transition-colors duration-300 rounded-3xl p-4 relative",
+                isDragging && "bg-indigo-500/10 border-2 border-dashed border-indigo-500"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileUpload}
+            />
+
+            {/* Drag Overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-3xl animate-in fade-in duration-200 pointer-events-none">
+                    <Upload className="w-16 h-16 text-indigo-500 animate-bounce mb-4" />
+                    <h3 className="text-2xl font-bold text-foreground">Drop image here</h3>
+                    <p className="text-foreground-muted">to open in editor</p>
+                </div>
+            )}
+
             {/* Hero Section */}
             <div className="text-center space-y-3 py-8">
                 <h2 
                     className="text-3xl font-bold"
                     style={{ color: 'var(--color-text-primary)' }}
                 >
-                    Capture Your Screen
+                    {captureMode === 'upload' ? 'Upload or Drop Image' : 'Capture Your Screen'}
                 </h2>
                 <p 
                     className="text-sm max-w-md mx-auto"
                     style={{ color: 'var(--color-text-secondary)' }}
                 >
-                    Choose your capture mode and create beautiful screenshots in seconds
+                    {captureMode === 'upload' 
+                        ? 'Drag and drop an image file or click below to browse' 
+                        : 'Choose your capture mode and create beautiful screenshots in seconds'}
                 </p>
             </div>
 
@@ -231,13 +329,13 @@ export const CaptureSection: React.FC = () => {
                 >
                     Capture Mode
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {captureModes.map(({ mode, icon: Icon, label, description }) => (
                         <button
                             key={mode}
                             onClick={() => setCaptureMode(mode)}
                             className={cn(
-                                "group relative flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-300",
+                                "group relative flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300",
                                 "hover:scale-[1.02] hover:shadow-lg",
                                 captureMode === mode
                                     ? "border-indigo-500 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 shadow-lg shadow-indigo-500/20"
@@ -448,14 +546,22 @@ export const CaptureSection: React.FC = () => {
                     {/* Button Content */}
                     <div className="relative px-12 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-2xl shadow-indigo-500/50 transition-all duration-300 group-hover:shadow-indigo-500/70 group-hover:scale-105 group-disabled:opacity-50 group-disabled:cursor-not-allowed group-disabled:scale-100">
                         <div className="flex items-center gap-3">
-                            <Camera 
-                                className={cn(
-                                    "w-6 h-6 text-white transition-transform duration-300 group-hover:rotate-12",
-                                    countdown !== null && "animate-pulse"
-                                )} 
-                            />
+                            {captureMode === 'upload' ? (
+                                <Upload className="w-6 h-6 text-white transition-transform duration-300 group-hover:scale-110" />
+                            ) : (
+                                <Camera 
+                                    className={cn(
+                                        "w-6 h-6 text-white transition-transform duration-300 group-hover:rotate-12",
+                                        countdown !== null && "animate-pulse"
+                                    )} 
+                                />
+                            )}
                             <span className="text-lg font-bold text-white">
-                                {countdown !== null ? `Capturing in ${countdown}s...` : 'Capture Screenshot'}
+                                {countdown !== null 
+                                    ? `Capturing in ${countdown}s...` 
+                                    : captureMode === 'upload' 
+                                        ? 'Select Image' 
+                                        : 'Capture Screenshot'}
                             </span>
                         </div>
                     </div>
