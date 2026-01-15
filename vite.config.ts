@@ -94,6 +94,9 @@ export default defineConfig({
           if (id.includes('tesseract')) {
             return 'tesseract';
           }
+          if (id.includes('zxcvbn')) {
+            return 'zxcvbn-vendor';
+          }
           
           // Code editor
           if (id.includes('@uiw/react-codemirror') || id.includes('@codemirror/view')) {
