@@ -10,8 +10,8 @@
 
 DevTools App is transitioning from a monolithic architecture to a **Plugin-Based Architecture** to improve performance and startup time.
 
-- **Core App**: Lightweight (50MB), essential tools only.
-- **Plugins**: Heavy tools (FFmpeg, Media, AI) loaded on demand.
+- **Core App**: Lightweight (~50MB), essential tools only.
+- **Plugins**: Heavy tools (FFmpeg, Media, AI, zxcvbn) loaded on demand.
 
 ### Recent Achievements
 
@@ -116,10 +116,10 @@ DevTools App is transitioning from a monolithic architecture to a **Plugin-Based
 
 ### Phase 5: Performance & Optimization
 
-- [x] Lazy Loading Components
-- [x] Virtual Scrolling
-- [x] Bundle Size Optimization
+- [x] Lazy Loading Components (Charts, Editors, Crypto Libs)
+- [x] Bundle Size Optimization (Chunk Splitting, Dynamic Imports)
 - [x] Error Boundaries & Logging
+- [x] Asset Optimization (Lazy CSS, Dynamic Image Libs)
 - [ ] Unit & Integration Tests
 
 ### Phase 6: Build & Distribution
