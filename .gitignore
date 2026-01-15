@@ -107,3 +107,27 @@ coverage
 *.zip
 *.tar.gz
 *.7z
+
+# Agent & Shared (MCP)
+.agent/
+.shared/
+
+# System Files
+__MACOSX/
+*.bat
+
+# Debug & Temporary Scripts
+debug_scripts/
+*.player-script.js
+
+# Build artifacts & cache
+dist-electron/pack/
+*.tsbuildinfo
+.cache/
+.temp/
+
+# Old/duplicate config files
+electron-builder.json
+
+# Archive docs (keep but ignore in searches)
+docs/archive/

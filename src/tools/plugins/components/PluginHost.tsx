@@ -12,7 +12,6 @@ interface PluginHostProps {
 export const PluginHost: React.FC<PluginHostProps> = ({ tabId, pluginId }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [PluginComponent] = useState<React.ComponentType<any> | null>(null);
 
     useEffect(() => {
         const loadPlugin = async () => {
