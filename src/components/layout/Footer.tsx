@@ -47,10 +47,9 @@ const ResourcePill = ({ icon: Icon, label, value, colorClass }: { icon: any, lab
                 <span className={cn("text-[8px] font-mono font-bold", colorClass)}>{Math.round(value)}%</span>
             </div>
             <div className="h-0.5 w-full bg-foreground/10 rounded-full overflow-hidden mt-0.5">
-                <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${value}%` }}
-                    className={cn("h-full", colorClass.replace('text-', 'bg-'))} 
+            <div 
+                    className={cn("h-full transition-all duration-300 ease-out", colorClass.replace('text-', 'bg-'))} 
+                    style={{ width: `${value}%` }}
                 />
             </div>
         </div>
@@ -76,16 +75,14 @@ const TaskMonitor = () => {
     if (taskCount === 0) return null;
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded-md shadow-sm"
+        <div 
+            className="flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded-md shadow-sm animate-in fade-in zoom-in duration-300"
         >
             <Zap size={10} className="text-sky-400 animate-pulse" />
             <span className="text-[9px] font-black text-sky-400 uppercase tracking-tight">
                 {taskCount} {taskCount === 1 ? 'Job' : 'Jobs'}
             </span>
-        </motion.div>
+        </div>
     );
 };
 
@@ -189,14 +186,12 @@ export const Footer = () => {
 
                 <div className="flex items-center gap-2 overflow-hidden">
                     {activeTool ? (
-                        <motion.div 
-                            initial={{ x: -10, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            className="flex items-center gap-2"
+                        <div 
+                            className="flex items-center gap-2 animate-in slide-in-from-left-2 fade-in duration-300"
                         >
                             <activeTool.icon size={12} className={activeTool.color || 'text-indigo-400'} />
                             <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{activeTool.name}</span>
-                        </motion.div>
+                        </div>
                     ) : (
                         <span className="text-xs font-medium text-foreground-disabled italic">DevTools Dashboard</span>
                     )}
