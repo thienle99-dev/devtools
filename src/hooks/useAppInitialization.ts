@@ -22,8 +22,11 @@ export function useAppInitialization() {
         }
     }, [hasCompletedOnboarding, startTour]);
 
-    // Preload heavy modules on idle for better UX
+    // Preload heavy modules on idle for better UX, but delay slightly to prioritize initial interaction
     useEffect(() => {
-        preloadHeavyModules();
+        const timer = setTimeout(() => {
+            preloadHeavyModules();
+        }, 5000);
+        return () => clearTimeout(timer);
     }, []);
 }
