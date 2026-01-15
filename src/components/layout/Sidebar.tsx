@@ -182,12 +182,9 @@ export const Sidebar: React.FC = React.memo(() => {
     }, [favorites, history, categoryOrder, activePlugins]);
 
     return (
-        <motion.aside
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+        <aside
             className={cn(
-                "h-full border-r border-border-glass bg-background/50 backdrop-blur-3xl flex flex-col z-20 shrink-0 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                "h-full border-r border-border-glass bg-background/50 backdrop-blur-3xl flex flex-col z-20 shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-[width]",
                 sidebarCollapsed ? "w-20" : "w-72"
             )}
         >
@@ -376,7 +373,7 @@ export const Sidebar: React.FC = React.memo(() => {
                     )}
                 </AnimatePresence>
             </nav>
-        </motion.aside>
+        </aside>
     );
 });
 

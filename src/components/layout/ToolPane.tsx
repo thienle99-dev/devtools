@@ -8,6 +8,7 @@ import { useToolState, useToolStore } from '../../store/toolStore';
 import { toast } from 'sonner';
 import { readFileAsText, downloadFile, openContentInNewTab } from '../../utils/fileIo';
 import { ToolSelector } from './ToolSelector';
+// ToolDefinition is used.
 import type { ToolDefinition } from '../../tools/registry/types';
 import { motion, AnimatePresence } from 'framer-motion';
 

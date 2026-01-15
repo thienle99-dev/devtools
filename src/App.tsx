@@ -10,7 +10,6 @@ import { AppErrorBoundary } from '@components/layout/AppErrorBoundary';
 import { CommandPalette } from '@components/CommandPalette';
 import { useClipboardStore } from '@store/clipboardStore';
 import { Footer } from '@components/layout/Footer';
-import { motion } from 'framer-motion';
 import { WelcomeTour } from '@components/onboarding/WelcomeTour';
 import { TaskQueue } from '@components/layout/TaskQueue';
 
@@ -23,17 +22,15 @@ import { useAppInitialization } from '@hooks/useAppInitialization';
 // Loading fallback component
 const PageLoader = () => (
   <div className="flex-1 flex items-center justify-center bg-background/30 backdrop-blur-sm">
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center gap-4"
+    <div 
+      className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300"
     >
       <div className="relative w-12 h-12">
         <div className="absolute inset-0 rounded-xl bg-indigo-500/20 border border-indigo-500/30 animate-pulse" />
         <div className="absolute inset-2 rounded-lg bg-indigo-500 animate-[spin_2s_linear_infinite]" />
       </div>
       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 animate-pulse">Initializing...</span>
-    </motion.div>
+    </div>
   </div>
 );
 
