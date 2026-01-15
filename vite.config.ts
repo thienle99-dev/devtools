@@ -1,7 +1,9 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import path from 'path'
 import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -56,7 +58,18 @@ export default defineConfig({
       // Optional: Use Node.js API in the Renderer-process
       renderer: {},
     }),
+    visualizer({
+      filename: 'dist/stats.html',
+      gzipSize: true,
+      open: false,
+    }),
   ],
+  // @ts-expect-error - Vitest config is merged by Vitest
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: [], // Add setup file if needed
+  },
   build: {
     sourcemap: false,
     // Optimize bundle size - Phase 2 optimizations

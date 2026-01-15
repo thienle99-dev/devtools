@@ -10,6 +10,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
+    "test": "vitest",
     "build": "tsc -b && vite build",
     "postinstall": "node scripts/download-ffmpeg.cjs",
     "download:ffmpeg": "node scripts/download-ffmpeg.cjs",
@@ -78,6 +79,7 @@
     "react-router-dom": "^7.11.0",
     "react-virtuoso": "^4.18.1",
     "reactflow": "^11.11.4",
+    "rollup-plugin-visualizer": "^6.0.5",
     "sonner": "^2.0.7",
     "sql-formatter": "^15.6.12",
     "systeminformation": "^5.29.0",
