@@ -1,6 +1,6 @@
 import React, { type InputHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@utils/cn';
-import { motion } from 'framer-motion';
+
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
     variant?: 'glass' | 'filled' | 'outline';
@@ -88,13 +88,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
             </div>
 
             {error && (
-                <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-[11px] text-rose-400 ml-1 font-medium"
+                <p
+                    className="text-[11px] text-rose-400 ml-1 font-medium animate-[pulse_0.5s_ease-in-out_1]"
                 >
                     {error}
-                </motion.p>
+                </p>
             )}
         </div>
     );

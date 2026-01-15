@@ -1,6 +1,6 @@
 import React, { type TextareaHTMLAttributes } from 'react';
 import { cn } from '@utils/cn';
-import { motion } from 'framer-motion';
+
 
 export interface TextAreaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
     variant?: 'glass' | 'filled' | 'outline';
@@ -72,13 +72,11 @@ export const TextArea: React.FC<TextAreaProps> = ({
             />
 
             {error && (
-                <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-[11px] text-rose-400 ml-1 font-medium"
+                <p
+                    className="text-[11px] text-rose-400 ml-1 font-medium animate-[pulse_0.5s_ease-in-out_1]"
                 >
                     {error}
-                </motion.p>
+                </p>
             )}
         </div>
     );

@@ -1,6 +1,6 @@
 import React, { type InputHTMLAttributes } from 'react';
 import { cn } from '@utils/cn';
-import { motion } from 'framer-motion';
+
 
 export interface RadioProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
     label?: string;
@@ -50,14 +50,12 @@ export const Radio: React.FC<RadioProps> = ({
                     // Checked State
                     checked && "border-indigo-500 bg-transparent"
                 )}>
-                    {checked && (
-                        <motion.div 
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                            className="w-2.5 h-2.5 bg-indigo-500 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-sm"
-                        />
-                    )}
+                    <div 
+                        className={cn(
+                            "w-2.5 h-2.5 bg-indigo-500 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-sm transition-all duration-150 ease-out",
+                            checked ? "scale-100 opacity-100" : "scale-0 opacity-0"
+                        )}
+                    />
                 </div>
             </div>
 
