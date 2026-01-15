@@ -11,6 +11,7 @@
     "download:ffmpeg": "node scripts/download-ffmpeg.cjs",
     "build:electron": "npm run build && electron-builder",
     "build:win": "npm run build && electron-builder --win",
+    "build:win:fast": "npm run build && electron-builder --config electron-builder.fast.yml --win",
     "build:win:exe": "npm run build && electron-builder --win nsis",
     "build:win:portable": "npm run build && electron-builder --win portable",
     "build:win:zip": "npm run build && electron-builder --win zip",

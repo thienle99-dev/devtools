@@ -58,6 +58,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    sourcemap: false,
     // Optimize bundle size - Phase 2 optimizations
     target: 'esnext',
     minify: 'esbuild', // Using esbuild for faster builds (terser is slower but smaller)

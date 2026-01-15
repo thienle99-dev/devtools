@@ -1,0 +1,50 @@
+appId: com.devtools.app
+productName: DevTools App
+copyright: >
+  Copyright © 2026 DevTools
+
+# FAST local builds (dev/internal): prioritize speed over size
+compression: store
+asar: true
+asarUnpack:
+  - '**/*.node'
+  - 'resources/bin/**'
+
+directories:
+  output: dist-electron/pack
+  buildResources: build
+
+files:
+  - 'dist/**'
+  - 'dist-electron/**'
+  - 'resources/**'
+  - 'package.json'
+  - '!src/**'
+  - '!electron/**'
+  - '!docs/**'
+  - '!debug_scripts/**'
+  - '!video/**'
+  - '!build/**'
+  - '!scripts/**'
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: public/icon.png
+  artifactName: '${productName}-${version}-Fast-Setup-${arch}.${ext}'
+  requestedExecutionLevel: asInvoker
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: DevTools App
+  deleteAppDataOnUninstall: false
+  differentialPackage: false
+  artifactName: '${productName}-${version}-Fast-Setup-${arch}.${ext}'
+
