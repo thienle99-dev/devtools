@@ -1,9 +1,8 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import type { ReactNode } from 'react';
 import { Upload, Clipboard, Link as LinkIcon, ArrowRight, ExternalLink, Copy, Download, Share2, GitCompare, Columns, Bookmark, History as HistoryIcon, HelpCircle, Trash2 } from 'lucide-react';
 import { cn } from '@utils/cn';
-import type { ToolDefinition } from '../../../tools/registry/types';
-import { ToolState } from '../../../store/toolStore';
+import type { ToolState } from '../../../store/toolStore';
 
 interface ToolHeaderProps {
     title: string;

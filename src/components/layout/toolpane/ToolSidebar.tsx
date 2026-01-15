@@ -1,9 +1,10 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
+import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Trash2 } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
-import { ToolState, Preset } from '../../../store/toolStore';
+import type { ToolState, Preset } from '../../../store/toolStore';
 
 interface ToolSidebarProps {
     activeSidebar: 'help' | 'presets' | 'history' | null;

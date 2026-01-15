@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useDashboardStore } from './dashboardStore';
 
-interface ToolHistoryEntry {
+export interface ToolHistoryEntry {
     id: string;
     timestamp: number;
     input: string;
@@ -10,14 +10,14 @@ interface ToolHistoryEntry {
     options: Record<string, any>;
 }
 
-interface Preset {
+export interface Preset {
     id: string;
     name: string;
     input: string;
     options: Record<string, any>;
 }
 
-interface ToolData {
+export interface ToolState {
     id: string;
     input: string;
     output: any;
@@ -26,6 +26,9 @@ interface ToolData {
     layout?: 'vertical' | 'horizontal';
     meta?: Record<string, any>;
 }
+
+// Alias for backward compatibility if needed, though we will try to migrate
+export type ToolData = ToolState;
 
 interface HistoryItem {
     id: string;
