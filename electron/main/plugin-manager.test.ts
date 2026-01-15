@@ -62,8 +62,8 @@ describe('PluginManager', () => {
         const storeMock = (pm as any).store;
         storeMock.get.mockReturnValue(0); // lastRegistryUpdate
 
-        const axios = require('axios').default;
-        axios.get.mockResolvedValue({
+        const axios = (await import('axios')).default;
+        (axios.get as any).mockResolvedValue({
             data: {
                 version: '1.0.0',
                 lastUpdated: Date.now(),

@@ -24,7 +24,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    electron({
+    !process.env.VITEST && electron({
       main: {
         // Synonym for `entry`
         entry: 'electron/main/main.ts',
@@ -63,7 +63,7 @@ export default defineConfig({
       gzipSize: true,
       open: false,
     }),
-  ],
+  ].filter(Boolean),
   // @ts-expect-error - Vitest config is merged by Vitest
   test: {
     globals: true,
