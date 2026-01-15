@@ -7,9 +7,17 @@ import { toast } from 'sonner';
 
 const TOOL_ID = 'camera';
 
-export const Camera: React.FC<{ tabId?: string }> = ({ tabId }) => {
+interface CameraProps {
+    tabId?: string;
+    mode?: 'photo' | 'video';
+}
+
+export const Camera: React.FC<CameraProps> = ({ tabId, mode }) => {
     const effectiveId = tabId || TOOL_ID;
     const { addToHistory } = useToolState(effectiveId);
+    
+    // If no mode provided, show both (default behavior)
+    const activeMode = mode || 'both';
 
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isRecording, setIsRecording] = useState(false);
@@ -128,8 +136,8 @@ export const Camera: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
-            title="Camera & Recorder"
-            description="Capture photos or record videos directly from your webcam"
+            title={activeMode === 'photo' ? "Webcam Photo" : activeMode === 'video' ? "Video Recorder" : "Camera & Recorder"}
+            description={activeMode === 'photo' ? "Capture high-quality photos from your webcam" : activeMode === 'video' ? "Record and save videos directly from your webcam" : "Capture photos or record videos directly from your webcam"}
             onClear={onClear}
         >
             <div className="flex flex-col h-full gap-6">
@@ -162,30 +170,36 @@ export const Camera: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
                             {/* Overlay Controls */}
                             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                                <button
-                                    onClick={capturePhoto}
-                                    className="p-3 bg-white text-black rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl"
-                                    title="Take Photo"
-                                >
-                                    <CameraIcon size={24} />
-                                </button>
-                                <div className="w-[1px] h-8 bg-white/20 mx-2" />
-                                {isRecording ? (
+                                {(activeMode === 'both' || activeMode === 'photo') && (
                                     <button
-                                        onClick={stopRecording}
-                                        className="p-3 bg-rose-500 text-white rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl animate-pulse"
-                                        title="Stop Recording"
+                                        onClick={capturePhoto}
+                                        className="p-3 bg-white text-black rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl"
+                                        title="Take Photo"
                                     >
-                                        <Circle size={24} fill="white" />
+                                        <CameraIcon size={24} />
                                     </button>
-                                ) : (
-                                    <button
-                                        onClick={startRecording}
-                                        className="p-3 bg-white/20 hover:bg-rose-500 text-white rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl"
-                                        title="Start Recording"
-                                    >
-                                        <Video size={24} />
-                                    </button>
+                                )}
+                                {activeMode === 'both' && <div className="w-[1px] h-8 bg-white/20 mx-2" />}
+                                {(activeMode === 'both' || activeMode === 'video') && (
+                                    <>
+                                        {isRecording ? (
+                                            <button
+                                                onClick={stopRecording}
+                                                className="p-3 bg-rose-500 text-white rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl animate-pulse"
+                                                title="Stop Recording"
+                                            >
+                                                <Circle size={24} fill="white" />
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={startRecording}
+                                                className="p-3 bg-white/20 hover:bg-rose-500 text-white rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl"
+                                                title="Start Recording"
+                                            >
+                                                <Video size={24} />
+                                            </button>
+                                        )}
+                                    </>
                                 )}
                             </div>
 

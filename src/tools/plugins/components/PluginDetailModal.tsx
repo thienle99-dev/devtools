@@ -72,7 +72,10 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
   const themeStyles = getCategoryColor(plugin.category);
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 dark:bg-black/80 backdrop-blur-2xl animate-in fade-in duration-300">
+    <div 
+        className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 dark:bg-black/80 backdrop-blur-2xl animate-in fade-in duration-300"
+        onClick={onClose}
+    >
       <div 
         className="w-full max-w-3xl max-h-[85vh] bg-neutral-100 dark:bg-neutral-900 border border-black/5 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col scale-100 animate-in zoom-in-95 duration-300 relative"
         onClick={e => e.stopPropagation()}
@@ -156,7 +159,7 @@ export const PluginDetailModal: React.FC<PluginDetailModalProps> = ({
                     <section>
                         <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-20 mb-4">Required Permissions</h3>
                         <div className="space-y-2">
-                            {Object.entries(plugin.permissions || {}).map(([key, value]) => (
+                            {Object.entries(plugin.permissions || {}).map(([key]) => (
                                 <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-black/[0.01] dark:bg-white/[0.01] border border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 transition-colors group">
                                     <div className="flex items-center gap-3">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />

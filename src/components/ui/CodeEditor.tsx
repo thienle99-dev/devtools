@@ -1,32 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import CodeMirror, { type ReactCodeMirrorProps } from '@uiw/react-codemirror';
-import { json } from '@codemirror/lang-json';
-import { javascript } from '@codemirror/lang-javascript';
-import { html } from '@codemirror/lang-html';
-import { css } from '@codemirror/lang-css';
-import { sql } from '@codemirror/lang-sql';
-import { yaml } from '@codemirror/lang-yaml';
 import { EditorView } from '@codemirror/view';
 import { useSettingsStore } from '../../store/settingsStore';
 import { cn } from '@utils/cn';
+import { loadCodeMirrorLanguage } from '@utils/lazyLoad';
 
 interface CodeEditorProps extends ReactCodeMirrorProps {
-    language?: 'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'sql' | 'yaml' | 'markdown' | 'text' | 'diff';
+    language?: 'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'sql' | 'yaml' | 'markdown' | 'text' | 'diff' | 'xml';
     className?: string;
 }
-
-const getLanguageExtension = (lang: CodeEditorProps['language']) => {
-    switch (lang) {
-        case 'json': return json();
-        case 'javascript':
-        case 'typescript': return javascript({ typescript: true });
-        case 'html': return html();
-        case 'css': return css();
-        case 'sql': return sql();
-        case 'yaml': return yaml();
-        default: return [];
-    }
-};
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
     language = 'text',
@@ -36,36 +18,64 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     ...props
 }) => {
     const { theme: appTheme } = useSettingsStore();
+    const [langExt, setLangExt] = useState<any>([]);
+
+    // Lazy load language extension
+    useEffect(() => {
+        let active = true;
+        if (language === 'text' || !language) {
+            setLangExt([]);
+            return;
+        }
+
+        loadCodeMirrorLanguage(language).then((m: any) => {
+            if (active && m) {
+                // Determine the correct function call based on common CM6 patterns
+                const extFn = m[language === 'xml' ? 'xml' : language === 'typescript' ? 'javascript' : language];
+                if (typeof extFn === 'function') {
+                    setLangExt(language === 'typescript' ? extFn({ typescript: true }) : extFn());
+                } else if (m.default && typeof m.default === 'function') {
+                    setLangExt(m.default());
+                } else {
+                    setLangExt([]);
+                }
+            }
+        }).catch(err => {
+            console.error(`Failed to load language ${language}:`, err);
+            if (active) setLangExt([]);
+        });
+
+        return () => { active = false; };
+    }, [language]);
 
     // Create a custom glassmorphism theme
     const glassTheme = useMemo(() => {
+        const isDark = appTheme === 'dark' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
         return EditorView.theme({
             "&": {
                 backgroundColor: "transparent !important",
                 height: "100%",
-                color: "var(--color-text-primary)",
-                fontSize: "13px", // Match existing font size
+                color: isDark ? "#e2e8f0" : "#1e293b",
+                fontSize: "13px",
             },
             ".cm-gutters": {
                 backgroundColor: "transparent !important",
-                borderRight: "1px solid var(--color-glass-border)",
-                color: "var(--color-text-muted)",
-            },
-            ".cm-gutterElement": {
-                backgroundColor: "transparent !important",
+                borderRight: "1px solid rgba(255, 255, 255, 0.1)",
+                color: isDark ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.3)",
             },
             ".cm-activeLine": {
-                backgroundColor: "var(--color-glass-button-hover) !important",
+                backgroundColor: "rgba(99, 102, 241, 0.05) !important",
             },
             ".cm-activeLineGutter": {
-                backgroundColor: "var(--color-glass-button-hover) !important",
-                color: "var(--color-text-primary)",
+                backgroundColor: "rgba(99, 102, 241, 0.1) !important",
+                color: "var(--accent-color, #6366f1)",
             },
             ".cm-cursor": {
-                borderLeftColor: "var(--color-text-primary)",
+                borderLeftColor: "var(--accent-color, #6366f1)",
             },
             ".cm-selectionBackground, ::selection": {
-                backgroundColor: "rgba(79, 70, 229, 0.3) !important", // Indigo/primary selection
+                backgroundColor: "rgba(99, 102, 241, 0.25) !important",
             },
             "&.cm-focused": {
                 outline: "none",
@@ -73,34 +83,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             ".cm-scroller": {
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
             }
-        }, { dark: appTheme === 'dark' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) });
+        }, { dark: isDark });
     }, [appTheme]);
-
-    // Use a base theme (like github dark/light) and override with glass, or just glass + syntax highlighting?
-    // For now, let's rely on the default syntax highlighting or maybe import one.
-    // However, CodeMirror default comes with some highlighting.
-    // Ideally, we'd use a theme that supports transparency nicely.
-    // Let's assume the default one is okayish but might need color tweaks for syntax.
-    // For a "premium" feel, we might want to manually define syntax colors or import `githubDark` / `githubLight` and override the background.
-
-    // Let's import github themes dynamically if we want, but simpler is to just let it be for now and refine syntax colors later if needed.
-    // Actually, `uiw/react-codemirror` supports `theme='dark'` or `theme='light'` prop which loads a basic theme.
-    // But we want transparent background.
-
-    // Let's just pass `glassTheme` as the ONLY theme extension for now to override core styles, 
-    // and let the default syntax highlighter do its job (which works based on tags).
-
-    const langExtension = useMemo(() => getLanguageExtension(language), [language]);
 
     return (
         <div className={cn(
-            "relative w-full h-full overflow-hidden rounded-xl border border-border-glass bg-glass-input hover:bg-glass-input-focus transition-colors",
-            "focus-within:ring-1 focus-within:ring-border-glass focus-within:bg-glass-input-focus", // Focus ring
+            "relative w-full h-full overflow-hidden rounded-xl border border-border-glass bg-glass-input/50 focus-within:bg-glass-input/80 transition-all duration-300",
             className
         )}>
             <CodeMirror
                 theme={[glassTheme, ...(Array.isArray(propTheme) ? propTheme : [propTheme].filter(Boolean))]}
-                extensions={[langExtension, ...extensions]}
+                extensions={[langExt, ...extensions]}
                 basicSetup={{
                     lineNumbers: true,
                     highlightActiveLineGutter: true,

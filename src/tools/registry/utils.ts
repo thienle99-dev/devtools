@@ -4,13 +4,28 @@ import { usePluginStore } from '@/store/pluginStore';
 import { PluginHost } from '@/tools/plugins/components/PluginHost';
 import { getCategoryIcon, getCategoryColor } from '@/tools/plugins/plugin-utils';
 
+// Pre-compute maps for faster lookups
+export const TOOLS_BY_ID = new Map<string, ToolDefinition>(
+    TOOLS.map(tool => [tool.id, tool])
+);
+
+export const TOOLS_BY_PATH = new Map<string, ToolDefinition>(
+    TOOLS.map(tool => [tool.path, tool])
+);
+
+export const TOOLS_BY_CATEGORY = TOOLS.reduce((acc, tool) => {
+    if (!acc[tool.category]) acc[tool.category] = [];
+    acc[tool.category].push(tool);
+    return acc;
+}, {} as Record<ToolCategory, ToolDefinition[]>);
+
 export const getToolsByCategory = (category: ToolCategory): ToolDefinition[] => {
-    return TOOLS.filter(tool => tool.category === category);
+    return TOOLS_BY_CATEGORY[category] || [];
 };
 
 export const getToolById = (id: string): ToolDefinition | undefined => {
-    // Check built-in tools first
-    const coreTool = TOOLS.find(tool => tool.id === id);
+    // Check built-in tools first (O(1) lookup)
+    const coreTool = TOOLS_BY_ID.get(id);
     if (coreTool) return coreTool;
 
     // Check active plugins
@@ -32,4 +47,8 @@ export const getToolById = (id: string): ToolDefinition | undefined => {
     }
 
     return undefined;
+};
+
+export const getToolByPath = (path: string): ToolDefinition | undefined => {
+    return TOOLS_BY_PATH.get(path);
 };

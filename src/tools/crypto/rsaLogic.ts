@@ -2,8 +2,9 @@ import forge from 'node-forge';
 
 export const generateKeyPair = async (bits: number): Promise<{ publicKey: string; privateKey: string }> => {
     return new Promise((resolve, reject) => {
-        forge.pki.rsa.generateKeyPair({ bits, workers: -1 }, (err, keypair) => {
+        forge.pki.rsa.generateKeyPair({ bits, workers: -1 }, (err: Error | null, keypair: forge.pki.rsa.KeyPair | null) => {
             if (err) return reject(err);
+            if (!keypair) return reject(new Error('Failed to generate key pair'));
             const publicKey = forge.pki.publicKeyToPem(keypair.publicKey);
             const privateKey = forge.pki.privateKeyToPem(keypair.privateKey);
             resolve({ publicKey, privateKey });

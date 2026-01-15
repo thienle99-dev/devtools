@@ -66,7 +66,7 @@ export const PluginCard: React.FC<PluginCardProps> = ({
 
   return (
     <div className={cn(
-      "plugin-card-hover group flex flex-col h-full rounded-3xl overflow-hidden relative backdrop-blur-md",
+      "plugin-card-hover group flex flex-col h-full rounded-3xl overflow-hidden relative backdrop-blur-md cursor-pointer",
       theme.glow
     )}>
       {/* Accent Glow Strip */}

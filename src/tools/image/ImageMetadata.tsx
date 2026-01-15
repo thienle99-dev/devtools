@@ -33,7 +33,8 @@ export const ImageMetadata: React.FC<{ tabId?: string }> = ({ tabId }) => {
             const url = URL.createObjectURL(file);
             setImage({ file, url });
 
-            const tags = await ExifReader.load(file);
+            const arrayBuffer = await file.arrayBuffer();
+            const tags = await ExifReader.load(arrayBuffer);
 
             const groups: MetadataGroup[] = [];
 

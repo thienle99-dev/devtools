@@ -58,10 +58,13 @@ export const PluginMarketplace: React.FC = () => {
   }, []);
 
   const handleInstall = async (plugin: PluginManifest) => {
+    console.log(`[Marketplace] Starting installation for ${plugin.id}`);
     try {
       setInstallingPlugin(plugin);
       await window.pluginAPI.installPlugin(plugin.id);
+      console.log(`[Marketplace] Installation call completed for ${plugin.id}`);
     } catch (error: any) {
+      console.error(`[Marketplace] Installation failed for ${plugin.id}:`, error);
       toast.error(error.message || 'Installation failed');
       setInstallingPlugin(null);
     }
@@ -244,7 +247,14 @@ export const PluginMarketplace: React.FC = () => {
                 : false;
 
               return (
-                <div key={plugin.id} onClick={() => setSelectedPlugin(plugin)}>
+                <div 
+                  key={plugin.id} 
+                  className="contents"
+                  onClick={() => {
+                    console.log('[Marketplace] Card clicked for plugin:', plugin.id);
+                    setSelectedPlugin(plugin);
+                  }}
+                >
                   <PluginCard 
                     plugin={installedPlugin ? installedPlugin.manifest : plugin} 
                     status={installingPlugin?.id === plugin.id ? 'installing' : (installedPlugin ? (isUpdateAvailable ? 'updating' : 'installed') : 'not-installed')}
@@ -265,7 +275,10 @@ export const PluginMarketplace: React.FC = () => {
         isOpen={!!selectedPlugin} 
         onClose={() => setSelectedPlugin(null)} 
         plugin={selectedPlugin}
-        onInstall={(p) => { setSelectedPlugin(null); handleInstall(p); }}
+        onInstall={(p) => { 
+            handleInstall(p); 
+            setSelectedPlugin(null); 
+        }}
         isInstalled={!!(selectedPlugin && installedPlugins.find(ip => ip.manifest.id === selectedPlugin.id))}
       />
 

@@ -14,7 +14,7 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@utils/cn';
-import { CATEGORIES, getToolsByCategory, getToolById } from '@tools/registry';
+import { CATEGORIES, TOOLS, getToolsByCategory, getToolById } from '@tools/registry';
 import { useSettingsStore } from '@store/settingsStore';
 import { usePluginStore } from '@store/pluginStore';
 import { getCategoryIcon, getCategoryColor } from '@tools/plugins/plugin-utils';
@@ -72,7 +72,6 @@ export const Sidebar: React.FC = React.memo(() => {
         const query = searchQuery.toLowerCase().trim();
         if (!query) return null;
 
-        const allCoreTools = CATEGORIES.map(c => getToolsByCategory(c.id)).flat();
         const pluginTools = activePlugins.map(p => ({
             id: p.manifest.id,
             name: p.manifest.name,
@@ -81,19 +80,19 @@ export const Sidebar: React.FC = React.memo(() => {
             icon: getCategoryIcon(p.manifest.category),
             color: getCategoryColor(p.manifest.category),
             category: 'Plugin',
-            isPlugin: true
+            isPlugin: true,
+            keywords: p.manifest.tags || []
         }));
 
-        const allTools = [...allCoreTools, ...pluginTools];
-        const uniqueTools = Array.from(new Set(allTools.map(t => t.id)))
-            .map(id => allTools.find(t => t.id === id)!)
-            .filter(t => t.id !== 'settings' && t.id !== 'dashboard');
-
-        const results = uniqueTools.filter(tool =>
-            tool.name.toLowerCase().includes(query) ||
-            tool.description.toLowerCase().includes(query) ||
-            (tool as any).keywords?.some((k: string) => k.toLowerCase().includes(query))
-        );
+        const allTools = [...TOOLS, ...pluginTools];
+        
+        const results = allTools.filter(tool => {
+            if (tool.id === 'settings' || tool.id === 'dashboard') return false;
+            
+            return tool.name.toLowerCase().includes(query) ||
+                tool.description.toLowerCase().includes(query) ||
+                (tool as any).keywords?.some((k: string) => k.toLowerCase().includes(query));
+        });
 
         return results.sort((a, b) => a.name.localeCompare(b.name));
     }, [searchQuery, activePlugins]);
@@ -105,7 +104,6 @@ export const Sidebar: React.FC = React.memo(() => {
                 const uniqueFavorites = Array.from(new Set(favorites));
                 tools = uniqueFavorites.map(id => getToolById(id)).filter((t): t is any => Boolean(t));
                 
-                // Add favorite plugins
                 const favPlugins = activePlugins
                     .filter(p => favorites.includes(p.manifest.id))
                     .map(p => ({
@@ -121,7 +119,6 @@ export const Sidebar: React.FC = React.memo(() => {
                 tools = [...tools, ...favPlugins];
 
             } else if (category.id === 'recent') {
-                // Unique based on tool ID, limited to 5
                 const seen = new Set<string>();
                 tools = history
                     .map(h => {
@@ -150,9 +147,9 @@ export const Sidebar: React.FC = React.memo(() => {
                     })
                     .slice(0, 5);
             } else {
+                // Uses the pre-computed map from the registry
                 tools = getToolsByCategory(category.id);
                 
-                // Add plugins belonging to this category
                 const matchingPlugins = activePlugins
                     .filter(p => p.manifest.category === category.id || (category.id === 'plugins' && !CATEGORIES.some(c => c.id === p.manifest.category)))
                     .map(p => ({
@@ -173,12 +170,13 @@ export const Sidebar: React.FC = React.memo(() => {
 
         if (categoryOrder.length === 0) return mapped;
 
+        const orderMap = new Map(categoryOrder.map((id, index) => [id, index]));
         return [...mapped].sort((a, b) => {
-            const indexA = categoryOrder.indexOf(a.id);
-            const indexB = categoryOrder.indexOf(b.id);
-            if (indexA === -1 && indexB === -1) return 0;
-            if (indexA === -1) return 1;
-            if (indexB === -1) return -1;
+            const indexA = orderMap.get(a.id);
+            const indexB = orderMap.get(b.id);
+            if (indexA === undefined && indexB === undefined) return 0;
+            if (indexA === undefined) return 1;
+            if (indexB === undefined) return -1;
             return indexA - indexB;
         });
     }, [favorites, history, categoryOrder, activePlugins]);

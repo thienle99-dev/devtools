@@ -106,3 +106,52 @@ export const generateHmac = (input: string, key: string, algorithm: 'md5' | 'sha
 export const generateBearerToken = (length: number = 32) => {
     return generateTokens({ length, numbers: true, uppercase: true, lowercase: true, symbols: false });
 };
+
+// Symmetric encryption/decryption functions
+export const symmetricEncrypt = (plaintext: string, key: string, algorithm: 'AES' | 'TripleDES' | 'Rabbit' | 'RC4' = 'AES'): string => {
+    if (!plaintext || !key) return '';
+    try {
+        switch (algorithm) {
+            case 'AES':
+                return CryptoJS.AES.encrypt(plaintext, key).toString();
+            case 'TripleDES':
+                return CryptoJS.TripleDES.encrypt(plaintext, key).toString();
+            case 'Rabbit':
+                return CryptoJS.Rabbit.encrypt(plaintext, key).toString();
+            case 'RC4':
+                return CryptoJS.RC4.encrypt(plaintext, key).toString();
+            default:
+                return CryptoJS.AES.encrypt(plaintext, key).toString();
+        }
+    } catch (error) {
+        console.error('Encryption error:', error);
+        return '';
+    }
+};
+
+export const symmetricDecrypt = (ciphertext: string, key: string, algorithm: 'AES' | 'TripleDES' | 'Rabbit' | 'RC4' = 'AES'): string => {
+    if (!ciphertext || !key) return '';
+    try {
+        let bytes;
+        switch (algorithm) {
+            case 'AES':
+                bytes = CryptoJS.AES.decrypt(ciphertext, key);
+                break;
+            case 'TripleDES':
+                bytes = CryptoJS.TripleDES.decrypt(ciphertext, key);
+                break;
+            case 'Rabbit':
+                bytes = CryptoJS.Rabbit.decrypt(ciphertext, key);
+                break;
+            case 'RC4':
+                bytes = CryptoJS.RC4.decrypt(ciphertext, key);
+                break;
+            default:
+                bytes = CryptoJS.AES.decrypt(ciphertext, key);
+        }
+        return bytes.toString(CryptoJS.enc.Utf8);
+    } catch (error) {
+        console.error('Decryption error:', error);
+        return '';
+    }
+};

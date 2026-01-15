@@ -43,9 +43,18 @@ files:
 # Windows Configuration (x64 ONLY)
 win:
   target:
+    # NSIS Installer (exe installer)
     - target: nsis
       arch:
-        - x64  # Removed ia32 for smaller builds
+        - x64
+    # Portable Executable (single exe, no install)
+    - target: portable
+      arch:
+        - x64
+    # ZIP Archive (portable zip)
+    - target: zip
+      arch:
+        - x64
   icon: public/icon.png
   artifactName: ${productName}-${version}-${arch}.${ext}
   requestedExecutionLevel: asInvoker
@@ -61,6 +70,16 @@ nsis:
   shortcutName: DevTools App
   deleteAppDataOnUninstall: false
   differentialPackage: true  # Smaller updates
+  artifactName: ${productName}-${version}-Setup-${arch}.${ext}
+
+# Portable Executable Configuration
+portable:
+  artifactName: ${productName}-${version}-Portable-${arch}.${ext}
+  requestExecutionLevel: user
+
+# ZIP Archive Configuration
+zip:
+  artifactName: ${productName}-${version}-Portable-${arch}.zip
 
 # macOS Configuration
 mac:

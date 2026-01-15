@@ -1,4 +1,4 @@
-import { Mic, Camera, Shield } from 'lucide-react';
+import { Mic, Camera, Shield, Video } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
@@ -8,33 +8,45 @@ export const mediaTools: ToolDefinition[] = [
         name: 'Voice Recorder',
         description: 'Record and save audio from your microphone',
         path: '/voice-recorder',
-        category: 'media',
+        category: 'capture',
         icon: Mic,
         color: 'text-red-400',
         component: Lazy.VoiceRecorder,
         keywords: ['voice', 'recorder', 'audio', 'mic', 'microphone']
     },
     {
-        id: 'camera',
-        name: 'Camera & Recorder',
-        description: 'Capture photos and record videos from your webcam',
-        path: '/camera',
-        category: 'media',
+        id: 'webcam-photo',
+        name: 'Webcam Photo',
+        description: 'Capture high-quality photos from your webcam',
+        path: '/camera-photo',
+        category: 'capture',
         icon: Camera,
         color: 'text-indigo-400',
         component: Lazy.Camera,
-        keywords: ['camera', 'webcam', 'photo', 'video', 'capture', 'recorder']
+        props: { mode: 'photo' },
+        keywords: ['camera', 'webcam', 'photo', 'capture']
     },
     {
-        id: 'xnapper',
+        id: 'video-recorder',
+        name: 'Video Recorder',
+        description: 'Record high-quality videos from your webcam',
+        path: '/video-recorder',
+        category: 'capture',
+        icon: Video,
+        color: 'text-rose-400',
+        component: Lazy.Camera,
+        props: { mode: 'video' },
+        keywords: ['video', 'recorder', 'webcam', 'capture']
+    },
+    {
+        id: 'beautiful-screenshot',
         name: 'Beautiful Screenshot',
         path: '/screenshot',
-        description: 'Create beautiful screenshots with backgrounds',
-        category: 'media',
+        description: 'Create professional screenshots with backgrounds and effects',
+        category: 'capture',
         icon: Shield,
         color: 'text-indigo-400',
         component: Lazy.Xnapper,
-        keywords: ['screenshot', 'canvas', 'image', 'capture', 'preview'],
+        keywords: ['screenshot', 'canvas', 'image', 'capture', 'preview', 'beautify'],
     },
-
 ];

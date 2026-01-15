@@ -17,6 +17,8 @@ export default defineConfig({
       '@assets': path.resolve(__dirname, './src/assets'),
       '@pages': path.resolve(__dirname, './src/pages'),
     },
+    // Ensure proper resolution for CommonJS modules like zxcvbn
+    dedupe: ['zxcvbn'],
   },
   plugins: [
     react(),
@@ -132,6 +134,7 @@ export default defineConfig({
       'zustand',
       'lucide-react',
       'sonner',
+      'zxcvbn',      // Password strength checker
     ],
     exclude: [
       'tesseract.js', // Lazy load
