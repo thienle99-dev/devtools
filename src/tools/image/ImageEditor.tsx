@@ -9,8 +9,7 @@ import {
     Frame, Sun, Contrast, Eraser
 } from 'lucide-react';
 import type { Crop as CropType, PixelCrop } from 'react-image-crop';
-// import ReactCrop from 'react-image-crop'; // Lazy loaded
-// import 'react-image-crop/dist/ReactCrop.css'; // Lazy loaded
+
 import { toast } from 'sonner';
 
 const TOOL_ID = 'image-editor';
