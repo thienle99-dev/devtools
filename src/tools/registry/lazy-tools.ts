@@ -76,3 +76,10 @@ export const Converter = React.lazy(() => import('@tools/converters/Converter').
 
 export const PluginMarketplace = React.lazy(() => import('@tools/plugins/PluginMarketplace').then(m => ({ default: m.default })));
 
+
+// PDF
+export const PdfConverter = React.lazy(() => import('@tools/pdf/PdfConverter'));
+export const PdfSecurity = React.lazy(() => import('@tools/pdf/PdfSecurity'));
+
+// Data
+export const DataParser = React.lazy(() => import('@tools/data/DataParser'));

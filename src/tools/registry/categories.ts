@@ -10,7 +10,8 @@ import {
     Type,
     Percent,
     Film,
-    Camera
+    Camera,
+    Database
 } from 'lucide-react';
 import type { CategoryDefinition } from './types';
 
@@ -31,4 +32,5 @@ export const CATEGORIES: CategoryDefinition[] = [
     { id: 'media', name: 'Media Tools', icon: Film, color: 'text-indigo-400' },
     { id: 'plugins', name: 'Plugins', icon: Box, color: 'text-blue-500' },
     { id: 'capture', name: 'Capture', icon: Camera, color: 'text-rose-400' },
+    { id: 'data', name: 'Data', icon: Database, color: 'text-cyan-500' },
 ];

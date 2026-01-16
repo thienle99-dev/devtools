@@ -9,6 +9,8 @@ import { imageTools } from './data/image';
 import { textTools } from './data/text';
 import { mathTools } from './data/math';
 import { pluginTools } from './data/plugins';
+import { pdfTools } from './data/pdf';
+import { dataTools } from './data/data';
 
 export const TOOLS: ToolDefinition[] = [
     ...formatters,
@@ -21,4 +23,6 @@ export const TOOLS: ToolDefinition[] = [
     ...textTools,
     ...mathTools,
     ...pluginTools,
+    ...pdfTools,
+    ...dataTools,
 ];

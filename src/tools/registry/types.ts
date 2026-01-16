@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math' | 'media' | 'security' | 'plugins' | 'capture';
+export type ToolCategory = 'converters' | 'formatters' | 'crypto' | 'web' | 'network' | 'development' | 'utilities' | 'pdf' | 'favorites' | 'recent' | 'image' | 'text' | 'math' | 'media' | 'security' | 'plugins' | 'capture' | 'data';
 
 export type ToolDataType = 'text' | 'json' | 'image' | 'file' | 'clipboard' | 'hex' | 'binary' | 'any' | 'xml' | 'yaml' | 'sql' | 'csv' | 'excel' | 'table';
 

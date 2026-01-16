@@ -100,9 +100,9 @@ DevTools App is transitioning from a monolithic architecture to a **Plugin-Based
 
 - [x] PDF Merger/Splitter/Extract/Rotate
 - [x] PDF Metadata Viewer/Editor
-- [ ] PDF Conversion (To Images/Text/HTML)
-- [ ] PDF Security (Password/Encrypt)
-- [ ] IBAN/Phone Parser
+- [x] PDF Conversion (To Images/Text)
+- [x] PDF Security (Password/Encrypt)
+- [x] IBAN/Phone Parser
 
 ### Phase 4: Polish & Advanced Features
 

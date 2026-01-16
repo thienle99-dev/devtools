@@ -337,15 +337,15 @@
 
 ### 3.10 Data Tools
 
-- [ ] Phone parser/formatter
-- [ ] IBAN validator/parser
+- [x] Phone parser/formatter
+- [x] IBAN validator/parser
 
 ### 3.11 PDF Tools
 
 - [ ] PDF signature checker
-- [ ] PDF to Images
+- [x] PDF to Images
 - [x] Images to PDF
-- [ ] PDF to Text
+- [x] PDF to Text
 - [ ] PDF to HTML
 - [ ] PDF to Markdown
 - [x] HTML to PDF
@@ -361,10 +361,10 @@
 - [ ] PDF Optimizer
 - [x] PDF Watermarker
 - [x] PDF Page Numbering
-- [ ] PDF Password Protector
-- [ ] PDF Password Remover
-- [ ] PDF Encryption
-- [ ] PDF Decryption
+- [x] PDF Password Protector
+- [x] PDF Password Remover
+- [x] PDF Encryption
+- [x] PDF Decryption
 - [x] PDF Metadata Remover
 - [x] PDF Metadata Viewer
 - [x] PDF Metadata Editor
