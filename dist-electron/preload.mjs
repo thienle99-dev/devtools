@@ -315,3 +315,16 @@ electron.contextBridge.exposeInMainWorld("pluginAPI", {
 	},
 	updateRegistry: () => electron.ipcRenderer.invoke("plugins:update-registry")
 });
+electron.contextBridge.exposeInMainWorld("videoCompressorAPI", {
+	getInfo: (filePath) => electron.ipcRenderer.invoke("video-compressor:get-info", filePath),
+	compress: (options) => electron.ipcRenderer.invoke("video-compressor:compress", options),
+	cancel: (id) => electron.ipcRenderer.invoke("video-compressor:cancel", id),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("video-compressor:progress", listener);
+		return () => electron.ipcRenderer.removeListener("video-compressor:progress", listener);
+	},
+	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});

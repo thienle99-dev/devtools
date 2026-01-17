@@ -51,14 +51,14 @@ export default function DownloadManager() {
             try {
                 const text = await (window as any).ipcRenderer.invoke('clipboard-read-text');
                 if (!text || text === lastClipboardUrl.current) return;
-                
+
                 lastClipboardUrl.current = text;
 
                 // Simple URL validation
                 if (text.startsWith('http://') || text.startsWith('https://')) {
                     // Check if ends with common download extensions (optional but safer)
                     const isDownloadLink = /\.(zip|exe|dmg|pkg|mp4|mkv|iso|rar|7z|pdf|jpg|png|mp3)$/i.test(text);
-                    
+
                     if (isDownloadLink) {
                         success('Link Detected', 'Would you like to download the link from clipboard?', {
                             action: {
@@ -131,23 +131,23 @@ export default function DownloadManager() {
 
         return cleanup;
     }, [loadData]);
-    
+
     // Notification Sounds
     useEffect(() => {
         if (!settings?.enableSounds) return;
 
         const startSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         const completeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
-        
+
         startSound.volume = 0.4;
         completeSound.volume = 0.5;
 
         const cleanupStarted = (window as any).downloadAPI.onStarted(() => {
-            startSound.play().catch(() => {}); // Catch play() errors (browser policy)
+            startSound.play().catch(() => { }); // Catch play() errors (browser policy)
         });
 
         const cleanupCompleted = (window as any).downloadAPI.onCompleted(() => {
-            completeSound.play().catch(() => {});
+            completeSound.play().catch(() => { });
         });
 
         return () => {
@@ -157,15 +157,15 @@ export default function DownloadManager() {
     }, [settings?.enableSounds]);
 
 
-    const handleCreateDownload = async (urls: string[], options?: { 
-        filename?: string, 
+    const handleCreateDownload = async (urls: string[], options?: {
+        filename?: string,
         checksum?: { algorithm: 'md5' | 'sha1' | 'sha256', value: string },
         credentials?: { username?: string, password?: string }
     }) => {
         try {
             for (const url of urls) {
-                await (window as any).downloadAPI.create({ 
-                    url, 
+                await (window as any).downloadAPI.create({
+                    url,
                     filename: options?.filename,
                     checksum: options?.checksum,
                     credentials: options?.credentials
@@ -335,7 +335,7 @@ export default function DownloadManager() {
                                     Live
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-end justify-between gap-4">
                                 <div className="space-y-1 shrink-0">
                                     <div className="text-2xl font-black text-foreground tabular-nums tracking-tighter">
@@ -352,12 +352,12 @@ export default function DownloadManager() {
                                         const maxSpeed = Math.max(...speedHistory, 1024 * 1024); // Min 1MB for scale
                                         const height = (speed / maxSpeed) * 100;
                                         return (
-                                            <div 
+                                            <div
                                                 key={i}
                                                 className="flex-1 bg-blue-500/20 rounded-full relative group/bar transition-all duration-300"
                                                 style={{ height: `${Math.max(height, 4)}%` }}
                                             >
-                                                <div 
+                                                <div
                                                     className="absolute inset-0 bg-blue-500 rounded-full opacity-40 group-hover/bar:opacity-100 transition-opacity"
                                                     style={{ height: '100%' }}
                                                 />
@@ -422,7 +422,7 @@ export default function DownloadManager() {
                     </nav>
 
                     <div className="pt-6 mt-auto border-t border-border-glass scale-95 origin-bottom">
-                         <button
+                        <button
                             onClick={() => setIsSettingsOpen(true)}
                             className="w-full group flex items-center justify-between px-5 py-4 rounded-[20px] bg-bg-glass-panel border border-border-glass hover:bg-bg-glass-hover transition-all duration-300 shadow-xl shadow-black/20"
                         >
@@ -467,8 +467,8 @@ export default function DownloadManager() {
                                         onClick={() => setSortBy(s)}
                                         className={cn(
                                             "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                                            sortBy === s 
-                                                ? "bg-blue-600 text-white" 
+                                            sortBy === s
+                                                ? "bg-blue-600 text-white"
                                                 : "text-foreground-tertiary hover:text-foreground-primary"
                                         )}
                                     >
@@ -503,21 +503,21 @@ export default function DownloadManager() {
                     {/* Scrollable Feed - High Density */}
                     <div className="flex-1 min-h-0 overflow-y-auto p-4 custom-scrollbar">
                         {filteredTasks.length > 0 ? (
-                             <Reorder.Group 
-                                axis="y" 
-                                values={filteredTasks} 
+                            <Reorder.Group
+                                axis="y"
+                                values={filteredTasks}
                                 onReorder={async (newOrder) => {
                                     // Local update for immediate feedback
                                     setHistory(prev => {
                                         const otherTasks = prev.filter(t => !filteredTasks.some(ft => ft.id === t.id));
                                         return [...newOrder, ...otherTasks];
                                     });
-                                    
+
                                     // Find which item actually moved for the backend IPC
                                     // This is a bit complex with filtering, so we'll just send the new order to a new IPC or use start/end index
                                     // Actually, let's just implement a simple reorder in DownloadManager.tsx for now
                                     // and then sync the full history.
-                                    
+
                                     // For simplicity, we'll sync the full history.
                                     await (window as any).downloadAPI.saveHistory(newOrder);
                                 }}
@@ -527,52 +527,52 @@ export default function DownloadManager() {
                                 )}
                             >
                                 {filteredTasks.map(task => (
-                                    <Reorder.Item 
-                                        key={task.id} 
+                                    <Reorder.Item
+                                        key={task.id}
                                         value={task}
                                         dragListener={viewMode === 'list'} // Only drag in list view for better UX
                                     >
-                                    <DownloadItem
-                                        task={task}
-                                        onStart={handleStart}
-                                        onPause={handlePause}
-                                        onCancel={handleCancel}
-                                        onOpenFolder={openFolder}
-                                        onVerifyChecksum={handleVerifyChecksum}
-                                        viewMode={viewMode}
-                                    />
+                                        <DownloadItem
+                                            task={task}
+                                            onStart={handleStart}
+                                            onPause={handlePause}
+                                            onCancel={handleCancel}
+                                            onOpenFolder={openFolder}
+                                            onVerifyChecksum={handleVerifyChecksum}
+                                            viewMode={viewMode}
+                                        />
                                     </Reorder.Item>
                                 ))}
                             </Reorder.Group>
-                    ) : (
-                        <div className="group relative flex flex-col items-center justify-center py-32 text-center bg-glass-panel border-2 border-dashed border-border-glass rounded-[40px] animate-in fade-in zoom-in duration-1000 overflow-hidden">
-                            {/* Animated Background Glow */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                            
-                            <div className="relative mb-8">
-                                <div className="absolute inset-0 bg-blue-500/30 blur-[60px] rounded-full animate-pulse-slow" />
-                                <div className="relative w-28 h-28 rounded-[32px] bg-gradient-to-br from-blue-500/20 to-blue-600/5 border border-blue-500/30 flex items-center justify-center shadow-2xl shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
-                                    <DownloadCloud className="w-14 h-14 text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                                </div>
-                            </div>
-                            
-                            <h3 className="relative z-10 text-3xl font-black text-foreground-primary mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground-primary to-foreground-primary/60">
-                                No Downloads Found
-                            </h3>
-                            <p className="relative z-10 text-foreground-tertiary max-w-[320px] mx-auto text-base font-medium leading-relaxed opacity-80">
-                                {searchQuery ? 
-                                    "We couldn't find any tasks matching your search criteria. Try a different keyword." : 
-                                    "Ready to go? Simply paste a URL here or use the Add Task button to start downloading."}
-                            </p>
+                        ) : (
+                            <div className="group relative flex flex-col items-center justify-center py-32 text-center bg-glass-panel border-2 border-dashed border-border-glass rounded-[40px] animate-in fade-in zoom-in duration-1000 overflow-hidden">
+                                {/* Animated Background Glow */}
+                                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                            {/* Decorative Elements */}
-                            <div className="absolute top-10 right-10 w-24 h-24 bg-purple-500/5 rounded-full blur-3xl" />
-                            <div className="absolute bottom-10 left-10 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl" />
-                        </div>
-                    )}
-                </div>
-            </main>
-        </div>
+                                <div className="relative mb-8">
+                                    <div className="absolute inset-0 bg-blue-500/30 blur-[60px] rounded-full animate-pulse-slow" />
+                                    <div className="relative w-28 h-28 rounded-[32px] bg-gradient-to-br from-blue-500/20 to-blue-600/5 border border-blue-500/30 flex items-center justify-center shadow-2xl shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
+                                        <DownloadCloud className="w-14 h-14 text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                                    </div>
+                                </div>
+
+                                <h3 className="relative z-10 text-3xl font-black text-foreground-primary mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground-primary to-foreground-primary/60">
+                                    No Downloads Found
+                                </h3>
+                                <p className="relative z-10 text-foreground-tertiary max-w-[320px] mx-auto text-base font-medium leading-relaxed opacity-80">
+                                    {searchQuery ?
+                                        "We couldn't find any tasks matching your search criteria. Try a different keyword." :
+                                        "Ready to go? Simply paste a URL here or use the Add Task button to start downloading."}
+                                </p>
+
+                                {/* Decorative Elements */}
+                                <div className="absolute top-10 right-10 w-24 h-24 bg-purple-500/5 rounded-full blur-3xl" />
+                                <div className="absolute bottom-10 left-10 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl" />
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
 
             <AddDownloadDialog
                 isOpen={isAddDialogOpen}
@@ -627,8 +627,8 @@ function SidebarItem({ icon: Icon, label, active, onClick, count, color }: Sideb
             {count !== undefined && (
                 <span className={cn(
                     "ml-auto px-2 py-0.5 rounded-lg text-[9px] font-black tabular-nums transition-all border",
-                    active 
-                        ? "bg-blue-500 text-white shadow-lg border-blue-400/50" 
+                    active
+                        ? "bg-blue-500 text-white shadow-lg border-blue-400/50"
                         : "bg-white/5 text-foreground-tertiary border-border-glass opacity-40 group-hover:opacity-100"
                 )}>
                     {count}

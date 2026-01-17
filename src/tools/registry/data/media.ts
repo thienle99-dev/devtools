@@ -1,4 +1,4 @@
-import { Mic, Camera, Shield, Film, Search, Music } from 'lucide-react';
+import { Mic, Camera, Shield, Film, Search, Music, Scale } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 
@@ -68,5 +68,16 @@ export const mediaTools: ToolDefinition[] = [
         color: 'text-pink-400',
         component: Lazy.AudioExtractor,
         keywords: ['audio', 'extract', 'video', 'mp3', 'media'],
+    },
+    {
+        id: 'video-compressor',
+        name: 'Video Compressor',
+        path: '/video-compressor',
+        description: 'Compress, resize and upscale video files',
+        category: 'media',
+        icon: Scale,
+        color: 'text-indigo-400',
+        component: Lazy.VideoCompressor,
+        keywords: ['video', 'compress', 'resize', 'scale', 'upscale', 'media'],
     },
 ];

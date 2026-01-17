@@ -5499,6 +5499,150 @@ var VideoEffects = class {
 	}
 };
 const videoEffects = new VideoEffects();
+var VideoCompressor = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Video Compressor: FFmpeg ready");
+			} else console.warn("⚠️ Video Compressor: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async getVideoInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => {
+				output += data.toString();
+			});
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const resMatch = output.match(/Video:.*?, (\d{3,5})x(\d{3,5})/);
+					const width = resMatch ? parseInt(resMatch[1]) : 0;
+					const height = resMatch ? parseInt(resMatch[2]) : 0;
+					const fpsMatch = output.match(/(\d+\.?\d*) fps/);
+					const fps = fpsMatch ? parseFloat(fpsMatch[1]) : 0;
+					const codecMatch = output.match(/Video: (\w+)/);
+					const codec = codecMatch ? codecMatch[1] : "unknown";
+					const bitrateMatch = output.match(/bitrate: (\d+) kb\/s/);
+					const bitrate = bitrateMatch ? parseInt(bitrateMatch[1]) : 0;
+					resolve({
+						path: filePath,
+						duration,
+						width,
+						height,
+						codec,
+						fps,
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0,
+						bitrate
+					});
+				} catch (error) {
+					reject(/* @__PURE__ */ new Error("Failed to parse video info"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async compress(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPath, outputPath, format, resolution, preset, crf, bitrate, scaleMode, keepAudio } = options;
+		if (!fs$1.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
+		const totalDuration = (await this.getVideoInfo(inputPath)).duration;
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `compressed_${path$1.basename(inputPath, path$1.extname(inputPath))}_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = ["-i", inputPath];
+		const filters = [];
+		if (resolution) {
+			let scaleString = `scale=${resolution.width}:${resolution.height}`;
+			if (scaleMode === "fit") scaleString = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=decrease,pad=${resolution.width}:${resolution.height}:(ow-iw)/2:(oh-ih)/2`;
+			else if (scaleMode === "fill") scaleString = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=increase,crop=${resolution.width}:${resolution.height}`;
+			filters.push(scaleString);
+		}
+		if (filters.length > 0 || resolution) filters.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
+		if (filters.length > 0) args.push("-vf", filters.join(","));
+		if (format === "mp4" || format === "mov") {
+			args.push("-c:v", "libx264");
+			if (bitrate) args.push("-b:v", bitrate);
+			else args.push("-crf", (crf || 23).toString());
+			args.push("-preset", preset || "medium");
+			args.push("-pix_fmt", "yuv420p");
+		} else if (format === "webm") {
+			args.push("-c:v", "libvpx-vp9");
+			if (bitrate) args.push("-b:v", bitrate);
+			else {
+				args.push("-crf", (crf || 30).toString());
+				args.push("-b:v", "0");
+			}
+		}
+		if (!keepAudio) args.push("-an");
+		else args.push("-c:a", "aac", "-b:a", "128k");
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			console.log(`[VideoCompressor] Command: ${this.ffmpegPath} ${args.join(" ")}`);
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / totalDuration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Compression failed with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancel(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoCompressor = new VideoCompressor();
 var HTTP_AGENT = new http.Agent({
 	keepAlive: true,
 	maxSockets: 128,
@@ -7128,6 +7272,17 @@ function createWindow() {
 	});
 	ipcMain.handle("store-delete", (_event, key) => store.delete(key));
 	setupScreenshotHandlers(win);
+	ipcMain.handle("video-compressor:get-info", async (_event, filePath) => {
+		return await videoCompressor.getVideoInfo(filePath);
+	});
+	ipcMain.handle("video-compressor:compress", async (_event, options) => {
+		return await videoCompressor.compress(options, (progress) => {
+			win?.webContents.send("video-compressor:progress", progress);
+		});
+	});
+	ipcMain.handle("video-compressor:cancel", async (_event, id) => {
+		return videoCompressor.cancel(id);
+	});
 	ipcMain.on("window-set-opacity", (_event, opacity) => {
 		if (win) win.setOpacity(Math.max(.5, Math.min(1, opacity)));
 	});

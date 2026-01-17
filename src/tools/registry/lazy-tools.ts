@@ -138,4 +138,6 @@ export const DashboardPage = React.lazy(() => import('@pages/Dashboard').then(m 
 export const UniversalFormatter = React.lazy(() => import('@tools/development/UniversalFormatter').then(m => ({ default: m.UniversalFormatter })));
 export const Converter = React.lazy(() => import('@tools/converters/Converter').then(m => ({ default: m.Converter })));
 
+export const VideoCompressor = React.lazy(() => import('@tools/media/VideoCompressor'));
+
 export const PluginMarketplace = React.lazy(() => import('@tools/plugins/PluginMarketplace').then(m => ({ default: m.default })));

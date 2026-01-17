@@ -83,13 +83,13 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                     <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 relative overflow-hidden ring-1",
                         isCompleted ? "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20" :
-                        isFailed ? "bg-rose-500/10 text-rose-400 ring-rose-500/20" :
-                        isDownloading ? "bg-blue-600/15 text-blue-400 ring-blue-500/30" :
-                        `${categoryBg} ${categoryColor} ring-border-glass`
+                            isFailed ? "bg-rose-500/10 text-rose-400 ring-rose-500/20" :
+                                isDownloading ? "bg-blue-600/15 text-blue-400 ring-blue-500/30" :
+                                    `${categoryBg} ${categoryColor} ring-border-glass`
                     )}>
                         <CategoryIcon className={cn("w-5 h-5 relative z-10", isDownloading && "animate-pulse")} />
                     </div>
-                    
+
                     {/* Status Dot */}
                     <div className="absolute -bottom-0.5 -right-0.5">
                         {isDownloading ? (
@@ -113,21 +113,21 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                             {task.filename}
                         </h4>
                         <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-foreground-tertiary">
-                             <span className={cn("opacity-80 transition-colors", categoryColor)}>{task.category}</span>
-                             <span className="opacity-40">•</span>
-                             <span className="tabular-nums">{formatBytes(task.downloadedSize)} / {formatBytes(task.totalSize)}</span>
-                             {task.credentials && (
-                                 <>
-                                     <span className="opacity-40">•</span>
-                                     <Lock className="w-2.5 h-2.5 text-amber-500" />
-                                 </>
-                             )}
-                             {task.checksum && (
-                                 <>
-                                     <span className="opacity-40">•</span>
-                                     <Fingerprint className={cn("w-2.5 h-2.5", task.checksum.verified === true ? "text-emerald-500" : task.checksum.verified === false ? "text-rose-500" : "text-blue-500")} />
-                                 </>
-                             )}
+                            <span className={cn("opacity-80 transition-colors", categoryColor)}>{task.category}</span>
+                            <span className="opacity-40">•</span>
+                            <span className="tabular-nums">{formatBytes(task.downloadedSize)} / {formatBytes(task.totalSize)}</span>
+                            {task.credentials && (
+                                <>
+                                    <span className="opacity-40">•</span>
+                                    <Lock className="w-2.5 h-2.5 text-amber-500" />
+                                </>
+                            )}
+                            {task.checksum && (
+                                <>
+                                    <span className="opacity-40">•</span>
+                                    <Fingerprint className={cn("w-2.5 h-2.5", task.checksum.verified === true ? "text-emerald-500" : task.checksum.verified === false ? "text-rose-500" : "text-blue-500")} />
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -156,15 +156,15 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                                 </span>
                             </div>
                         )}
-                        
+
                         {/* Ultra Thin Progress Bar */}
                         <div className="h-1 w-full bg-foreground-muted/10 rounded-full overflow-hidden border border-border-glass relative">
                             <div
                                 className={cn(
                                     "h-full rounded-full transition-all duration-700 ease-out",
-                                    isCompleted ? "bg-emerald-500" : 
-                                    isFailed ? "bg-rose-500" : 
-                                    "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                                    isCompleted ? "bg-emerald-500" :
+                                        isFailed ? "bg-rose-500" :
+                                            "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
                                 )}
                                 style={{ width: `${progress}%` }}
                             />
@@ -172,7 +172,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
 
                         {/* Smaller metadata for error case */}
                         {task.error && (
-                             <span className="text-[9px] font-black tabular-nums text-foreground-tertiary">
+                            <span className="text-[9px] font-black tabular-nums text-foreground-tertiary">
                                 {progress.toFixed(1)}%
                             </span>
                         )}
@@ -196,13 +196,13 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                             className={cn(
                                 "w-7 h-7 flex items-center justify-center rounded-lg transition-all border border-transparent",
                                 task.checksum.verified === true ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" :
-                                task.checksum.verified === false ? "text-rose-500 bg-rose-500/10 border-rose-500/20" :
-                                "text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/20"
+                                    task.checksum.verified === false ? "text-rose-500 bg-rose-500/10 border-rose-500/20" :
+                                        "text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/20"
                             )}
                         >
-                            {task.checksum.verified === true ? <ShieldCheck className="w-4 h-4" /> : 
-                             task.checksum.verified === false ? <ShieldAlert className="w-4 h-4" /> : 
-                             <Fingerprint className="w-3.5 h-3.5" />}
+                            {task.checksum.verified === true ? <ShieldCheck className="w-4 h-4" /> :
+                                task.checksum.verified === false ? <ShieldAlert className="w-4 h-4" /> :
+                                    <Fingerprint className="w-3.5 h-3.5" />}
                         </button>
                     )}
                     {!isCompleted && !isFailed && (
@@ -222,10 +222,10 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
                     >
                         {isCompleted ? <Folder className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                     </button>
-                    
+
                     {/* Tiny URL Link */}
                     <button className="w-7 h-7 flex items-center justify-center rounded-lg text-foreground-tertiary hover:text-blue-400 hover:bg-blue-400/10 border border-transparent hover:border-blue-400/20" title={task.url}>
-                         <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5" />
                     </button>
                 </div>
             </div>

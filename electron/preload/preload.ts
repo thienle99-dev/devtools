@@ -340,3 +340,17 @@ contextBridge.exposeInMainWorld('pluginAPI', {
   },
   updateRegistry: () => ipcRenderer.invoke('plugins:update-registry'),
 })
+
+contextBridge.exposeInMainWorld('videoCompressorAPI', {
+  getInfo: (filePath: string) => ipcRenderer.invoke('video-compressor:get-info', filePath),
+  compress: (options: any) => ipcRenderer.invoke('video-compressor:compress', options),
+  cancel: (id: string) => ipcRenderer.invoke('video-compressor:cancel', id),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-compressor:progress', listener);
+    return () => ipcRenderer.removeListener('video-compressor:progress', listener);
+  },
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})

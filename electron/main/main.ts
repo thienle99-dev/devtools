@@ -20,6 +20,7 @@ import { videoMerger } from './video-merger'
 import { audioManager } from './audio-manager'
 import { videoTrimmer } from './video-trimmer'
 import { videoEffects } from './video-effects'
+import { videoCompressor } from './video-compressor'
 import si from 'systeminformation'
 import Store from 'electron-store'
 import { setupDownloadManagerHandlers } from './download-manager-handlers'
@@ -749,6 +750,21 @@ function createWindow() {
 
   // Setup screenshot handlers
   setupScreenshotHandlers(win);
+
+  // Video Compressor Handlers
+  ipcMain.handle('video-compressor:get-info', async (_event, filePath) => {
+    return await videoCompressor.getVideoInfo(filePath);
+  });
+
+  ipcMain.handle('video-compressor:compress', async (_event, options) => {
+    return await videoCompressor.compress(options, (progress) => {
+      win?.webContents.send('video-compressor:progress', progress);
+    });
+  });
+
+  ipcMain.handle('video-compressor:cancel', async (_event, id) => {
+    return videoCompressor.cancel(id);
+  });
 
   // Window settings IPC handlers
   ipcMain.on('window-set-opacity', (_event, opacity: number) => {
