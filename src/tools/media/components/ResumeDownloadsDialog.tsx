@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Download, X, Clock, AlertCircle } from 'lucide-react';
-import { cn } from '@utils/cn';
 
 interface ResumeDownloadsDialogProps {
     pendingCount: number;

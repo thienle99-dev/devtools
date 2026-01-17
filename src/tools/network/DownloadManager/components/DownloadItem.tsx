@@ -9,8 +9,6 @@ import {
     FileText,
     ExternalLink,
     Archive,
-    CheckCircle2,
-    AlertCircle,
     FileCode,
     FileImage,
     FileAudio,
@@ -23,7 +21,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { formatBytes, formatTime } from '@utils/format';
-import { Button } from '@components/ui/Button';
 import type { DownloadTask } from '@/types/network/download';
 
 interface DownloadItemProps {

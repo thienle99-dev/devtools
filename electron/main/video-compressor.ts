@@ -53,28 +53,42 @@ export class VideoCompressor {
 
             process.on('close', () => {
                 try {
-                    // Parse duration
-                    const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+                    // Parse duration - handling both 00:00:00 and 00:00:00.00 formats
+                    const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/i);
                     const duration = durationMatch
                         ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3])
                         : 0;
 
-                    // Parse video resolution
-                    const resMatch = output.match(/Video:.*?, (\d{3,5})x(\d{3,5})/);
-                    const width = resMatch ? parseInt(resMatch[1]) : 0;
-                    const height = resMatch ? parseInt(resMatch[2]) : 0;
+                    // Global bitrate
+                    const globalBitrateMatch = output.match(/bitrate: (\d+) kb\/s/i);
+                    let bitrate = globalBitrateMatch ? parseInt(globalBitrateMatch[1]) : 0;
 
-                    // Parse FPS
-                    const fpsMatch = output.match(/(\d+\.?\d*) fps/);
-                    const fps = fpsMatch ? parseFloat(fpsMatch[1]) : 0;
+                    // Parse video stream info
+                    // We look for "Stream #...: Video: ..."
+                    const videoStreamMatch = output.match(/Stream #.*: Video: ([^,\n]+), [^,\n]+, (\d+)x(\d+)/i);
 
-                    // Parse codec
-                    const codecMatch = output.match(/Video: (\w+)/);
-                    const codec = codecMatch ? codecMatch[1] : 'unknown';
+                    let codec = 'unknown';
+                    let width = 0;
+                    let height = 0;
+                    let fps = 0;
 
-                    // Parse bitrate
-                    const bitrateMatch = output.match(/bitrate: (\d+) kb\/s/);
-                    const bitrate = bitrateMatch ? parseInt(bitrateMatch[1]) : 0;
+                    if (videoStreamMatch) {
+                        codec = videoStreamMatch[1].trim().split(' ')[0]; // Extract first word of codec
+                        width = parseInt(videoStreamMatch[2]);
+                        height = parseInt(videoStreamMatch[3]);
+
+                        // Parse FPS from the same line or nearby
+                        // It usually looks like "23.98 fps" or "24 fps"
+                        const fpsMatch = output.match(/, (\d+(?:\.\d+)?) fps/i);
+                        if (fpsMatch) fps = parseFloat(fpsMatch[1]);
+                    } else {
+                        // Fallback resolution check if the specific stream match failed
+                        const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
+                        if (resMatch) {
+                            width = parseInt(resMatch[1]);
+                            height = parseInt(resMatch[2]);
+                        }
+                    }
 
                     const info: VideoMetadata = {
                         path: filePath,
@@ -126,7 +140,24 @@ export class VideoCompressor {
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        const args: string[] = ['-i', inputPath];
+        // Calculate bitrate if targetSize is provided
+        let calculatedVideoBitrate = bitrate;
+        if (options.targetSize && totalDuration > 0) {
+            // Target size in bits
+            const targetBits = options.targetSize * 8;
+            // Reserve ~128kbps for audio (if kept)
+            const audioBitrate = keepAudio ? 128000 : 0;
+            const availableVideoBits = targetBits - (audioBitrate * totalDuration);
+            const videoBitrateKbps = Math.floor((availableVideoBits / totalDuration) / 1000);
+
+            // Ensure a sane minimum
+            calculatedVideoBitrate = `${Math.max(100, videoBitrateKbps)}k`;
+        }
+
+        const args: string[] = [
+            '-threads', '0', // Use all available CPU threads
+            '-i', inputPath
+        ];
 
         // Video filters (Scaling)
         const filters: string[] = [];
@@ -142,8 +173,6 @@ export class VideoCompressor {
 
         // Always ensure even dimensions for many codecs
         if (filters.length > 0 || resolution) {
-            // If we already have filters, we might need to append. 
-            // But actually let's just make sure the final result is even.
             filters.push('scale=trunc(iw/2)*2:trunc(ih/2)*2');
         }
 
@@ -152,23 +181,55 @@ export class VideoCompressor {
         }
 
         // Codecs and Quality
+        const useHW = options.useHardwareAcceleration;
+        const platform = process.platform;
+
         if (format === 'mp4' || format === 'mov') {
-            args.push('-c:v', 'libx264');
-            if (bitrate) {
-                args.push('-b:v', bitrate);
+            if (useHW) {
+                if (platform === 'darwin') {
+                    args.push('-c:v', 'h264_videotoolbox');
+                    if (calculatedVideoBitrate) {
+                        args.push('-b:v', calculatedVideoBitrate);
+                    } else {
+                        const q = Math.max(0, Math.min(100, 100 - (crf || 23) * 1.5));
+                        args.push('-q:v', Math.round(q).toString());
+                    }
+                } else if (platform === 'win32') {
+                    args.push('-c:v', 'h264_nvenc');
+                    if (calculatedVideoBitrate) {
+                        args.push('-b:v', calculatedVideoBitrate);
+                    } else {
+                        args.push('-cq', (crf || 23).toString());
+                    }
+                    args.push('-preset', 'p4');
+                } else {
+                    args.push('-c:v', 'libx264');
+                    if (calculatedVideoBitrate) {
+                        args.push('-b:v', calculatedVideoBitrate);
+                    } else {
+                        args.push('-crf', (crf || 23).toString());
+                    }
+                    args.push('-preset', preset || 'medium');
+                }
             } else {
-                args.push('-crf', (crf || 23).toString());
+                args.push('-c:v', 'libx264');
+                if (calculatedVideoBitrate) {
+                    args.push('-b:v', calculatedVideoBitrate);
+                } else {
+                    args.push('-crf', (crf || 23).toString());
+                }
+                args.push('-preset', preset || 'medium');
             }
-            args.push('-preset', preset || 'medium');
             args.push('-pix_fmt', 'yuv420p');
         } else if (format === 'webm') {
             args.push('-c:v', 'libvpx-vp9');
-            if (bitrate) {
-                args.push('-b:v', bitrate);
+            if (calculatedVideoBitrate) {
+                args.push('-b:v', calculatedVideoBitrate);
             } else {
                 args.push('-crf', (crf || 30).toString());
-                args.push('-b:v', '0'); // Required for constant quality in VP9
+                args.push('-b:v', '0');
             }
+            args.push('-row-mt', '1');
         }
 
         // Audio
@@ -196,11 +257,23 @@ export class VideoCompressor {
                     const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
                     const speed = speedMatch ? parseFloat(speedMatch[1]) : 1;
 
+                    const sizeMatch = output.match(/size=\s*(\d+)kB/);
+                    const currentSize = sizeMatch ? parseInt(sizeMatch[1]) * 1024 : undefined;
+
+                    // Calculate ETA
+                    let eta = 0;
+                    if (speed > 0) {
+                        const remainingDuration = totalDuration - currentTime;
+                        eta = Math.max(0, remainingDuration / speed);
+                    }
+
                     progressCallback({
                         id,
                         percent,
                         state: 'processing',
-                        speed
+                        speed,
+                        currentSize,
+                        eta
                     });
                 }
             });
@@ -209,7 +282,14 @@ export class VideoCompressor {
                 this.activeProcesses.delete(id);
                 if (code === 0) {
                     if (progressCallback) {
-                        progressCallback({ id, percent: 100, state: 'complete', outputPath: finalOutputPath });
+                        const finalSize = fs.existsSync(finalOutputPath) ? fs.statSync(finalOutputPath).size : 0;
+                        progressCallback({
+                            id,
+                            percent: 100,
+                            state: 'complete',
+                            outputPath: finalOutputPath,
+                            currentSize: finalSize
+                        });
                     }
                     resolve(finalOutputPath);
                 } else {

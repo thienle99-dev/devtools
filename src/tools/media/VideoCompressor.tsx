@@ -18,7 +18,7 @@ import {
     VolumeX
 } from 'lucide-react';
 import { cn } from '@utils/cn';
-import { formatDuration, formatBytes } from '@utils/format';
+import { formatDuration, formatBytes, formatETA } from '@utils/format';
 import { useTask } from '../../hooks/useTask';
 import type { VideoMetadata, VideoCompressOptions, VideoCompressProgress } from '../../types/video-compressor';
 
@@ -48,6 +48,9 @@ export const VideoCompressor: React.FC = () => {
     const [crf, setCrf] = useState(23);
     const [preset, setPreset] = useState('medium');
     const [keepAudio, setKeepAudio] = useState(true);
+    const [useHardwareAcceleration, setUseHardwareAcceleration] = useState(true);
+    const [compressionMode, setCompressionMode] = useState<'quality' | 'target'>('quality');
+    const [targetSizeMB, setTargetSizeMB] = useState(25);
 
     const { runTask } = useTask('video-compressor');
 
@@ -70,9 +73,8 @@ export const VideoCompressor: React.FC = () => {
 
     const handleFileSelect = async () => {
         try {
-            const paths = await (window as any).videoCompressorAPI?.chooseInputFile();
-            if (paths && paths.length > 0) {
-                const filePath = paths[0];
+            const filePath = await (window as any).videoCompressorAPI?.chooseInputFile();
+            if (filePath) {
                 setIsAnalyzing(true);
                 setError(null);
                 setOutputPath(null);
@@ -105,9 +107,11 @@ export const VideoCompressor: React.FC = () => {
             format: selectedFormat,
             resolution: targetResolution || undefined,
             scaleMode,
-            crf,
+            crf: compressionMode === 'quality' ? crf : undefined,
             preset,
-            keepAudio
+            keepAudio,
+            useHardwareAcceleration,
+            targetSize: compressionMode === 'target' ? targetSizeMB * 1024 * 1024 : undefined
         };
 
         try {
@@ -213,7 +217,7 @@ export const VideoCompressor: React.FC = () => {
 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between py-2 border-b border-border-glass/50">
-                                        <span className="text-xs font-bold text-foreground-secondary">Filenmame</span>
+                                        <span className="text-xs font-bold text-foreground-secondary">Filename</span>
                                         <span className="text-xs font-black truncate max-w-[200px]">{file.path.split(/[\\/]/).pop()}</span>
                                     </div>
                                     <div className="flex items-center justify-between py-2 border-b border-border-glass/50">
@@ -238,12 +242,28 @@ export const VideoCompressor: React.FC = () => {
                             {/* Processing Progress */}
                             {isProcessing && (
                                 <div className="glass-panel p-6 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 transition-all">
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-3">
                                             <Loader2 className="animate-spin text-indigo-400" size={18} />
                                             <span className="text-xs font-black uppercase tracking-widest text-indigo-400">Processing...</span>
                                         </div>
                                         <span className="text-lg font-black text-indigo-400">{Math.round(progress?.percent || 0)}%</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="text-[10px] font-bold text-foreground-secondary uppercase tracking-widest">
+                                            Size: {progress?.currentSize ? formatBytes(progress.currentSize) : '--'}
+                                            {progress?.percent && progress.percent > 5 && progress.currentSize ? (
+                                                <span className="ml-2 opacity-60">
+                                                    (Est. ~{formatBytes((progress.currentSize / progress.percent) * 100)})
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        {file && progress?.currentSize && (
+                                            <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                                                -{Math.round((1 - (progress.currentSize / (file.size * (progress.percent / 100)))) * 100) || 0}% ratio
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="h-2 w-full bg-foreground/[0.05] rounded-full overflow-hidden mb-4">
@@ -254,7 +274,14 @@ export const VideoCompressor: React.FC = () => {
                                     </div>
 
                                     <div className="flex items-center justify-between text-[10px] font-bold text-foreground-secondary uppercase tracking-widest">
-                                        <span>Speed: {progress?.speed ? `${progress.speed.toFixed(2)}x` : '--'}</span>
+                                        <div className="flex items-center gap-4">
+                                            <span>Speed: {progress?.speed ? `${progress.speed.toFixed(2)}x` : '--'}</span>
+                                            {progress?.eta !== undefined && progress.eta > 0 && (
+                                                <span className="text-indigo-400/80">
+                                                    ETA: {formatETA(progress.eta)}
+                                                </span>
+                                            )}
+                                        </div>
                                         <button
                                             onClick={handleCancel}
                                             className="text-rose-400 hover:text-rose-300 transition-colors"
@@ -277,12 +304,22 @@ export const VideoCompressor: React.FC = () => {
 
                             {outputPath && (
                                 <div className="glass-panel p-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle2 className="text-emerald-400" size={24} />
-                                        <div>
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400">Compression Complete!</h4>
-                                            <p className="text-[10px] font-bold text-foreground-secondary uppercase truncate max-w-[250px]">{outputPath.split(/[\\/]/).pop()}</p>
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle2 className="text-emerald-400" size={24} />
+                                            <div>
+                                                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400">Compression Complete!</h4>
+                                                <p className="text-[10px] font-bold text-foreground-secondary uppercase truncate max-w-[250px]">{outputPath.split(/[\\/]/).pop()}</p>
+                                            </div>
                                         </div>
+                                        {file && progress?.currentSize && (
+                                            <div className="text-right">
+                                                <div className="text-xs font-black text-emerald-400">-{Math.round((1 - (progress.currentSize / file.size)) * 100)}%</div>
+                                                <div className="text-[8px] font-bold text-foreground-tertiary uppercase tracking-tighter">
+                                                    {formatBytes(progress.currentSize)} final
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex gap-2">
@@ -393,27 +430,78 @@ export const VideoCompressor: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Quality / CRF Slider */}
+                                    {/* Compression Mode Switcher */}
                                     <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-[10px] font-black text-foreground-secondary uppercase tracking-widest">Compression Quality (CRF)</label>
-                                            <span className="text-xs font-black text-indigo-400">{crf}</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="51"
-                                            step="1"
-                                            value={crf}
-                                            onChange={(e) => setCrf(parseInt(e.target.value))}
-                                            className="w-full h-1.5 bg-foreground/[0.05] rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                        />
-                                        <div className="flex justify-between text-[8px] font-black text-foreground-secondary uppercase tracking-tighter opacity-50">
-                                            <span>LOSSLESS (0)</span>
-                                            <span>MEDIUM (23-28)</span>
-                                            <span>LOWEST (51)</span>
+                                        <label className="text-[10px] font-black text-foreground-secondary uppercase tracking-widest">Compression Mode</label>
+                                        <div className="flex p-1 bg-foreground/[0.03] border border-border-glass rounded-2xl">
+                                            <button
+                                                onClick={() => setCompressionMode('quality')}
+                                                className={cn(
+                                                    "flex-1 py-2 text-[10px] font-black rounded-xl uppercase transition-all",
+                                                    compressionMode === 'quality'
+                                                        ? "bg-background text-indigo-400 shadow-sm border border-border-glass"
+                                                        : "text-foreground-secondary hover:text-foreground"
+                                                )}
+                                            >
+                                                Constant Quality
+                                            </button>
+                                            <button
+                                                onClick={() => setCompressionMode('target')}
+                                                className={cn(
+                                                    "flex-1 py-2 text-[10px] font-black rounded-xl uppercase transition-all",
+                                                    compressionMode === 'target'
+                                                        ? "bg-background text-emerald-400 shadow-sm border border-border-glass"
+                                                        : "text-foreground-secondary hover:text-foreground"
+                                                )}
+                                            >
+                                                Target File Size
+                                            </button>
                                         </div>
                                     </div>
+
+                                    {/* Mode-specific settings */}
+                                    {compressionMode === 'quality' ? (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-black text-foreground-secondary uppercase tracking-widest">Compression Quality (CRF)</label>
+                                                <span className="text-xs font-black text-indigo-400">{crf}</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="51"
+                                                step="1"
+                                                value={crf}
+                                                onChange={(e) => setCrf(parseInt(e.target.value))}
+                                                className="w-full h-1.5 bg-foreground/[0.05] rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                            />
+                                            <div className="flex justify-between text-[8px] font-black text-foreground-secondary uppercase tracking-tighter opacity-50">
+                                                <span>LOSSLESS (0)</span>
+                                                <span>MEDIUM (23-28)</span>
+                                                <span>LOWEST (51)</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-black text-foreground-secondary uppercase tracking-widest text-emerald-400">Target Size (MB)</label>
+                                                <span className="text-xs font-black text-emerald-400">{targetSizeMB} MB</span>
+                                            </div>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={targetSizeMB}
+                                                    onChange={(e) => setTargetSizeMB(Math.max(1, parseInt(e.target.value) || 0))}
+                                                    className="w-full bg-foreground/[0.03] border border-border-glass rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-emerald-500/50 uppercase"
+                                                    placeholder="Enter size in MB..."
+                                                />
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-foreground-tertiary">MB</div>
+                                            </div>
+                                            <p className="text-[8px] font-bold text-foreground-tertiary uppercase tracking-tighter opacity-70">
+                                                Bitrate will be calculated automatically to fit {targetSizeMB}MB.
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {/* Preset selection */}
                                     <div className="space-y-3">
@@ -429,29 +517,60 @@ export const VideoCompressor: React.FC = () => {
                                         </select>
                                     </div>
 
-                                    {/* Keep Audio Toggle */}
-                                    <div className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-border-glass">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn(
-                                                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                                                keepAudio ? "bg-indigo-500/10 text-indigo-400" : "bg-foreground/[0.05] text-foreground-secondary"
-                                            )}>
-                                                {keepAudio ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                                    {/* Hardware Acceleration & Audio Container */}
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {/* Hardware Acceleration Toggle */}
+                                        <div className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-border-glass">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                                    useHardwareAcceleration ? "bg-emerald-500/10 text-emerald-400" : "bg-foreground/[0.05] text-foreground-secondary"
+                                                )}>
+                                                    <Zap size={16} />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest block">Hardware Acceleration</span>
+                                                    <span className="text-[8px] text-foreground-tertiary font-bold uppercase tracking-tighter">Use GPU for 3x-5x faster speed</span>
+                                                </div>
                                             </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Include Audio Track</span>
+                                            <button
+                                                onClick={() => setUseHardwareAcceleration(!useHardwareAcceleration)}
+                                                className={cn(
+                                                    "w-10 h-5 rounded-full transition-all relative p-1",
+                                                    useHardwareAcceleration ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-foreground/[0.1]"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-3 h-3 bg-white rounded-full transition-all shadow-sm",
+                                                    useHardwareAcceleration ? "translate-x-5" : "translate-x-0"
+                                                )} />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => setKeepAudio(!keepAudio)}
-                                            className={cn(
-                                                "w-10 h-5 rounded-full transition-all relative p-1",
-                                                keepAudio ? "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]" : "bg-foreground/[0.1]"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "w-3 h-3 bg-white rounded-full transition-all shadow-sm",
-                                                keepAudio ? "translate-x-5" : "translate-x-0"
-                                            )} />
-                                        </button>
+
+                                        {/* Keep Audio Toggle */}
+                                        <div className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-border-glass">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                                    keepAudio ? "bg-indigo-500/10 text-indigo-400" : "bg-foreground/[0.05] text-foreground-secondary"
+                                                )}>
+                                                    {keepAudio ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Include Audio Track</span>
+                                            </div>
+                                            <button
+                                                onClick={() => setKeepAudio(!keepAudio)}
+                                                className={cn(
+                                                    "w-10 h-5 rounded-full transition-all relative p-1",
+                                                    keepAudio ? "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]" : "bg-foreground/[0.1]"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-3 h-3 bg-white rounded-full transition-all shadow-sm",
+                                                    keepAudio ? "translate-x-5" : "translate-x-0"
+                                                )} />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Action Button */}

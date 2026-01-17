@@ -12,6 +12,8 @@ export interface VideoCompressOptions {
     bitrate?: string; // e.g. '1M', '500k'
     scaleMode?: 'fit' | 'fill' | 'stretch';
     keepAudio?: boolean;
+    useHardwareAcceleration?: boolean;
+    targetSize?: number; // Target size in bytes
 }
 
 export interface VideoCompressProgress {
@@ -22,6 +24,7 @@ export interface VideoCompressProgress {
     error?: string;
     speed?: number;
     eta?: number;
+    currentSize?: number;
 }
 
 export interface VideoMetadata {

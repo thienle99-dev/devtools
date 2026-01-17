@@ -1,28 +1,4117 @@
 import { t as __require } from "./chunk-C6JYzw3a.js";
 import { BrowserWindow, Menu, Notification, Tray, app, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, protocol, screen, shell } from "electron";
 import path, { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { createHash, randomUUID } from "node:crypto";
-import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { exec } from "node:child_process";
+import Store from "electron-store";
+import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
-import os from "node:os";
-import si from "systeminformation";
 import { createReadStream } from "node:fs";
+import * as os$1 from "node:os";
+import os from "node:os";
+import { createHash, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import { createRequire } from "module";
+import si from "systeminformation";
 import fs$1 from "fs";
 import path$1 from "path";
-import Store from "electron-store";
 import { createHash as createHash$1, randomUUID as randomUUID$1 } from "crypto";
 import { exec as exec$1, execSync, spawn } from "child_process";
+import { createRequire } from "module";
 import { promisify as promisify$1 } from "util";
 import https from "https";
 import fs$2 from "fs/promises";
-import http from "http";
-import { EventEmitter } from "events";
 import AdmZip from "adm-zip";
 import axios from "axios";
+import http from "http";
+import { EventEmitter } from "events";
+var VideoMerger = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Video Merger: FFmpeg ready");
+			} else console.warn("⚠️ Video Merger: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async getVideoInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => {
+				output += data.toString();
+			});
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const resMatch = output.match(/Video:.*?, (\d{3,5})x(\d{3,5})/);
+					const width = resMatch ? parseInt(resMatch[1]) : 0;
+					const height = resMatch ? parseInt(resMatch[2]) : 0;
+					const fpsMatch = output.match(/(\d+\.?\d*) fps/);
+					const fps = fpsMatch ? parseFloat(fpsMatch[1]) : 0;
+					const codecMatch = output.match(/Video: (\w+)/);
+					resolve({
+						path: filePath,
+						duration,
+						width,
+						height,
+						codec: codecMatch ? codecMatch[1] : "unknown",
+						fps,
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0
+					});
+				} catch (error) {
+					reject(/* @__PURE__ */ new Error("Failed to parse video info"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async generateThumbnail(filePath, time = 1) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-thumbs");
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const thumbName = `thumb_${randomUUID$1()}.jpg`;
+		const outputPath = path$1.join(outputDir, thumbName);
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-ss",
+				time.toString(),
+				"-i",
+				filePath,
+				"-frames:v",
+				"1",
+				"-q:v",
+				"2",
+				"-vf",
+				"scale=480:-1,unsharp=3:3:1.5:3:3:0.5",
+				"-f",
+				"image2",
+				"-y",
+				outputPath
+			];
+			console.log(`[VideoMerger] Generating thumbnail: ${args.join(" ")}`);
+			const process$1 = spawn(this.ffmpegPath, args);
+			process$1.on("close", (code) => {
+				if (code === 0) {
+					const data = fs$1.readFileSync(outputPath, { encoding: "base64" });
+					fs$1.unlinkSync(outputPath);
+					resolve(`data:image/jpeg;base64,${data}`);
+				} else reject(/* @__PURE__ */ new Error("Thumbnail generation failed"));
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async generateFilmstrip(filePath, duration, count = 10) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const actualCount = Math.min(200, Math.max(5, Math.min(count, Math.floor(duration))));
+		const tempId = randomUUID$1();
+		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", tempId);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const safeDuration = duration > 0 ? duration : 1;
+		const fps = actualCount / safeDuration;
+		console.log(`Generating filmstrip (Optimized): Target ${actualCount} frames from ${safeDuration}s video (fps=${fps.toFixed(4)})`);
+		const outputPattern = path$1.join(outputDir, "thumb_%03d.jpg").replace(/\\/g, "/");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-vf",
+				`fps=${fps},scale=320:-1,unsharp=3:3:1:3:3:0.5`,
+				"-an",
+				"-sn",
+				"-q:v",
+				"4",
+				"-f",
+				"image2",
+				"-y",
+				outputPattern
+			];
+			console.log(`[VideoMerger] Running FFmpeg for filmstrip: ${args.join(" ")}`);
+			const process$1 = spawn(this.ffmpegPath, args);
+			let stderr = "";
+			process$1.stderr.on("data", (data) => {
+				stderr += data.toString();
+			});
+			process$1.on("close", (code) => {
+				if (code === 0) try {
+					const files = fs$1.readdirSync(outputDir).filter((f) => f.startsWith("thumb_") && f.endsWith(".jpg")).sort();
+					if (files.length === 0) {
+						console.error("Filmstrip generation failed: No frames produced. FFmpeg output:", stderr);
+						reject(/* @__PURE__ */ new Error("No frames produced"));
+						return;
+					}
+					const finalFrames = files.map((f) => {
+						const p = path$1.join(outputDir, f);
+						return `data:image/jpeg;base64,${fs$1.readFileSync(p, { encoding: "base64" })}`;
+					}).slice(0, actualCount);
+					try {
+						fs$1.rmSync(outputDir, {
+							recursive: true,
+							force: true
+						});
+					} catch (cleanupErr) {
+						console.warn("Filmstrip cleanup failed:", cleanupErr);
+					}
+					resolve(finalFrames);
+				} catch (e) {
+					reject(e);
+				}
+				else {
+					console.error("Filmstrip generation failed with code:", code, stderr);
+					reject(/* @__PURE__ */ new Error("Filmstrip generation failed"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async extractWaveform(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		console.log("Extracting waveform for:", filePath);
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-vn",
+				"-ac",
+				"1",
+				"-filter:a",
+				"aresample=8000",
+				"-map",
+				"0:a",
+				"-c:a",
+				"pcm_s16le",
+				"-f",
+				"data",
+				"-"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			const chunks = [];
+			process$1.stdout.on("data", (chunk) => {
+				chunks.push(chunk);
+			});
+			process$1.stderr.on("data", () => {});
+			process$1.on("close", (code) => {
+				if (code === 0) try {
+					const buffer = Buffer.concat(chunks);
+					const data = [];
+					const samplesPerPoint = 80;
+					for (let i = 0; i < buffer.length; i += samplesPerPoint * 2) {
+						let max = 0;
+						for (let j = 0; j < samplesPerPoint; j++) {
+							const offset = i + j * 2;
+							if (offset + 1 < buffer.length) {
+								const val = Math.abs(buffer.readInt16LE(offset));
+								if (val > max) max = val;
+							}
+						}
+						data.push(max / 32768);
+					}
+					console.log(`Waveform extracted: ${data.length} points`);
+					resolve(data);
+				} catch (err) {
+					reject(err);
+				}
+				else reject(/* @__PURE__ */ new Error("Waveform extraction failed"));
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async createVideoFromImages(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = randomUUID$1();
+		const { imagePaths, fps, outputPath, format, quality } = options;
+		if (!imagePaths || imagePaths.length === 0) throw new Error("No images provided");
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `video_from_frames_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		const tempId = randomUUID$1();
+		const tempDir = path$1.join(app.getPath("temp"), "devtools-video-frames", tempId);
+		if (!fs$1.existsSync(tempDir)) fs$1.mkdirSync(tempDir, { recursive: true });
+		const listPath = path$1.join(tempDir, "inputs.txt");
+		try {
+			const duration = 1 / fps;
+			const finalContent = imagePaths.map((p) => {
+				return `file '${p.replace(/\\/g, "/").replace(/'/g, "'\\''")}'\nduration ${duration}`;
+			}).join("\n") + `\nfile '${imagePaths[imagePaths.length - 1].replace(/\\/g, "/").replace(/'/g, "'\\''")}'`;
+			fs$1.writeFileSync(listPath, finalContent);
+			const args = [
+				"-f",
+				"concat",
+				"-safe",
+				"0",
+				"-i",
+				listPath
+			];
+			const filters = [];
+			if (format !== "gif") filters.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
+			filters.push(`fps=${fps}`);
+			if (options.filter) switch (options.filter) {
+				case "grayscale":
+					filters.push("hue=s=0");
+					break;
+				case "sepia":
+					filters.push("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131");
+					break;
+				case "invert":
+					filters.push("negate");
+					break;
+				case "warm":
+					filters.push("eq=gamma_r=1.2:gamma_g=1.0:gamma_b=0.9");
+					break;
+				case "cool":
+					filters.push("eq=gamma_r=0.9:gamma_g=1.0:gamma_b=1.2");
+					break;
+				case "vintage":
+					filters.push("curves=vintage");
+					break;
+			}
+			if (options.watermark && options.watermark.text) {
+				const w = options.watermark;
+				const safeText = (w.text || "").replace(/:/g, "\\:").replace(/'/g, "");
+				let x = "(w-text_w)/2";
+				let y = "(h-text_h)/2";
+				const padding = 20;
+				switch (w.position) {
+					case "top-left":
+						x = `${padding}`;
+						y = `${padding}`;
+						break;
+					case "top-right":
+						x = `w-text_w-${padding}`;
+						y = `${padding}`;
+						break;
+					case "bottom-left":
+						x = `${padding}`;
+						y = `h-text_h-${padding}`;
+						break;
+					case "bottom-right":
+						x = `w-text_w-${padding}`;
+						y = `h-text_h-${padding}`;
+						break;
+				}
+				const fontSize = w.fontSize || 24;
+				const fontColor = w.color || "white";
+				const alpha = w.opacity || .8;
+				filters.push(`drawtext=text='${safeText}':x=${x}:y=${y}:fontsize=${fontSize}:fontcolor=${fontColor}:alpha=${alpha}`);
+			}
+			if (format === "gif") {
+				const filterString = filters.join(",");
+				args.push("-vf", `${filterString},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`);
+			} else {
+				const filterString = filters.join(",");
+				if (filterString) args.push("-vf", filterString);
+				if (format === "mp4") {
+					args.push("-c:v", "libx264", "-pix_fmt", "yuv420p");
+					if (quality === "low") args.push("-crf", "28");
+					else if (quality === "high") args.push("-crf", "18");
+					else args.push("-crf", "23");
+				} else if (format === "webm") {
+					args.push("-c:v", "libvpx-vp9", "-b:v", "0");
+					if (quality === "low") args.push("-crf", "40");
+					else if (quality === "high") args.push("-crf", "20");
+					else args.push("-crf", "30");
+				}
+			}
+			args.push("-y", finalOutputPath);
+			console.log(`[VideoMerger] Creating video from images (concat): ${args.join(" ")}`);
+			return new Promise((resolve, reject) => {
+				const process$1 = spawn(this.ffmpegPath, args);
+				this.activeProcesses.set(id, process$1);
+				const totalDuration = imagePaths.length / fps;
+				process$1.stderr.on("data", (data) => {
+					const output = data.toString();
+					if (progressCallback) {
+						const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+						if (timeMatch) {
+							const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+							progressCallback({
+								id,
+								percent: Math.min(currentTime / totalDuration * 100, 99),
+								state: "processing"
+							});
+						}
+					}
+				});
+				process$1.on("close", (code) => {
+					this.activeProcesses.delete(id);
+					try {
+						fs$1.rmSync(tempDir, {
+							recursive: true,
+							force: true
+						});
+					} catch (e) {
+						console.warn("Failed to cleanup temp dir", e);
+					}
+					if (code === 0) {
+						if (progressCallback) progressCallback({
+							id,
+							percent: 100,
+							state: "complete",
+							outputPath: finalOutputPath
+						});
+						resolve(finalOutputPath);
+					} else reject(/* @__PURE__ */ new Error(`FFmpeg failed with code ${code}`));
+				});
+				process$1.on("error", (err) => {
+					this.activeProcesses.delete(id);
+					try {
+						fs$1.rmSync(tempDir, {
+							recursive: true,
+							force: true
+						});
+					} catch (e) {}
+					reject(err);
+				});
+			});
+		} catch (error) {
+			try {
+				fs$1.rmSync(tempDir, {
+					recursive: true,
+					force: true
+				});
+			} catch (e) {}
+			throw error;
+		}
+	}
+	async mergeVideos(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { clips, outputPath, format } = options;
+		if (!clips || clips.length === 0) throw new Error("No input clips provided");
+		for (const clip of clips) if (!fs$1.existsSync(clip.path)) throw new Error(`File not found: ${clip.path}`);
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const videoInfos = await Promise.all(clips.map((c) => this.getVideoInfo(c.path)));
+		let totalDuration = 0;
+		clips.forEach((clip, i) => {
+			const fullDuration = videoInfos[i].duration;
+			const start = clip.startTime || 0;
+			const end = clip.endTime || fullDuration;
+			totalDuration += end - start;
+		});
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `merged_video_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = [];
+		clips.forEach((clip) => {
+			if (clip.startTime !== void 0) args.push("-ss", clip.startTime.toString());
+			if (clip.endTime !== void 0) args.push("-to", clip.endTime.toString());
+			args.push("-i", clip.path);
+		});
+		let filterStr = "";
+		clips.forEach((_, i) => {
+			filterStr += `[${i}:v][${i}:a]`;
+		});
+		filterStr += `concat=n=${clips.length}:v=1:a=1[v][a]`;
+		args.push("-filter_complex", filterStr);
+		args.push("-map", "[v]", "-map", "[a]");
+		args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");
+		args.push("-c:a", "aac", "-b:a", "128k");
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / totalDuration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Merge failed with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancelMerge(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoMerger = new VideoMerger();
+var AudioManager = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("Audio Manager FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
+		} catch (e) {
+			console.warn("FFmpeg setup failed for Audio Manager:", e);
+		}
+	}
+	async getAudioInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => output += data.toString());
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const sampleRateMatch = output.match(/(\d+) Hz/);
+					const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1]) : 0;
+					resolve({
+						path: filePath,
+						duration,
+						format: path$1.extname(filePath).slice(1),
+						sampleRate,
+						channels: output.includes("stereo") ? 2 : 1,
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0
+					});
+				} catch (e) {
+					reject(/* @__PURE__ */ new Error("Failed to parse audio info"));
+				}
+			});
+		});
+	}
+	async applyAudioChanges(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = randomUUID$1();
+		const { videoPath, audioLayers, outputPath, outputFormat, keepOriginalAudio, originalAudioVolume } = options;
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const videoInfoArgs = [
+			"-i",
+			videoPath,
+			"-hide_banner"
+		];
+		const infoProcess = spawn(this.ffmpegPath, videoInfoArgs);
+		let infoOutput = "";
+		await new Promise((resolve) => {
+			infoProcess.stderr.on("data", (d) => infoOutput += d.toString());
+			infoProcess.on("close", resolve);
+		});
+		const durationMatch = infoOutput.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+		const totalDuration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const finalOutputPath = outputPath || path$1.join(outputDir, `audio_mixed_${Date.now()}.${outputFormat}`);
+		const args = ["-i", videoPath];
+		audioLayers.forEach((layer) => {
+			if (layer.clipStart > 0) args.push("-ss", layer.clipStart.toString());
+			if (layer.clipEnd > 0) args.push("-to", layer.clipEnd.toString());
+			args.push("-i", layer.path);
+		});
+		let filterStr = "";
+		let inputCount = 0;
+		if (keepOriginalAudio) {
+			filterStr += `[0:a]volume=${originalAudioVolume}[a0];`;
+			inputCount++;
+		}
+		audioLayers.forEach((layer, i) => {
+			const inputIdx = i + 1;
+			filterStr += `[${inputIdx}:a]volume=${layer.volume},adelay=${layer.startTime * 1e3}|${layer.startTime * 1e3}[a${inputIdx}];`;
+			inputCount++;
+		});
+		for (let i = 0; i < inputCount; i++) filterStr += `[a${i}]`;
+		filterStr += `amix=inputs=${inputCount}:duration=first:dropout_transition=2[aout]`;
+		args.push("-filter_complex", filterStr);
+		args.push("-map", "0:v", "-map", "[aout]");
+		args.push("-c:v", "copy");
+		args.push("-c:a", "aac", "-b:a", "192k", "-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					progressCallback({
+						id,
+						percent: Math.min(currentTime / totalDuration * 100, 100),
+						state: "processing"
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Exit code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancel(id) {
+		const p = this.activeProcesses.get(id);
+		if (p) {
+			p.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const audioManager = new AudioManager();
+var AudioExtractor = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Audio Extractor: FFmpeg ready");
+			} else console.warn("⚠️ Audio Extractor: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async getAudioInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => {
+				output += data.toString();
+			});
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const audioMatch = output.match(/Stream #\d+:\d+.*?: Audio: (\w+).*?, (\d+) Hz.*?, (\w+).*?, (\d+) kb\/s/);
+					const hasAudio = !!audioMatch;
+					const hasVideo = output.includes("Video:");
+					resolve({
+						duration,
+						bitrate: audioMatch ? parseInt(audioMatch[4]) : 0,
+						sampleRate: audioMatch ? parseInt(audioMatch[2]) : 0,
+						channels: audioMatch && audioMatch[3].includes("stereo") ? 2 : 1,
+						codec: audioMatch ? audioMatch[1] : "unknown",
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0,
+						hasAudio,
+						hasVideo
+					});
+				} catch (error) {
+					reject(/* @__PURE__ */ new Error("Failed to parse audio info"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async extractAudio(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPath, outputPath, format, bitrate, sampleRate, channels, trim, normalize, fadeIn, fadeOut } = options;
+		if (!fs$1.existsSync(inputPath)) throw new Error("Input file not found");
+		const audioInfo = await this.getAudioInfo(inputPath);
+		if (!audioInfo.hasAudio) throw new Error("No audio stream found in input file");
+		const inputFilename = path$1.basename(inputPath, path$1.extname(inputPath));
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `${inputFilename}_extracted.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = ["-i", inputPath];
+		if (trim?.start !== void 0) args.push("-ss", trim.start.toString());
+		if (trim?.end !== void 0) args.push("-to", trim.end.toString());
+		args.push("-vn");
+		const filters = [];
+		if (normalize) filters.push("loudnorm");
+		if (fadeIn && fadeIn > 0) filters.push(`afade=t=in:d=${fadeIn}`);
+		if (fadeOut && fadeOut > 0) {
+			const startTime = (trim?.end || audioInfo.duration) - fadeOut;
+			filters.push(`afade=t=out:st=${startTime}:d=${fadeOut}`);
+		}
+		if (filters.length > 0) args.push("-af", filters.join(","));
+		switch (format) {
+			case "mp3":
+				args.push("-acodec", "libmp3lame");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+			case "aac":
+				args.push("-acodec", "aac");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+			case "flac":
+				args.push("-acodec", "flac");
+				break;
+			case "wav":
+				args.push("-acodec", "pcm_s16le");
+				break;
+			case "ogg":
+				args.push("-acodec", "libvorbis");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+			case "m4a":
+				args.push("-acodec", "aac");
+				if (bitrate) args.push("-b:a", bitrate);
+				break;
+		}
+		if (sampleRate) args.push("-ar", sampleRate.toString());
+		if (channels) args.push("-ac", channels.toString());
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			let duration = audioInfo.duration;
+			if (trim?.start && trim?.end) duration = trim.end - trim.start;
+			else if (trim?.end) duration = trim.end;
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / duration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						filename: outputFilename,
+						inputPath,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						filename: outputFilename,
+						inputPath,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`FFmpeg exited with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancelExtraction(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+	cancelAll() {
+		this.activeProcesses.forEach((process$1) => process$1.kill());
+		this.activeProcesses.clear();
+	}
+};
+const audioExtractor = new AudioExtractor();
+var VideoTrimmer = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("Video Trimmer FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
+		} catch (e) {
+			console.warn("FFmpeg setup failed for Video Trimmer:", e);
+		}
+	}
+	async process(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const { inputPath, ranges, mode, outputFormat, outputPath } = options;
+		const id = randomUUID$1();
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const results = [];
+		if (mode === "trim" || mode === "cut") {
+			const finalOutputPath = outputPath || path$1.join(outputDir, `trimmed_${Date.now()}.${outputFormat}`);
+			const args = [];
+			if (ranges.length === 1 && mode === "trim") {
+				args.push("-ss", ranges[0].start.toString(), "-to", ranges[0].end.toString(), "-i", inputPath);
+				args.push("-c", "copy", "-y", finalOutputPath);
+			} else {
+				args.push("-i", inputPath);
+				let filterStr = "";
+				ranges.forEach((range, i) => {
+					filterStr += `[0:v]trim=start=${range.start}:end=${range.end},setpts=PTS-STARTPTS[v${i}];`;
+					filterStr += `[0:a]atrim=start=${range.start}:end=${range.end},asetpts=PTS-STARTPTS[a${i}];`;
+				});
+				for (let i = 0; i < ranges.length; i++) filterStr += `[v${i}][a${i}]`;
+				filterStr += `concat=n=${ranges.length}:v=1:a=1[outv][outa]`;
+				args.push("-filter_complex", filterStr);
+				args.push("-map", "[outv]", "-map", "[outa]");
+				args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "23");
+				args.push("-c:a", "aac", "-y", finalOutputPath);
+			}
+			await this.runFFmpeg(args, id, ranges.reduce((acc, r) => acc + (r.end - r.start), 0), progressCallback);
+			results.push(finalOutputPath);
+		} else if (mode === "split") for (let i = 0; i < ranges.length; i++) {
+			const range = ranges[i];
+			const splitPath = path$1.join(outputDir, `split_${i + 1}_${Date.now()}.${outputFormat}`);
+			const args = [
+				"-ss",
+				range.start.toString(),
+				"-to",
+				range.end.toString(),
+				"-i",
+				inputPath,
+				"-c",
+				"copy",
+				"-y",
+				splitPath
+			];
+			if (progressCallback) progressCallback({
+				id,
+				percent: i / ranges.length * 100,
+				state: "processing"
+			});
+			await this.runFFmpeg(args, id, range.end - range.start);
+			results.push(splitPath);
+		}
+		if (progressCallback) progressCallback({
+			id,
+			percent: 100,
+			state: "complete",
+			outputPath: results[0]
+		});
+		return results;
+	}
+	async runFFmpeg(args, id, totalDuration, progressCallback) {
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					progressCallback({
+						id,
+						percent: Math.min(currentTime / totalDuration * 100, 100),
+						state: "processing"
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) resolve();
+				else reject(/* @__PURE__ */ new Error(`FFmpeg exited with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancel(id) {
+		const p = this.activeProcesses.get(id);
+		if (p) {
+			p.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoTrimmer = new VideoTrimmer();
+var VideoEffects = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Video Effects: FFmpeg ready");
+			} else console.warn("⚠️ Video Effects: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async applyEffects(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPath, outputPath, format } = options;
+		if (!fs$1.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
+		if (progressCallback) progressCallback({
+			id,
+			percent: 0,
+			state: "analyzing"
+		});
+		const videoInfo = await this.getVideoInfo(inputPath);
+		const totalDuration = options.speed ? videoInfo.duration / options.speed : videoInfo.duration;
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `effect_video_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		const args = ["-i", inputPath];
+		let vFilters = [];
+		let aFilters = [];
+		if (options.speed && options.speed !== 1) {
+			vFilters.push(`setpts=${1 / options.speed}*PTS`);
+			let tempSpeed = options.speed;
+			while (tempSpeed > 2) {
+				aFilters.push("atempo=2.0");
+				tempSpeed /= 2;
+			}
+			while (tempSpeed < .5) {
+				aFilters.push("atempo=0.5");
+				tempSpeed /= .5;
+			}
+			aFilters.push(`atempo=${tempSpeed}`);
+		}
+		if (options.flip === "horizontal" || options.flip === "both") vFilters.push("hflip");
+		if (options.flip === "vertical" || options.flip === "both") vFilters.push("vflip");
+		if (options.rotate) {
+			if (options.rotate === 90) vFilters.push("transpose=1");
+			else if (options.rotate === 180) vFilters.push("transpose=2,transpose=2");
+			else if (options.rotate === 270) vFilters.push("transpose=2");
+		}
+		if (options.brightness !== void 0 || options.contrast !== void 0 || options.saturation !== void 0 || options.gamma !== void 0) vFilters.push(`eq=brightness=${options.brightness || 0}:contrast=${options.contrast !== void 0 ? options.contrast : 1}:saturation=${options.saturation !== void 0 ? options.saturation : 1}:gamma=${options.gamma !== void 0 ? options.gamma : 1}`);
+		if (options.grayscale) vFilters.push("hue=s=0");
+		if (options.sepia) vFilters.push("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131");
+		if (options.blur) vFilters.push(`boxblur=${options.blur}:1`);
+		if (options.noise) vFilters.push(`noise=alls=${options.noise}:allf=t+u`);
+		if (options.sharpen) vFilters.push("unsharp=5:5:1.0:5:5:0.0");
+		if (options.vintage) {
+			vFilters.push("curves=vintage");
+			vFilters.push("vignette=PI/4");
+		}
+		if (options.reverse) {
+			vFilters.push("reverse");
+			aFilters.push("areverse");
+		}
+		if (vFilters.length > 0) args.push("-vf", vFilters.join(","));
+		if (aFilters.length > 0) args.push("-af", aFilters.join(","));
+		if (options.quality === "low") args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "30");
+		else if (options.quality === "high") args.push("-c:v", "libx264", "-preset", "slow", "-crf", "18");
+		else args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");
+		args.push("-c:a", "aac", "-b:a", "128k");
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / totalDuration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					progressCallback({
+						id,
+						percent,
+						state: "processing",
+						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Effects application failed with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	async getVideoInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const process$1 = spawn(this.ffmpegPath, [
+				"-i",
+				filePath,
+				"-hide_banner"
+			]);
+			let output = "";
+			process$1.stderr.on("data", (data) => output += data.toString());
+			process$1.on("close", (code) => {
+				if (code !== 0 && !output.includes("Duration")) {
+					reject(/* @__PURE__ */ new Error("Failed to get video info"));
+					return;
+				}
+				const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				resolve({ duration: durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0 });
+			});
+			process$1.on("error", reject);
+		});
+	}
+	cancelEffects(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoEffects = new VideoEffects();
+var VideoCompressor = class {
+	constructor() {
+		this.ffmpegPath = null;
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
+	}
+	async initFFmpeg() {
+		try {
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Video Compressor: FFmpeg ready");
+			} else console.warn("⚠️ Video Compressor: FFmpeg not available");
+		} catch (e) {
+			console.warn("FFmpeg setup failed:", e);
+		}
+	}
+	async getVideoInfo(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		return new Promise((resolve, reject) => {
+			const args = [
+				"-i",
+				filePath,
+				"-hide_banner"
+			];
+			const process$1 = spawn(this.ffmpegPath, args);
+			let output = "";
+			process$1.stderr.on("data", (data) => {
+				output += data.toString();
+			});
+			process$1.on("close", () => {
+				try {
+					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/i);
+					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					const globalBitrateMatch = output.match(/bitrate: (\d+) kb\/s/i);
+					let bitrate = globalBitrateMatch ? parseInt(globalBitrateMatch[1]) : 0;
+					const videoStreamMatch = output.match(/Stream #.*: Video: ([^,\n]+), [^,\n]+, (\d+)x(\d+)/i);
+					let codec = "unknown";
+					let width = 0;
+					let height = 0;
+					let fps = 0;
+					if (videoStreamMatch) {
+						codec = videoStreamMatch[1].trim().split(" ")[0];
+						width = parseInt(videoStreamMatch[2]);
+						height = parseInt(videoStreamMatch[3]);
+						const fpsMatch = output.match(/, (\d+(?:\.\d+)?) fps/i);
+						if (fpsMatch) fps = parseFloat(fpsMatch[1]);
+					} else {
+						const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
+						if (resMatch) {
+							width = parseInt(resMatch[1]);
+							height = parseInt(resMatch[2]);
+						}
+					}
+					resolve({
+						path: filePath,
+						duration,
+						width,
+						height,
+						codec,
+						fps,
+						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0,
+						bitrate
+					});
+				} catch (error) {
+					reject(/* @__PURE__ */ new Error("Failed to parse video info"));
+				}
+			});
+			process$1.on("error", reject);
+		});
+	}
+	async compress(options, progressCallback) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const id = options.id || randomUUID$1();
+		const { inputPath, outputPath, format, resolution, preset, crf, bitrate, scaleMode, keepAudio } = options;
+		if (!fs$1.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
+		const totalDuration = (await this.getVideoInfo(inputPath)).duration;
+		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
+		const outputFilename = outputPath ? path$1.basename(outputPath) : `compressed_${path$1.basename(inputPath, path$1.extname(inputPath))}_${Date.now()}.${format}`;
+		const finalOutputPath = path$1.join(outputDir, outputFilename);
+		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
+		let calculatedVideoBitrate = bitrate;
+		if (options.targetSize && totalDuration > 0) {
+			const availableVideoBits = options.targetSize * 8 - (keepAudio ? 128e3 : 0) * totalDuration;
+			const videoBitrateKbps = Math.floor(availableVideoBits / totalDuration / 1e3);
+			calculatedVideoBitrate = `${Math.max(100, videoBitrateKbps)}k`;
+		}
+		const args = [
+			"-threads",
+			"0",
+			"-i",
+			inputPath
+		];
+		const filters = [];
+		if (resolution) {
+			let scaleString = `scale=${resolution.width}:${resolution.height}`;
+			if (scaleMode === "fit") scaleString = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=decrease,pad=${resolution.width}:${resolution.height}:(ow-iw)/2:(oh-ih)/2`;
+			else if (scaleMode === "fill") scaleString = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=increase,crop=${resolution.width}:${resolution.height}`;
+			filters.push(scaleString);
+		}
+		if (filters.length > 0 || resolution) filters.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
+		if (filters.length > 0) args.push("-vf", filters.join(","));
+		const useHW = options.useHardwareAcceleration;
+		const platform = process.platform;
+		if (format === "mp4" || format === "mov") {
+			if (useHW) if (platform === "darwin") {
+				args.push("-c:v", "h264_videotoolbox");
+				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
+				else {
+					const q = Math.max(0, Math.min(100, 100 - (crf || 23) * 1.5));
+					args.push("-q:v", Math.round(q).toString());
+				}
+			} else if (platform === "win32") {
+				args.push("-c:v", "h264_nvenc");
+				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
+				else args.push("-cq", (crf || 23).toString());
+				args.push("-preset", "p4");
+			} else {
+				args.push("-c:v", "libx264");
+				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
+				else args.push("-crf", (crf || 23).toString());
+				args.push("-preset", preset || "medium");
+			}
+			else {
+				args.push("-c:v", "libx264");
+				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
+				else args.push("-crf", (crf || 23).toString());
+				args.push("-preset", preset || "medium");
+			}
+			args.push("-pix_fmt", "yuv420p");
+		} else if (format === "webm") {
+			args.push("-c:v", "libvpx-vp9");
+			if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
+			else {
+				args.push("-crf", (crf || 30).toString());
+				args.push("-b:v", "0");
+			}
+			args.push("-row-mt", "1");
+		}
+		if (!keepAudio) args.push("-an");
+		else args.push("-c:a", "aac", "-b:a", "128k");
+		args.push("-y", finalOutputPath);
+		return new Promise((resolve, reject) => {
+			console.log(`[VideoCompressor] Command: ${this.ffmpegPath} ${args.join(" ")}`);
+			const process$1 = spawn(this.ffmpegPath, args);
+			this.activeProcesses.set(id, process$1);
+			process$1.stderr.on("data", (data) => {
+				const output = data.toString();
+				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+				if (timeMatch && progressCallback) {
+					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+					const percent = Math.min(currentTime / totalDuration * 100, 100);
+					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
+					const speed = speedMatch ? parseFloat(speedMatch[1]) : 1;
+					const sizeMatch = output.match(/size=\s*(\d+)kB/);
+					const currentSize = sizeMatch ? parseInt(sizeMatch[1]) * 1024 : void 0;
+					let eta = 0;
+					if (speed > 0) {
+						const remainingDuration = totalDuration - currentTime;
+						eta = Math.max(0, remainingDuration / speed);
+					}
+					progressCallback({
+						id,
+						percent,
+						state: "processing",
+						speed,
+						currentSize,
+						eta
+					});
+				}
+			});
+			process$1.on("close", (code) => {
+				this.activeProcesses.delete(id);
+				if (code === 0) {
+					if (progressCallback) progressCallback({
+						id,
+						percent: 100,
+						state: "complete",
+						outputPath: finalOutputPath,
+						currentSize: fs$1.existsSync(finalOutputPath) ? fs$1.statSync(finalOutputPath).size : 0
+					});
+					resolve(finalOutputPath);
+				} else reject(/* @__PURE__ */ new Error(`Compression failed with code ${code}`));
+			});
+			process$1.on("error", (err) => {
+				this.activeProcesses.delete(id);
+				reject(err);
+			});
+		});
+	}
+	cancel(id) {
+		const process$1 = this.activeProcesses.get(id);
+		if (process$1) {
+			process$1.kill();
+			this.activeProcesses.delete(id);
+		}
+	}
+};
+const videoCompressor = new VideoCompressor();
+var require$4 = createRequire(import.meta.url);
+var YouTubeDownloader = class {
+	constructor() {
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.hasAria2c = false;
+		this.hasFFmpeg = false;
+		this.ffmpegPath = null;
+		this.downloadQueue = [];
+		this.activeDownloadsCount = 0;
+		this.videoInfoCache = /* @__PURE__ */ new Map();
+		this.CACHE_TTL = 1800 * 1e3;
+		this.store = new Store({
+			name: "youtube-download-history",
+			defaults: {
+				history: [],
+				settings: {
+					defaultVideoQuality: "1080p",
+					defaultAudioQuality: "0",
+					maxConcurrentDownloads: 3,
+					maxSpeedLimit: ""
+				}
+			}
+		});
+		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
+		this.initPromise = this.initYtDlp();
+	}
+	async initYtDlp() {
+		try {
+			const ytDlpModule = require$4("yt-dlp-wrap");
+			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
+			if (!fs$1.existsSync(this.binaryPath)) {
+				console.log("Downloading yt-dlp binary to:", this.binaryPath);
+				try {
+					await YTDlpWrap.downloadFromGithub(this.binaryPath);
+					console.log("yt-dlp binary downloaded successfully");
+				} catch (downloadError) {
+					console.error("Failed to download yt-dlp binary:", downloadError);
+					throw new Error(`Failed to download yt-dlp: ${downloadError}`);
+				}
+			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
+			this.ytDlp = new YTDlpWrap(this.binaryPath);
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				this.hasFFmpeg = true;
+				const version = FFmpegHelper.getFFmpegVersion();
+				console.log(`✅ FFmpeg ready: ${version || "version unknown"}`);
+			} else console.warn("⚠️ FFmpeg not available - video features may be limited");
+			await this.checkHelpers();
+		} catch (error) {
+			console.error("Failed to initialize yt-dlp:", error);
+			throw error;
+		}
+	}
+	async checkHelpers() {
+		this.hasAria2c = false;
+		try {
+			const userData = app.getPath("userData");
+			const localBin = path$1.join(userData, "bin", "aria2c.exe");
+			if (fs$1.existsSync(localBin)) {
+				this.hasAria2c = true;
+				console.log("✅ Aria2c found locally:", localBin);
+			}
+		} catch {}
+		if (!this.hasAria2c) try {
+			execSync("aria2c --version", { stdio: "ignore" });
+			this.hasAria2c = true;
+			console.log("✅ Aria2c found globally");
+		} catch {
+			console.log("ℹ️ Aria2c not found");
+		}
+		if (this.ffmpegPath) {
+			this.hasFFmpeg = true;
+			console.log("✅ FFmpeg static detected", this.ffmpegPath);
+		} else try {
+			execSync("ffmpeg -version", { stdio: "ignore" });
+			this.hasFFmpeg = true;
+			console.log("✅ FFmpeg found globally");
+		} catch {
+			this.hasFFmpeg = false;
+			console.warn("⚠️ FFmpeg not found");
+		}
+	}
+	async installAria2() {
+		console.log("Starting Aria2 download...");
+		try {
+			const userData = app.getPath("userData");
+			const binDir = path$1.join(userData, "bin");
+			if (!fs$1.existsSync(binDir)) fs$1.mkdirSync(binDir, { recursive: true });
+			const zipPath = path$1.join(binDir, "aria2.zip");
+			const url = "https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip";
+			await new Promise((resolve, reject) => {
+				const file = fs$1.createWriteStream(zipPath);
+				https.get(url, (res) => {
+					if (res.statusCode === 302 || res.statusCode === 301) https.get(res.headers.location, (res2) => {
+						if (res2.statusCode !== 200) {
+							reject(/* @__PURE__ */ new Error("DL Fail " + res2.statusCode));
+							return;
+						}
+						res2.pipe(file);
+						file.on("finish", () => {
+							file.close();
+							resolve();
+						});
+					}).on("error", reject);
+					else if (res.statusCode === 200) {
+						res.pipe(file);
+						file.on("finish", () => {
+							file.close();
+							resolve();
+						});
+					} else reject(/* @__PURE__ */ new Error(`Failed to download: ${res.statusCode}`));
+				}).on("error", reject);
+			});
+			await promisify$1(exec$1)(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${binDir}' -Force"`);
+			const subDir = path$1.join(binDir, "aria2-1.36.0-win-64bit-build1");
+			const exePath = path$1.join(subDir, "aria2c.exe");
+			const targetPath = path$1.join(binDir, "aria2c.exe");
+			if (fs$1.existsSync(exePath)) fs$1.copyFileSync(exePath, targetPath);
+			try {
+				fs$1.unlinkSync(zipPath);
+			} catch {}
+			await this.checkHelpers();
+			return this.hasAria2c;
+		} catch (e) {
+			console.error("Install Aria2 Failed", e);
+			throw e;
+		}
+	}
+	async ensureInitialized() {
+		await this.initPromise;
+	}
+	async processQueue() {
+		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
+		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
+			const task = this.downloadQueue.shift();
+			if (task) {
+				this.activeDownloadsCount++;
+				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
+					this.activeDownloadsCount--;
+					this.processQueue();
+				});
+			}
+		}
+	}
+	async getVideoInfo(url) {
+		await this.ensureInitialized();
+		const cached = this.videoInfoCache.get(url);
+		if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+			console.log("Returning cached video info for:", url);
+			return cached.info;
+		}
+		try {
+			const info = await this.ytDlp.getVideoInfo([
+				url,
+				"--skip-download",
+				"--no-playlist",
+				"--no-check-certificate"
+			]);
+			const formats = (info.formats || []).map((format) => ({
+				itag: format.format_id ? parseInt(format.format_id) : 0,
+				quality: format.quality || format.format_note || "unknown",
+				qualityLabel: format.format_note || format.resolution,
+				hasVideo: !!format.vcodec && format.vcodec !== "none",
+				hasAudio: !!format.acodec && format.acodec !== "none",
+				container: format.ext || "unknown",
+				codecs: format.vcodec || format.acodec,
+				bitrate: format.tbr ? format.tbr * 1e3 : void 0,
+				audioBitrate: format.abr,
+				filesize: format.filesize || format.filesize_approx
+			}));
+			const qualityLabels = /* @__PURE__ */ new Set();
+			formats.forEach((format) => {
+				if (format.qualityLabel) {
+					const match = format.qualityLabel.match(/(\d+p)/);
+					if (match) qualityLabels.add(match[1]);
+				}
+			});
+			const availableQualities = Array.from(qualityLabels).sort((a, b) => {
+				const aNum = parseInt(a);
+				return parseInt(b) - aNum;
+			});
+			const hasVideo = formats.some((f) => f.hasVideo);
+			const hasAudio = formats.some((f) => f.hasAudio);
+			let uploadDate;
+			if (info.upload_date) try {
+				const dateStr = info.upload_date.toString();
+				if (dateStr.length === 8) uploadDate = `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+			} catch (e) {
+				console.warn("Failed to parse upload date:", info.upload_date);
+			}
+			const videoInfo = {
+				videoId: info.id || "",
+				title: info.title || "Unknown",
+				author: info.uploader || info.channel || "Unknown",
+				lengthSeconds: parseInt(info.duration) || 0,
+				thumbnailUrl: info.thumbnail || "",
+				description: info.description || void 0,
+				viewCount: parseInt(info.view_count) || void 0,
+				uploadDate,
+				formats,
+				availableQualities,
+				hasVideo,
+				hasAudio
+			};
+			this.videoInfoCache.set(url, {
+				info: videoInfo,
+				timestamp: Date.now()
+			});
+			return videoInfo;
+		} catch (error) {
+			throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
+	async getPlaylistInfo(url) {
+		await this.ensureInitialized();
+		try {
+			const info = await this.ytDlp.getVideoInfo([
+				url,
+				"--flat-playlist",
+				"--skip-download",
+				"--no-check-certificate"
+			]);
+			if (!info.entries || !Array.isArray(info.entries)) throw new Error("Not a valid playlist URL");
+			const videos = info.entries.map((entry) => ({
+				id: entry.id || entry.url,
+				title: entry.title || "Unknown Title",
+				duration: entry.duration || 0,
+				thumbnail: entry.thumbnail || entry.thumbnails?.[0]?.url || "",
+				url: entry.url || `https://www.youtube.com/watch?v=${entry.id}`
+			}));
+			return {
+				playlistId: info.id || info.playlist_id || "unknown",
+				title: info.title || info.playlist_title || "Unknown Playlist",
+				videoCount: videos.length,
+				videos
+			};
+		} catch (error) {
+			throw new Error(`Failed to get playlist info: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
+	async checkDiskSpace(directory, requiredBytes) {
+		try {
+			const filesystems = await si.fsSize();
+			const root = path$1.parse(path$1.resolve(directory)).root.toLowerCase();
+			const fs$3 = filesystems.find((d) => {
+				const mount = d.mount.toLowerCase();
+				return root.startsWith(mount) || mount.startsWith(root.replace(/\\/g, ""));
+			});
+			if (fs$3) {
+				if (fs$3.available < requiredBytes + 100 * 1024 * 1024) throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs$3.available / 1024 / 1024).toFixed(2)} MB`);
+			}
+		} catch (error) {
+			console.warn("Disk space check failed:", error);
+		}
+	}
+	async downloadVideo(options, progressCallback) {
+		return new Promise((resolve, reject) => {
+			this.downloadQueue.push({
+				run: () => this.executeDownload(options, progressCallback),
+				resolve,
+				reject
+			});
+			this.processQueue();
+		});
+	}
+	async executeDownload(options, progressCallback) {
+		await this.ensureInitialized();
+		console.log("ExecuteDownload - hasFFmpeg:", this.hasFFmpeg, "path:", this.ffmpegPath);
+		const { url, format, quality, container, outputPath, maxSpeed, embedSubs, id } = options;
+		const downloadId = id || randomUUID$1();
+		try {
+			const info = await this.getVideoInfo(url);
+			const sanitizedTitle = this.sanitizeFilename(info.title);
+			const downloadsPath = outputPath || app.getPath("downloads");
+			const extension = container || (format === "audio" ? "mp3" : "mp4");
+			let filenameSuffix = "";
+			if (format === "audio") filenameSuffix = `_audio_${quality || "best"}`;
+			else if (format === "video" && quality) filenameSuffix = `_${quality}`;
+			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.%(ext)s`);
+			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			let estimatedSize = 0;
+			if (format === "audio") estimatedSize = info.formats.find((f) => f.hasAudio && !f.hasVideo && (f.quality === quality || f.itag.toString() === "140"))?.filesize || 0;
+			else {
+				let videoFormat;
+				if (quality && quality !== "best") videoFormat = info.formats.find((f) => f.qualityLabel?.startsWith(quality) && f.hasVideo);
+				else videoFormat = info.formats.find((f) => f.hasVideo);
+				const audioFormat = info.formats.find((f) => f.hasAudio && !f.hasVideo);
+				if (videoFormat) estimatedSize += videoFormat.filesize || 0;
+				if (audioFormat) estimatedSize += audioFormat.filesize || 0;
+			}
+			if (estimatedSize > 1024 * 1024) await this.checkDiskSpace(downloadsPath, estimatedSize);
+			const args = [
+				url,
+				"-o",
+				outputTemplate,
+				"--no-playlist",
+				"--no-warnings",
+				"--newline",
+				"--no-check-certificate",
+				"--concurrent-fragments",
+				`${options.concurrentFragments || 4}`,
+				"--buffer-size",
+				"1M",
+				"--retries",
+				"10",
+				"--fragment-retries",
+				"10",
+				"-c"
+			];
+			if (embedSubs) args.push("--write-subs", "--write-auto-subs", "--sub-lang", "en.*,vi", "--embed-subs");
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
+			if (maxSpeed) args.push("--limit-rate", maxSpeed);
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
+			if (format === "audio") args.push("-x", "--audio-format", container || "mp3", "--audio-quality", quality || "0");
+			else if (format === "video") {
+				if (quality && quality !== "best") {
+					const height = quality.replace("p", "");
+					args.push("-f", `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
+				} else args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best");
+				const outputFormat = container || "mp4";
+				args.push("--merge-output-format", outputFormat);
+				if (outputFormat === "mp4") args.push("--postprocessor-args", "ffmpeg:-c:v copy -c:a aac");
+			} else args.push("-f", "best");
+			return new Promise((resolve, reject) => {
+				let downloadedBytes = 0;
+				let totalBytes = 0;
+				let percent = 0;
+				const process$1 = this.ytDlp.exec(args);
+				this.activeProcesses.set(downloadId, process$1);
+				if (process$1.ytDlpProcess) {
+					const ytDlpProc = process$1.ytDlpProcess;
+					ytDlpProc.stdout?.on("data", (data) => {
+						const output = data.toString();
+						console.log(`[${downloadId}] stdout:`, output);
+						output.split(/\r?\n/).forEach((line) => {
+							if (!line.trim()) return;
+							const progress = this.parseProgressLine(line);
+							if (progress && progressCallback) {
+								if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
+								if (progress.percent > 0) percent = progress.percent;
+								downloadedBytes = percent / 100 * totalBytes;
+								progressCallback({
+									id: downloadId,
+									percent: Math.round(percent),
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed: progress.speed,
+									eta: progress.eta,
+									state: "downloading",
+									filename: `${sanitizedTitle}${filenameSuffix}.${extension}`
+								});
+							}
+						});
+					});
+					ytDlpProc.stderr?.on("data", (data) => {
+						const output = data.toString();
+						console.log(`[${downloadId}] stderr:`, output);
+						output.split(/\r?\n/).forEach((line) => {
+							if (!line.trim()) return;
+							const progress = this.parseProgressLine(line);
+							if (progress && progressCallback) {
+								if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
+								if (progress.percent > 0) percent = progress.percent;
+								downloadedBytes = percent / 100 * totalBytes;
+								progressCallback({
+									id: downloadId,
+									percent: Math.round(percent),
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed: progress.speed,
+									eta: progress.eta,
+									state: "downloading",
+									filename: `${sanitizedTitle}.${extension}`
+								});
+							}
+						});
+					});
+				}
+				process$1.on("close", (code) => {
+					this.activeProcesses.delete(downloadId);
+					if (code === 0) {
+						const expectedFile = path$1.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.${extension}`);
+						let actualFileSize = totalBytes;
+						try {
+							if (fs$1.existsSync(expectedFile)) actualFileSize = fs$1.statSync(expectedFile).size;
+						} catch (e) {
+							console.warn("Failed to get file size:", e);
+						}
+						if (progressCallback) progressCallback({
+							id: downloadId,
+							percent: 100,
+							downloaded: actualFileSize,
+							total: actualFileSize,
+							speed: 0,
+							eta: 0,
+							state: "complete",
+							filename: `${sanitizedTitle}.${extension}`
+						});
+						this.addToHistory({
+							url,
+							title: info.title,
+							thumbnailUrl: info.thumbnailUrl,
+							format,
+							quality: quality || (format === "audio" ? "best" : "auto"),
+							path: expectedFile,
+							size: actualFileSize,
+							duration: info.lengthSeconds,
+							status: "completed"
+						});
+						resolve(expectedFile);
+					} else {
+						this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
+						reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
+					}
+				});
+				process$1.on("error", (error) => {
+					this.activeProcesses.delete(downloadId);
+					this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
+					reject(error);
+				});
+			});
+		} catch (error) {
+			this.activeProcesses.delete(downloadId);
+			throw new Error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
+	cancelDownload(id) {
+		if (id) {
+			const proc = this.activeProcesses.get(id);
+			if (proc) {
+				console.log(`Cancelling download ${id}`);
+				try {
+					if (proc.ytDlpProcess && typeof proc.ytDlpProcess.kill === "function") proc.ytDlpProcess.kill();
+					else if (typeof proc.kill === "function") proc.kill();
+				} catch (e) {
+					console.error("Failed to kill process:", e);
+				}
+				this.activeProcesses.delete(id);
+			}
+		} else {
+			console.log(`Cancelling all ${this.activeProcesses.size} downloads`);
+			this.activeProcesses.forEach((proc) => {
+				try {
+					if (proc.ytDlpProcess && typeof proc.ytDlpProcess.kill === "function") proc.ytDlpProcess.kill();
+					else if (typeof proc.kill === "function") proc.kill();
+				} catch (e) {
+					console.error("Failed to kill process:", e);
+				}
+			});
+			this.activeProcesses.clear();
+		}
+	}
+	cleanupPartialFiles(directory, filename, extension) {
+		try {
+			[
+				path$1.join(directory, `${filename}.${extension}`),
+				path$1.join(directory, `${filename}.${extension}.part`),
+				path$1.join(directory, `${filename}.${extension}.ytdl`),
+				path$1.join(directory, `${filename}.part`)
+			].forEach((p) => {
+				if (fs$1.existsSync(p)) fs$1.unlinkSync(p);
+			});
+		} catch (error) {
+			console.error("Cleanup failed:", error);
+		}
+	}
+	sanitizeFilename(filename) {
+		return filename.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);
+	}
+	parseProgressLine(line) {
+		const getMultiplier = (unit) => {
+			if (!unit) return 1;
+			const u = unit.toLowerCase();
+			if (u.includes("k")) return 1024;
+			if (u.includes("m")) return 1024 * 1024;
+			if (u.includes("g")) return 1024 * 1024 * 1024;
+			return 1;
+		};
+		if (line.includes("[download]")) {
+			const percentMatch = line.match(/(\d+(?:\.\d+)?)%/);
+			const sizeMatch = line.match(/of\s+~?([0-9.,]+)([a-zA-Z]+)/);
+			const speedMatch = line.match(/at\s+([0-9.,]+)([a-zA-Z]+\/s)/);
+			const etaMatch = line.match(/ETA\s+([\d:]+)/);
+			console.log("[parseProgressLine] Matches:", {
+				line,
+				percentMatch: percentMatch?.[0],
+				sizeMatch: sizeMatch?.[0],
+				speedMatch: speedMatch?.[0],
+				etaMatch: etaMatch?.[0]
+			});
+			if (percentMatch) {
+				const percent = parseFloat(percentMatch[1]);
+				let totalBytes = 0;
+				let speed = 0;
+				let eta = 0;
+				if (sizeMatch) totalBytes = parseFloat(sizeMatch[1].replace(/,/g, "")) * getMultiplier(sizeMatch[2]);
+				if (speedMatch) speed = parseFloat(speedMatch[1].replace(/,/g, "")) * getMultiplier(speedMatch[2].replace("/s", ""));
+				if (etaMatch) {
+					const parts = etaMatch[1].split(":").map(Number);
+					if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
+					else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
+					else eta = parts[0];
+				}
+				return {
+					percent,
+					totalBytes,
+					downloadedBytes: 0,
+					speed,
+					eta,
+					status: "downloading"
+				};
+			}
+		}
+		return null;
+	}
+	getHistory() {
+		return this.store.get("history", []);
+	}
+	addToHistory(item) {
+		const history = this.store.get("history", []);
+		const newItem = {
+			...item,
+			id: randomUUID$1(),
+			timestamp: Date.now()
+		};
+		this.store.set("history", [newItem, ...history].slice(0, 50));
+	}
+	removeFromHistory(id) {
+		const filtered = this.store.get("history", []).filter((item) => item.id !== id);
+		this.store.set("history", filtered);
+	}
+	clearHistory() {
+		this.store.set("history", []);
+	}
+	getCapabilities() {
+		return {
+			hasAria2c: this.hasAria2c,
+			hasFFmpeg: this.hasFFmpeg
+		};
+	}
+	getSettings() {
+		return this.store.get("settings");
+	}
+	saveSettings(settings) {
+		const updated = {
+			...this.store.get("settings"),
+			...settings
+		};
+		this.store.set("settings", updated);
+		return updated;
+	}
+};
+const youtubeDownloader = new YouTubeDownloader();
+var require$3 = createRequire(import.meta.url);
+var TikTokDownloader = class {
+	constructor() {
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.ffmpegPath = null;
+		this.downloadQueue = [];
+		this.activeDownloadsCount = 0;
+		this.store = new Store({
+			name: "tiktok-download-history",
+			defaults: {
+				history: [],
+				settings: {
+					defaultFormat: "video",
+					defaultQuality: "best",
+					removeWatermark: false,
+					maxConcurrentDownloads: 3,
+					maxSpeedLimit: ""
+				}
+			}
+		});
+		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
+		this.initPromise = this.init();
+	}
+	async init() {
+		try {
+			const ytDlpModule = require$3("yt-dlp-wrap");
+			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
+			if (!fs$1.existsSync(this.binaryPath)) {
+				console.log("Downloading yt-dlp binary (TikTok)...");
+				await YTDlpWrap.downloadFromGithub(this.binaryPath);
+			}
+			this.ytDlp = new YTDlpWrap(this.binaryPath);
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ TikTok Downloader: FFmpeg ready");
+			} else console.warn("⚠️ TikTok Downloader: FFmpeg not available");
+		} catch (error) {
+			console.error("Failed to init TikTok downloader:", error);
+			throw error;
+		}
+	}
+	async ensureInitialized() {
+		await this.initPromise;
+	}
+	async getVideoInfo(url) {
+		await this.ensureInitialized();
+		try {
+			const info = await this.ytDlp.getVideoInfo([
+				url,
+				"--skip-download",
+				"--no-playlist",
+				"--no-check-certificate"
+			]);
+			return {
+				id: info.id,
+				title: info.title || "TikTok Video",
+				author: info.uploader || info.channel || "Unknown",
+				authorUsername: info.uploader_id || "",
+				duration: info.duration || 0,
+				thumbnailUrl: info.thumbnail || "",
+				description: info.description,
+				viewCount: info.view_count,
+				likeCount: info.like_count,
+				commentCount: info.comment_count,
+				shareCount: info.repost_count,
+				uploadDate: info.upload_date,
+				musicTitle: info.track,
+				musicAuthor: info.artist
+			};
+		} catch (error) {
+			throw new Error(`Failed to get TikTok info: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+	async downloadVideo(options, progressCallback) {
+		return new Promise((resolve, reject) => {
+			this.downloadQueue.push({
+				run: () => this.executeDownload(options, progressCallback),
+				resolve,
+				reject
+			});
+			this.processQueue();
+		});
+	}
+	async processQueue() {
+		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
+		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
+			const task = this.downloadQueue.shift();
+			if (task) {
+				this.activeDownloadsCount++;
+				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
+					this.activeDownloadsCount--;
+					this.processQueue();
+				});
+			}
+		}
+	}
+	async executeDownload(options, progressCallback) {
+		await this.ensureInitialized();
+		const { url, format, quality, outputPath, maxSpeed, id } = options;
+		const downloadId = id || randomUUID$1();
+		try {
+			const info = await this.getVideoInfo(url);
+			const sanitizedTitle = this.sanitizeFilename(info.title);
+			const author = this.sanitizeFilename(info.authorUsername || info.author);
+			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
+			const extension = format === "audio" ? "mp3" : "mp4";
+			const filename = `${author}_${sanitizedTitle}_${info.id}.${extension}`;
+			const outputTemplate = path$1.join(downloadsPath, filename);
+			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			const args = [
+				url,
+				"-o",
+				outputTemplate,
+				"--no-playlist",
+				"--newline",
+				"--no-warnings",
+				"--no-check-certificate",
+				"--concurrent-fragments",
+				"4",
+				"--retries",
+				"10"
+			];
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
+			if (maxSpeed) args.push("--limit-rate", maxSpeed);
+			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+			else if (quality === "low") args.push("-f", "worst");
+			else if (quality === "medium") args.push("-f", "best");
+			else args.push("-f", "best");
+			return new Promise((resolve, reject) => {
+				let totalBytes = 0;
+				let downloadedBytes = 0;
+				let percent = 0;
+				const process$1 = this.ytDlp.exec(args);
+				this.activeProcesses.set(downloadId, process$1);
+				if (process$1.ytDlpProcess) process$1.ytDlpProcess.stdout?.on("data", (data) => {
+					data.toString().split(/\r?\n/).forEach((line) => {
+						if (!line.trim()) return;
+						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
+						if (progressMatch) {
+							percent = parseFloat(progressMatch[1]);
+							const sizeVal = parseFloat(progressMatch[2]);
+							const sizeUnit = progressMatch[3];
+							const speedVal = parseFloat(progressMatch[4]);
+							const speedUnit = progressMatch[5];
+							const etaStr = progressMatch[6];
+							const unitMultipliers = {
+								"B": 1,
+								"KiB": 1024,
+								"MiB": 1024 * 1024,
+								"GiB": 1024 * 1024 * 1024
+							};
+							totalBytes = sizeVal * (unitMultipliers[sizeUnit] || 1);
+							downloadedBytes = percent / 100 * totalBytes;
+							const speed = speedVal * (unitMultipliers[speedUnit] || 1);
+							const etaParts = etaStr.split(":");
+							let eta = 0;
+							if (etaParts.length === 2) eta = parseInt(etaParts[0]) * 60 + parseInt(etaParts[1]);
+							if (etaParts.length === 3) eta = parseInt(etaParts[0]) * 3600 + parseInt(etaParts[1]) * 60 + parseInt(etaParts[2]);
+							if (progressCallback) progressCallback({
+								id: downloadId,
+								percent,
+								downloaded: downloadedBytes,
+								total: totalBytes,
+								speed,
+								eta,
+								state: "downloading",
+								filename
+							});
+						}
+					});
+				});
+				process$1.on("close", (code) => {
+					this.activeProcesses.delete(downloadId);
+					if (code === 0) if (fs$1.existsSync(outputTemplate)) {
+						if (progressCallback) progressCallback({
+							id: downloadId,
+							percent: 100,
+							downloaded: totalBytes,
+							total: totalBytes,
+							speed: 0,
+							eta: 0,
+							state: "complete",
+							filename,
+							filePath: outputTemplate
+						});
+						this.addToHistory({
+							id: downloadId,
+							url,
+							title: info.title,
+							thumbnailUrl: info.thumbnailUrl,
+							author: info.author,
+							authorUsername: info.authorUsername,
+							timestamp: Date.now(),
+							path: outputTemplate,
+							size: totalBytes,
+							duration: info.duration,
+							format: format || "video",
+							status: "completed"
+						});
+						resolve(outputTemplate);
+					} else reject(/* @__PURE__ */ new Error("Download finished but file not found"));
+					else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
+				});
+				process$1.on("error", (err) => {
+					this.activeProcesses.delete(downloadId);
+					reject(err);
+				});
+			});
+		} catch (error) {
+			this.activeProcesses.delete(downloadId);
+			throw error;
+		}
+	}
+	cancelDownload(id) {
+		if (id) {
+			const proc = this.activeProcesses.get(id);
+			if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill();
+		} else this.activeProcesses.forEach((proc) => {
+			if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
+		});
+	}
+	getHistory() {
+		return this.store.get("history", []);
+	}
+	clearHistory() {
+		this.store.set("history", []);
+	}
+	removeFromHistory(id) {
+		const history = this.getHistory();
+		this.store.set("history", history.filter((h) => h.id !== id));
+	}
+	addToHistory(item) {
+		const history = this.getHistory();
+		history.unshift(item);
+		this.store.set("history", history.slice(0, 100));
+	}
+	getSettings() {
+		return this.store.get("settings");
+	}
+	saveSettings(settings) {
+		const current = this.getSettings();
+		this.store.set("settings", {
+			...current,
+			...settings
+		});
+	}
+	sanitizeFilename(name) {
+		return name.replace(/[<>:"/\\|?*]/g, "").trim();
+	}
+};
+const tiktokDownloader = new TikTokDownloader();
+const ErrorCode = {
+	NETWORK_ERROR: "NETWORK_ERROR",
+	CONNECTION_TIMEOUT: "CONNECTION_TIMEOUT",
+	DNS_LOOKUP_FAILED: "DNS_LOOKUP_FAILED",
+	NO_INTERNET: "NO_INTERNET",
+	AUTH_REQUIRED: "AUTH_REQUIRED",
+	LOGIN_REQUIRED: "LOGIN_REQUIRED",
+	INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
+	COOKIES_EXPIRED: "COOKIES_EXPIRED",
+	VIDEO_UNAVAILABLE: "VIDEO_UNAVAILABLE",
+	PRIVATE_VIDEO: "PRIVATE_VIDEO",
+	DELETED_VIDEO: "DELETED_VIDEO",
+	GEO_RESTRICTED: "GEO_RESTRICTED",
+	AGE_RESTRICTED: "AGE_RESTRICTED",
+	SERVER_ERROR: "SERVER_ERROR",
+	RATE_LIMITED: "RATE_LIMITED",
+	SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
+	DISK_FULL: "DISK_FULL",
+	PERMISSION_DENIED: "PERMISSION_DENIED",
+	INVALID_PATH: "INVALID_PATH",
+	NO_FORMATS_AVAILABLE: "NO_FORMATS_AVAILABLE",
+	UNSUPPORTED_FORMAT: "UNSUPPORTED_FORMAT",
+	EXTRACTION_FAILED: "EXTRACTION_FAILED",
+	UNKNOWN_ERROR: "UNKNOWN_ERROR"
+};
+var DownloadError = class extends Error {
+	constructor(message, code = ErrorCode.UNKNOWN_ERROR, options = {}) {
+		super(message);
+		this.name = "DownloadError";
+		this.code = code;
+		this.recoverable = options.recoverable ?? false;
+		this.retryable = options.retryable ?? true;
+		this.suggestions = options.suggestions ?? [];
+		this.metadata = {
+			timestamp: Date.now(),
+			...options.metadata
+		};
+		if (options.cause) this.stack = `${this.stack}\nCaused by: ${options.cause.stack}`;
+	}
+	toJSON() {
+		return {
+			name: this.name,
+			message: this.message,
+			code: this.code,
+			recoverable: this.recoverable,
+			retryable: this.retryable,
+			suggestions: this.suggestions,
+			metadata: this.metadata,
+			stack: this.stack
+		};
+	}
+};
+var NetworkError = class extends DownloadError {
+	constructor(message, metadata) {
+		super(message, ErrorCode.NETWORK_ERROR, {
+			retryable: true,
+			recoverable: true,
+			suggestions: [
+				{
+					title: "Check Your Internet Connection",
+					description: "Make sure you are connected to the internet",
+					action: "retry"
+				},
+				{
+					title: "Try Again Later",
+					description: "The network might be temporarily unavailable",
+					action: "retry-later"
+				},
+				{
+					title: "Check Firewall/VPN",
+					description: "Your firewall or VPN might be blocking the connection"
+				}
+			],
+			metadata
+		});
+	}
+};
+var ConnectionTimeoutError = class extends DownloadError {
+	constructor(message, metadata) {
+		super(message, ErrorCode.CONNECTION_TIMEOUT, {
+			retryable: true,
+			recoverable: true,
+			suggestions: [{
+				title: "Retry Download",
+				description: "The connection timed out, try downloading again",
+				action: "retry"
+			}, {
+				title: "Check Network Speed",
+				description: "Your internet connection might be slow"
+			}],
+			metadata
+		});
+	}
+};
+var LoginRequiredError = class extends DownloadError {
+	constructor(message, platform, metadata) {
+		super(message, ErrorCode.LOGIN_REQUIRED, {
+			retryable: false,
+			recoverable: true,
+			suggestions: [{
+				title: "Login Required",
+				description: `You need to be logged in to ${platform || "this platform"} to download this content`,
+				action: "open-settings"
+			}, {
+				title: "Enable Browser Cookies",
+				description: "In Settings, enable browser cookies to use your logged-in session",
+				action: "open-settings"
+			}],
+			metadata: {
+				...metadata,
+				platform
+			}
+		});
+	}
+};
+var ContentUnavailableError = class extends DownloadError {
+	constructor(message, reason, metadata) {
+		const codeMap = {
+			"private": ErrorCode.PRIVATE_VIDEO,
+			"deleted": ErrorCode.DELETED_VIDEO,
+			"geo-restricted": ErrorCode.GEO_RESTRICTED,
+			"age-restricted": ErrorCode.AGE_RESTRICTED,
+			"unavailable": ErrorCode.VIDEO_UNAVAILABLE
+		};
+		super(message, codeMap[reason], {
+			retryable: reason === "unavailable",
+			recoverable: false,
+			suggestions: {
+				"private": [{
+					title: "Content is Private",
+					description: "This content is private and cannot be downloaded"
+				}, {
+					title: "Request Access",
+					description: "You may need to request access from the content owner"
+				}],
+				"deleted": [{
+					title: "Content Removed",
+					description: "This content has been deleted by the owner or platform"
+				}, {
+					title: "Check URL",
+					description: "Verify the URL is correct and the content still exists"
+				}],
+				"geo-restricted": [{
+					title: "Not Available in Your Region",
+					description: "This content is geo-restricted and not available in your country"
+				}, {
+					title: "Try Using VPN",
+					description: "You might need a VPN to access this content"
+				}],
+				"age-restricted": [{
+					title: "Age Restricted Content",
+					description: "You need to be logged in to download age-restricted content",
+					action: "open-settings"
+				}],
+				"unavailable": [{
+					title: "Content Unavailable",
+					description: "This content is currently unavailable"
+				}, {
+					title: "Try Again Later",
+					description: "The content might be temporarily unavailable",
+					action: "retry-later"
+				}]
+			}[reason],
+			metadata
+		});
+	}
+};
+var RateLimitError = class extends DownloadError {
+	constructor(message, retryAfter, metadata) {
+		super(message, ErrorCode.RATE_LIMITED, {
+			retryable: true,
+			recoverable: true,
+			suggestions: [{
+				title: "Too Many Requests",
+				description: retryAfter ? `You've made too many requests. Please wait ${Math.ceil(retryAfter / 60)} minutes before trying again.` : "You've made too many requests. Please wait a few minutes before trying again.",
+				action: "retry-later"
+			}, {
+				title: "Reduce Concurrent Downloads",
+				description: "Try downloading fewer files at once",
+				action: "open-settings"
+			}],
+			metadata: {
+				...metadata,
+				retryAfter
+			}
+		});
+	}
+};
+var ServerError = class extends DownloadError {
+	constructor(message, statusCode, metadata) {
+		super(message, ErrorCode.SERVER_ERROR, {
+			retryable: statusCode ? statusCode >= 500 : true,
+			recoverable: true,
+			suggestions: [
+				{
+					title: "Server Error",
+					description: "The server encountered an error while processing your request"
+				},
+				{
+					title: "Try Again Later",
+					description: "The platform's servers might be experiencing issues",
+					action: "retry-later"
+				},
+				{
+					title: "Check Platform Status",
+					description: "Visit the platform's status page to see if there are known issues"
+				}
+			],
+			metadata: {
+				...metadata,
+				statusCode
+			}
+		});
+	}
+};
+var DiskFullError = class extends DownloadError {
+	constructor(message, availableSpace, metadata) {
+		super(message, ErrorCode.DISK_FULL, {
+			retryable: false,
+			recoverable: true,
+			suggestions: [
+				{
+					title: "Insufficient Disk Space",
+					description: availableSpace ? `You have only ${(availableSpace / (1024 * 1024 * 1024)).toFixed(2)} GB available. Free up some space and try again.` : "Your disk is full. Free up some space and try again."
+				},
+				{
+					title: "Clean Up Downloads Folder",
+					description: "Delete old downloads to free up space"
+				},
+				{
+					title: "Change Download Location",
+					description: "Choose a different drive with more space",
+					action: "open-settings"
+				}
+			],
+			metadata
+		});
+	}
+};
+var ErrorParser = class {
+	static parse(error, metadata) {
+		const message = typeof error === "string" ? error : error.message;
+		const lowerMsg = message.toLowerCase();
+		if (lowerMsg.includes("network error") || lowerMsg.includes("enotfound") || lowerMsg.includes("getaddrinfo") || lowerMsg.includes("unable to download") || lowerMsg.includes("nodename nor servname")) return new NetworkError(message, metadata);
+		if (lowerMsg.includes("timeout") || lowerMsg.includes("timed out")) return new ConnectionTimeoutError(message, metadata);
+		if (lowerMsg.includes("login required")) return new LoginRequiredError(message, metadata?.platform, metadata);
+		if (lowerMsg.includes("private video") || lowerMsg.includes("this video is private")) return new ContentUnavailableError(message, "private", metadata);
+		if (lowerMsg.includes("video unavailable") || lowerMsg.includes("has been removed")) return new ContentUnavailableError(message, "deleted", metadata);
+		if (lowerMsg.includes("geographic") || lowerMsg.includes("not available in your country")) return new ContentUnavailableError(message, "geo-restricted", metadata);
+		if (lowerMsg.includes("age") && lowerMsg.includes("restrict")) return new ContentUnavailableError(message, "age-restricted", metadata);
+		if (lowerMsg.includes("429") || lowerMsg.includes("too many requests")) {
+			const retryMatch = message.match(/retry after (\d+)/i);
+			return new RateLimitError(message, retryMatch ? parseInt(retryMatch[1]) : void 0, metadata);
+		}
+		if (lowerMsg.includes("500") || lowerMsg.includes("502") || lowerMsg.includes("503") || lowerMsg.includes("server error")) {
+			const statusMatch = message.match(/(\d{3})/);
+			return new ServerError(message, statusMatch ? parseInt(statusMatch[1]) : void 0, metadata);
+		}
+		if (lowerMsg.includes("no space left") || lowerMsg.includes("disk full") || lowerMsg.includes("enospc")) return new DiskFullError(message, void 0, metadata);
+		return new DownloadError(message, ErrorCode.UNKNOWN_ERROR, {
+			retryable: true,
+			suggestions: [
+				{
+					title: "Unknown Error",
+					description: "An unexpected error occurred"
+				},
+				{
+					title: "Try Again",
+					description: "Retry the download to see if the issue persists",
+					action: "retry"
+				},
+				{
+					title: "Report Issue",
+					description: "If this error keeps occurring, please report it",
+					action: "export-log"
+				}
+			],
+			metadata
+		});
+	}
+};
+var ErrorLogger = class {
+	constructor() {
+		this.maxEntries = 500;
+		this.retentionDays = 30;
+		this.store = new Store({
+			name: "error-log",
+			defaults: {
+				errors: [],
+				stats: {
+					totalErrors: 0,
+					errorsByCode: {},
+					lastCleanup: Date.now()
+				}
+			}
+		});
+		this.cleanupOldErrors();
+	}
+	log(error, downloadId) {
+		const entry = {
+			id: this.generateId(),
+			timestamp: Date.now(),
+			downloadId,
+			url: error.metadata.url,
+			platform: error.metadata.platform,
+			errorCode: error.code,
+			errorMessage: error.message,
+			errorStack: error.stack,
+			retryCount: error.metadata.retryCount || 0,
+			resolved: false,
+			metadata: error.metadata
+		};
+		const errors = this.store.get("errors", []);
+		errors.unshift(entry);
+		if (errors.length > this.maxEntries) errors.splice(this.maxEntries);
+		this.store.set("errors", errors);
+		this.updateStats(error.code);
+		console.error(`[ErrorLogger] Logged error ${entry.id}: ${error.code} - ${error.message}`);
+		return entry.id;
+	}
+	markResolved(errorId, userAction) {
+		const errors = this.store.get("errors", []);
+		const error = errors.find((e) => e.id === errorId);
+		if (error) {
+			error.resolved = true;
+			error.userAction = userAction;
+			this.store.set("errors", errors);
+			console.log(`[ErrorLogger] Marked error ${errorId} as resolved (${userAction})`);
+		}
+	}
+	getRecentErrors(limit = 50) {
+		return this.store.get("errors", []).slice(0, limit);
+	}
+	getErrorsByDownload(downloadId) {
+		return this.store.get("errors", []).filter((e) => e.downloadId === downloadId);
+	}
+	getErrorsByCode(code) {
+		return this.store.get("errors", []).filter((e) => e.errorCode === code);
+	}
+	getUnresolvedErrors() {
+		return this.store.get("errors", []).filter((e) => !e.resolved);
+	}
+	getStats() {
+		const stats = this.store.get("stats");
+		const errors = this.store.get("errors", []);
+		const oneDayAgo = Date.now() - 1440 * 60 * 1e3;
+		const recentErrors = errors.filter((e) => e.timestamp > oneDayAgo);
+		const errorCounts = {};
+		errors.forEach((e) => {
+			errorCounts[e.errorCode] = (errorCounts[e.errorCode] || 0) + 1;
+		});
+		const mostCommon = Object.entries(errorCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([code, count]) => ({
+			code,
+			count
+		}));
+		return {
+			total: stats.totalErrors,
+			stored: errors.length,
+			recent24h: recentErrors.length,
+			unresolved: errors.filter((e) => !e.resolved).length,
+			byCode: stats.errorsByCode,
+			mostCommon,
+			lastCleanup: new Date(stats.lastCleanup)
+		};
+	}
+	async exportToFile(format) {
+		const errors = this.store.get("errors", []);
+		const filename = `error-log-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.${format}`;
+		const filePath = path$1.join(app.getPath("downloads"), filename);
+		let content = "";
+		if (format === "json") content = JSON.stringify({
+			exported: (/* @__PURE__ */ new Date()).toISOString(),
+			stats: this.getStats(),
+			errors
+		}, null, 2);
+		else if (format === "csv") {
+			content = [
+				"Timestamp",
+				"Error Code",
+				"Error Message",
+				"URL",
+				"Platform",
+				"Retry Count",
+				"Resolved",
+				"User Action"
+			].join(",") + "\n";
+			errors.forEach((e) => {
+				const row = [
+					new Date(e.timestamp).toISOString(),
+					e.errorCode,
+					`"${e.errorMessage.replace(/"/g, "\"\"")}"`,
+					e.url || "",
+					e.platform || "",
+					e.retryCount,
+					e.resolved,
+					e.userAction || ""
+				];
+				content += row.join(",") + "\n";
+			});
+		} else {
+			content = `Error Log Export\n`;
+			content += `Generated: ${(/* @__PURE__ */ new Date()).toISOString()}\n`;
+			content += `Total Errors: ${errors.length}\n`;
+			content += `\n${"=".repeat(80)}\n\n`;
+			errors.forEach((e, i) => {
+				content += `Error #${i + 1}\n`;
+				content += `Timestamp: ${new Date(e.timestamp).toLocaleString()}\n`;
+				content += `Code: ${e.errorCode}\n`;
+				content += `Message: ${e.errorMessage}\n`;
+				if (e.url) content += `URL: ${e.url}\n`;
+				if (e.platform) content += `Platform: ${e.platform}\n`;
+				content += `Retry Count: ${e.retryCount}\n`;
+				content += `Resolved: ${e.resolved ? "Yes" : "No"}\n`;
+				if (e.userAction) content += `User Action: ${e.userAction}\n`;
+				if (e.errorStack) content += `\nStack Trace:\n${e.errorStack}\n`;
+				content += `\n${"-".repeat(80)}\n\n`;
+			});
+		}
+		await fs$2.writeFile(filePath, content, "utf-8");
+		console.log(`[ErrorLogger] Exported ${errors.length} errors to ${filePath}`);
+		return filePath;
+	}
+	clearAll() {
+		this.store.set("errors", []);
+		console.log("[ErrorLogger] Cleared all errors");
+	}
+	clearResolved() {
+		const errors = this.store.get("errors", []);
+		const unresolved = errors.filter((e) => !e.resolved);
+		this.store.set("errors", unresolved);
+		console.log(`[ErrorLogger] Cleared ${errors.length - unresolved.length} resolved errors`);
+	}
+	cleanupOldErrors() {
+		const errors = this.store.get("errors", []);
+		const cutoffDate = Date.now() - this.retentionDays * 24 * 60 * 60 * 1e3;
+		const filtered = errors.filter((e) => e.timestamp > cutoffDate);
+		if (filtered.length < errors.length) {
+			this.store.set("errors", filtered);
+			const stats = this.store.get("stats");
+			stats.lastCleanup = Date.now();
+			this.store.set("stats", stats);
+			console.log(`[ErrorLogger] Cleaned up ${errors.length - filtered.length} old errors`);
+		}
+	}
+	updateStats(errorCode) {
+		const stats = this.store.get("stats");
+		stats.totalErrors++;
+		stats.errorsByCode[errorCode] = (stats.errorsByCode[errorCode] || 0) + 1;
+		this.store.set("stats", stats);
+	}
+	generateId() {
+		return `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+	}
+};
+const errorLogger = new ErrorLogger();
+var RetryManager = class {
+	constructor() {
+		this.retryStates = /* @__PURE__ */ new Map();
+		this.retryTimers = /* @__PURE__ */ new Map();
+		this.defaultConfig = {
+			maxRetries: 3,
+			initialDelay: 2e3,
+			maxDelay: 6e4,
+			backoffMultiplier: 2,
+			jitter: true
+		};
+	}
+	shouldRetry(downloadId, error, config) {
+		const cfg = {
+			...this.defaultConfig,
+			...config
+		};
+		const state = this.retryStates.get(downloadId);
+		if (!error.retryable) {
+			console.log(`[RetryManager] Error ${error.code} is not retryable`);
+			return false;
+		}
+		if ((state?.attemptCount || 0) >= cfg.maxRetries) {
+			console.log(`[RetryManager] Max retries (${cfg.maxRetries}) reached for ${downloadId}`);
+			return false;
+		}
+		return true;
+	}
+	calculateDelay(attemptCount, config) {
+		const cfg = {
+			...this.defaultConfig,
+			...config
+		};
+		let delay = cfg.initialDelay * Math.pow(cfg.backoffMultiplier, attemptCount);
+		delay = Math.min(delay, cfg.maxDelay);
+		if (cfg.jitter) {
+			const jitterAmount = delay * .25 * Math.random();
+			delay += jitterAmount;
+		}
+		return Math.floor(delay);
+	}
+	scheduleRetry(downloadId, retryCallback, error, config) {
+		if (!this.shouldRetry(downloadId, error, config)) return { scheduled: false };
+		const state = this.retryStates.get(downloadId) || {
+			downloadId,
+			attemptCount: 0,
+			totalWaitTime: 0
+		};
+		state.attemptCount++;
+		state.lastError = error;
+		const delay = this.calculateDelay(state.attemptCount - 1, config);
+		const retryAt = Date.now() + delay;
+		state.nextRetryAt = retryAt;
+		state.totalWaitTime += delay;
+		this.retryStates.set(downloadId, state);
+		console.log(`[RetryManager] Scheduling retry ${state.attemptCount}/${this.defaultConfig.maxRetries} for ${downloadId} in ${(delay / 1e3).toFixed(1)}s`);
+		const existingTimer = this.retryTimers.get(downloadId);
+		if (existingTimer) clearTimeout(existingTimer);
+		const timer = setTimeout(async () => {
+			console.log(`[RetryManager] Executing retry ${state.attemptCount} for ${downloadId}`);
+			this.retryTimers.delete(downloadId);
+			try {
+				await retryCallback();
+				this.clearRetryState(downloadId);
+			} catch (error$1) {
+				console.error(`[RetryManager] Retry failed for ${downloadId}:`, error$1);
+			}
+		}, delay);
+		this.retryTimers.set(downloadId, timer);
+		return {
+			scheduled: true,
+			retryAt,
+			delay
+		};
+	}
+	getRetryState(downloadId) {
+		return this.retryStates.get(downloadId);
+	}
+	getTimeUntilRetry(downloadId) {
+		const state = this.retryStates.get(downloadId);
+		if (!state || !state.nextRetryAt) return null;
+		const remaining = state.nextRetryAt - Date.now();
+		return remaining > 0 ? remaining : 0;
+	}
+	cancelRetry(downloadId) {
+		const timer = this.retryTimers.get(downloadId);
+		if (timer) {
+			clearTimeout(timer);
+			this.retryTimers.delete(downloadId);
+			console.log(`[RetryManager] Cancelled retry for ${downloadId}`);
+		}
+		this.retryStates.delete(downloadId);
+	}
+	clearRetryState(downloadId) {
+		this.retryStates.delete(downloadId);
+		const timer = this.retryTimers.get(downloadId);
+		if (timer) {
+			clearTimeout(timer);
+			this.retryTimers.delete(downloadId);
+		}
+		console.log(`[RetryManager] Cleared retry state for ${downloadId}`);
+	}
+	getActiveRetries() {
+		return Array.from(this.retryStates.values());
+	}
+	clearAll() {
+		this.retryTimers.forEach((timer) => clearTimeout(timer));
+		this.retryTimers.clear();
+		this.retryStates.clear();
+		console.log("[RetryManager] Cleared all retries");
+	}
+	getStats() {
+		const states = Array.from(this.retryStates.values());
+		return {
+			activeRetries: states.length,
+			totalRetryAttempts: states.reduce((sum, s) => sum + s.attemptCount, 0),
+			averageRetryCount: states.length > 0 ? states.reduce((sum, s) => sum + s.attemptCount, 0) / states.length : 0,
+			totalWaitTime: states.reduce((sum, s) => sum + s.totalWaitTime, 0),
+			nextRetry: states.filter((s) => s.nextRetryAt).sort((a, b) => (a.nextRetryAt || 0) - (b.nextRetryAt || 0))[0]
+		};
+	}
+};
+const retryManager = new RetryManager();
+var require$2 = createRequire(import.meta.url);
+var UniversalDownloader = class {
+	constructor() {
+		this.activeProcesses = /* @__PURE__ */ new Map();
+		this.activeOptions = /* @__PURE__ */ new Map();
+		this.ffmpegPath = null;
+		this.downloadQueue = [];
+		this.activeDownloadsCount = 0;
+		this.store = new Store({
+			name: "universal-download-history",
+			defaults: {
+				history: [],
+				settings: {
+					defaultFormat: "video",
+					defaultQuality: "best",
+					maxConcurrentDownloads: 3,
+					maxSpeedLimit: "",
+					useBrowserCookies: null
+				},
+				queue: []
+			}
+		});
+		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
+		this.initPromise = this.init();
+		setInterval(() => this.processQueue(), 5e3);
+		this.loadPersistedQueue();
+	}
+	loadPersistedQueue() {
+		const persistedQueue = this.store.get("queue") || [];
+		for (const item of persistedQueue) this.downloadQueue.push({
+			options: item.options,
+			run: () => this.executeDownload(item.options),
+			resolve: () => {},
+			reject: () => {},
+			state: item.state === "downloading" ? "paused" : item.state
+		});
+	}
+	saveQueuePersistently() {
+		const toSave = this.downloadQueue.map((item) => ({
+			options: item.options,
+			state: item.state
+		}));
+		this.store.set("queue", toSave);
+	}
+	prepareForShutdown() {
+		console.log("🔄 Preparing downloads for shutdown...");
+		this.activeProcesses.forEach((process$1, downloadId) => {
+			const options = this.activeOptions.get(downloadId);
+			if (options) if (!this.downloadQueue.some((item) => item.options.id === downloadId)) this.downloadQueue.push({
+				options,
+				run: () => this.executeDownload(options),
+				resolve: () => {},
+				reject: () => {},
+				state: "paused"
+			});
+			else {
+				const queueItem = this.downloadQueue.find((item) => item.options.id === downloadId);
+				if (queueItem) queueItem.state = "paused";
+			}
+			if (process$1.ytDlpProcess) process$1.ytDlpProcess.kill("SIGTERM");
+		});
+		this.saveQueuePersistently();
+		const pendingCount = this.downloadQueue.filter((item) => item.state === "queued" || item.state === "paused").length;
+		console.log(`✅ Saved ${pendingCount} pending downloads`);
+		return pendingCount;
+	}
+	getPendingDownloadsCount() {
+		return (this.store.get("queue") || []).filter((item) => item.state === "queued" || item.state === "paused").length;
+	}
+	resumePendingDownloads() {
+		console.log("🔄 Resuming pending downloads...");
+		const pending = this.downloadQueue.filter((item) => item.state === "queued" || item.state === "paused");
+		pending.forEach((item) => {
+			item.state = "queued";
+		});
+		this.saveQueuePersistently();
+		this.processQueue();
+		console.log(`✅ Resumed ${pending.length} downloads`);
+	}
+	clearPendingDownloads() {
+		console.log("🗑️ Clearing pending downloads...");
+		this.downloadQueue = this.downloadQueue.filter((item) => item.state === "downloading");
+		this.saveQueuePersistently();
+	}
+	handleDownloadError(error, downloadId, url, platform, progressCallback) {
+		const downloadError = error instanceof DownloadError ? error : ErrorParser.parse(error, {
+			url,
+			platform
+		});
+		const retryState = retryManager.getRetryState(downloadId);
+		if (retryState) downloadError.metadata.retryCount = retryState.attemptCount;
+		const errorId = errorLogger.log(downloadError, downloadId);
+		console.error(`[Download Error] ${downloadId}: ${downloadError.code} - ${downloadError.message}`, `(Retry: ${downloadError.metadata.retryCount || 0})`);
+		if (progressCallback) progressCallback({
+			id: downloadId,
+			percent: 0,
+			downloaded: 0,
+			total: 0,
+			speed: 0,
+			eta: 0,
+			state: "error",
+			filename: url,
+			platform,
+			error: {
+				code: downloadError.code,
+				message: downloadError.message,
+				suggestions: downloadError.suggestions,
+				retryable: downloadError.retryable,
+				errorId
+			}
+		});
+		if (downloadError.retryable) {
+			const options = this.activeOptions.get(downloadId);
+			if (options) {
+				const retryResult = retryManager.scheduleRetry(downloadId, async () => {
+					await this.executeDownload(options, progressCallback);
+				}, downloadError);
+				if (retryResult.scheduled) {
+					console.log(`[Retry Scheduled] ${downloadId} will retry in ${(retryResult.delay / 1e3).toFixed(1)}s`);
+					if (progressCallback) progressCallback({
+						id: downloadId,
+						percent: 0,
+						downloaded: 0,
+						total: 0,
+						speed: 0,
+						eta: retryResult.delay / 1e3,
+						state: "error",
+						filename: url,
+						platform,
+						error: {
+							code: downloadError.code,
+							message: `${downloadError.message} - Retrying in ${(retryResult.delay / 1e3).toFixed(0)}s...`,
+							suggestions: downloadError.suggestions,
+							retryable: true,
+							retryAt: retryResult.retryAt,
+							errorId
+						}
+					});
+				}
+			}
+		}
+		return downloadError;
+	}
+	getErrorLog(limit) {
+		return errorLogger.getRecentErrors(limit);
+	}
+	async exportErrorLog(format) {
+		return await errorLogger.exportToFile(format);
+	}
+	getErrorStats() {
+		return {
+			errorLog: errorLogger.getStats(),
+			retryManager: retryManager.getStats()
+		};
+	}
+	clearErrorLog(type = "resolved") {
+		if (type === "all") errorLogger.clearAll();
+		else errorLogger.clearResolved();
+	}
+	async init() {
+		try {
+			const ytDlpModule = require$2("yt-dlp-wrap");
+			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
+			if (!fs$1.existsSync(this.binaryPath)) {
+				console.log("Downloading yt-dlp binary (Universal)...");
+				await YTDlpWrap.downloadFromGithub(this.binaryPath);
+			}
+			this.ytDlp = new YTDlpWrap(this.binaryPath);
+			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
+			const ffmpegPath = FFmpegHelper.getFFmpegPath();
+			if (ffmpegPath) {
+				this.ffmpegPath = ffmpegPath;
+				console.log("✅ Universal Downloader: FFmpeg ready");
+			} else console.warn("⚠️ Universal Downloader: FFmpeg not available");
+		} catch (error) {
+			console.error("Failed to init Universal downloader:", error);
+			throw error;
+		}
+	}
+	async ensureInitialized() {
+		await this.initPromise;
+	}
+	detectPlatform(url, extractor) {
+		const u = url.toLowerCase();
+		if (extractor) {
+			const e = extractor.toLowerCase();
+			if (e.includes("youtube")) return "youtube";
+			if (e.includes("tiktok")) return "tiktok";
+			if (e.includes("instagram")) return "instagram";
+			if (e.includes("facebook") || e.includes("fb")) return "facebook";
+			if (e.includes("twitter") || e.includes("x") || e.includes("periscope")) return "twitter";
+			if (e.includes("twitch")) return "twitch";
+			if (e.includes("reddit")) return "reddit";
+			if (e.includes("vimeo")) return "other";
+			if (e.includes("pinterest")) return "other";
+			if (e.includes("soundcloud")) return "other";
+		}
+		if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
+		if (u.includes("tiktok.com")) return "tiktok";
+		if (u.includes("instagram.com")) return "instagram";
+		if (u.includes("facebook.com") || u.includes("fb.watch") || u.includes("fb.com")) return "facebook";
+		if (u.includes("twitter.com") || u.includes("x.com")) return "twitter";
+		if (u.includes("twitch.tv")) return "twitch";
+		if (u.includes("reddit.com") || u.includes("redd.it")) return "reddit";
+		if (u.includes("pinterest.com")) return "other";
+		if (u.includes("vimeo.com")) return "other";
+		return "other";
+	}
+	async getMediaInfo(url) {
+		await this.ensureInitialized();
+		try {
+			const hasVideoId = url.includes("v=") || url.includes("youtu.be/") || url.includes("/video/") || url.includes("/v/");
+			const hasPlaylistId = url.includes("list=") || url.includes("/playlist") || url.includes("/sets/") || url.includes("/album/") || url.includes("/c/") || url.includes("/channel/") || url.includes("/user/");
+			const settings = this.getSettings();
+			const commonArgs = ["--dump-json", "--no-check-certificate"];
+			if (settings.useBrowserCookies) commonArgs.push("--cookies-from-browser", settings.useBrowserCookies);
+			const mainArgs = [url, ...commonArgs];
+			if (hasPlaylistId && !hasVideoId) mainArgs.push("--flat-playlist");
+			else mainArgs.push("--no-playlist");
+			const playlistArgs = hasPlaylistId && hasVideoId ? [
+				url,
+				...commonArgs,
+				"--flat-playlist"
+			] : null;
+			const [mainRes, playlistRes] = await Promise.allSettled([this.ytDlp.execPromise(mainArgs), playlistArgs ? this.ytDlp.execPromise(playlistArgs) : Promise.resolve(null)]);
+			if (mainRes.status === "rejected") throw mainRes.reason;
+			const lines = mainRes.value.trim().split("\n");
+			let info = JSON.parse(lines[0]);
+			if (lines.length > 1 && !info.entries) {
+				const entries = lines.map((l) => {
+					try {
+						return JSON.parse(l);
+					} catch (e) {
+						return null;
+					}
+				}).filter((i) => i !== null);
+				info = {
+					...entries[0],
+					entries,
+					_type: "playlist"
+				};
+			}
+			if (playlistRes.status === "fulfilled" && playlistRes.value) try {
+				const pLines = playlistRes.value.trim().split("\n");
+				let playlistInfo = JSON.parse(pLines[0]);
+				if (pLines.length > 1 && !playlistInfo.entries) {
+					const entries = pLines.map((l) => {
+						try {
+							return JSON.parse(l);
+						} catch (e) {
+							return null;
+						}
+					}).filter((i) => i !== null);
+					playlistInfo = {
+						...entries[0],
+						entries
+					};
+				}
+				if (playlistInfo.entries && !info.entries) {
+					info.entries = playlistInfo.entries;
+					info.playlist_count = playlistInfo.playlist_count || playlistInfo.entries.length;
+					if (!info._type) info._type = "playlist";
+				}
+			} catch (e) {
+				console.warn("Failed to parse auxiliary playlist info:", e);
+			}
+			const platform = this.detectPlatform(url, info.extractor);
+			const isPlaylist = info._type === "playlist" || !!info.entries || info._type === "multi_video";
+			const hasPlaylistContext = hasPlaylistId || !!info.playlist_id;
+			const availableQualities = [];
+			const formatsSource = isPlaylist && info.entries && info.entries[0] ? info.entries[0].formats : info.formats;
+			if (formatsSource && Array.isArray(formatsSource)) {
+				const qualitySet = /* @__PURE__ */ new Set();
+				formatsSource.forEach((fmt) => {
+					if (fmt.vcodec && fmt.vcodec !== "none") {
+						if (fmt.height) qualitySet.add(`${fmt.height}p`);
+						else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) qualitySet.add(fmt.format_note);
+						else if (fmt.resolution && /^\d+x\d+$/.test(fmt.resolution)) {
+							const h = fmt.resolution.split("x")[1];
+							qualitySet.add(`${h}p`);
+						}
+					}
+				});
+				if (qualitySet.size === 0 && info.height) qualitySet.add(`${info.height}p`);
+				const sortedQualities = Array.from(qualitySet).sort((a, b) => {
+					const hA = parseInt(a);
+					return parseInt(b) - hA;
+				});
+				availableQualities.push(...sortedQualities);
+			}
+			const playlistVideos = isPlaylist && info.entries ? info.entries.map((entry) => ({
+				id: entry.id,
+				title: entry.title,
+				duration: entry.duration,
+				url: entry.url || (platform === "youtube" ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url),
+				thumbnail: entry.thumbnails?.[0]?.url || entry.thumbnail
+			})) : void 0;
+			const title = info.title || info.id || "Untitled Media";
+			const thumbnail = info.thumbnail || info.entries?.[0]?.thumbnail || info.thumbnails?.[0]?.url || "";
+			return {
+				id: info.id || info.entries?.[0]?.id || "unknown",
+				url: info.webpage_url || url,
+				title,
+				platform,
+				thumbnailUrl: thumbnail,
+				author: info.uploader || info.channel || info.uploader_id || "Unknown",
+				authorUrl: info.uploader_url || info.channel_url,
+				duration: info.duration,
+				uploadDate: info.upload_date,
+				description: info.description,
+				viewCount: info.view_count,
+				likeCount: info.like_count,
+				isLive: info.is_live || false,
+				webpageUrl: info.webpage_url,
+				availableQualities: availableQualities.length > 0 ? availableQualities : void 0,
+				isPlaylist: isPlaylist || hasPlaylistContext,
+				playlistCount: isPlaylist || hasPlaylistContext ? info.playlist_count || info.entries?.length : void 0,
+				playlistVideos,
+				size: info.filesize || info.filesize_approx
+			};
+		} catch (error) {
+			const downloadError = ErrorParser.parse(error, {
+				url,
+				platform: this.detectPlatform(url)
+			});
+			errorLogger.log(downloadError);
+			throw downloadError;
+		}
+	}
+	async downloadMedia(options, progressCallback) {
+		const downloadId = options.id || randomUUID$1();
+		return new Promise((resolve, reject) => {
+			this.downloadQueue.push({
+				options: {
+					...options,
+					id: downloadId
+				},
+				run: () => this.executeDownload({
+					...options,
+					id: downloadId
+				}, progressCallback),
+				resolve,
+				reject,
+				state: "queued"
+			});
+			this.saveQueuePersistently();
+			this.processQueue();
+		});
+	}
+	async retryDownload(id) {
+		const queuedItem = this.downloadQueue.find((item) => item.options.id === id);
+		if (queuedItem) {
+			queuedItem.state = "queued";
+			this.saveQueuePersistently();
+			this.processQueue();
+			return;
+		}
+		const options = this.activeOptions.get(id);
+		if (options) {
+			this.downloadQueue.push({
+				options,
+				run: () => this.executeDownload(options),
+				resolve: () => {},
+				reject: () => {},
+				state: "queued"
+			});
+			this.saveQueuePersistently();
+			this.processQueue();
+			return;
+		}
+		const historyItem = this.store.get("history").find((h) => h.id === id);
+		if (historyItem) {
+			const reconstructedOptions = {
+				url: historyItem.url,
+				format: historyItem.format || "video",
+				quality: "best",
+				id: historyItem.id
+			};
+			this.downloadQueue.push({
+				options: reconstructedOptions,
+				run: () => this.executeDownload(reconstructedOptions),
+				resolve: () => {},
+				reject: () => {},
+				state: "queued"
+			});
+			this.saveQueuePersistently();
+			this.processQueue();
+		}
+	}
+	async pauseDownload(id) {
+		const proc = this.activeProcesses.get(id);
+		if (proc && proc.ytDlpProcess) {
+			const task = this.downloadQueue.find((t) => t.options.id === id);
+			if (task) task.state = "paused";
+			proc.ytDlpProcess.kill("SIGTERM");
+			this.saveQueuePersistently();
+		}
+	}
+	async resumeDownload(id) {
+		const queuedItem = this.downloadQueue.find((item) => item.options.id === id);
+		if (queuedItem) {
+			queuedItem.state = "queued";
+			this.saveQueuePersistently();
+			this.processQueue();
+			return;
+		}
+		const options = this.activeOptions.get(id);
+		if (options) {
+			this.downloadQueue.unshift({
+				options,
+				run: () => this.executeDownload(options),
+				resolve: () => {},
+				reject: () => {},
+				state: "queued"
+			});
+			this.saveQueuePersistently();
+			this.processQueue();
+		}
+	}
+	async checkDiskSpace(downloadPath) {
+		try {
+			const targetPath = downloadPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
+			const disks = await si.fsSize();
+			let disk = disks[0];
+			let maxMatchLen = -1;
+			for (const d of disks) if (targetPath.startsWith(d.mount) && d.mount.length > maxMatchLen) {
+				maxMatchLen = d.mount.length;
+				disk = d;
+			}
+			if (!disk) return {
+				available: 0,
+				total: 0,
+				warning: false
+			};
+			const available = disk.available;
+			const total = disk.size;
+			return {
+				available,
+				total,
+				warning: available < 5 * 1024 * 1024 * 1024 || available / total < .1
+			};
+		} catch (error) {
+			console.error("Failed to check disk space:", error);
+			return {
+				available: 0,
+				total: 0,
+				warning: false
+			};
+		}
+	}
+	getQueue() {
+		return this.downloadQueue.map((item) => ({
+			id: item.options.id,
+			url: item.options.url,
+			state: item.state,
+			filename: item.options.url
+		}));
+	}
+	reorderQueue(id, newIndex) {
+		const index = this.downloadQueue.findIndex((item) => item.options.id === id);
+		if (index !== -1 && newIndex >= 0 && newIndex < this.downloadQueue.length) {
+			const item = this.downloadQueue.splice(index, 1)[0];
+			this.downloadQueue.splice(newIndex, 0, item);
+			this.saveQueuePersistently();
+		}
+	}
+	async processQueue() {
+		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
+		if ((await this.checkDiskSpace()).available < 500 * 1024 * 1024) {
+			console.warn("Low disk space, skipping queue processing");
+			return;
+		}
+		while (this.activeDownloadsCount < maxConcurrent) {
+			const task = this.downloadQueue.find((t) => t.state === "queued");
+			if (!task) break;
+			this.activeDownloadsCount++;
+			task.state = "downloading";
+			this.saveQueuePersistently();
+			task.run().then((result) => {
+				task.state = "downloading";
+				this.downloadQueue = this.downloadQueue.filter((t) => t !== task);
+				task.resolve(result);
+			}).catch((error) => {
+				task.state = "error";
+				task.reject(error);
+			}).finally(() => {
+				this.activeDownloadsCount--;
+				this.saveQueuePersistently();
+				this.processQueue();
+			});
+		}
+	}
+	async executeDownload(options, progressCallback) {
+		await this.ensureInitialized();
+		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems, audioFormat } = options;
+		const downloadId = id || randomUUID$1();
+		this.activeOptions.set(downloadId, options);
+		try {
+			const space = await this.checkDiskSpace(outputPath);
+			if (space.warning && space.available < 100 * 1024 * 1024) throw new Error("Not enough disk space to start download.");
+		} catch (e) {
+			console.warn("Disk space check failed:", e);
+		}
+		try {
+			const info = await this.getMediaInfo(url);
+			const sanitizedTitle = this.sanitizeFilename(info.title);
+			const author = this.sanitizeFilename(info.author || "unknown");
+			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
+			const extension = format === "audio" ? audioFormat || "mp3" : "mp4";
+			let outputTemplate;
+			let displayFilename;
+			const shouldDownloadPlaylist = isPlaylist === true;
+			const platformName = (info.platform || "Other").toUpperCase();
+			if (shouldDownloadPlaylist) {
+				const playlistFolder = path$1.join(downloadsPath, sanitizedTitle);
+				if (!fs$1.existsSync(playlistFolder)) fs$1.mkdirSync(playlistFolder, { recursive: true });
+				outputTemplate = path$1.join(playlistFolder, "%(playlist_index)s - %(title)s.%(ext)s");
+				displayFilename = `[${platformName} PLAYLIST] ${sanitizedTitle}`;
+			} else {
+				displayFilename = `[${platformName}] ${author} - ${sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + "..." : sanitizedTitle} [${info.id}].${extension}`;
+				outputTemplate = path$1.join(downloadsPath, displayFilename);
+			}
+			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
+			const args = [
+				url,
+				"-o",
+				outputTemplate,
+				"--newline",
+				"--no-warnings",
+				"--no-check-certificate",
+				"--concurrent-fragments",
+				"4",
+				"--retries",
+				"10"
+			];
+			if (!shouldDownloadPlaylist) args.push("--no-playlist");
+			else if (playlistItems) args.push("--playlist-items", playlistItems);
+			if (embedSubs && info.platform === "youtube") args.push("--all-subs", "--embed-subs", "--write-auto-subs");
+			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
+			if (maxSpeed) args.push("--limit-rate", maxSpeed);
+			const settings = this.getSettings();
+			const browserForCookies = cookiesBrowser || settings.useBrowserCookies;
+			if (browserForCookies) args.push("--cookies-from-browser", browserForCookies);
+			if (format === "audio") {
+				args.push("-x", "--audio-format", audioFormat || "mp3");
+				const audioQuality = quality || "0";
+				args.push("--audio-quality", audioQuality);
+			} else {
+				if (quality && quality.endsWith("p")) {
+					const height = quality.replace("p", "");
+					args.push("-f", `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
+				} else args.push("-f", "bestvideo+bestaudio/best");
+				args.push("--merge-output-format", "mp4");
+			}
+			if (!isPlaylist && !info.isPlaylist) args.push("--no-playlist");
+			return new Promise((resolve, reject) => {
+				let totalBytes = 0;
+				let downloadedBytes = 0;
+				let percent = 0;
+				let currentItemFilename = displayFilename;
+				let stderrOutput = "";
+				const process$1 = this.ytDlp.exec(args);
+				this.activeProcesses.set(downloadId, process$1);
+				if (process$1.ytDlpProcess) {
+					process$1.ytDlpProcess.stderr?.on("data", (data) => {
+						stderrOutput += data.toString();
+					});
+					process$1.ytDlpProcess.stdout?.on("data", (data) => {
+						data.toString().split(/\r?\n/).forEach((line) => {
+							if (!line.trim()) return;
+							const itemMatch = line.match(/\[download\] Destination: .*[/\\](.*)$/);
+							if (itemMatch) currentItemFilename = itemMatch[1];
+							const progressMatch = line.match(/\[download\]\s+([\d.]+)%\s+of\s+~?([\d.]+)([\w]+)\s+at\s+([\d.]+)([\w/]+)\s+ETA\s+([\d:]+)/);
+							if (progressMatch) {
+								percent = parseFloat(progressMatch[1]);
+								const sizeVal = parseFloat(progressMatch[2]);
+								const sizeUnit = progressMatch[3];
+								const speedVal = parseFloat(progressMatch[4]);
+								const speedUnit = progressMatch[5].split("/")[0];
+								const etaStr = progressMatch[6];
+								const unitMultipliers = {
+									"B": 1,
+									"KB": 1024,
+									"KIB": 1024,
+									"K": 1024,
+									"MB": 1024 * 1024,
+									"MIB": 1024 * 1024,
+									"M": 1024 * 1024,
+									"GB": 1024 * 1024 * 1024,
+									"GIB": 1024 * 1024 * 1024,
+									"G": 1024 * 1024 * 1024,
+									"TB": 1024 * 1024 * 1024 * 1024,
+									"TIB": 1024 * 1024 * 1024 * 1024,
+									"T": 1024 * 1024 * 1024 * 1024
+								};
+								totalBytes = sizeVal * (unitMultipliers[sizeUnit.toUpperCase()] || 1);
+								downloadedBytes = percent / 100 * totalBytes;
+								const speed = speedVal * (unitMultipliers[speedUnit.toUpperCase()] || 1);
+								const etaParts = etaStr.split(":").reverse();
+								let eta = 0;
+								if (etaParts[0]) eta += parseInt(etaParts[0]);
+								if (etaParts[1]) eta += parseInt(etaParts[1]) * 60;
+								if (etaParts[2]) eta += parseInt(etaParts[2]) * 3600;
+								if (progressCallback) progressCallback({
+									id: downloadId,
+									percent,
+									downloaded: downloadedBytes,
+									total: totalBytes,
+									speed,
+									eta,
+									state: "downloading",
+									filename: info.isPlaylist ? `${displayFilename} (${currentItemFilename})` : displayFilename,
+									platform: info.platform
+								});
+							}
+						});
+					});
+				}
+				process$1.on("close", (code) => {
+					this.activeProcesses.delete(downloadId);
+					if (code === 0) {
+						this.activeOptions.delete(downloadId);
+						const finalPath = isPlaylist || info.isPlaylist ? path$1.join(downloadsPath, sanitizedTitle) : outputTemplate;
+						if (progressCallback) progressCallback({
+							id: downloadId,
+							percent: 100,
+							downloaded: totalBytes,
+							total: totalBytes,
+							speed: 0,
+							eta: 0,
+							state: "complete",
+							filename: displayFilename,
+							filePath: finalPath,
+							platform: info.platform
+						});
+						this.addToHistory({
+							id: downloadId,
+							url,
+							title: info.title,
+							platform: info.platform,
+							thumbnailUrl: info.thumbnailUrl,
+							author: info.author,
+							timestamp: Date.now(),
+							path: finalPath,
+							size: totalBytes,
+							duration: info.duration,
+							format,
+							status: "completed"
+						});
+						resolve(finalPath);
+					} else if (code === null) {
+						const errorMsg = stderrOutput ? `Download terminated: ${stderrOutput.substring(0, 200)}` : "Download was cancelled or terminated unexpectedly";
+						const error = this.handleDownloadError(new Error(errorMsg), downloadId, url, info.platform, progressCallback);
+						reject(error);
+					} else {
+						const errorMsg = stderrOutput || `Download failed (exit code: ${code})`;
+						const error = this.handleDownloadError(new Error(errorMsg), downloadId, url, info.platform, progressCallback);
+						reject(error);
+					}
+				});
+				process$1.on("error", (err) => {
+					this.activeProcesses.delete(downloadId);
+					const error = this.handleDownloadError(err, downloadId, url, info.platform, progressCallback);
+					reject(error);
+				});
+				const timeout = setTimeout(() => {
+					if (this.activeProcesses.has(downloadId)) {
+						console.warn(`Download timeout for ${downloadId}, killing process`);
+						const proc = this.activeProcesses.get(downloadId);
+						if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill("SIGTERM");
+					}
+				}, 36e5);
+				const originalResolve = resolve;
+				const originalReject = reject;
+				resolve = (value) => {
+					clearTimeout(timeout);
+					originalResolve(value);
+				};
+				reject = (reason) => {
+					clearTimeout(timeout);
+					originalReject(reason);
+				};
+			});
+		} catch (error) {
+			this.activeProcesses.delete(downloadId);
+			throw error;
+		}
+	}
+	cancelDownload(id) {
+		if (id) {
+			const proc = this.activeProcesses.get(id);
+			if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill();
+			this.downloadQueue = this.downloadQueue.filter((t) => t.options.id !== id);
+			this.saveQueuePersistently();
+		} else {
+			this.activeProcesses.forEach((proc) => {
+				if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
+			});
+			this.downloadQueue = [];
+			this.saveQueuePersistently();
+		}
+	}
+	getHistory() {
+		return this.store.get("history", []);
+	}
+	clearHistory() {
+		this.store.set("history", []);
+	}
+	removeFromHistory(id) {
+		const history = this.getHistory();
+		this.store.set("history", history.filter((h) => h.id !== id));
+	}
+	addToHistory(item) {
+		const history = this.getHistory();
+		history.unshift(item);
+		this.store.set("history", history.slice(0, 200));
+	}
+	getSettings() {
+		return this.store.get("settings");
+	}
+	saveSettings(settings) {
+		const current = this.getSettings();
+		this.store.set("settings", {
+			...current,
+			...settings
+		});
+	}
+	sanitizeFilename(name) {
+		return name.replace(/[<>:"/\\|?*]/g, "").trim();
+	}
+};
+const universalDownloader = new UniversalDownloader();
+var require$1 = createRequire(import.meta.url);
+var PluginManager = class {
+	constructor() {
+		this.loadedPlugins = /* @__PURE__ */ new Map();
+		const userDataPath = app.getPath("userData");
+		this.pluginsDir = path$1.join(userDataPath, "plugins");
+		this.binariesDir = path$1.join(userDataPath, "binaries");
+		this.registryUrl = "https://raw.githubusercontent.com/devtools-app/plugin-registry/main/registry.json";
+		this.store = new Store({
+			name: "plugin-manager",
+			defaults: {
+				installed: {},
+				registry: null,
+				lastRegistryUpdate: 0
+			}
+		});
+		this.ensureDirectories();
+	}
+	async ensureDirectories() {
+		await fs$2.mkdir(this.pluginsDir, { recursive: true });
+		await fs$2.mkdir(this.binariesDir, { recursive: true });
+	}
+	async initialize() {
+		console.log("[PluginManager] Initializing...");
+		await this.updateRegistry();
+		await this.loadInstalledPlugins();
+		console.log("[PluginManager] Initialized with", this.loadedPlugins.size, "active plugins");
+	}
+	async updateRegistry(force = false) {
+		const lastUpdate = this.store.get("lastRegistryUpdate");
+		if (!force && Date.now() - lastUpdate < 3600 * 1e3) {
+			console.log("[PluginManager] Registry is up to date");
+			return;
+		}
+		try {
+			console.log("[PluginManager] Fetching plugin registry...");
+			const response = await axios.get(this.registryUrl, { timeout: 1e4 });
+			this.store.set("registry", response.data);
+			this.store.set("lastRegistryUpdate", Date.now());
+			console.log("[PluginManager] Registry updated:", response.data.plugins.length, "plugins available");
+		} catch (error) {
+			console.error("[PluginManager] Failed to update registry:", error.message);
+			if (!this.store.get("registry")) await this.loadEmbeddedRegistry();
+		}
+	}
+	async loadEmbeddedRegistry() {
+		try {
+			let registryPath = "";
+			if (app.isPackaged) registryPath = path$1.join(process.resourcesPath, "plugin-registry.json");
+			else registryPath = path$1.join(app.getAppPath(), "resources", "plugin-registry.json");
+			console.log("[PluginManager] Loading registry from:", registryPath);
+			const data = await fs$2.readFile(registryPath, "utf-8");
+			const registry = JSON.parse(data);
+			this.store.set("registry", registry);
+			console.log("[PluginManager] Loaded embedded registry");
+		} catch (error) {
+			console.error("[PluginManager] Failed to load embedded registry:", error);
+		}
+	}
+	getRegistry() {
+		return this.store.get("registry");
+	}
+	getAvailablePlugins() {
+		return this.store.get("registry")?.plugins || [];
+	}
+	async installPlugin(pluginId, onProgress) {
+		console.log("[PluginManager] Installing plugin:", pluginId);
+		const manifest = this.getPluginManifest(pluginId);
+		if (!manifest) throw new Error(`Plugin not found in registry: ${pluginId}`);
+		if (this.store.get("installed")[pluginId]) throw new Error(`Plugin already installed: ${pluginId}`);
+		this.checkCompatibility(manifest);
+		try {
+			onProgress?.({
+				stage: "download",
+				percent: 0,
+				message: "Downloading plugin..."
+			});
+			const pluginZipPath = await this.downloadFile(manifest.downloadUrl, path$1.join(app.getPath("temp"), `${pluginId}.zip`), (percent) => onProgress?.({
+				stage: "download",
+				percent,
+				message: `Downloading... ${percent}%`
+			}));
+			onProgress?.({
+				stage: "verify",
+				percent: 50,
+				message: "Verifying integrity..."
+			});
+			await this.verifyChecksum(pluginZipPath, manifest.checksum);
+			onProgress?.({
+				stage: "extract",
+				percent: 60,
+				message: "Extracting files..."
+			});
+			const pluginPath = path$1.join(this.pluginsDir, pluginId);
+			await this.extractZip(pluginZipPath, pluginPath);
+			if (manifest.dependencies?.binary && manifest.dependencies.binary.length > 0) {
+				onProgress?.({
+					stage: "dependencies",
+					percent: 70,
+					message: "Installing dependencies..."
+				});
+				await this.installBinaryDependencies(manifest.dependencies.binary, onProgress);
+			}
+			onProgress?.({
+				stage: "validate",
+				percent: 90,
+				message: "Validating plugin..."
+			});
+			await this.validatePlugin(pluginPath, manifest);
+			onProgress?.({
+				stage: "register",
+				percent: 95,
+				message: "Registering plugin..."
+			});
+			const installedPlugin = {
+				manifest,
+				installPath: pluginPath,
+				installedAt: Date.now(),
+				active: true
+			};
+			const updatedInstalled = {
+				...this.store.get("installed"),
+				[pluginId]: installedPlugin
+			};
+			this.store.set("installed", updatedInstalled);
+			onProgress?.({
+				stage: "complete",
+				percent: 100,
+				message: "Plugin installed successfully!"
+			});
+			await this.loadPlugin(pluginId);
+			await fs$2.unlink(pluginZipPath).catch(() => {});
+			console.log("[PluginManager] Plugin installed successfully:", pluginId);
+		} catch (error) {
+			console.error("[PluginManager] Installation failed:", error);
+			const pluginPath = path$1.join(this.pluginsDir, pluginId);
+			await fs$2.rm(pluginPath, {
+				recursive: true,
+				force: true
+			}).catch(() => {});
+			throw new Error(`Installation failed: ${error.message}`);
+		}
+	}
+	async uninstallPlugin(pluginId) {
+		console.log("[PluginManager] Uninstalling plugin:", pluginId);
+		const installed = this.store.get("installed");
+		const plugin = installed[pluginId];
+		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
+		try {
+			this.unloadPlugin(pluginId);
+			await fs$2.rm(plugin.installPath, {
+				recursive: true,
+				force: true
+			});
+			if (plugin.manifest.dependencies?.binary) await this.cleanupDependencies(plugin.manifest.dependencies.binary);
+			const { [pluginId]: removed, ...remaining } = installed;
+			this.store.set("installed", remaining);
+			console.log("[PluginManager] Plugin uninstalled:", pluginId);
+		} catch (error) {
+			console.error("[PluginManager] Uninstallation failed:", error);
+			throw new Error(`Uninstallation failed: ${error.message}`);
+		}
+	}
+	async loadInstalledPlugins() {
+		const installed = this.store.get("installed");
+		for (const [pluginId, plugin] of Object.entries(installed)) if (plugin.active) try {
+			await this.loadPlugin(pluginId);
+		} catch (error) {
+			console.error(`[PluginManager] Failed to load plugin ${pluginId}:`, error.message);
+		}
+	}
+	async loadPlugin(pluginId) {
+		const plugin = this.store.get("installed")[pluginId];
+		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
+		try {
+			const pluginModule = require$1(path$1.join(plugin.installPath, plugin.manifest.main));
+			if (pluginModule.activate) await pluginModule.activate();
+			this.loadedPlugins.set(pluginId, pluginModule);
+			console.log("[PluginManager] Plugin loaded:", pluginId);
+		} catch (error) {
+			console.error(`[PluginManager] Failed to load plugin ${pluginId}:`, error);
+			throw error;
+		}
+	}
+	unloadPlugin(pluginId) {
+		const pluginModule = this.loadedPlugins.get(pluginId);
+		if (pluginModule?.deactivate) try {
+			pluginModule.deactivate();
+		} catch (error) {
+			console.error(`[PluginManager] Error during plugin deactivation:`, error);
+		}
+		this.loadedPlugins.delete(pluginId);
+		console.log("[PluginManager] Plugin unloaded:", pluginId);
+	}
+	async installBinaryDependencies(dependencies, onProgress) {
+		const platform = process.platform;
+		for (let i = 0; i < dependencies.length; i++) {
+			const dep = dependencies[i];
+			const platformInfo = dep.platforms[platform];
+			if (!platformInfo) {
+				console.warn(`[PluginManager] Binary ${dep.name} not available for ${platform}`);
+				continue;
+			}
+			const binaryPath = path$1.join(this.binariesDir, dep.name);
+			if (await this.fileExists(binaryPath)) {
+				console.log(`[PluginManager] Binary ${dep.name} already exists`);
+				continue;
+			}
+			const basePercent = 70 + i / dependencies.length * 20;
+			onProgress?.({
+				stage: "dependencies",
+				percent: basePercent,
+				message: `Installing ${dep.name}...`
+			});
+			const tempPath = path$1.join(app.getPath("temp"), `${dep.name}.zip`);
+			await this.downloadFile(platformInfo.url, tempPath);
+			await this.verifyChecksum(tempPath, platformInfo.checksum);
+			await this.extractZip(tempPath, this.binariesDir);
+			if (platform !== "win32") await fs$2.chmod(binaryPath, 493);
+			await fs$2.unlink(tempPath).catch(() => {});
+			console.log(`[PluginManager] Binary installed: ${dep.name}`);
+		}
+	}
+	async cleanupDependencies(dependencies) {
+		const installed = this.store.get("installed");
+		for (const dep of dependencies) {
+			let inUse = false;
+			for (const plugin of Object.values(installed)) if (plugin.manifest.dependencies?.binary?.some((d) => d.name === dep.name)) {
+				inUse = true;
+				break;
+			}
+			if (!inUse) {
+				const binaryPath = path$1.join(this.binariesDir, dep.name);
+				await fs$2.rm(binaryPath, {
+					force: true,
+					recursive: true
+				}).catch(() => {});
+				console.log(`[PluginManager] Removed unused binary: ${dep.name}`);
+			}
+		}
+	}
+	getPluginManifest(pluginId) {
+		return this.store.get("registry")?.plugins.find((p) => p.id === pluginId) || null;
+	}
+	checkCompatibility(manifest) {
+		if (!manifest.platforms.includes(process.platform)) throw new Error(`Plugin not compatible with ${process.platform}`);
+		if (app.getVersion() < manifest.minAppVersion) throw new Error(`Plugin requires app version ${manifest.minAppVersion} or higher`);
+	}
+	async downloadFile(url, destination, onProgress) {
+		const response = await axios({
+			method: "GET",
+			url,
+			responseType: "stream",
+			timeout: 3e5
+		});
+		const totalSize = parseInt(response.headers["content-length"], 10);
+		let downloadedSize = 0;
+		const writer = require$1("fs").createWriteStream(destination);
+		response.data.on("data", (chunk) => {
+			downloadedSize += chunk.length;
+			const percent = Math.round(downloadedSize / totalSize * 100);
+			onProgress?.(percent);
+		});
+		response.data.pipe(writer);
+		return new Promise((resolve, reject) => {
+			writer.on("finish", () => resolve(destination));
+			writer.on("error", reject);
+		});
+	}
+	async verifyChecksum(filePath, expectedChecksum) {
+		const fileBuffer = await fs$2.readFile(filePath);
+		if (createHash$1("sha256").update(fileBuffer).digest("hex") !== expectedChecksum) throw new Error("Checksum verification failed - file may be corrupted");
+	}
+	async extractZip(zipPath, destination) {
+		new AdmZip(zipPath).extractAllTo(destination, true);
+	}
+	async validatePlugin(pluginPath, manifest) {
+		const mainPath = path$1.join(pluginPath, manifest.main);
+		if (!await this.fileExists(mainPath)) throw new Error(`Plugin main file not found: ${manifest.main}`);
+		const manifestPath = path$1.join(pluginPath, "manifest.json");
+		if (!await this.fileExists(manifestPath)) throw new Error("Plugin manifest.json not found");
+	}
+	async fileExists(filePath) {
+		try {
+			await fs$2.access(filePath);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+	getInstalledPlugins() {
+		const installed = this.store.get("installed");
+		return Object.values(installed);
+	}
+	isInstalled(pluginId) {
+		return pluginId in this.store.get("installed");
+	}
+	getPlugin(pluginId) {
+		return this.loadedPlugins.get(pluginId);
+	}
+	getBinaryPath(binaryName) {
+		return path$1.join(this.binariesDir, binaryName);
+	}
+	async togglePlugin(pluginId, active) {
+		const installed = this.store.get("installed");
+		const plugin = installed[pluginId];
+		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
+		if (active && !plugin.active) await this.loadPlugin(pluginId);
+		else if (!active && plugin.active) this.unloadPlugin(pluginId);
+		plugin.active = active;
+		this.store.set("installed", installed);
+	}
+};
+const pluginManager = new PluginManager();
+var __filename = fileURLToPath(import.meta.url);
+var __dirname$1 = path.dirname(__filename);
+function setupScreenshotHandlers(win$1) {
+	ipcMain.handle("screenshot:get-sources", async () => {
+		try {
+			return (await desktopCapturer.getSources({
+				types: ["window", "screen"],
+				thumbnailSize: {
+					width: 300,
+					height: 200
+				}
+			})).map((source) => ({
+				id: source.id,
+				name: source.name,
+				thumbnail: source.thumbnail.toDataURL(),
+				type: source.id.startsWith("screen") ? "screen" : "window"
+			}));
+		} catch (error) {
+			console.error("Failed to get sources:", error);
+			return [];
+		}
+	});
+	ipcMain.handle("screenshot:capture-screen", async () => {
+		try {
+			const display = screen.getPrimaryDisplay();
+			const scaleFactor = display.scaleFactor || 1;
+			const size = {
+				width: Math.ceil(display.size.width * scaleFactor),
+				height: Math.ceil(display.size.height * scaleFactor)
+			};
+			const sources = await desktopCapturer.getSources({
+				types: ["screen"],
+				thumbnailSize: size
+			});
+			if (sources.length === 0) throw new Error("No screens available");
+			const image = sources[0].thumbnail;
+			return {
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
+			};
+		} catch (error) {
+			console.error("Failed to capture screen:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:capture-window", async (_event, sourceId) => {
+		try {
+			const source = (await desktopCapturer.getSources({
+				types: ["window"],
+				thumbnailSize: {
+					width: 1920,
+					height: 1080
+				}
+			})).find((s) => s.id === sourceId);
+			if (!source) throw new Error("Window not found");
+			const image = source.thumbnail;
+			return {
+				dataUrl: image.toDataURL(),
+				width: image.getSize().width,
+				height: image.getSize().height
+			};
+		} catch (error) {
+			console.error("Failed to capture window:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:capture-area", async () => {
+		try {
+			console.log("Capturing screen for area selection...");
+			const display = screen.getPrimaryDisplay();
+			const scaleFactor = display.scaleFactor || 1;
+			const size = {
+				width: Math.ceil(display.size.width * scaleFactor),
+				height: Math.ceil(display.size.height * scaleFactor)
+			};
+			const sources = await desktopCapturer.getSources({
+				types: ["screen"],
+				thumbnailSize: size
+			});
+			console.log(`Found ${sources.length} sources.`);
+			if (sources.length === 0) {
+				console.error("No screens available for capture.");
+				throw new Error("No screens available");
+			}
+			const fullScreenImage = sources[0].thumbnail;
+			console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
+			console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
+			return new Promise((resolve, reject) => {
+				let selectionWindow = null;
+				const cleanup = () => {
+					if (selectionWindow && !selectionWindow.isDestroyed()) selectionWindow.close();
+					ipcMain.removeHandler("screenshot:area-selected");
+					ipcMain.removeHandler("screenshot:area-cancelled");
+				};
+				ipcMain.handle("screenshot:area-selected", async (_event, bounds) => {
+					cleanup();
+					const scaleFactor$1 = display.scaleFactor;
+					const croppedImage = fullScreenImage.crop({
+						x: Math.round(bounds.x * scaleFactor$1),
+						y: Math.round(bounds.y * scaleFactor$1),
+						width: Math.round(bounds.width * scaleFactor$1),
+						height: Math.round(bounds.height * scaleFactor$1)
+					});
+					resolve({
+						dataUrl: croppedImage.toDataURL(),
+						width: croppedImage.getSize().width,
+						height: croppedImage.getSize().height
+					});
+				});
+				ipcMain.handle("screenshot:area-cancelled", () => {
+					cleanup();
+					reject(/* @__PURE__ */ new Error("Area selection cancelled"));
+				});
+				const { width, height, x, y } = display.bounds;
+				selectionWindow = new BrowserWindow({
+					x,
+					y,
+					width,
+					height,
+					frame: false,
+					transparent: true,
+					hasShadow: false,
+					backgroundColor: "#00000000",
+					alwaysOnTop: true,
+					skipTaskbar: true,
+					resizable: false,
+					enableLargerThanScreen: true,
+					movable: false,
+					acceptFirstMouse: true,
+					webPreferences: {
+						nodeIntegration: false,
+						contextIsolation: true,
+						preload: path.join(__dirname$1, "preload.mjs")
+					}
+				});
+				selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+				selectionWindow.show();
+				selectionWindow.focus();
+				selectionWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            body {
+                                width: 100vw;
+                                height: 100vh;
+                                cursor: crosshair;
+                                background: transparent;
+                                overflow: hidden;
+                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                                user-select: none;
+                            }
+                            #selection {
+                                position: absolute;
+                                border: 2px solid #3b82f6;
+                                background: rgba(59, 130, 246, 0.05);
+                                display: none;
+                                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+                                z-index: 100;
+                                pointer-events: none;
+                            }
+                            #toolbar {
+                                position: absolute;
+                                display: none;
+                                background: #1a1b1e;
+                                padding: 6px;
+                                border-radius: 10px;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+                                z-index: 2000;
+                                display: flex;
+                                gap: 8px;
+                                align-items: center;
+                                pointer-events: auto;
+                                animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                            }
+                            @keyframes popIn {
+                                from { opacity: 0; transform: scale(0.95) translateY(5px); }
+                                to { opacity: 1; transform: scale(1) translateY(0); }
+                            }
+                            .btn {
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                padding: 0 16px;
+                                height: 36px;
+                                border-radius: 8px;
+                                border: none;
+                                font-size: 13px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.15s ease;
+                                color: white;
+                            }
+                            .btn-cancel {
+                                background: rgba(255,255,255,0.08);
+                                color: #e5e5e5;
+                            }
+                            .btn-cancel:hover { background: rgba(255,255,255,0.12); color: white; }
+                            .btn-capture {
+                                background: #3b82f6;
+                                color: white;
+                                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+                            }
+                            .btn-capture:hover { background: #2563eb; transform: translateY(-1px); }
+                            .btn-capture:active { transform: translateY(0); }
+                            #dimensions {
+                                position: absolute;
+                                top: -34px;
+                                left: 0;
+                                background: #3b82f6;
+                                color: white;
+                                padding: 4px 8px;
+                                border-radius: 6px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                                opacity: 0;
+                                transition: opacity 0.2s;
+                            }
+                            #instructions {
+                                position: absolute;
+                                top: 40px;
+                                left: 50%;
+                                transform: translateX(-50%);
+                                background: rgba(0, 0, 0, 0.7);
+                                backdrop-filter: blur(10px);
+                                color: white;
+                                padding: 8px 16px;
+                                border-radius: 20px;
+                                font-size: 13px;
+                                font-weight: 500;
+                                pointer-events: none;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                                border: 1px solid rgba(255,255,255,0.1);
+                                opacity: 0.8;
+                            }
+                            .hidden { display: none !important; }
+                        </style>
+                    </head>
+                    <body>
+                        <div id="instructions">Click and drag to capture</div>
+                        <div id="selection">
+                            <div id="dimensions">0 x 0</div>
+                        </div>
+                        <div id="toolbar" class="hidden">
+                            <button class="btn btn-cancel" id="btn-cancel">Cancel</button>
+                            <button class="btn btn-capture" id="btn-capture">Capture</button>
+                        </div>
+                        <script>
+                            const selection = document.getElementById('selection');
+                            const toolbar = document.getElementById('toolbar');
+                            const dimensions = document.getElementById('dimensions');
+                            const btnCancel = document.getElementById('btn-cancel');
+                            const btnCapture = document.getElementById('btn-capture');
+                            
+                            let startX, startY, isDrawing = false;
+                            let currentBounds = { x: 0, y: 0, width: 0, height: 0 };
+                            
+                            document.addEventListener('contextmenu', e => e.preventDefault());
+
+                            function capture() {
+                                if (!window.electronAPI) {
+                                    alert('Error: Electron API not available. Preload script missed?');
+                                    return;
+                                }
+                                if (currentBounds.width > 0 && currentBounds.height > 0) {
+                                    window.electronAPI.sendSelection(currentBounds);
+                                }
+                            }
+                            
+                            function cancel() {
+                                if (window.electronAPI) {
+                                    window.electronAPI.cancelSelection();
+                                } else {
+                                    // If API is missing, we can't notify main process, but we can try to close window via window.close() if not sandboxed?
+                                    // But contextIsolation is on.
+                                    alert('Error: Electron API not available. Cannot cancel properly.');
+                                }
+                            }
+
+                            btnCapture.onclick = capture;
+                            btnCancel.onclick = cancel;
+
+                            document.addEventListener('mousedown', (e) => {
+                                if (e.target.closest('#toolbar')) return;
+                                if (e.button !== 0) {
+                                    if (e.button === 2) cancel();
+                                    return;
+                                }
+                                isDrawing = true;
+                                startX = e.clientX;
+                                startY = e.clientY;
+                                toolbar.classList.add('hidden');
+                                dimensions.style.opacity = '1';
+                                selection.style.left = startX + 'px';
+                                selection.style.top = startY + 'px';
+                                selection.style.width = '0px';
+                                selection.style.height = '0px';
+                                selection.style.display = 'block';
+                            });
+
+                            document.addEventListener('mousemove', (e) => {
+                                if (!isDrawing) return;
+                                const currentX = e.clientX;
+                                const currentY = e.clientY;
+                                const width = Math.abs(currentX - startX);
+                                const height = Math.abs(currentY - startY);
+                                const left = Math.min(startX, currentX);
+                                const top = Math.min(startY, currentY);
+                                selection.style.left = left + 'px';
+                                selection.style.top = top + 'px';
+                                selection.style.width = width + 'px';
+                                selection.style.height = height + 'px';
+                                dimensions.textContent = Math.round(width) + ' x ' + Math.round(height);
+                                currentBounds = { x: left, y: top, width, height };
+                            });
+
+                            document.addEventListener('mouseup', (e) => {
+                                if (!isDrawing) return;
+                                isDrawing = false;
+                                if (currentBounds.width > 10 && currentBounds.height > 10) {
+                                    toolbar.classList.remove('hidden');
+                                    const toolbarHeight = 60;
+                                    let top = currentBounds.y + currentBounds.height + 10;
+                                    if (top + toolbarHeight > window.innerHeight) top = currentBounds.y - toolbarHeight - 10;
+                                    let left = currentBounds.x + (currentBounds.width / 2) - 100;
+                                    left = Math.max(10, Math.min(window.innerWidth - 210, left));
+                                    toolbar.style.top = top + 'px';
+                                    toolbar.style.left = left + 'px';
+                                } else {
+                                    selection.style.display = 'none';
+                                    toolbar.classList.add('hidden');
+                                }
+                            });
+
+                            document.addEventListener('keydown', (e) => {
+                                if (e.key === 'Escape') cancel();
+                                if (e.key === 'Enter' && !toolbar.classList.contains('hidden')) capture();
+                            });
+                        <\/script>
+                    </body>
+                    </html>
+                `)}`);
+				setTimeout(() => {
+					if (selectionWindow && !selectionWindow.isDestroyed()) {
+						cleanup();
+						reject(/* @__PURE__ */ new Error("Area selection timeout"));
+					}
+				}, 12e4);
+			});
+		} catch (error) {
+			console.error("Failed to capture area:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:capture-url", async (_event, url) => {
+		try {
+			console.log("Capturing URL:", url);
+			const win$2 = new BrowserWindow({
+				width: 1200,
+				height: 800,
+				show: false,
+				webPreferences: {
+					offscreen: false,
+					contextIsolation: true
+				}
+			});
+			await win$2.loadURL(url);
+			try {
+				const dbg = win$2.webContents.debugger;
+				dbg.attach("1.3");
+				const layout = await dbg.sendCommand("Page.getLayoutMetrics");
+				const contentSize = layout.contentSize || layout.cssContentSize || {
+					width: 1200,
+					height: 800
+				};
+				const width = Math.ceil(contentSize.width);
+				const height = Math.ceil(contentSize.height);
+				console.log(`Page dimensions: ${width}x${height}`);
+				await dbg.sendCommand("Emulation.setDeviceMetricsOverride", {
+					width,
+					height,
+					deviceScaleFactor: 1,
+					mobile: false
+				});
+				const result = await dbg.sendCommand("Page.captureScreenshot", {
+					format: "png",
+					captureBeyondViewport: true
+				});
+				dbg.detach();
+				win$2.close();
+				return {
+					dataUrl: "data:image/png;base64," + result.data,
+					width,
+					height
+				};
+			} catch (cdpError) {
+				console.error("CDP Error:", cdpError);
+				const img = await win$2.webContents.capturePage();
+				win$2.close();
+				return {
+					dataUrl: img.toDataURL(),
+					width: img.getSize().width,
+					height: img.getSize().height
+				};
+			}
+		} catch (error) {
+			console.error("Failed to capture URL:", error);
+			throw error;
+		}
+	});
+	ipcMain.handle("screenshot:save-file", async (_event, dataUrl, options) => {
+		try {
+			const { filename, format = "png" } = options;
+			const result = await dialog.showSaveDialog(win$1, {
+				defaultPath: filename || `screenshot-${Date.now()}.${format}`,
+				filters: [
+					{
+						name: "PNG Image",
+						extensions: ["png"]
+					},
+					{
+						name: "JPEG Image",
+						extensions: ["jpg", "jpeg"]
+					},
+					{
+						name: "WebP Image",
+						extensions: ["webp"]
+					}
+				]
+			});
+			if (result.canceled || !result.filePath) return {
+				success: false,
+				canceled: true
+			};
+			const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+			const buffer = Buffer.from(base64Data, "base64");
+			await fs.writeFile(result.filePath, buffer);
+			return {
+				success: true,
+				filePath: result.filePath
+			};
+		} catch (error) {
+			console.error("Failed to save screenshot:", error);
+			return {
+				success: false,
+				error: error.message
+			};
+		}
+	});
+}
 var execAsync$1 = promisify(exec);
 var dirSizeCache = /* @__PURE__ */ new Map();
 var CACHE_TTL = 300 * 1e3;
@@ -1924,3725 +6013,6 @@ var deleteBackup = async (backupId) => {
 		};
 	}
 };
-var __filename = fileURLToPath(import.meta.url);
-var __dirname$1 = path.dirname(__filename);
-function setupScreenshotHandlers(win$1) {
-	ipcMain.handle("screenshot:get-sources", async () => {
-		try {
-			return (await desktopCapturer.getSources({
-				types: ["window", "screen"],
-				thumbnailSize: {
-					width: 300,
-					height: 200
-				}
-			})).map((source) => ({
-				id: source.id,
-				name: source.name,
-				thumbnail: source.thumbnail.toDataURL(),
-				type: source.id.startsWith("screen") ? "screen" : "window"
-			}));
-		} catch (error) {
-			console.error("Failed to get sources:", error);
-			return [];
-		}
-	});
-	ipcMain.handle("screenshot:capture-screen", async () => {
-		try {
-			const display = screen.getPrimaryDisplay();
-			const scaleFactor = display.scaleFactor || 1;
-			const size = {
-				width: Math.ceil(display.size.width * scaleFactor),
-				height: Math.ceil(display.size.height * scaleFactor)
-			};
-			const sources = await desktopCapturer.getSources({
-				types: ["screen"],
-				thumbnailSize: size
-			});
-			if (sources.length === 0) throw new Error("No screens available");
-			const image = sources[0].thumbnail;
-			return {
-				dataUrl: image.toDataURL(),
-				width: image.getSize().width,
-				height: image.getSize().height
-			};
-		} catch (error) {
-			console.error("Failed to capture screen:", error);
-			throw error;
-		}
-	});
-	ipcMain.handle("screenshot:capture-window", async (_event, sourceId) => {
-		try {
-			const source = (await desktopCapturer.getSources({
-				types: ["window"],
-				thumbnailSize: {
-					width: 1920,
-					height: 1080
-				}
-			})).find((s) => s.id === sourceId);
-			if (!source) throw new Error("Window not found");
-			const image = source.thumbnail;
-			return {
-				dataUrl: image.toDataURL(),
-				width: image.getSize().width,
-				height: image.getSize().height
-			};
-		} catch (error) {
-			console.error("Failed to capture window:", error);
-			throw error;
-		}
-	});
-	ipcMain.handle("screenshot:capture-area", async () => {
-		try {
-			console.log("Capturing screen for area selection...");
-			const display = screen.getPrimaryDisplay();
-			const scaleFactor = display.scaleFactor || 1;
-			const size = {
-				width: Math.ceil(display.size.width * scaleFactor),
-				height: Math.ceil(display.size.height * scaleFactor)
-			};
-			const sources = await desktopCapturer.getSources({
-				types: ["screen"],
-				thumbnailSize: size
-			});
-			console.log(`Found ${sources.length} sources.`);
-			if (sources.length === 0) {
-				console.error("No screens available for capture.");
-				throw new Error("No screens available");
-			}
-			const fullScreenImage = sources[0].thumbnail;
-			console.log(`Captured thumbnail size: ${fullScreenImage.getSize().width}x${fullScreenImage.getSize().height}`);
-			console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
-			return new Promise((resolve, reject) => {
-				let selectionWindow = null;
-				const cleanup = () => {
-					if (selectionWindow && !selectionWindow.isDestroyed()) selectionWindow.close();
-					ipcMain.removeHandler("screenshot:area-selected");
-					ipcMain.removeHandler("screenshot:area-cancelled");
-				};
-				ipcMain.handle("screenshot:area-selected", async (_event, bounds) => {
-					cleanup();
-					const scaleFactor$1 = display.scaleFactor;
-					const croppedImage = fullScreenImage.crop({
-						x: Math.round(bounds.x * scaleFactor$1),
-						y: Math.round(bounds.y * scaleFactor$1),
-						width: Math.round(bounds.width * scaleFactor$1),
-						height: Math.round(bounds.height * scaleFactor$1)
-					});
-					resolve({
-						dataUrl: croppedImage.toDataURL(),
-						width: croppedImage.getSize().width,
-						height: croppedImage.getSize().height
-					});
-				});
-				ipcMain.handle("screenshot:area-cancelled", () => {
-					cleanup();
-					reject(/* @__PURE__ */ new Error("Area selection cancelled"));
-				});
-				const { width, height, x, y } = display.bounds;
-				selectionWindow = new BrowserWindow({
-					x,
-					y,
-					width,
-					height,
-					frame: false,
-					transparent: true,
-					hasShadow: false,
-					backgroundColor: "#00000000",
-					alwaysOnTop: true,
-					skipTaskbar: true,
-					resizable: false,
-					enableLargerThanScreen: true,
-					movable: false,
-					acceptFirstMouse: true,
-					webPreferences: {
-						nodeIntegration: false,
-						contextIsolation: true,
-						preload: path.join(__dirname$1, "preload.mjs")
-					}
-				});
-				selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-				selectionWindow.show();
-				selectionWindow.focus();
-				selectionWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>
-                            * { margin: 0; padding: 0; box-sizing: border-box; }
-                            body {
-                                width: 100vw;
-                                height: 100vh;
-                                cursor: crosshair;
-                                background: transparent;
-                                overflow: hidden;
-                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                                user-select: none;
-                            }
-                            #selection {
-                                position: absolute;
-                                border: 2px solid #3b82f6;
-                                background: rgba(59, 130, 246, 0.05);
-                                display: none;
-                                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
-                                z-index: 100;
-                                pointer-events: none;
-                            }
-                            #toolbar {
-                                position: absolute;
-                                display: none;
-                                background: #1a1b1e;
-                                padding: 6px;
-                                border-radius: 10px;
-                                box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
-                                z-index: 2000;
-                                display: flex;
-                                gap: 8px;
-                                align-items: center;
-                                pointer-events: auto;
-                                animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-                            }
-                            @keyframes popIn {
-                                from { opacity: 0; transform: scale(0.95) translateY(5px); }
-                                to { opacity: 1; transform: scale(1) translateY(0); }
-                            }
-                            .btn {
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                padding: 0 16px;
-                                height: 36px;
-                                border-radius: 8px;
-                                border: none;
-                                font-size: 13px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: all 0.15s ease;
-                                color: white;
-                            }
-                            .btn-cancel {
-                                background: rgba(255,255,255,0.08);
-                                color: #e5e5e5;
-                            }
-                            .btn-cancel:hover { background: rgba(255,255,255,0.12); color: white; }
-                            .btn-capture {
-                                background: #3b82f6;
-                                color: white;
-                                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-                            }
-                            .btn-capture:hover { background: #2563eb; transform: translateY(-1px); }
-                            .btn-capture:active { transform: translateY(0); }
-                            #dimensions {
-                                position: absolute;
-                                top: -34px;
-                                left: 0;
-                                background: #3b82f6;
-                                color: white;
-                                padding: 4px 8px;
-                                border-radius: 6px;
-                                font-size: 12px;
-                                font-weight: 600;
-                                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                                opacity: 0;
-                                transition: opacity 0.2s;
-                            }
-                            #instructions {
-                                position: absolute;
-                                top: 40px;
-                                left: 50%;
-                                transform: translateX(-50%);
-                                background: rgba(0, 0, 0, 0.7);
-                                backdrop-filter: blur(10px);
-                                color: white;
-                                padding: 8px 16px;
-                                border-radius: 20px;
-                                font-size: 13px;
-                                font-weight: 500;
-                                pointer-events: none;
-                                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                                border: 1px solid rgba(255,255,255,0.1);
-                                opacity: 0.8;
-                            }
-                            .hidden { display: none !important; }
-                        </style>
-                    </head>
-                    <body>
-                        <div id="instructions">Click and drag to capture</div>
-                        <div id="selection">
-                            <div id="dimensions">0 x 0</div>
-                        </div>
-                        <div id="toolbar" class="hidden">
-                            <button class="btn btn-cancel" id="btn-cancel">Cancel</button>
-                            <button class="btn btn-capture" id="btn-capture">Capture</button>
-                        </div>
-                        <script>
-                            const selection = document.getElementById('selection');
-                            const toolbar = document.getElementById('toolbar');
-                            const dimensions = document.getElementById('dimensions');
-                            const btnCancel = document.getElementById('btn-cancel');
-                            const btnCapture = document.getElementById('btn-capture');
-                            
-                            let startX, startY, isDrawing = false;
-                            let currentBounds = { x: 0, y: 0, width: 0, height: 0 };
-                            
-                            document.addEventListener('contextmenu', e => e.preventDefault());
-
-                            function capture() {
-                                if (!window.electronAPI) {
-                                    alert('Error: Electron API not available. Preload script missed?');
-                                    return;
-                                }
-                                if (currentBounds.width > 0 && currentBounds.height > 0) {
-                                    window.electronAPI.sendSelection(currentBounds);
-                                }
-                            }
-                            
-                            function cancel() {
-                                if (window.electronAPI) {
-                                    window.electronAPI.cancelSelection();
-                                } else {
-                                    // If API is missing, we can't notify main process, but we can try to close window via window.close() if not sandboxed?
-                                    // But contextIsolation is on.
-                                    alert('Error: Electron API not available. Cannot cancel properly.');
-                                }
-                            }
-
-                            btnCapture.onclick = capture;
-                            btnCancel.onclick = cancel;
-
-                            document.addEventListener('mousedown', (e) => {
-                                if (e.target.closest('#toolbar')) return;
-                                if (e.button !== 0) {
-                                    if (e.button === 2) cancel();
-                                    return;
-                                }
-                                isDrawing = true;
-                                startX = e.clientX;
-                                startY = e.clientY;
-                                toolbar.classList.add('hidden');
-                                dimensions.style.opacity = '1';
-                                selection.style.left = startX + 'px';
-                                selection.style.top = startY + 'px';
-                                selection.style.width = '0px';
-                                selection.style.height = '0px';
-                                selection.style.display = 'block';
-                            });
-
-                            document.addEventListener('mousemove', (e) => {
-                                if (!isDrawing) return;
-                                const currentX = e.clientX;
-                                const currentY = e.clientY;
-                                const width = Math.abs(currentX - startX);
-                                const height = Math.abs(currentY - startY);
-                                const left = Math.min(startX, currentX);
-                                const top = Math.min(startY, currentY);
-                                selection.style.left = left + 'px';
-                                selection.style.top = top + 'px';
-                                selection.style.width = width + 'px';
-                                selection.style.height = height + 'px';
-                                dimensions.textContent = Math.round(width) + ' x ' + Math.round(height);
-                                currentBounds = { x: left, y: top, width, height };
-                            });
-
-                            document.addEventListener('mouseup', (e) => {
-                                if (!isDrawing) return;
-                                isDrawing = false;
-                                if (currentBounds.width > 10 && currentBounds.height > 10) {
-                                    toolbar.classList.remove('hidden');
-                                    const toolbarHeight = 60;
-                                    let top = currentBounds.y + currentBounds.height + 10;
-                                    if (top + toolbarHeight > window.innerHeight) top = currentBounds.y - toolbarHeight - 10;
-                                    let left = currentBounds.x + (currentBounds.width / 2) - 100;
-                                    left = Math.max(10, Math.min(window.innerWidth - 210, left));
-                                    toolbar.style.top = top + 'px';
-                                    toolbar.style.left = left + 'px';
-                                } else {
-                                    selection.style.display = 'none';
-                                    toolbar.classList.add('hidden');
-                                }
-                            });
-
-                            document.addEventListener('keydown', (e) => {
-                                if (e.key === 'Escape') cancel();
-                                if (e.key === 'Enter' && !toolbar.classList.contains('hidden')) capture();
-                            });
-                        <\/script>
-                    </body>
-                    </html>
-                `)}`);
-				setTimeout(() => {
-					if (selectionWindow && !selectionWindow.isDestroyed()) {
-						cleanup();
-						reject(/* @__PURE__ */ new Error("Area selection timeout"));
-					}
-				}, 12e4);
-			});
-		} catch (error) {
-			console.error("Failed to capture area:", error);
-			throw error;
-		}
-	});
-	ipcMain.handle("screenshot:capture-url", async (_event, url) => {
-		try {
-			console.log("Capturing URL:", url);
-			const win$2 = new BrowserWindow({
-				width: 1200,
-				height: 800,
-				show: false,
-				webPreferences: {
-					offscreen: false,
-					contextIsolation: true
-				}
-			});
-			await win$2.loadURL(url);
-			try {
-				const dbg = win$2.webContents.debugger;
-				dbg.attach("1.3");
-				const layout = await dbg.sendCommand("Page.getLayoutMetrics");
-				const contentSize = layout.contentSize || layout.cssContentSize || {
-					width: 1200,
-					height: 800
-				};
-				const width = Math.ceil(contentSize.width);
-				const height = Math.ceil(contentSize.height);
-				console.log(`Page dimensions: ${width}x${height}`);
-				await dbg.sendCommand("Emulation.setDeviceMetricsOverride", {
-					width,
-					height,
-					deviceScaleFactor: 1,
-					mobile: false
-				});
-				const result = await dbg.sendCommand("Page.captureScreenshot", {
-					format: "png",
-					captureBeyondViewport: true
-				});
-				dbg.detach();
-				win$2.close();
-				return {
-					dataUrl: "data:image/png;base64," + result.data,
-					width,
-					height
-				};
-			} catch (cdpError) {
-				console.error("CDP Error:", cdpError);
-				const img = await win$2.webContents.capturePage();
-				win$2.close();
-				return {
-					dataUrl: img.toDataURL(),
-					width: img.getSize().width,
-					height: img.getSize().height
-				};
-			}
-		} catch (error) {
-			console.error("Failed to capture URL:", error);
-			throw error;
-		}
-	});
-	ipcMain.handle("screenshot:save-file", async (_event, dataUrl, options) => {
-		try {
-			const { filename, format = "png" } = options;
-			const result = await dialog.showSaveDialog(win$1, {
-				defaultPath: filename || `screenshot-${Date.now()}.${format}`,
-				filters: [
-					{
-						name: "PNG Image",
-						extensions: ["png"]
-					},
-					{
-						name: "JPEG Image",
-						extensions: ["jpg", "jpeg"]
-					},
-					{
-						name: "WebP Image",
-						extensions: ["webp"]
-					}
-				]
-			});
-			if (result.canceled || !result.filePath) return {
-				success: false,
-				canceled: true
-			};
-			const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
-			const buffer = Buffer.from(base64Data, "base64");
-			await fs.writeFile(result.filePath, buffer);
-			return {
-				success: true,
-				filePath: result.filePath
-			};
-		} catch (error) {
-			console.error("Failed to save screenshot:", error);
-			return {
-				success: false,
-				error: error.message
-			};
-		}
-	});
-}
-var require$4 = createRequire(import.meta.url);
-var YouTubeDownloader = class {
-	constructor() {
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.hasAria2c = false;
-		this.hasFFmpeg = false;
-		this.ffmpegPath = null;
-		this.downloadQueue = [];
-		this.activeDownloadsCount = 0;
-		this.videoInfoCache = /* @__PURE__ */ new Map();
-		this.CACHE_TTL = 1800 * 1e3;
-		this.store = new Store({
-			name: "youtube-download-history",
-			defaults: {
-				history: [],
-				settings: {
-					defaultVideoQuality: "1080p",
-					defaultAudioQuality: "0",
-					maxConcurrentDownloads: 3,
-					maxSpeedLimit: ""
-				}
-			}
-		});
-		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
-		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
-		this.initPromise = this.initYtDlp();
-	}
-	async initYtDlp() {
-		try {
-			const ytDlpModule = require$4("yt-dlp-wrap");
-			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
-			if (!fs$1.existsSync(this.binaryPath)) {
-				console.log("Downloading yt-dlp binary to:", this.binaryPath);
-				try {
-					await YTDlpWrap.downloadFromGithub(this.binaryPath);
-					console.log("yt-dlp binary downloaded successfully");
-				} catch (downloadError) {
-					console.error("Failed to download yt-dlp binary:", downloadError);
-					throw new Error(`Failed to download yt-dlp: ${downloadError}`);
-				}
-			} else console.log("Using existing yt-dlp binary at:", this.binaryPath);
-			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				this.hasFFmpeg = true;
-				const version = FFmpegHelper.getFFmpegVersion();
-				console.log(`✅ FFmpeg ready: ${version || "version unknown"}`);
-			} else console.warn("⚠️ FFmpeg not available - video features may be limited");
-			await this.checkHelpers();
-		} catch (error) {
-			console.error("Failed to initialize yt-dlp:", error);
-			throw error;
-		}
-	}
-	async checkHelpers() {
-		this.hasAria2c = false;
-		try {
-			const userData = app.getPath("userData");
-			const localBin = path$1.join(userData, "bin", "aria2c.exe");
-			if (fs$1.existsSync(localBin)) {
-				this.hasAria2c = true;
-				console.log("✅ Aria2c found locally:", localBin);
-			}
-		} catch {}
-		if (!this.hasAria2c) try {
-			execSync("aria2c --version", { stdio: "ignore" });
-			this.hasAria2c = true;
-			console.log("✅ Aria2c found globally");
-		} catch {
-			console.log("ℹ️ Aria2c not found");
-		}
-		if (this.ffmpegPath) {
-			this.hasFFmpeg = true;
-			console.log("✅ FFmpeg static detected", this.ffmpegPath);
-		} else try {
-			execSync("ffmpeg -version", { stdio: "ignore" });
-			this.hasFFmpeg = true;
-			console.log("✅ FFmpeg found globally");
-		} catch {
-			this.hasFFmpeg = false;
-			console.warn("⚠️ FFmpeg not found");
-		}
-	}
-	async installAria2() {
-		console.log("Starting Aria2 download...");
-		try {
-			const userData = app.getPath("userData");
-			const binDir = path$1.join(userData, "bin");
-			if (!fs$1.existsSync(binDir)) fs$1.mkdirSync(binDir, { recursive: true });
-			const zipPath = path$1.join(binDir, "aria2.zip");
-			const url = "https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip";
-			await new Promise((resolve, reject) => {
-				const file = fs$1.createWriteStream(zipPath);
-				https.get(url, (res) => {
-					if (res.statusCode === 302 || res.statusCode === 301) https.get(res.headers.location, (res2) => {
-						if (res2.statusCode !== 200) {
-							reject(/* @__PURE__ */ new Error("DL Fail " + res2.statusCode));
-							return;
-						}
-						res2.pipe(file);
-						file.on("finish", () => {
-							file.close();
-							resolve();
-						});
-					}).on("error", reject);
-					else if (res.statusCode === 200) {
-						res.pipe(file);
-						file.on("finish", () => {
-							file.close();
-							resolve();
-						});
-					} else reject(/* @__PURE__ */ new Error(`Failed to download: ${res.statusCode}`));
-				}).on("error", reject);
-			});
-			await promisify$1(exec$1)(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${binDir}' -Force"`);
-			const subDir = path$1.join(binDir, "aria2-1.36.0-win-64bit-build1");
-			const exePath = path$1.join(subDir, "aria2c.exe");
-			const targetPath = path$1.join(binDir, "aria2c.exe");
-			if (fs$1.existsSync(exePath)) fs$1.copyFileSync(exePath, targetPath);
-			try {
-				fs$1.unlinkSync(zipPath);
-			} catch {}
-			await this.checkHelpers();
-			return this.hasAria2c;
-		} catch (e) {
-			console.error("Install Aria2 Failed", e);
-			throw e;
-		}
-	}
-	async ensureInitialized() {
-		await this.initPromise;
-	}
-	async processQueue() {
-		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
-		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
-			const task = this.downloadQueue.shift();
-			if (task) {
-				this.activeDownloadsCount++;
-				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
-					this.activeDownloadsCount--;
-					this.processQueue();
-				});
-			}
-		}
-	}
-	async getVideoInfo(url) {
-		await this.ensureInitialized();
-		const cached = this.videoInfoCache.get(url);
-		if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-			console.log("Returning cached video info for:", url);
-			return cached.info;
-		}
-		try {
-			const info = await this.ytDlp.getVideoInfo([
-				url,
-				"--skip-download",
-				"--no-playlist",
-				"--no-check-certificate"
-			]);
-			const formats = (info.formats || []).map((format) => ({
-				itag: format.format_id ? parseInt(format.format_id) : 0,
-				quality: format.quality || format.format_note || "unknown",
-				qualityLabel: format.format_note || format.resolution,
-				hasVideo: !!format.vcodec && format.vcodec !== "none",
-				hasAudio: !!format.acodec && format.acodec !== "none",
-				container: format.ext || "unknown",
-				codecs: format.vcodec || format.acodec,
-				bitrate: format.tbr ? format.tbr * 1e3 : void 0,
-				audioBitrate: format.abr,
-				filesize: format.filesize || format.filesize_approx
-			}));
-			const qualityLabels = /* @__PURE__ */ new Set();
-			formats.forEach((format) => {
-				if (format.qualityLabel) {
-					const match = format.qualityLabel.match(/(\d+p)/);
-					if (match) qualityLabels.add(match[1]);
-				}
-			});
-			const availableQualities = Array.from(qualityLabels).sort((a, b) => {
-				const aNum = parseInt(a);
-				return parseInt(b) - aNum;
-			});
-			const hasVideo = formats.some((f) => f.hasVideo);
-			const hasAudio = formats.some((f) => f.hasAudio);
-			let uploadDate;
-			if (info.upload_date) try {
-				const dateStr = info.upload_date.toString();
-				if (dateStr.length === 8) uploadDate = `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
-			} catch (e) {
-				console.warn("Failed to parse upload date:", info.upload_date);
-			}
-			const videoInfo = {
-				videoId: info.id || "",
-				title: info.title || "Unknown",
-				author: info.uploader || info.channel || "Unknown",
-				lengthSeconds: parseInt(info.duration) || 0,
-				thumbnailUrl: info.thumbnail || "",
-				description: info.description || void 0,
-				viewCount: parseInt(info.view_count) || void 0,
-				uploadDate,
-				formats,
-				availableQualities,
-				hasVideo,
-				hasAudio
-			};
-			this.videoInfoCache.set(url, {
-				info: videoInfo,
-				timestamp: Date.now()
-			});
-			return videoInfo;
-		} catch (error) {
-			throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : "Unknown error"}`);
-		}
-	}
-	async getPlaylistInfo(url) {
-		await this.ensureInitialized();
-		try {
-			const info = await this.ytDlp.getVideoInfo([
-				url,
-				"--flat-playlist",
-				"--skip-download",
-				"--no-check-certificate"
-			]);
-			if (!info.entries || !Array.isArray(info.entries)) throw new Error("Not a valid playlist URL");
-			const videos = info.entries.map((entry) => ({
-				id: entry.id || entry.url,
-				title: entry.title || "Unknown Title",
-				duration: entry.duration || 0,
-				thumbnail: entry.thumbnail || entry.thumbnails?.[0]?.url || "",
-				url: entry.url || `https://www.youtube.com/watch?v=${entry.id}`
-			}));
-			return {
-				playlistId: info.id || info.playlist_id || "unknown",
-				title: info.title || info.playlist_title || "Unknown Playlist",
-				videoCount: videos.length,
-				videos
-			};
-		} catch (error) {
-			throw new Error(`Failed to get playlist info: ${error instanceof Error ? error.message : "Unknown error"}`);
-		}
-	}
-	async checkDiskSpace(directory, requiredBytes) {
-		try {
-			const filesystems = await si.fsSize();
-			const root = path$1.parse(path$1.resolve(directory)).root.toLowerCase();
-			const fs$3 = filesystems.find((d) => {
-				const mount = d.mount.toLowerCase();
-				return root.startsWith(mount) || mount.startsWith(root.replace(/\\/g, ""));
-			});
-			if (fs$3) {
-				if (fs$3.available < requiredBytes + 100 * 1024 * 1024) throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs$3.available / 1024 / 1024).toFixed(2)} MB`);
-			}
-		} catch (error) {
-			console.warn("Disk space check failed:", error);
-		}
-	}
-	async downloadVideo(options, progressCallback) {
-		return new Promise((resolve, reject) => {
-			this.downloadQueue.push({
-				run: () => this.executeDownload(options, progressCallback),
-				resolve,
-				reject
-			});
-			this.processQueue();
-		});
-	}
-	async executeDownload(options, progressCallback) {
-		await this.ensureInitialized();
-		console.log("ExecuteDownload - hasFFmpeg:", this.hasFFmpeg, "path:", this.ffmpegPath);
-		const { url, format, quality, container, outputPath, maxSpeed, embedSubs, id } = options;
-		const downloadId = id || randomUUID$1();
-		try {
-			const info = await this.getVideoInfo(url);
-			const sanitizedTitle = this.sanitizeFilename(info.title);
-			const downloadsPath = outputPath || app.getPath("downloads");
-			const extension = container || (format === "audio" ? "mp3" : "mp4");
-			let filenameSuffix = "";
-			if (format === "audio") filenameSuffix = `_audio_${quality || "best"}`;
-			else if (format === "video" && quality) filenameSuffix = `_${quality}`;
-			const outputTemplate = path$1.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.%(ext)s`);
-			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
-			let estimatedSize = 0;
-			if (format === "audio") estimatedSize = info.formats.find((f) => f.hasAudio && !f.hasVideo && (f.quality === quality || f.itag.toString() === "140"))?.filesize || 0;
-			else {
-				let videoFormat;
-				if (quality && quality !== "best") videoFormat = info.formats.find((f) => f.qualityLabel?.startsWith(quality) && f.hasVideo);
-				else videoFormat = info.formats.find((f) => f.hasVideo);
-				const audioFormat = info.formats.find((f) => f.hasAudio && !f.hasVideo);
-				if (videoFormat) estimatedSize += videoFormat.filesize || 0;
-				if (audioFormat) estimatedSize += audioFormat.filesize || 0;
-			}
-			if (estimatedSize > 1024 * 1024) await this.checkDiskSpace(downloadsPath, estimatedSize);
-			const args = [
-				url,
-				"-o",
-				outputTemplate,
-				"--no-playlist",
-				"--no-warnings",
-				"--newline",
-				"--no-check-certificate",
-				"--concurrent-fragments",
-				`${options.concurrentFragments || 4}`,
-				"--buffer-size",
-				"1M",
-				"--retries",
-				"10",
-				"--fragment-retries",
-				"10",
-				"-c"
-			];
-			if (embedSubs) args.push("--write-subs", "--write-auto-subs", "--sub-lang", "en.*,vi", "--embed-subs");
-			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
-			if (maxSpeed) args.push("--limit-rate", maxSpeed);
-			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
-			if (format === "audio") args.push("-x", "--audio-format", container || "mp3", "--audio-quality", quality || "0");
-			else if (format === "video") {
-				if (quality && quality !== "best") {
-					const height = quality.replace("p", "");
-					args.push("-f", `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
-				} else args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best");
-				const outputFormat = container || "mp4";
-				args.push("--merge-output-format", outputFormat);
-				if (outputFormat === "mp4") args.push("--postprocessor-args", "ffmpeg:-c:v copy -c:a aac");
-			} else args.push("-f", "best");
-			return new Promise((resolve, reject) => {
-				let downloadedBytes = 0;
-				let totalBytes = 0;
-				let percent = 0;
-				const process$1 = this.ytDlp.exec(args);
-				this.activeProcesses.set(downloadId, process$1);
-				if (process$1.ytDlpProcess) {
-					const ytDlpProc = process$1.ytDlpProcess;
-					ytDlpProc.stdout?.on("data", (data) => {
-						const output = data.toString();
-						console.log(`[${downloadId}] stdout:`, output);
-						output.split(/\r?\n/).forEach((line) => {
-							if (!line.trim()) return;
-							const progress = this.parseProgressLine(line);
-							if (progress && progressCallback) {
-								if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
-								if (progress.percent > 0) percent = progress.percent;
-								downloadedBytes = percent / 100 * totalBytes;
-								progressCallback({
-									id: downloadId,
-									percent: Math.round(percent),
-									downloaded: downloadedBytes,
-									total: totalBytes,
-									speed: progress.speed,
-									eta: progress.eta,
-									state: "downloading",
-									filename: `${sanitizedTitle}${filenameSuffix}.${extension}`
-								});
-							}
-						});
-					});
-					ytDlpProc.stderr?.on("data", (data) => {
-						const output = data.toString();
-						console.log(`[${downloadId}] stderr:`, output);
-						output.split(/\r?\n/).forEach((line) => {
-							if (!line.trim()) return;
-							const progress = this.parseProgressLine(line);
-							if (progress && progressCallback) {
-								if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
-								if (progress.percent > 0) percent = progress.percent;
-								downloadedBytes = percent / 100 * totalBytes;
-								progressCallback({
-									id: downloadId,
-									percent: Math.round(percent),
-									downloaded: downloadedBytes,
-									total: totalBytes,
-									speed: progress.speed,
-									eta: progress.eta,
-									state: "downloading",
-									filename: `${sanitizedTitle}.${extension}`
-								});
-							}
-						});
-					});
-				}
-				process$1.on("close", (code) => {
-					this.activeProcesses.delete(downloadId);
-					if (code === 0) {
-						const expectedFile = path$1.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.${extension}`);
-						let actualFileSize = totalBytes;
-						try {
-							if (fs$1.existsSync(expectedFile)) actualFileSize = fs$1.statSync(expectedFile).size;
-						} catch (e) {
-							console.warn("Failed to get file size:", e);
-						}
-						if (progressCallback) progressCallback({
-							id: downloadId,
-							percent: 100,
-							downloaded: actualFileSize,
-							total: actualFileSize,
-							speed: 0,
-							eta: 0,
-							state: "complete",
-							filename: `${sanitizedTitle}.${extension}`
-						});
-						this.addToHistory({
-							url,
-							title: info.title,
-							thumbnailUrl: info.thumbnailUrl,
-							format,
-							quality: quality || (format === "audio" ? "best" : "auto"),
-							path: expectedFile,
-							size: actualFileSize,
-							duration: info.lengthSeconds,
-							status: "completed"
-						});
-						resolve(expectedFile);
-					} else {
-						this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
-						reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
-					}
-				});
-				process$1.on("error", (error) => {
-					this.activeProcesses.delete(downloadId);
-					this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
-					reject(error);
-				});
-			});
-		} catch (error) {
-			this.activeProcesses.delete(downloadId);
-			throw new Error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-		}
-	}
-	cancelDownload(id) {
-		if (id) {
-			const proc = this.activeProcesses.get(id);
-			if (proc) {
-				console.log(`Cancelling download ${id}`);
-				try {
-					if (proc.ytDlpProcess && typeof proc.ytDlpProcess.kill === "function") proc.ytDlpProcess.kill();
-					else if (typeof proc.kill === "function") proc.kill();
-				} catch (e) {
-					console.error("Failed to kill process:", e);
-				}
-				this.activeProcesses.delete(id);
-			}
-		} else {
-			console.log(`Cancelling all ${this.activeProcesses.size} downloads`);
-			this.activeProcesses.forEach((proc) => {
-				try {
-					if (proc.ytDlpProcess && typeof proc.ytDlpProcess.kill === "function") proc.ytDlpProcess.kill();
-					else if (typeof proc.kill === "function") proc.kill();
-				} catch (e) {
-					console.error("Failed to kill process:", e);
-				}
-			});
-			this.activeProcesses.clear();
-		}
-	}
-	cleanupPartialFiles(directory, filename, extension) {
-		try {
-			[
-				path$1.join(directory, `${filename}.${extension}`),
-				path$1.join(directory, `${filename}.${extension}.part`),
-				path$1.join(directory, `${filename}.${extension}.ytdl`),
-				path$1.join(directory, `${filename}.part`)
-			].forEach((p) => {
-				if (fs$1.existsSync(p)) fs$1.unlinkSync(p);
-			});
-		} catch (error) {
-			console.error("Cleanup failed:", error);
-		}
-	}
-	sanitizeFilename(filename) {
-		return filename.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, " ").trim().substring(0, 200);
-	}
-	parseProgressLine(line) {
-		const getMultiplier = (unit) => {
-			if (!unit) return 1;
-			const u = unit.toLowerCase();
-			if (u.includes("k")) return 1024;
-			if (u.includes("m")) return 1024 * 1024;
-			if (u.includes("g")) return 1024 * 1024 * 1024;
-			return 1;
-		};
-		if (line.includes("[download]")) {
-			const percentMatch = line.match(/(\d+(?:\.\d+)?)%/);
-			const sizeMatch = line.match(/of\s+~?([0-9.,]+)([a-zA-Z]+)/);
-			const speedMatch = line.match(/at\s+([0-9.,]+)([a-zA-Z]+\/s)/);
-			const etaMatch = line.match(/ETA\s+([\d:]+)/);
-			console.log("[parseProgressLine] Matches:", {
-				line,
-				percentMatch: percentMatch?.[0],
-				sizeMatch: sizeMatch?.[0],
-				speedMatch: speedMatch?.[0],
-				etaMatch: etaMatch?.[0]
-			});
-			if (percentMatch) {
-				const percent = parseFloat(percentMatch[1]);
-				let totalBytes = 0;
-				let speed = 0;
-				let eta = 0;
-				if (sizeMatch) totalBytes = parseFloat(sizeMatch[1].replace(/,/g, "")) * getMultiplier(sizeMatch[2]);
-				if (speedMatch) speed = parseFloat(speedMatch[1].replace(/,/g, "")) * getMultiplier(speedMatch[2].replace("/s", ""));
-				if (etaMatch) {
-					const parts = etaMatch[1].split(":").map(Number);
-					if (parts.length === 3) eta = parts[0] * 3600 + parts[1] * 60 + parts[2];
-					else if (parts.length === 2) eta = parts[0] * 60 + parts[1];
-					else eta = parts[0];
-				}
-				return {
-					percent,
-					totalBytes,
-					downloadedBytes: 0,
-					speed,
-					eta,
-					status: "downloading"
-				};
-			}
-		}
-		return null;
-	}
-	getHistory() {
-		return this.store.get("history", []);
-	}
-	addToHistory(item) {
-		const history = this.store.get("history", []);
-		const newItem = {
-			...item,
-			id: randomUUID$1(),
-			timestamp: Date.now()
-		};
-		this.store.set("history", [newItem, ...history].slice(0, 50));
-	}
-	removeFromHistory(id) {
-		const filtered = this.store.get("history", []).filter((item) => item.id !== id);
-		this.store.set("history", filtered);
-	}
-	clearHistory() {
-		this.store.set("history", []);
-	}
-	getCapabilities() {
-		return {
-			hasAria2c: this.hasAria2c,
-			hasFFmpeg: this.hasFFmpeg
-		};
-	}
-	getSettings() {
-		return this.store.get("settings");
-	}
-	saveSettings(settings) {
-		const updated = {
-			...this.store.get("settings"),
-			...settings
-		};
-		this.store.set("settings", updated);
-		return updated;
-	}
-};
-const youtubeDownloader = new YouTubeDownloader();
-var require$3 = createRequire(import.meta.url);
-var TikTokDownloader = class {
-	constructor() {
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.ffmpegPath = null;
-		this.downloadQueue = [];
-		this.activeDownloadsCount = 0;
-		this.store = new Store({
-			name: "tiktok-download-history",
-			defaults: {
-				history: [],
-				settings: {
-					defaultFormat: "video",
-					defaultQuality: "best",
-					removeWatermark: false,
-					maxConcurrentDownloads: 3,
-					maxSpeedLimit: ""
-				}
-			}
-		});
-		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
-		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
-		this.initPromise = this.init();
-	}
-	async init() {
-		try {
-			const ytDlpModule = require$3("yt-dlp-wrap");
-			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
-			if (!fs$1.existsSync(this.binaryPath)) {
-				console.log("Downloading yt-dlp binary (TikTok)...");
-				await YTDlpWrap.downloadFromGithub(this.binaryPath);
-			}
-			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				console.log("✅ TikTok Downloader: FFmpeg ready");
-			} else console.warn("⚠️ TikTok Downloader: FFmpeg not available");
-		} catch (error) {
-			console.error("Failed to init TikTok downloader:", error);
-			throw error;
-		}
-	}
-	async ensureInitialized() {
-		await this.initPromise;
-	}
-	async getVideoInfo(url) {
-		await this.ensureInitialized();
-		try {
-			const info = await this.ytDlp.getVideoInfo([
-				url,
-				"--skip-download",
-				"--no-playlist",
-				"--no-check-certificate"
-			]);
-			return {
-				id: info.id,
-				title: info.title || "TikTok Video",
-				author: info.uploader || info.channel || "Unknown",
-				authorUsername: info.uploader_id || "",
-				duration: info.duration || 0,
-				thumbnailUrl: info.thumbnail || "",
-				description: info.description,
-				viewCount: info.view_count,
-				likeCount: info.like_count,
-				commentCount: info.comment_count,
-				shareCount: info.repost_count,
-				uploadDate: info.upload_date,
-				musicTitle: info.track,
-				musicAuthor: info.artist
-			};
-		} catch (error) {
-			throw new Error(`Failed to get TikTok info: ${error instanceof Error ? error.message : String(error)}`);
-		}
-	}
-	async downloadVideo(options, progressCallback) {
-		return new Promise((resolve, reject) => {
-			this.downloadQueue.push({
-				run: () => this.executeDownload(options, progressCallback),
-				resolve,
-				reject
-			});
-			this.processQueue();
-		});
-	}
-	async processQueue() {
-		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
-		while (this.activeDownloadsCount < maxConcurrent && this.downloadQueue.length > 0) {
-			const task = this.downloadQueue.shift();
-			if (task) {
-				this.activeDownloadsCount++;
-				task.run().then((result) => task.resolve(result)).catch((error) => task.reject(error)).finally(() => {
-					this.activeDownloadsCount--;
-					this.processQueue();
-				});
-			}
-		}
-	}
-	async executeDownload(options, progressCallback) {
-		await this.ensureInitialized();
-		const { url, format, quality, outputPath, maxSpeed, id } = options;
-		const downloadId = id || randomUUID$1();
-		try {
-			const info = await this.getVideoInfo(url);
-			const sanitizedTitle = this.sanitizeFilename(info.title);
-			const author = this.sanitizeFilename(info.authorUsername || info.author);
-			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
-			const extension = format === "audio" ? "mp3" : "mp4";
-			const filename = `${author}_${sanitizedTitle}_${info.id}.${extension}`;
-			const outputTemplate = path$1.join(downloadsPath, filename);
-			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
-			const args = [
-				url,
-				"-o",
-				outputTemplate,
-				"--no-playlist",
-				"--newline",
-				"--no-warnings",
-				"--no-check-certificate",
-				"--concurrent-fragments",
-				"4",
-				"--retries",
-				"10"
-			];
-			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
-			if (maxSpeed) args.push("--limit-rate", maxSpeed);
-			if (format === "audio") args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
-			else if (quality === "low") args.push("-f", "worst");
-			else if (quality === "medium") args.push("-f", "best");
-			else args.push("-f", "best");
-			return new Promise((resolve, reject) => {
-				let totalBytes = 0;
-				let downloadedBytes = 0;
-				let percent = 0;
-				const process$1 = this.ytDlp.exec(args);
-				this.activeProcesses.set(downloadId, process$1);
-				if (process$1.ytDlpProcess) process$1.ytDlpProcess.stdout?.on("data", (data) => {
-					data.toString().split(/\r?\n/).forEach((line) => {
-						if (!line.trim()) return;
-						const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%\s+of\s+~?(\d+\.?\d*)(\w+)\s+at\s+(\d+\.?\d*)(\w+)\/s\s+ETA\s+(\d+:\d+)/);
-						if (progressMatch) {
-							percent = parseFloat(progressMatch[1]);
-							const sizeVal = parseFloat(progressMatch[2]);
-							const sizeUnit = progressMatch[3];
-							const speedVal = parseFloat(progressMatch[4]);
-							const speedUnit = progressMatch[5];
-							const etaStr = progressMatch[6];
-							const unitMultipliers = {
-								"B": 1,
-								"KiB": 1024,
-								"MiB": 1024 * 1024,
-								"GiB": 1024 * 1024 * 1024
-							};
-							totalBytes = sizeVal * (unitMultipliers[sizeUnit] || 1);
-							downloadedBytes = percent / 100 * totalBytes;
-							const speed = speedVal * (unitMultipliers[speedUnit] || 1);
-							const etaParts = etaStr.split(":");
-							let eta = 0;
-							if (etaParts.length === 2) eta = parseInt(etaParts[0]) * 60 + parseInt(etaParts[1]);
-							if (etaParts.length === 3) eta = parseInt(etaParts[0]) * 3600 + parseInt(etaParts[1]) * 60 + parseInt(etaParts[2]);
-							if (progressCallback) progressCallback({
-								id: downloadId,
-								percent,
-								downloaded: downloadedBytes,
-								total: totalBytes,
-								speed,
-								eta,
-								state: "downloading",
-								filename
-							});
-						}
-					});
-				});
-				process$1.on("close", (code) => {
-					this.activeProcesses.delete(downloadId);
-					if (code === 0) if (fs$1.existsSync(outputTemplate)) {
-						if (progressCallback) progressCallback({
-							id: downloadId,
-							percent: 100,
-							downloaded: totalBytes,
-							total: totalBytes,
-							speed: 0,
-							eta: 0,
-							state: "complete",
-							filename,
-							filePath: outputTemplate
-						});
-						this.addToHistory({
-							id: downloadId,
-							url,
-							title: info.title,
-							thumbnailUrl: info.thumbnailUrl,
-							author: info.author,
-							authorUsername: info.authorUsername,
-							timestamp: Date.now(),
-							path: outputTemplate,
-							size: totalBytes,
-							duration: info.duration,
-							format: format || "video",
-							status: "completed"
-						});
-						resolve(outputTemplate);
-					} else reject(/* @__PURE__ */ new Error("Download finished but file not found"));
-					else reject(/* @__PURE__ */ new Error(`yt-dlp exited with code ${code}`));
-				});
-				process$1.on("error", (err) => {
-					this.activeProcesses.delete(downloadId);
-					reject(err);
-				});
-			});
-		} catch (error) {
-			this.activeProcesses.delete(downloadId);
-			throw error;
-		}
-	}
-	cancelDownload(id) {
-		if (id) {
-			const proc = this.activeProcesses.get(id);
-			if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill();
-		} else this.activeProcesses.forEach((proc) => {
-			if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
-		});
-	}
-	getHistory() {
-		return this.store.get("history", []);
-	}
-	clearHistory() {
-		this.store.set("history", []);
-	}
-	removeFromHistory(id) {
-		const history = this.getHistory();
-		this.store.set("history", history.filter((h) => h.id !== id));
-	}
-	addToHistory(item) {
-		const history = this.getHistory();
-		history.unshift(item);
-		this.store.set("history", history.slice(0, 100));
-	}
-	getSettings() {
-		return this.store.get("settings");
-	}
-	saveSettings(settings) {
-		const current = this.getSettings();
-		this.store.set("settings", {
-			...current,
-			...settings
-		});
-	}
-	sanitizeFilename(name) {
-		return name.replace(/[<>:"/\\|?*]/g, "").trim();
-	}
-};
-const tiktokDownloader = new TikTokDownloader();
-let ErrorCode = /* @__PURE__ */ function(ErrorCode$1) {
-	ErrorCode$1["NETWORK_ERROR"] = "NETWORK_ERROR";
-	ErrorCode$1["CONNECTION_TIMEOUT"] = "CONNECTION_TIMEOUT";
-	ErrorCode$1["DNS_LOOKUP_FAILED"] = "DNS_LOOKUP_FAILED";
-	ErrorCode$1["NO_INTERNET"] = "NO_INTERNET";
-	ErrorCode$1["AUTH_REQUIRED"] = "AUTH_REQUIRED";
-	ErrorCode$1["LOGIN_REQUIRED"] = "LOGIN_REQUIRED";
-	ErrorCode$1["INVALID_CREDENTIALS"] = "INVALID_CREDENTIALS";
-	ErrorCode$1["COOKIES_EXPIRED"] = "COOKIES_EXPIRED";
-	ErrorCode$1["VIDEO_UNAVAILABLE"] = "VIDEO_UNAVAILABLE";
-	ErrorCode$1["PRIVATE_VIDEO"] = "PRIVATE_VIDEO";
-	ErrorCode$1["DELETED_VIDEO"] = "DELETED_VIDEO";
-	ErrorCode$1["GEO_RESTRICTED"] = "GEO_RESTRICTED";
-	ErrorCode$1["AGE_RESTRICTED"] = "AGE_RESTRICTED";
-	ErrorCode$1["SERVER_ERROR"] = "SERVER_ERROR";
-	ErrorCode$1["RATE_LIMITED"] = "RATE_LIMITED";
-	ErrorCode$1["SERVICE_UNAVAILABLE"] = "SERVICE_UNAVAILABLE";
-	ErrorCode$1["DISK_FULL"] = "DISK_FULL";
-	ErrorCode$1["PERMISSION_DENIED"] = "PERMISSION_DENIED";
-	ErrorCode$1["INVALID_PATH"] = "INVALID_PATH";
-	ErrorCode$1["NO_FORMATS_AVAILABLE"] = "NO_FORMATS_AVAILABLE";
-	ErrorCode$1["UNSUPPORTED_FORMAT"] = "UNSUPPORTED_FORMAT";
-	ErrorCode$1["EXTRACTION_FAILED"] = "EXTRACTION_FAILED";
-	ErrorCode$1["UNKNOWN_ERROR"] = "UNKNOWN_ERROR";
-	return ErrorCode$1;
-}({});
-var DownloadError = class extends Error {
-	constructor(message, code = ErrorCode.UNKNOWN_ERROR, options = {}) {
-		super(message);
-		this.name = "DownloadError";
-		this.code = code;
-		this.recoverable = options.recoverable ?? false;
-		this.retryable = options.retryable ?? true;
-		this.suggestions = options.suggestions ?? [];
-		this.metadata = {
-			timestamp: Date.now(),
-			...options.metadata
-		};
-		if (options.cause) this.stack = `${this.stack}\nCaused by: ${options.cause.stack}`;
-	}
-	toJSON() {
-		return {
-			name: this.name,
-			message: this.message,
-			code: this.code,
-			recoverable: this.recoverable,
-			retryable: this.retryable,
-			suggestions: this.suggestions,
-			metadata: this.metadata,
-			stack: this.stack
-		};
-	}
-};
-var NetworkError = class extends DownloadError {
-	constructor(message, metadata) {
-		super(message, ErrorCode.NETWORK_ERROR, {
-			retryable: true,
-			recoverable: true,
-			suggestions: [
-				{
-					title: "Check Your Internet Connection",
-					description: "Make sure you are connected to the internet",
-					action: "retry"
-				},
-				{
-					title: "Try Again Later",
-					description: "The network might be temporarily unavailable",
-					action: "retry-later"
-				},
-				{
-					title: "Check Firewall/VPN",
-					description: "Your firewall or VPN might be blocking the connection"
-				}
-			],
-			metadata
-		});
-	}
-};
-var ConnectionTimeoutError = class extends DownloadError {
-	constructor(message, metadata) {
-		super(message, ErrorCode.CONNECTION_TIMEOUT, {
-			retryable: true,
-			recoverable: true,
-			suggestions: [{
-				title: "Retry Download",
-				description: "The connection timed out, try downloading again",
-				action: "retry"
-			}, {
-				title: "Check Network Speed",
-				description: "Your internet connection might be slow"
-			}],
-			metadata
-		});
-	}
-};
-var LoginRequiredError = class extends DownloadError {
-	constructor(message, platform, metadata) {
-		super(message, ErrorCode.LOGIN_REQUIRED, {
-			retryable: false,
-			recoverable: true,
-			suggestions: [{
-				title: "Login Required",
-				description: `You need to be logged in to ${platform || "this platform"} to download this content`,
-				action: "open-settings"
-			}, {
-				title: "Enable Browser Cookies",
-				description: "In Settings, enable browser cookies to use your logged-in session",
-				action: "open-settings"
-			}],
-			metadata: {
-				...metadata,
-				platform
-			}
-		});
-	}
-};
-var ContentUnavailableError = class extends DownloadError {
-	constructor(message, reason, metadata) {
-		const codeMap = {
-			"private": ErrorCode.PRIVATE_VIDEO,
-			"deleted": ErrorCode.DELETED_VIDEO,
-			"geo-restricted": ErrorCode.GEO_RESTRICTED,
-			"age-restricted": ErrorCode.AGE_RESTRICTED,
-			"unavailable": ErrorCode.VIDEO_UNAVAILABLE
-		};
-		super(message, codeMap[reason], {
-			retryable: reason === "unavailable",
-			recoverable: false,
-			suggestions: {
-				"private": [{
-					title: "Content is Private",
-					description: "This content is private and cannot be downloaded"
-				}, {
-					title: "Request Access",
-					description: "You may need to request access from the content owner"
-				}],
-				"deleted": [{
-					title: "Content Removed",
-					description: "This content has been deleted by the owner or platform"
-				}, {
-					title: "Check URL",
-					description: "Verify the URL is correct and the content still exists"
-				}],
-				"geo-restricted": [{
-					title: "Not Available in Your Region",
-					description: "This content is geo-restricted and not available in your country"
-				}, {
-					title: "Try Using VPN",
-					description: "You might need a VPN to access this content"
-				}],
-				"age-restricted": [{
-					title: "Age Restricted Content",
-					description: "You need to be logged in to download age-restricted content",
-					action: "open-settings"
-				}],
-				"unavailable": [{
-					title: "Content Unavailable",
-					description: "This content is currently unavailable"
-				}, {
-					title: "Try Again Later",
-					description: "The content might be temporarily unavailable",
-					action: "retry-later"
-				}]
-			}[reason],
-			metadata
-		});
-	}
-};
-var RateLimitError = class extends DownloadError {
-	constructor(message, retryAfter, metadata) {
-		super(message, ErrorCode.RATE_LIMITED, {
-			retryable: true,
-			recoverable: true,
-			suggestions: [{
-				title: "Too Many Requests",
-				description: retryAfter ? `You've made too many requests. Please wait ${Math.ceil(retryAfter / 60)} minutes before trying again.` : "You've made too many requests. Please wait a few minutes before trying again.",
-				action: "retry-later"
-			}, {
-				title: "Reduce Concurrent Downloads",
-				description: "Try downloading fewer files at once",
-				action: "open-settings"
-			}],
-			metadata: {
-				...metadata,
-				retryAfter
-			}
-		});
-	}
-};
-var ServerError = class extends DownloadError {
-	constructor(message, statusCode, metadata) {
-		super(message, ErrorCode.SERVER_ERROR, {
-			retryable: statusCode ? statusCode >= 500 : true,
-			recoverable: true,
-			suggestions: [
-				{
-					title: "Server Error",
-					description: "The server encountered an error while processing your request"
-				},
-				{
-					title: "Try Again Later",
-					description: "The platform's servers might be experiencing issues",
-					action: "retry-later"
-				},
-				{
-					title: "Check Platform Status",
-					description: "Visit the platform's status page to see if there are known issues"
-				}
-			],
-			metadata: {
-				...metadata,
-				statusCode
-			}
-		});
-	}
-};
-var DiskFullError = class extends DownloadError {
-	constructor(message, availableSpace, metadata) {
-		super(message, ErrorCode.DISK_FULL, {
-			retryable: false,
-			recoverable: true,
-			suggestions: [
-				{
-					title: "Insufficient Disk Space",
-					description: availableSpace ? `You have only ${(availableSpace / (1024 * 1024 * 1024)).toFixed(2)} GB available. Free up some space and try again.` : "Your disk is full. Free up some space and try again."
-				},
-				{
-					title: "Clean Up Downloads Folder",
-					description: "Delete old downloads to free up space"
-				},
-				{
-					title: "Change Download Location",
-					description: "Choose a different drive with more space",
-					action: "open-settings"
-				}
-			],
-			metadata
-		});
-	}
-};
-var ErrorParser = class {
-	static parse(error, metadata) {
-		const message = typeof error === "string" ? error : error.message;
-		const lowerMsg = message.toLowerCase();
-		if (lowerMsg.includes("network error") || lowerMsg.includes("enotfound") || lowerMsg.includes("getaddrinfo") || lowerMsg.includes("unable to download") || lowerMsg.includes("nodename nor servname")) return new NetworkError(message, metadata);
-		if (lowerMsg.includes("timeout") || lowerMsg.includes("timed out")) return new ConnectionTimeoutError(message, metadata);
-		if (lowerMsg.includes("login required")) return new LoginRequiredError(message, metadata?.platform, metadata);
-		if (lowerMsg.includes("private video") || lowerMsg.includes("this video is private")) return new ContentUnavailableError(message, "private", metadata);
-		if (lowerMsg.includes("video unavailable") || lowerMsg.includes("has been removed")) return new ContentUnavailableError(message, "deleted", metadata);
-		if (lowerMsg.includes("geographic") || lowerMsg.includes("not available in your country")) return new ContentUnavailableError(message, "geo-restricted", metadata);
-		if (lowerMsg.includes("age") && lowerMsg.includes("restrict")) return new ContentUnavailableError(message, "age-restricted", metadata);
-		if (lowerMsg.includes("429") || lowerMsg.includes("too many requests")) {
-			const retryMatch = message.match(/retry after (\d+)/i);
-			return new RateLimitError(message, retryMatch ? parseInt(retryMatch[1]) : void 0, metadata);
-		}
-		if (lowerMsg.includes("500") || lowerMsg.includes("502") || lowerMsg.includes("503") || lowerMsg.includes("server error")) {
-			const statusMatch = message.match(/(\d{3})/);
-			return new ServerError(message, statusMatch ? parseInt(statusMatch[1]) : void 0, metadata);
-		}
-		if (lowerMsg.includes("no space left") || lowerMsg.includes("disk full") || lowerMsg.includes("enospc")) return new DiskFullError(message, void 0, metadata);
-		return new DownloadError(message, ErrorCode.UNKNOWN_ERROR, {
-			retryable: true,
-			suggestions: [
-				{
-					title: "Unknown Error",
-					description: "An unexpected error occurred"
-				},
-				{
-					title: "Try Again",
-					description: "Retry the download to see if the issue persists",
-					action: "retry"
-				},
-				{
-					title: "Report Issue",
-					description: "If this error keeps occurring, please report it",
-					action: "export-log"
-				}
-			],
-			metadata
-		});
-	}
-};
-var ErrorLogger = class {
-	constructor() {
-		this.maxEntries = 500;
-		this.retentionDays = 30;
-		this.store = new Store({
-			name: "error-log",
-			defaults: {
-				errors: [],
-				stats: {
-					totalErrors: 0,
-					errorsByCode: {},
-					lastCleanup: Date.now()
-				}
-			}
-		});
-		this.cleanupOldErrors();
-	}
-	log(error, downloadId) {
-		const entry = {
-			id: this.generateId(),
-			timestamp: Date.now(),
-			downloadId,
-			url: error.metadata.url,
-			platform: error.metadata.platform,
-			errorCode: error.code,
-			errorMessage: error.message,
-			errorStack: error.stack,
-			retryCount: error.metadata.retryCount || 0,
-			resolved: false,
-			metadata: error.metadata
-		};
-		const errors = this.store.get("errors", []);
-		errors.unshift(entry);
-		if (errors.length > this.maxEntries) errors.splice(this.maxEntries);
-		this.store.set("errors", errors);
-		this.updateStats(error.code);
-		console.error(`[ErrorLogger] Logged error ${entry.id}: ${error.code} - ${error.message}`);
-		return entry.id;
-	}
-	markResolved(errorId, userAction) {
-		const errors = this.store.get("errors", []);
-		const error = errors.find((e) => e.id === errorId);
-		if (error) {
-			error.resolved = true;
-			error.userAction = userAction;
-			this.store.set("errors", errors);
-			console.log(`[ErrorLogger] Marked error ${errorId} as resolved (${userAction})`);
-		}
-	}
-	getRecentErrors(limit = 50) {
-		return this.store.get("errors", []).slice(0, limit);
-	}
-	getErrorsByDownload(downloadId) {
-		return this.store.get("errors", []).filter((e) => e.downloadId === downloadId);
-	}
-	getErrorsByCode(code) {
-		return this.store.get("errors", []).filter((e) => e.errorCode === code);
-	}
-	getUnresolvedErrors() {
-		return this.store.get("errors", []).filter((e) => !e.resolved);
-	}
-	getStats() {
-		const stats = this.store.get("stats");
-		const errors = this.store.get("errors", []);
-		const oneDayAgo = Date.now() - 1440 * 60 * 1e3;
-		const recentErrors = errors.filter((e) => e.timestamp > oneDayAgo);
-		const errorCounts = {};
-		errors.forEach((e) => {
-			errorCounts[e.errorCode] = (errorCounts[e.errorCode] || 0) + 1;
-		});
-		const mostCommon = Object.entries(errorCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([code, count]) => ({
-			code,
-			count
-		}));
-		return {
-			total: stats.totalErrors,
-			stored: errors.length,
-			recent24h: recentErrors.length,
-			unresolved: errors.filter((e) => !e.resolved).length,
-			byCode: stats.errorsByCode,
-			mostCommon,
-			lastCleanup: new Date(stats.lastCleanup)
-		};
-	}
-	async exportToFile(format) {
-		const errors = this.store.get("errors", []);
-		const filename = `error-log-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.${format}`;
-		const filePath = path$1.join(app.getPath("downloads"), filename);
-		let content = "";
-		if (format === "json") content = JSON.stringify({
-			exported: (/* @__PURE__ */ new Date()).toISOString(),
-			stats: this.getStats(),
-			errors
-		}, null, 2);
-		else if (format === "csv") {
-			content = [
-				"Timestamp",
-				"Error Code",
-				"Error Message",
-				"URL",
-				"Platform",
-				"Retry Count",
-				"Resolved",
-				"User Action"
-			].join(",") + "\n";
-			errors.forEach((e) => {
-				const row = [
-					new Date(e.timestamp).toISOString(),
-					e.errorCode,
-					`"${e.errorMessage.replace(/"/g, "\"\"")}"`,
-					e.url || "",
-					e.platform || "",
-					e.retryCount,
-					e.resolved,
-					e.userAction || ""
-				];
-				content += row.join(",") + "\n";
-			});
-		} else {
-			content = `Error Log Export\n`;
-			content += `Generated: ${(/* @__PURE__ */ new Date()).toISOString()}\n`;
-			content += `Total Errors: ${errors.length}\n`;
-			content += `\n${"=".repeat(80)}\n\n`;
-			errors.forEach((e, i) => {
-				content += `Error #${i + 1}\n`;
-				content += `Timestamp: ${new Date(e.timestamp).toLocaleString()}\n`;
-				content += `Code: ${e.errorCode}\n`;
-				content += `Message: ${e.errorMessage}\n`;
-				if (e.url) content += `URL: ${e.url}\n`;
-				if (e.platform) content += `Platform: ${e.platform}\n`;
-				content += `Retry Count: ${e.retryCount}\n`;
-				content += `Resolved: ${e.resolved ? "Yes" : "No"}\n`;
-				if (e.userAction) content += `User Action: ${e.userAction}\n`;
-				if (e.errorStack) content += `\nStack Trace:\n${e.errorStack}\n`;
-				content += `\n${"-".repeat(80)}\n\n`;
-			});
-		}
-		await fs$2.writeFile(filePath, content, "utf-8");
-		console.log(`[ErrorLogger] Exported ${errors.length} errors to ${filePath}`);
-		return filePath;
-	}
-	clearAll() {
-		this.store.set("errors", []);
-		console.log("[ErrorLogger] Cleared all errors");
-	}
-	clearResolved() {
-		const errors = this.store.get("errors", []);
-		const unresolved = errors.filter((e) => !e.resolved);
-		this.store.set("errors", unresolved);
-		console.log(`[ErrorLogger] Cleared ${errors.length - unresolved.length} resolved errors`);
-	}
-	cleanupOldErrors() {
-		const errors = this.store.get("errors", []);
-		const cutoffDate = Date.now() - this.retentionDays * 24 * 60 * 60 * 1e3;
-		const filtered = errors.filter((e) => e.timestamp > cutoffDate);
-		if (filtered.length < errors.length) {
-			this.store.set("errors", filtered);
-			const stats = this.store.get("stats");
-			stats.lastCleanup = Date.now();
-			this.store.set("stats", stats);
-			console.log(`[ErrorLogger] Cleaned up ${errors.length - filtered.length} old errors`);
-		}
-	}
-	updateStats(errorCode) {
-		const stats = this.store.get("stats");
-		stats.totalErrors++;
-		stats.errorsByCode[errorCode] = (stats.errorsByCode[errorCode] || 0) + 1;
-		this.store.set("stats", stats);
-	}
-	generateId() {
-		return `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-	}
-};
-const errorLogger = new ErrorLogger();
-var RetryManager = class {
-	constructor() {
-		this.retryStates = /* @__PURE__ */ new Map();
-		this.retryTimers = /* @__PURE__ */ new Map();
-		this.defaultConfig = {
-			maxRetries: 3,
-			initialDelay: 2e3,
-			maxDelay: 6e4,
-			backoffMultiplier: 2,
-			jitter: true
-		};
-	}
-	shouldRetry(downloadId, error, config) {
-		const cfg = {
-			...this.defaultConfig,
-			...config
-		};
-		const state = this.retryStates.get(downloadId);
-		if (!error.retryable) {
-			console.log(`[RetryManager] Error ${error.code} is not retryable`);
-			return false;
-		}
-		if ((state?.attemptCount || 0) >= cfg.maxRetries) {
-			console.log(`[RetryManager] Max retries (${cfg.maxRetries}) reached for ${downloadId}`);
-			return false;
-		}
-		return true;
-	}
-	calculateDelay(attemptCount, config) {
-		const cfg = {
-			...this.defaultConfig,
-			...config
-		};
-		let delay = cfg.initialDelay * Math.pow(cfg.backoffMultiplier, attemptCount);
-		delay = Math.min(delay, cfg.maxDelay);
-		if (cfg.jitter) {
-			const jitterAmount = delay * .25 * Math.random();
-			delay += jitterAmount;
-		}
-		return Math.floor(delay);
-	}
-	scheduleRetry(downloadId, retryCallback, error, config) {
-		if (!this.shouldRetry(downloadId, error, config)) return { scheduled: false };
-		const state = this.retryStates.get(downloadId) || {
-			downloadId,
-			attemptCount: 0,
-			totalWaitTime: 0
-		};
-		state.attemptCount++;
-		state.lastError = error;
-		const delay = this.calculateDelay(state.attemptCount - 1, config);
-		const retryAt = Date.now() + delay;
-		state.nextRetryAt = retryAt;
-		state.totalWaitTime += delay;
-		this.retryStates.set(downloadId, state);
-		console.log(`[RetryManager] Scheduling retry ${state.attemptCount}/${this.defaultConfig.maxRetries} for ${downloadId} in ${(delay / 1e3).toFixed(1)}s`);
-		const existingTimer = this.retryTimers.get(downloadId);
-		if (existingTimer) clearTimeout(existingTimer);
-		const timer = setTimeout(async () => {
-			console.log(`[RetryManager] Executing retry ${state.attemptCount} for ${downloadId}`);
-			this.retryTimers.delete(downloadId);
-			try {
-				await retryCallback();
-				this.clearRetryState(downloadId);
-			} catch (error$1) {
-				console.error(`[RetryManager] Retry failed for ${downloadId}:`, error$1);
-			}
-		}, delay);
-		this.retryTimers.set(downloadId, timer);
-		return {
-			scheduled: true,
-			retryAt,
-			delay
-		};
-	}
-	getRetryState(downloadId) {
-		return this.retryStates.get(downloadId);
-	}
-	getTimeUntilRetry(downloadId) {
-		const state = this.retryStates.get(downloadId);
-		if (!state || !state.nextRetryAt) return null;
-		const remaining = state.nextRetryAt - Date.now();
-		return remaining > 0 ? remaining : 0;
-	}
-	cancelRetry(downloadId) {
-		const timer = this.retryTimers.get(downloadId);
-		if (timer) {
-			clearTimeout(timer);
-			this.retryTimers.delete(downloadId);
-			console.log(`[RetryManager] Cancelled retry for ${downloadId}`);
-		}
-		this.retryStates.delete(downloadId);
-	}
-	clearRetryState(downloadId) {
-		this.retryStates.delete(downloadId);
-		const timer = this.retryTimers.get(downloadId);
-		if (timer) {
-			clearTimeout(timer);
-			this.retryTimers.delete(downloadId);
-		}
-		console.log(`[RetryManager] Cleared retry state for ${downloadId}`);
-	}
-	getActiveRetries() {
-		return Array.from(this.retryStates.values());
-	}
-	clearAll() {
-		this.retryTimers.forEach((timer) => clearTimeout(timer));
-		this.retryTimers.clear();
-		this.retryStates.clear();
-		console.log("[RetryManager] Cleared all retries");
-	}
-	getStats() {
-		const states = Array.from(this.retryStates.values());
-		return {
-			activeRetries: states.length,
-			totalRetryAttempts: states.reduce((sum, s) => sum + s.attemptCount, 0),
-			averageRetryCount: states.length > 0 ? states.reduce((sum, s) => sum + s.attemptCount, 0) / states.length : 0,
-			totalWaitTime: states.reduce((sum, s) => sum + s.totalWaitTime, 0),
-			nextRetry: states.filter((s) => s.nextRetryAt).sort((a, b) => (a.nextRetryAt || 0) - (b.nextRetryAt || 0))[0]
-		};
-	}
-};
-const retryManager = new RetryManager();
-var require$2 = createRequire(import.meta.url);
-var UniversalDownloader = class {
-	constructor() {
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.activeOptions = /* @__PURE__ */ new Map();
-		this.ffmpegPath = null;
-		this.downloadQueue = [];
-		this.activeDownloadsCount = 0;
-		this.store = new Store({
-			name: "universal-download-history",
-			defaults: {
-				history: [],
-				settings: {
-					defaultFormat: "video",
-					defaultQuality: "best",
-					maxConcurrentDownloads: 3,
-					maxSpeedLimit: "",
-					useBrowserCookies: null
-				},
-				queue: []
-			}
-		});
-		const binaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
-		this.binaryPath = path$1.join(app.getPath("userData"), binaryName);
-		this.initPromise = this.init();
-		setInterval(() => this.processQueue(), 5e3);
-		this.loadPersistedQueue();
-	}
-	loadPersistedQueue() {
-		const persistedQueue = this.store.get("queue") || [];
-		for (const item of persistedQueue) this.downloadQueue.push({
-			options: item.options,
-			run: () => this.executeDownload(item.options),
-			resolve: () => {},
-			reject: () => {},
-			state: item.state === "downloading" ? "paused" : item.state
-		});
-	}
-	saveQueuePersistently() {
-		const toSave = this.downloadQueue.map((item) => ({
-			options: item.options,
-			state: item.state
-		}));
-		this.store.set("queue", toSave);
-	}
-	prepareForShutdown() {
-		console.log("🔄 Preparing downloads for shutdown...");
-		this.activeProcesses.forEach((process$1, downloadId) => {
-			const options = this.activeOptions.get(downloadId);
-			if (options) if (!this.downloadQueue.some((item) => item.options.id === downloadId)) this.downloadQueue.push({
-				options,
-				run: () => this.executeDownload(options),
-				resolve: () => {},
-				reject: () => {},
-				state: "paused"
-			});
-			else {
-				const queueItem = this.downloadQueue.find((item) => item.options.id === downloadId);
-				if (queueItem) queueItem.state = "paused";
-			}
-			if (process$1.ytDlpProcess) process$1.ytDlpProcess.kill("SIGTERM");
-		});
-		this.saveQueuePersistently();
-		const pendingCount = this.downloadQueue.filter((item) => item.state === "queued" || item.state === "paused").length;
-		console.log(`✅ Saved ${pendingCount} pending downloads`);
-		return pendingCount;
-	}
-	getPendingDownloadsCount() {
-		return (this.store.get("queue") || []).filter((item) => item.state === "queued" || item.state === "paused").length;
-	}
-	resumePendingDownloads() {
-		console.log("🔄 Resuming pending downloads...");
-		const pending = this.downloadQueue.filter((item) => item.state === "queued" || item.state === "paused");
-		pending.forEach((item) => {
-			item.state = "queued";
-		});
-		this.saveQueuePersistently();
-		this.processQueue();
-		console.log(`✅ Resumed ${pending.length} downloads`);
-	}
-	clearPendingDownloads() {
-		console.log("🗑️ Clearing pending downloads...");
-		this.downloadQueue = this.downloadQueue.filter((item) => item.state === "downloading");
-		this.saveQueuePersistently();
-	}
-	handleDownloadError(error, downloadId, url, platform, progressCallback) {
-		const downloadError = error instanceof DownloadError ? error : ErrorParser.parse(error, {
-			url,
-			platform
-		});
-		const retryState = retryManager.getRetryState(downloadId);
-		if (retryState) downloadError.metadata.retryCount = retryState.attemptCount;
-		const errorId = errorLogger.log(downloadError, downloadId);
-		console.error(`[Download Error] ${downloadId}: ${downloadError.code} - ${downloadError.message}`, `(Retry: ${downloadError.metadata.retryCount || 0})`);
-		if (progressCallback) progressCallback({
-			id: downloadId,
-			percent: 0,
-			downloaded: 0,
-			total: 0,
-			speed: 0,
-			eta: 0,
-			state: "error",
-			filename: url,
-			platform,
-			error: {
-				code: downloadError.code,
-				message: downloadError.message,
-				suggestions: downloadError.suggestions,
-				retryable: downloadError.retryable,
-				errorId
-			}
-		});
-		if (downloadError.retryable) {
-			const options = this.activeOptions.get(downloadId);
-			if (options) {
-				const retryResult = retryManager.scheduleRetry(downloadId, async () => {
-					await this.executeDownload(options, progressCallback);
-				}, downloadError);
-				if (retryResult.scheduled) {
-					console.log(`[Retry Scheduled] ${downloadId} will retry in ${(retryResult.delay / 1e3).toFixed(1)}s`);
-					if (progressCallback) progressCallback({
-						id: downloadId,
-						percent: 0,
-						downloaded: 0,
-						total: 0,
-						speed: 0,
-						eta: retryResult.delay / 1e3,
-						state: "error",
-						filename: url,
-						platform,
-						error: {
-							code: downloadError.code,
-							message: `${downloadError.message} - Retrying in ${(retryResult.delay / 1e3).toFixed(0)}s...`,
-							suggestions: downloadError.suggestions,
-							retryable: true,
-							retryAt: retryResult.retryAt,
-							errorId
-						}
-					});
-				}
-			}
-		}
-		return downloadError;
-	}
-	getErrorLog(limit) {
-		return errorLogger.getRecentErrors(limit);
-	}
-	async exportErrorLog(format) {
-		return await errorLogger.exportToFile(format);
-	}
-	getErrorStats() {
-		return {
-			errorLog: errorLogger.getStats(),
-			retryManager: retryManager.getStats()
-		};
-	}
-	clearErrorLog(type = "resolved") {
-		if (type === "all") errorLogger.clearAll();
-		else errorLogger.clearResolved();
-	}
-	async init() {
-		try {
-			const ytDlpModule = require$2("yt-dlp-wrap");
-			const YTDlpWrap = ytDlpModule.default || ytDlpModule;
-			if (!fs$1.existsSync(this.binaryPath)) {
-				console.log("Downloading yt-dlp binary (Universal)...");
-				await YTDlpWrap.downloadFromGithub(this.binaryPath);
-			}
-			this.ytDlp = new YTDlpWrap(this.binaryPath);
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				console.log("✅ Universal Downloader: FFmpeg ready");
-			} else console.warn("⚠️ Universal Downloader: FFmpeg not available");
-		} catch (error) {
-			console.error("Failed to init Universal downloader:", error);
-			throw error;
-		}
-	}
-	async ensureInitialized() {
-		await this.initPromise;
-	}
-	detectPlatform(url, extractor) {
-		const u = url.toLowerCase();
-		if (extractor) {
-			const e = extractor.toLowerCase();
-			if (e.includes("youtube")) return "youtube";
-			if (e.includes("tiktok")) return "tiktok";
-			if (e.includes("instagram")) return "instagram";
-			if (e.includes("facebook") || e.includes("fb")) return "facebook";
-			if (e.includes("twitter") || e.includes("x") || e.includes("periscope")) return "twitter";
-			if (e.includes("twitch")) return "twitch";
-			if (e.includes("reddit")) return "reddit";
-			if (e.includes("vimeo")) return "other";
-			if (e.includes("pinterest")) return "other";
-			if (e.includes("soundcloud")) return "other";
-		}
-		if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
-		if (u.includes("tiktok.com")) return "tiktok";
-		if (u.includes("instagram.com")) return "instagram";
-		if (u.includes("facebook.com") || u.includes("fb.watch") || u.includes("fb.com")) return "facebook";
-		if (u.includes("twitter.com") || u.includes("x.com")) return "twitter";
-		if (u.includes("twitch.tv")) return "twitch";
-		if (u.includes("reddit.com") || u.includes("redd.it")) return "reddit";
-		if (u.includes("pinterest.com")) return "other";
-		if (u.includes("vimeo.com")) return "other";
-		return "other";
-	}
-	async getMediaInfo(url) {
-		await this.ensureInitialized();
-		try {
-			const hasVideoId = url.includes("v=") || url.includes("youtu.be/") || url.includes("/video/") || url.includes("/v/");
-			const hasPlaylistId = url.includes("list=") || url.includes("/playlist") || url.includes("/sets/") || url.includes("/album/") || url.includes("/c/") || url.includes("/channel/") || url.includes("/user/");
-			const settings = this.getSettings();
-			const commonArgs = ["--dump-json", "--no-check-certificate"];
-			if (settings.useBrowserCookies) commonArgs.push("--cookies-from-browser", settings.useBrowserCookies);
-			const mainArgs = [url, ...commonArgs];
-			if (hasPlaylistId && !hasVideoId) mainArgs.push("--flat-playlist");
-			else mainArgs.push("--no-playlist");
-			const playlistArgs = hasPlaylistId && hasVideoId ? [
-				url,
-				...commonArgs,
-				"--flat-playlist"
-			] : null;
-			const [mainRes, playlistRes] = await Promise.allSettled([this.ytDlp.execPromise(mainArgs), playlistArgs ? this.ytDlp.execPromise(playlistArgs) : Promise.resolve(null)]);
-			if (mainRes.status === "rejected") throw mainRes.reason;
-			const lines = mainRes.value.trim().split("\n");
-			let info = JSON.parse(lines[0]);
-			if (lines.length > 1 && !info.entries) {
-				const entries = lines.map((l) => {
-					try {
-						return JSON.parse(l);
-					} catch (e) {
-						return null;
-					}
-				}).filter((i) => i !== null);
-				info = {
-					...entries[0],
-					entries,
-					_type: "playlist"
-				};
-			}
-			if (playlistRes.status === "fulfilled" && playlistRes.value) try {
-				const pLines = playlistRes.value.trim().split("\n");
-				let playlistInfo = JSON.parse(pLines[0]);
-				if (pLines.length > 1 && !playlistInfo.entries) {
-					const entries = pLines.map((l) => {
-						try {
-							return JSON.parse(l);
-						} catch (e) {
-							return null;
-						}
-					}).filter((i) => i !== null);
-					playlistInfo = {
-						...entries[0],
-						entries
-					};
-				}
-				if (playlistInfo.entries && !info.entries) {
-					info.entries = playlistInfo.entries;
-					info.playlist_count = playlistInfo.playlist_count || playlistInfo.entries.length;
-					if (!info._type) info._type = "playlist";
-				}
-			} catch (e) {
-				console.warn("Failed to parse auxiliary playlist info:", e);
-			}
-			const platform = this.detectPlatform(url, info.extractor);
-			const isPlaylist = info._type === "playlist" || !!info.entries || info._type === "multi_video";
-			const hasPlaylistContext = hasPlaylistId || !!info.playlist_id;
-			const availableQualities = [];
-			const formatsSource = isPlaylist && info.entries && info.entries[0] ? info.entries[0].formats : info.formats;
-			if (formatsSource && Array.isArray(formatsSource)) {
-				const qualitySet = /* @__PURE__ */ new Set();
-				formatsSource.forEach((fmt) => {
-					if (fmt.vcodec && fmt.vcodec !== "none") {
-						if (fmt.height) qualitySet.add(`${fmt.height}p`);
-						else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) qualitySet.add(fmt.format_note);
-						else if (fmt.resolution && /^\d+x\d+$/.test(fmt.resolution)) {
-							const h = fmt.resolution.split("x")[1];
-							qualitySet.add(`${h}p`);
-						}
-					}
-				});
-				if (qualitySet.size === 0 && info.height) qualitySet.add(`${info.height}p`);
-				const sortedQualities = Array.from(qualitySet).sort((a, b) => {
-					const hA = parseInt(a);
-					return parseInt(b) - hA;
-				});
-				availableQualities.push(...sortedQualities);
-			}
-			const playlistVideos = isPlaylist && info.entries ? info.entries.map((entry) => ({
-				id: entry.id,
-				title: entry.title,
-				duration: entry.duration,
-				url: entry.url || (platform === "youtube" ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url),
-				thumbnail: entry.thumbnails?.[0]?.url || entry.thumbnail
-			})) : void 0;
-			const title = info.title || info.id || "Untitled Media";
-			const thumbnail = info.thumbnail || info.entries?.[0]?.thumbnail || info.thumbnails?.[0]?.url || "";
-			return {
-				id: info.id || info.entries?.[0]?.id || "unknown",
-				url: info.webpage_url || url,
-				title,
-				platform,
-				thumbnailUrl: thumbnail,
-				author: info.uploader || info.channel || info.uploader_id || "Unknown",
-				authorUrl: info.uploader_url || info.channel_url,
-				duration: info.duration,
-				uploadDate: info.upload_date,
-				description: info.description,
-				viewCount: info.view_count,
-				likeCount: info.like_count,
-				isLive: info.is_live || false,
-				webpageUrl: info.webpage_url,
-				availableQualities: availableQualities.length > 0 ? availableQualities : void 0,
-				isPlaylist: isPlaylist || hasPlaylistContext,
-				playlistCount: isPlaylist || hasPlaylistContext ? info.playlist_count || info.entries?.length : void 0,
-				playlistVideos,
-				size: info.filesize || info.filesize_approx
-			};
-		} catch (error) {
-			const downloadError = ErrorParser.parse(error, {
-				url,
-				platform: this.detectPlatform(url)
-			});
-			errorLogger.log(downloadError);
-			throw downloadError;
-		}
-	}
-	async downloadMedia(options, progressCallback) {
-		const downloadId = options.id || randomUUID$1();
-		return new Promise((resolve, reject) => {
-			this.downloadQueue.push({
-				options: {
-					...options,
-					id: downloadId
-				},
-				run: () => this.executeDownload({
-					...options,
-					id: downloadId
-				}, progressCallback),
-				resolve,
-				reject,
-				state: "queued"
-			});
-			this.saveQueuePersistently();
-			this.processQueue();
-		});
-	}
-	async retryDownload(id) {
-		const queuedItem = this.downloadQueue.find((item) => item.options.id === id);
-		if (queuedItem) {
-			queuedItem.state = "queued";
-			this.saveQueuePersistently();
-			this.processQueue();
-			return;
-		}
-		const options = this.activeOptions.get(id);
-		if (options) {
-			this.downloadQueue.push({
-				options,
-				run: () => this.executeDownload(options),
-				resolve: () => {},
-				reject: () => {},
-				state: "queued"
-			});
-			this.saveQueuePersistently();
-			this.processQueue();
-			return;
-		}
-		const historyItem = this.store.get("history").find((h) => h.id === id);
-		if (historyItem) {
-			const reconstructedOptions = {
-				url: historyItem.url,
-				format: historyItem.format || "video",
-				quality: "best",
-				id: historyItem.id
-			};
-			this.downloadQueue.push({
-				options: reconstructedOptions,
-				run: () => this.executeDownload(reconstructedOptions),
-				resolve: () => {},
-				reject: () => {},
-				state: "queued"
-			});
-			this.saveQueuePersistently();
-			this.processQueue();
-		}
-	}
-	async pauseDownload(id) {
-		const proc = this.activeProcesses.get(id);
-		if (proc && proc.ytDlpProcess) {
-			const task = this.downloadQueue.find((t) => t.options.id === id);
-			if (task) task.state = "paused";
-			proc.ytDlpProcess.kill("SIGTERM");
-			this.saveQueuePersistently();
-		}
-	}
-	async resumeDownload(id) {
-		const queuedItem = this.downloadQueue.find((item) => item.options.id === id);
-		if (queuedItem) {
-			queuedItem.state = "queued";
-			this.saveQueuePersistently();
-			this.processQueue();
-			return;
-		}
-		const options = this.activeOptions.get(id);
-		if (options) {
-			this.downloadQueue.unshift({
-				options,
-				run: () => this.executeDownload(options),
-				resolve: () => {},
-				reject: () => {},
-				state: "queued"
-			});
-			this.saveQueuePersistently();
-			this.processQueue();
-		}
-	}
-	async checkDiskSpace(downloadPath) {
-		try {
-			const targetPath = downloadPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
-			const disks = await si.fsSize();
-			let disk = disks[0];
-			let maxMatchLen = -1;
-			for (const d of disks) if (targetPath.startsWith(d.mount) && d.mount.length > maxMatchLen) {
-				maxMatchLen = d.mount.length;
-				disk = d;
-			}
-			if (!disk) return {
-				available: 0,
-				total: 0,
-				warning: false
-			};
-			const available = disk.available;
-			const total = disk.size;
-			return {
-				available,
-				total,
-				warning: available < 5 * 1024 * 1024 * 1024 || available / total < .1
-			};
-		} catch (error) {
-			console.error("Failed to check disk space:", error);
-			return {
-				available: 0,
-				total: 0,
-				warning: false
-			};
-		}
-	}
-	getQueue() {
-		return this.downloadQueue.map((item) => ({
-			id: item.options.id,
-			url: item.options.url,
-			state: item.state,
-			filename: item.options.url
-		}));
-	}
-	reorderQueue(id, newIndex) {
-		const index = this.downloadQueue.findIndex((item) => item.options.id === id);
-		if (index !== -1 && newIndex >= 0 && newIndex < this.downloadQueue.length) {
-			const item = this.downloadQueue.splice(index, 1)[0];
-			this.downloadQueue.splice(newIndex, 0, item);
-			this.saveQueuePersistently();
-		}
-	}
-	async processQueue() {
-		const maxConcurrent = this.getSettings().maxConcurrentDownloads || 3;
-		if ((await this.checkDiskSpace()).available < 500 * 1024 * 1024) {
-			console.warn("Low disk space, skipping queue processing");
-			return;
-		}
-		while (this.activeDownloadsCount < maxConcurrent) {
-			const task = this.downloadQueue.find((t) => t.state === "queued");
-			if (!task) break;
-			this.activeDownloadsCount++;
-			task.state = "downloading";
-			this.saveQueuePersistently();
-			task.run().then((result) => {
-				task.state = "downloading";
-				this.downloadQueue = this.downloadQueue.filter((t) => t !== task);
-				task.resolve(result);
-			}).catch((error) => {
-				task.state = "error";
-				task.reject(error);
-			}).finally(() => {
-				this.activeDownloadsCount--;
-				this.saveQueuePersistently();
-				this.processQueue();
-			});
-		}
-	}
-	async executeDownload(options, progressCallback) {
-		await this.ensureInitialized();
-		const { url, format, quality, outputPath, maxSpeed, id, cookiesBrowser, embedSubs, isPlaylist, playlistItems, audioFormat } = options;
-		const downloadId = id || randomUUID$1();
-		this.activeOptions.set(downloadId, options);
-		try {
-			const space = await this.checkDiskSpace(outputPath);
-			if (space.warning && space.available < 100 * 1024 * 1024) throw new Error("Not enough disk space to start download.");
-		} catch (e) {
-			console.warn("Disk space check failed:", e);
-		}
-		try {
-			const info = await this.getMediaInfo(url);
-			const sanitizedTitle = this.sanitizeFilename(info.title);
-			const author = this.sanitizeFilename(info.author || "unknown");
-			const downloadsPath = outputPath || this.store.get("settings.downloadPath") || app.getPath("downloads");
-			const extension = format === "audio" ? audioFormat || "mp3" : "mp4";
-			let outputTemplate;
-			let displayFilename;
-			const shouldDownloadPlaylist = isPlaylist === true;
-			const platformName = (info.platform || "Other").toUpperCase();
-			if (shouldDownloadPlaylist) {
-				const playlistFolder = path$1.join(downloadsPath, sanitizedTitle);
-				if (!fs$1.existsSync(playlistFolder)) fs$1.mkdirSync(playlistFolder, { recursive: true });
-				outputTemplate = path$1.join(playlistFolder, "%(playlist_index)s - %(title)s.%(ext)s");
-				displayFilename = `[${platformName} PLAYLIST] ${sanitizedTitle}`;
-			} else {
-				displayFilename = `[${platformName}] ${author} - ${sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + "..." : sanitizedTitle} [${info.id}].${extension}`;
-				outputTemplate = path$1.join(downloadsPath, displayFilename);
-			}
-			if (!fs$1.existsSync(downloadsPath)) fs$1.mkdirSync(downloadsPath, { recursive: true });
-			const args = [
-				url,
-				"-o",
-				outputTemplate,
-				"--newline",
-				"--no-warnings",
-				"--no-check-certificate",
-				"--concurrent-fragments",
-				"4",
-				"--retries",
-				"10"
-			];
-			if (!shouldDownloadPlaylist) args.push("--no-playlist");
-			else if (playlistItems) args.push("--playlist-items", playlistItems);
-			if (embedSubs && info.platform === "youtube") args.push("--all-subs", "--embed-subs", "--write-auto-subs");
-			if (this.ffmpegPath) args.push("--ffmpeg-location", this.ffmpegPath);
-			if (maxSpeed) args.push("--limit-rate", maxSpeed);
-			const settings = this.getSettings();
-			const browserForCookies = cookiesBrowser || settings.useBrowserCookies;
-			if (browserForCookies) args.push("--cookies-from-browser", browserForCookies);
-			if (format === "audio") {
-				args.push("-x", "--audio-format", audioFormat || "mp3");
-				const audioQuality = quality || "0";
-				args.push("--audio-quality", audioQuality);
-			} else {
-				if (quality && quality.endsWith("p")) {
-					const height = quality.replace("p", "");
-					args.push("-f", `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]`);
-				} else args.push("-f", "bestvideo+bestaudio/best");
-				args.push("--merge-output-format", "mp4");
-			}
-			if (!isPlaylist && !info.isPlaylist) args.push("--no-playlist");
-			return new Promise((resolve, reject) => {
-				let totalBytes = 0;
-				let downloadedBytes = 0;
-				let percent = 0;
-				let currentItemFilename = displayFilename;
-				let stderrOutput = "";
-				const process$1 = this.ytDlp.exec(args);
-				this.activeProcesses.set(downloadId, process$1);
-				if (process$1.ytDlpProcess) {
-					process$1.ytDlpProcess.stderr?.on("data", (data) => {
-						stderrOutput += data.toString();
-					});
-					process$1.ytDlpProcess.stdout?.on("data", (data) => {
-						data.toString().split(/\r?\n/).forEach((line) => {
-							if (!line.trim()) return;
-							const itemMatch = line.match(/\[download\] Destination: .*[/\\](.*)$/);
-							if (itemMatch) currentItemFilename = itemMatch[1];
-							const progressMatch = line.match(/\[download\]\s+([\d.]+)%\s+of\s+~?([\d.]+)([\w]+)\s+at\s+([\d.]+)([\w/]+)\s+ETA\s+([\d:]+)/);
-							if (progressMatch) {
-								percent = parseFloat(progressMatch[1]);
-								const sizeVal = parseFloat(progressMatch[2]);
-								const sizeUnit = progressMatch[3];
-								const speedVal = parseFloat(progressMatch[4]);
-								const speedUnit = progressMatch[5].split("/")[0];
-								const etaStr = progressMatch[6];
-								const unitMultipliers = {
-									"B": 1,
-									"KB": 1024,
-									"KIB": 1024,
-									"K": 1024,
-									"MB": 1024 * 1024,
-									"MIB": 1024 * 1024,
-									"M": 1024 * 1024,
-									"GB": 1024 * 1024 * 1024,
-									"GIB": 1024 * 1024 * 1024,
-									"G": 1024 * 1024 * 1024,
-									"TB": 1024 * 1024 * 1024 * 1024,
-									"TIB": 1024 * 1024 * 1024 * 1024,
-									"T": 1024 * 1024 * 1024 * 1024
-								};
-								totalBytes = sizeVal * (unitMultipliers[sizeUnit.toUpperCase()] || 1);
-								downloadedBytes = percent / 100 * totalBytes;
-								const speed = speedVal * (unitMultipliers[speedUnit.toUpperCase()] || 1);
-								const etaParts = etaStr.split(":").reverse();
-								let eta = 0;
-								if (etaParts[0]) eta += parseInt(etaParts[0]);
-								if (etaParts[1]) eta += parseInt(etaParts[1]) * 60;
-								if (etaParts[2]) eta += parseInt(etaParts[2]) * 3600;
-								if (progressCallback) progressCallback({
-									id: downloadId,
-									percent,
-									downloaded: downloadedBytes,
-									total: totalBytes,
-									speed,
-									eta,
-									state: "downloading",
-									filename: info.isPlaylist ? `${displayFilename} (${currentItemFilename})` : displayFilename,
-									platform: info.platform
-								});
-							}
-						});
-					});
-				}
-				process$1.on("close", (code) => {
-					this.activeProcesses.delete(downloadId);
-					if (code === 0) {
-						this.activeOptions.delete(downloadId);
-						const finalPath = isPlaylist || info.isPlaylist ? path$1.join(downloadsPath, sanitizedTitle) : outputTemplate;
-						if (progressCallback) progressCallback({
-							id: downloadId,
-							percent: 100,
-							downloaded: totalBytes,
-							total: totalBytes,
-							speed: 0,
-							eta: 0,
-							state: "complete",
-							filename: displayFilename,
-							filePath: finalPath,
-							platform: info.platform
-						});
-						this.addToHistory({
-							id: downloadId,
-							url,
-							title: info.title,
-							platform: info.platform,
-							thumbnailUrl: info.thumbnailUrl,
-							author: info.author,
-							timestamp: Date.now(),
-							path: finalPath,
-							size: totalBytes,
-							duration: info.duration,
-							format,
-							status: "completed"
-						});
-						resolve(finalPath);
-					} else if (code === null) {
-						const errorMsg = stderrOutput ? `Download terminated: ${stderrOutput.substring(0, 200)}` : "Download was cancelled or terminated unexpectedly";
-						const error = this.handleDownloadError(new Error(errorMsg), downloadId, url, info.platform, progressCallback);
-						reject(error);
-					} else {
-						const errorMsg = stderrOutput || `Download failed (exit code: ${code})`;
-						const error = this.handleDownloadError(new Error(errorMsg), downloadId, url, info.platform, progressCallback);
-						reject(error);
-					}
-				});
-				process$1.on("error", (err) => {
-					this.activeProcesses.delete(downloadId);
-					const error = this.handleDownloadError(err, downloadId, url, info.platform, progressCallback);
-					reject(error);
-				});
-				const timeout = setTimeout(() => {
-					if (this.activeProcesses.has(downloadId)) {
-						console.warn(`Download timeout for ${downloadId}, killing process`);
-						const proc = this.activeProcesses.get(downloadId);
-						if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill("SIGTERM");
-					}
-				}, 36e5);
-				const originalResolve = resolve;
-				const originalReject = reject;
-				resolve = (value) => {
-					clearTimeout(timeout);
-					originalResolve(value);
-				};
-				reject = (reason) => {
-					clearTimeout(timeout);
-					originalReject(reason);
-				};
-			});
-		} catch (error) {
-			this.activeProcesses.delete(downloadId);
-			throw error;
-		}
-	}
-	cancelDownload(id) {
-		if (id) {
-			const proc = this.activeProcesses.get(id);
-			if (proc && proc.ytDlpProcess) proc.ytDlpProcess.kill();
-			this.downloadQueue = this.downloadQueue.filter((t) => t.options.id !== id);
-			this.saveQueuePersistently();
-		} else {
-			this.activeProcesses.forEach((proc) => {
-				if (proc.ytDlpProcess) proc.ytDlpProcess.kill();
-			});
-			this.downloadQueue = [];
-			this.saveQueuePersistently();
-		}
-	}
-	getHistory() {
-		return this.store.get("history", []);
-	}
-	clearHistory() {
-		this.store.set("history", []);
-	}
-	removeFromHistory(id) {
-		const history = this.getHistory();
-		this.store.set("history", history.filter((h) => h.id !== id));
-	}
-	addToHistory(item) {
-		const history = this.getHistory();
-		history.unshift(item);
-		this.store.set("history", history.slice(0, 200));
-	}
-	getSettings() {
-		return this.store.get("settings");
-	}
-	saveSettings(settings) {
-		const current = this.getSettings();
-		this.store.set("settings", {
-			...current,
-			...settings
-		});
-	}
-	sanitizeFilename(name) {
-		return name.replace(/[<>:"/\\|?*]/g, "").trim();
-	}
-};
-const universalDownloader = new UniversalDownloader();
-var AudioExtractor = class {
-	constructor() {
-		this.ffmpegPath = null;
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
-	}
-	async initFFmpeg() {
-		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				console.log("✅ Audio Extractor: FFmpeg ready");
-			} else console.warn("⚠️ Audio Extractor: FFmpeg not available");
-		} catch (e) {
-			console.warn("FFmpeg setup failed:", e);
-		}
-	}
-	async getAudioInfo(filePath) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-hide_banner"
-			];
-			const process$1 = spawn(this.ffmpegPath, args);
-			let output = "";
-			process$1.stderr.on("data", (data) => {
-				output += data.toString();
-			});
-			process$1.on("close", () => {
-				try {
-					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
-					const audioMatch = output.match(/Stream #\d+:\d+.*?: Audio: (\w+).*?, (\d+) Hz.*?, (\w+).*?, (\d+) kb\/s/);
-					const hasAudio = !!audioMatch;
-					const hasVideo = output.includes("Video:");
-					resolve({
-						duration,
-						bitrate: audioMatch ? parseInt(audioMatch[4]) : 0,
-						sampleRate: audioMatch ? parseInt(audioMatch[2]) : 0,
-						channels: audioMatch && audioMatch[3].includes("stereo") ? 2 : 1,
-						codec: audioMatch ? audioMatch[1] : "unknown",
-						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0,
-						hasAudio,
-						hasVideo
-					});
-				} catch (error) {
-					reject(/* @__PURE__ */ new Error("Failed to parse audio info"));
-				}
-			});
-			process$1.on("error", reject);
-		});
-	}
-	async extractAudio(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const id = options.id || randomUUID$1();
-		const { inputPath, outputPath, format, bitrate, sampleRate, channels, trim, normalize, fadeIn, fadeOut } = options;
-		if (!fs$1.existsSync(inputPath)) throw new Error("Input file not found");
-		const audioInfo = await this.getAudioInfo(inputPath);
-		if (!audioInfo.hasAudio) throw new Error("No audio stream found in input file");
-		const inputFilename = path$1.basename(inputPath, path$1.extname(inputPath));
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const outputFilename = outputPath ? path$1.basename(outputPath) : `${inputFilename}_extracted.${format}`;
-		const finalOutputPath = path$1.join(outputDir, outputFilename);
-		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const args = ["-i", inputPath];
-		if (trim?.start !== void 0) args.push("-ss", trim.start.toString());
-		if (trim?.end !== void 0) args.push("-to", trim.end.toString());
-		args.push("-vn");
-		const filters = [];
-		if (normalize) filters.push("loudnorm");
-		if (fadeIn && fadeIn > 0) filters.push(`afade=t=in:d=${fadeIn}`);
-		if (fadeOut && fadeOut > 0) {
-			const startTime = (trim?.end || audioInfo.duration) - fadeOut;
-			filters.push(`afade=t=out:st=${startTime}:d=${fadeOut}`);
-		}
-		if (filters.length > 0) args.push("-af", filters.join(","));
-		switch (format) {
-			case "mp3":
-				args.push("-acodec", "libmp3lame");
-				if (bitrate) args.push("-b:a", bitrate);
-				break;
-			case "aac":
-				args.push("-acodec", "aac");
-				if (bitrate) args.push("-b:a", bitrate);
-				break;
-			case "flac":
-				args.push("-acodec", "flac");
-				break;
-			case "wav":
-				args.push("-acodec", "pcm_s16le");
-				break;
-			case "ogg":
-				args.push("-acodec", "libvorbis");
-				if (bitrate) args.push("-b:a", bitrate);
-				break;
-			case "m4a":
-				args.push("-acodec", "aac");
-				if (bitrate) args.push("-b:a", bitrate);
-				break;
-		}
-		if (sampleRate) args.push("-ar", sampleRate.toString());
-		if (channels) args.push("-ac", channels.toString());
-		args.push("-y", finalOutputPath);
-		return new Promise((resolve, reject) => {
-			const process$1 = spawn(this.ffmpegPath, args);
-			this.activeProcesses.set(id, process$1);
-			let duration = audioInfo.duration;
-			if (trim?.start && trim?.end) duration = trim.end - trim.start;
-			else if (trim?.end) duration = trim.end;
-			process$1.stderr.on("data", (data) => {
-				const output = data.toString();
-				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				if (timeMatch && progressCallback) {
-					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-					const percent = Math.min(currentTime / duration * 100, 100);
-					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
-					progressCallback({
-						id,
-						filename: outputFilename,
-						inputPath,
-						percent,
-						state: "processing",
-						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
-					});
-				}
-			});
-			process$1.on("close", (code) => {
-				this.activeProcesses.delete(id);
-				if (code === 0) {
-					if (progressCallback) progressCallback({
-						id,
-						filename: outputFilename,
-						inputPath,
-						percent: 100,
-						state: "complete",
-						outputPath: finalOutputPath
-					});
-					resolve(finalOutputPath);
-				} else reject(/* @__PURE__ */ new Error(`FFmpeg exited with code ${code}`));
-			});
-			process$1.on("error", (err) => {
-				this.activeProcesses.delete(id);
-				reject(err);
-			});
-		});
-	}
-	cancelExtraction(id) {
-		const process$1 = this.activeProcesses.get(id);
-		if (process$1) {
-			process$1.kill();
-			this.activeProcesses.delete(id);
-		}
-	}
-	cancelAll() {
-		this.activeProcesses.forEach((process$1) => process$1.kill());
-		this.activeProcesses.clear();
-	}
-};
-const audioExtractor = new AudioExtractor();
-var VideoMerger = class {
-	constructor() {
-		this.ffmpegPath = null;
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
-	}
-	async initFFmpeg() {
-		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				console.log("✅ Video Merger: FFmpeg ready");
-			} else console.warn("⚠️ Video Merger: FFmpeg not available");
-		} catch (e) {
-			console.warn("FFmpeg setup failed:", e);
-		}
-	}
-	async getVideoInfo(filePath) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-hide_banner"
-			];
-			const process$1 = spawn(this.ffmpegPath, args);
-			let output = "";
-			process$1.stderr.on("data", (data) => {
-				output += data.toString();
-			});
-			process$1.on("close", () => {
-				try {
-					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
-					const resMatch = output.match(/Video:.*?, (\d{3,5})x(\d{3,5})/);
-					const width = resMatch ? parseInt(resMatch[1]) : 0;
-					const height = resMatch ? parseInt(resMatch[2]) : 0;
-					const fpsMatch = output.match(/(\d+\.?\d*) fps/);
-					const fps = fpsMatch ? parseFloat(fpsMatch[1]) : 0;
-					const codecMatch = output.match(/Video: (\w+)/);
-					resolve({
-						path: filePath,
-						duration,
-						width,
-						height,
-						codec: codecMatch ? codecMatch[1] : "unknown",
-						fps,
-						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0
-					});
-				} catch (error) {
-					reject(/* @__PURE__ */ new Error("Failed to parse video info"));
-				}
-			});
-			process$1.on("error", reject);
-		});
-	}
-	async generateThumbnail(filePath, time = 1) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-thumbs");
-		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const thumbName = `thumb_${randomUUID$1()}.jpg`;
-		const outputPath = path$1.join(outputDir, thumbName);
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-ss",
-				time.toString(),
-				"-i",
-				filePath,
-				"-frames:v",
-				"1",
-				"-q:v",
-				"2",
-				"-vf",
-				"scale=480:-1,unsharp=3:3:1.5:3:3:0.5",
-				"-f",
-				"image2",
-				"-y",
-				outputPath
-			];
-			console.log(`[VideoMerger] Generating thumbnail: ${args.join(" ")}`);
-			const process$1 = spawn(this.ffmpegPath, args);
-			process$1.on("close", (code) => {
-				if (code === 0) {
-					const data = fs$1.readFileSync(outputPath, { encoding: "base64" });
-					fs$1.unlinkSync(outputPath);
-					resolve(`data:image/jpeg;base64,${data}`);
-				} else reject(/* @__PURE__ */ new Error("Thumbnail generation failed"));
-			});
-			process$1.on("error", reject);
-		});
-	}
-	async generateFilmstrip(filePath, duration, count = 10) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const actualCount = Math.min(200, Math.max(5, Math.min(count, Math.floor(duration))));
-		const tempId = randomUUID$1();
-		const outputDir = path$1.join(app.getPath("temp"), "devtools-app-filmstrips", tempId);
-		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const safeDuration = duration > 0 ? duration : 1;
-		const fps = actualCount / safeDuration;
-		console.log(`Generating filmstrip (Optimized): Target ${actualCount} frames from ${safeDuration}s video (fps=${fps.toFixed(4)})`);
-		const outputPattern = path$1.join(outputDir, "thumb_%03d.jpg").replace(/\\/g, "/");
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-vf",
-				`fps=${fps},scale=320:-1,unsharp=3:3:1:3:3:0.5`,
-				"-an",
-				"-sn",
-				"-q:v",
-				"4",
-				"-f",
-				"image2",
-				"-y",
-				outputPattern
-			];
-			console.log(`[VideoMerger] Running FFmpeg for filmstrip: ${args.join(" ")}`);
-			const process$1 = spawn(this.ffmpegPath, args);
-			let stderr = "";
-			process$1.stderr.on("data", (data) => {
-				stderr += data.toString();
-			});
-			process$1.on("close", (code) => {
-				if (code === 0) try {
-					const files = fs$1.readdirSync(outputDir).filter((f) => f.startsWith("thumb_") && f.endsWith(".jpg")).sort();
-					if (files.length === 0) {
-						console.error("Filmstrip generation failed: No frames produced. FFmpeg output:", stderr);
-						reject(/* @__PURE__ */ new Error("No frames produced"));
-						return;
-					}
-					const finalFrames = files.map((f) => {
-						const p = path$1.join(outputDir, f);
-						return `data:image/jpeg;base64,${fs$1.readFileSync(p, { encoding: "base64" })}`;
-					}).slice(0, actualCount);
-					try {
-						fs$1.rmSync(outputDir, {
-							recursive: true,
-							force: true
-						});
-					} catch (cleanupErr) {
-						console.warn("Filmstrip cleanup failed:", cleanupErr);
-					}
-					resolve(finalFrames);
-				} catch (e) {
-					reject(e);
-				}
-				else {
-					console.error("Filmstrip generation failed with code:", code, stderr);
-					reject(/* @__PURE__ */ new Error("Filmstrip generation failed"));
-				}
-			});
-			process$1.on("error", reject);
-		});
-	}
-	async extractWaveform(filePath) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		console.log("Extracting waveform for:", filePath);
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-vn",
-				"-ac",
-				"1",
-				"-filter:a",
-				"aresample=8000",
-				"-map",
-				"0:a",
-				"-c:a",
-				"pcm_s16le",
-				"-f",
-				"data",
-				"-"
-			];
-			const process$1 = spawn(this.ffmpegPath, args);
-			const chunks = [];
-			process$1.stdout.on("data", (chunk) => {
-				chunks.push(chunk);
-			});
-			process$1.stderr.on("data", () => {});
-			process$1.on("close", (code) => {
-				if (code === 0) try {
-					const buffer = Buffer.concat(chunks);
-					const data = [];
-					const samplesPerPoint = 80;
-					for (let i = 0; i < buffer.length; i += samplesPerPoint * 2) {
-						let max = 0;
-						for (let j = 0; j < samplesPerPoint; j++) {
-							const offset = i + j * 2;
-							if (offset + 1 < buffer.length) {
-								const val = Math.abs(buffer.readInt16LE(offset));
-								if (val > max) max = val;
-							}
-						}
-						data.push(max / 32768);
-					}
-					console.log(`Waveform extracted: ${data.length} points`);
-					resolve(data);
-				} catch (err) {
-					reject(err);
-				}
-				else reject(/* @__PURE__ */ new Error("Waveform extraction failed"));
-			});
-			process$1.on("error", reject);
-		});
-	}
-	async createVideoFromImages(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const id = randomUUID$1();
-		const { imagePaths, fps, outputPath, format, quality } = options;
-		if (!imagePaths || imagePaths.length === 0) throw new Error("No images provided");
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const outputFilename = outputPath ? path$1.basename(outputPath) : `video_from_frames_${Date.now()}.${format}`;
-		const finalOutputPath = path$1.join(outputDir, outputFilename);
-		const tempId = randomUUID$1();
-		const tempDir = path$1.join(app.getPath("temp"), "devtools-video-frames", tempId);
-		if (!fs$1.existsSync(tempDir)) fs$1.mkdirSync(tempDir, { recursive: true });
-		const listPath = path$1.join(tempDir, "inputs.txt");
-		try {
-			const duration = 1 / fps;
-			const finalContent = imagePaths.map((p) => {
-				return `file '${p.replace(/\\/g, "/").replace(/'/g, "'\\''")}'\nduration ${duration}`;
-			}).join("\n") + `\nfile '${imagePaths[imagePaths.length - 1].replace(/\\/g, "/").replace(/'/g, "'\\''")}'`;
-			fs$1.writeFileSync(listPath, finalContent);
-			const args = [
-				"-f",
-				"concat",
-				"-safe",
-				"0",
-				"-i",
-				listPath
-			];
-			const filters = [];
-			if (format !== "gif") filters.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
-			filters.push(`fps=${fps}`);
-			if (options.filter) switch (options.filter) {
-				case "grayscale":
-					filters.push("hue=s=0");
-					break;
-				case "sepia":
-					filters.push("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131");
-					break;
-				case "invert":
-					filters.push("negate");
-					break;
-				case "warm":
-					filters.push("eq=gamma_r=1.2:gamma_g=1.0:gamma_b=0.9");
-					break;
-				case "cool":
-					filters.push("eq=gamma_r=0.9:gamma_g=1.0:gamma_b=1.2");
-					break;
-				case "vintage":
-					filters.push("curves=vintage");
-					break;
-			}
-			if (options.watermark && options.watermark.text) {
-				const w = options.watermark;
-				const safeText = (w.text || "").replace(/:/g, "\\:").replace(/'/g, "");
-				let x = "(w-text_w)/2";
-				let y = "(h-text_h)/2";
-				const padding = 20;
-				switch (w.position) {
-					case "top-left":
-						x = `${padding}`;
-						y = `${padding}`;
-						break;
-					case "top-right":
-						x = `w-text_w-${padding}`;
-						y = `${padding}`;
-						break;
-					case "bottom-left":
-						x = `${padding}`;
-						y = `h-text_h-${padding}`;
-						break;
-					case "bottom-right":
-						x = `w-text_w-${padding}`;
-						y = `h-text_h-${padding}`;
-						break;
-				}
-				const fontSize = w.fontSize || 24;
-				const fontColor = w.color || "white";
-				const alpha = w.opacity || .8;
-				filters.push(`drawtext=text='${safeText}':x=${x}:y=${y}:fontsize=${fontSize}:fontcolor=${fontColor}:alpha=${alpha}`);
-			}
-			if (format === "gif") {
-				const filterString = filters.join(",");
-				args.push("-vf", `${filterString},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`);
-			} else {
-				const filterString = filters.join(",");
-				if (filterString) args.push("-vf", filterString);
-				if (format === "mp4") {
-					args.push("-c:v", "libx264", "-pix_fmt", "yuv420p");
-					if (quality === "low") args.push("-crf", "28");
-					else if (quality === "high") args.push("-crf", "18");
-					else args.push("-crf", "23");
-				} else if (format === "webm") {
-					args.push("-c:v", "libvpx-vp9", "-b:v", "0");
-					if (quality === "low") args.push("-crf", "40");
-					else if (quality === "high") args.push("-crf", "20");
-					else args.push("-crf", "30");
-				}
-			}
-			args.push("-y", finalOutputPath);
-			console.log(`[VideoMerger] Creating video from images (concat): ${args.join(" ")}`);
-			return new Promise((resolve, reject) => {
-				const process$1 = spawn(this.ffmpegPath, args);
-				this.activeProcesses.set(id, process$1);
-				const totalDuration = imagePaths.length / fps;
-				process$1.stderr.on("data", (data) => {
-					const output = data.toString();
-					if (progressCallback) {
-						const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-						if (timeMatch) {
-							const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-							progressCallback({
-								id,
-								percent: Math.min(currentTime / totalDuration * 100, 99),
-								state: "processing"
-							});
-						}
-					}
-				});
-				process$1.on("close", (code) => {
-					this.activeProcesses.delete(id);
-					try {
-						fs$1.rmSync(tempDir, {
-							recursive: true,
-							force: true
-						});
-					} catch (e) {
-						console.warn("Failed to cleanup temp dir", e);
-					}
-					if (code === 0) {
-						if (progressCallback) progressCallback({
-							id,
-							percent: 100,
-							state: "complete",
-							outputPath: finalOutputPath
-						});
-						resolve(finalOutputPath);
-					} else reject(/* @__PURE__ */ new Error(`FFmpeg failed with code ${code}`));
-				});
-				process$1.on("error", (err) => {
-					this.activeProcesses.delete(id);
-					try {
-						fs$1.rmSync(tempDir, {
-							recursive: true,
-							force: true
-						});
-					} catch (e) {}
-					reject(err);
-				});
-			});
-		} catch (error) {
-			try {
-				fs$1.rmSync(tempDir, {
-					recursive: true,
-					force: true
-				});
-			} catch (e) {}
-			throw error;
-		}
-	}
-	async mergeVideos(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const id = options.id || randomUUID$1();
-		const { clips, outputPath, format } = options;
-		if (!clips || clips.length === 0) throw new Error("No input clips provided");
-		for (const clip of clips) if (!fs$1.existsSync(clip.path)) throw new Error(`File not found: ${clip.path}`);
-		if (progressCallback) progressCallback({
-			id,
-			percent: 0,
-			state: "analyzing"
-		});
-		const videoInfos = await Promise.all(clips.map((c) => this.getVideoInfo(c.path)));
-		let totalDuration = 0;
-		clips.forEach((clip, i) => {
-			const fullDuration = videoInfos[i].duration;
-			const start = clip.startTime || 0;
-			const end = clip.endTime || fullDuration;
-			totalDuration += end - start;
-		});
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const outputFilename = outputPath ? path$1.basename(outputPath) : `merged_video_${Date.now()}.${format}`;
-		const finalOutputPath = path$1.join(outputDir, outputFilename);
-		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const args = [];
-		clips.forEach((clip) => {
-			if (clip.startTime !== void 0) args.push("-ss", clip.startTime.toString());
-			if (clip.endTime !== void 0) args.push("-to", clip.endTime.toString());
-			args.push("-i", clip.path);
-		});
-		let filterStr = "";
-		clips.forEach((_, i) => {
-			filterStr += `[${i}:v][${i}:a]`;
-		});
-		filterStr += `concat=n=${clips.length}:v=1:a=1[v][a]`;
-		args.push("-filter_complex", filterStr);
-		args.push("-map", "[v]", "-map", "[a]");
-		args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");
-		args.push("-c:a", "aac", "-b:a", "128k");
-		args.push("-y", finalOutputPath);
-		return new Promise((resolve, reject) => {
-			const process$1 = spawn(this.ffmpegPath, args);
-			this.activeProcesses.set(id, process$1);
-			process$1.stderr.on("data", (data) => {
-				const output = data.toString();
-				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				if (timeMatch && progressCallback) {
-					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-					const percent = Math.min(currentTime / totalDuration * 100, 100);
-					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
-					progressCallback({
-						id,
-						percent,
-						state: "processing",
-						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
-					});
-				}
-			});
-			process$1.on("close", (code) => {
-				this.activeProcesses.delete(id);
-				if (code === 0) {
-					if (progressCallback) progressCallback({
-						id,
-						percent: 100,
-						state: "complete",
-						outputPath: finalOutputPath
-					});
-					resolve(finalOutputPath);
-				} else reject(/* @__PURE__ */ new Error(`Merge failed with code ${code}`));
-			});
-			process$1.on("error", (err) => {
-				this.activeProcesses.delete(id);
-				reject(err);
-			});
-		});
-	}
-	cancelMerge(id) {
-		const process$1 = this.activeProcesses.get(id);
-		if (process$1) {
-			process$1.kill();
-			this.activeProcesses.delete(id);
-		}
-	}
-};
-const videoMerger = new VideoMerger();
-var AudioManager = class {
-	constructor() {
-		this.ffmpegPath = null;
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg().catch((e) => console.error("Audio Manager FFmpeg init error:", e));
-	}
-	async initFFmpeg() {
-		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
-		} catch (e) {
-			console.warn("FFmpeg setup failed for Audio Manager:", e);
-		}
-	}
-	async getAudioInfo(filePath) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-hide_banner"
-			];
-			const process$1 = spawn(this.ffmpegPath, args);
-			let output = "";
-			process$1.stderr.on("data", (data) => output += data.toString());
-			process$1.on("close", () => {
-				try {
-					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
-					const sampleRateMatch = output.match(/(\d+) Hz/);
-					const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1]) : 0;
-					resolve({
-						path: filePath,
-						duration,
-						format: path$1.extname(filePath).slice(1),
-						sampleRate,
-						channels: output.includes("stereo") ? 2 : 1,
-						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0
-					});
-				} catch (e) {
-					reject(/* @__PURE__ */ new Error("Failed to parse audio info"));
-				}
-			});
-		});
-	}
-	async applyAudioChanges(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const id = randomUUID$1();
-		const { videoPath, audioLayers, outputPath, outputFormat, keepOriginalAudio, originalAudioVolume } = options;
-		if (progressCallback) progressCallback({
-			id,
-			percent: 0,
-			state: "analyzing"
-		});
-		const videoInfoArgs = [
-			"-i",
-			videoPath,
-			"-hide_banner"
-		];
-		const infoProcess = spawn(this.ffmpegPath, videoInfoArgs);
-		let infoOutput = "";
-		await new Promise((resolve) => {
-			infoProcess.stderr.on("data", (d) => infoOutput += d.toString());
-			infoProcess.on("close", resolve);
-		});
-		const durationMatch = infoOutput.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-		const totalDuration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const finalOutputPath = outputPath || path$1.join(outputDir, `audio_mixed_${Date.now()}.${outputFormat}`);
-		const args = ["-i", videoPath];
-		audioLayers.forEach((layer) => {
-			if (layer.clipStart > 0) args.push("-ss", layer.clipStart.toString());
-			if (layer.clipEnd > 0) args.push("-to", layer.clipEnd.toString());
-			args.push("-i", layer.path);
-		});
-		let filterStr = "";
-		let inputCount = 0;
-		if (keepOriginalAudio) {
-			filterStr += `[0:a]volume=${originalAudioVolume}[a0];`;
-			inputCount++;
-		}
-		audioLayers.forEach((layer, i) => {
-			const inputIdx = i + 1;
-			filterStr += `[${inputIdx}:a]volume=${layer.volume},adelay=${layer.startTime * 1e3}|${layer.startTime * 1e3}[a${inputIdx}];`;
-			inputCount++;
-		});
-		for (let i = 0; i < inputCount; i++) filterStr += `[a${i}]`;
-		filterStr += `amix=inputs=${inputCount}:duration=first:dropout_transition=2[aout]`;
-		args.push("-filter_complex", filterStr);
-		args.push("-map", "0:v", "-map", "[aout]");
-		args.push("-c:v", "copy");
-		args.push("-c:a", "aac", "-b:a", "192k", "-y", finalOutputPath);
-		return new Promise((resolve, reject) => {
-			const process$1 = spawn(this.ffmpegPath, args);
-			this.activeProcesses.set(id, process$1);
-			process$1.stderr.on("data", (data) => {
-				const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				if (timeMatch && progressCallback) {
-					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-					progressCallback({
-						id,
-						percent: Math.min(currentTime / totalDuration * 100, 100),
-						state: "processing"
-					});
-				}
-			});
-			process$1.on("close", (code) => {
-				this.activeProcesses.delete(id);
-				if (code === 0) {
-					if (progressCallback) progressCallback({
-						id,
-						percent: 100,
-						state: "complete",
-						outputPath: finalOutputPath
-					});
-					resolve(finalOutputPath);
-				} else reject(/* @__PURE__ */ new Error(`Exit code ${code}`));
-			});
-			process$1.on("error", (err) => {
-				this.activeProcesses.delete(id);
-				reject(err);
-			});
-		});
-	}
-	cancel(id) {
-		const p = this.activeProcesses.get(id);
-		if (p) {
-			p.kill();
-			this.activeProcesses.delete(id);
-		}
-	}
-};
-const audioManager = new AudioManager();
-var VideoTrimmer = class {
-	constructor() {
-		this.ffmpegPath = null;
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg().catch((e) => console.error("Video Trimmer FFmpeg init error:", e));
-	}
-	async initFFmpeg() {
-		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			this.ffmpegPath = FFmpegHelper.getFFmpegPath();
-		} catch (e) {
-			console.warn("FFmpeg setup failed for Video Trimmer:", e);
-		}
-	}
-	async process(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const { inputPath, ranges, mode, outputFormat, outputPath } = options;
-		const id = randomUUID$1();
-		if (progressCallback) progressCallback({
-			id,
-			percent: 0,
-			state: "analyzing"
-		});
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const results = [];
-		if (mode === "trim" || mode === "cut") {
-			const finalOutputPath = outputPath || path$1.join(outputDir, `trimmed_${Date.now()}.${outputFormat}`);
-			const args = [];
-			if (ranges.length === 1 && mode === "trim") {
-				args.push("-ss", ranges[0].start.toString(), "-to", ranges[0].end.toString(), "-i", inputPath);
-				args.push("-c", "copy", "-y", finalOutputPath);
-			} else {
-				args.push("-i", inputPath);
-				let filterStr = "";
-				ranges.forEach((range, i) => {
-					filterStr += `[0:v]trim=start=${range.start}:end=${range.end},setpts=PTS-STARTPTS[v${i}];`;
-					filterStr += `[0:a]atrim=start=${range.start}:end=${range.end},asetpts=PTS-STARTPTS[a${i}];`;
-				});
-				for (let i = 0; i < ranges.length; i++) filterStr += `[v${i}][a${i}]`;
-				filterStr += `concat=n=${ranges.length}:v=1:a=1[outv][outa]`;
-				args.push("-filter_complex", filterStr);
-				args.push("-map", "[outv]", "-map", "[outa]");
-				args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "23");
-				args.push("-c:a", "aac", "-y", finalOutputPath);
-			}
-			await this.runFFmpeg(args, id, ranges.reduce((acc, r) => acc + (r.end - r.start), 0), progressCallback);
-			results.push(finalOutputPath);
-		} else if (mode === "split") for (let i = 0; i < ranges.length; i++) {
-			const range = ranges[i];
-			const splitPath = path$1.join(outputDir, `split_${i + 1}_${Date.now()}.${outputFormat}`);
-			const args = [
-				"-ss",
-				range.start.toString(),
-				"-to",
-				range.end.toString(),
-				"-i",
-				inputPath,
-				"-c",
-				"copy",
-				"-y",
-				splitPath
-			];
-			if (progressCallback) progressCallback({
-				id,
-				percent: i / ranges.length * 100,
-				state: "processing"
-			});
-			await this.runFFmpeg(args, id, range.end - range.start);
-			results.push(splitPath);
-		}
-		if (progressCallback) progressCallback({
-			id,
-			percent: 100,
-			state: "complete",
-			outputPath: results[0]
-		});
-		return results;
-	}
-	async runFFmpeg(args, id, totalDuration, progressCallback) {
-		return new Promise((resolve, reject) => {
-			const process$1 = spawn(this.ffmpegPath, args);
-			this.activeProcesses.set(id, process$1);
-			process$1.stderr.on("data", (data) => {
-				const timeMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				if (timeMatch && progressCallback) {
-					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-					progressCallback({
-						id,
-						percent: Math.min(currentTime / totalDuration * 100, 100),
-						state: "processing"
-					});
-				}
-			});
-			process$1.on("close", (code) => {
-				this.activeProcesses.delete(id);
-				if (code === 0) resolve();
-				else reject(/* @__PURE__ */ new Error(`FFmpeg exited with code ${code}`));
-			});
-			process$1.on("error", (err) => {
-				this.activeProcesses.delete(id);
-				reject(err);
-			});
-		});
-	}
-	cancel(id) {
-		const p = this.activeProcesses.get(id);
-		if (p) {
-			p.kill();
-			this.activeProcesses.delete(id);
-		}
-	}
-};
-const videoTrimmer = new VideoTrimmer();
-var VideoEffects = class {
-	constructor() {
-		this.ffmpegPath = null;
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
-	}
-	async initFFmpeg() {
-		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				console.log("✅ Video Effects: FFmpeg ready");
-			} else console.warn("⚠️ Video Effects: FFmpeg not available");
-		} catch (e) {
-			console.warn("FFmpeg setup failed:", e);
-		}
-	}
-	async applyEffects(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const id = options.id || randomUUID$1();
-		const { inputPath, outputPath, format } = options;
-		if (!fs$1.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
-		if (progressCallback) progressCallback({
-			id,
-			percent: 0,
-			state: "analyzing"
-		});
-		const videoInfo = await this.getVideoInfo(inputPath);
-		const totalDuration = options.speed ? videoInfo.duration / options.speed : videoInfo.duration;
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const outputFilename = outputPath ? path$1.basename(outputPath) : `effect_video_${Date.now()}.${format}`;
-		const finalOutputPath = path$1.join(outputDir, outputFilename);
-		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const args = ["-i", inputPath];
-		let vFilters = [];
-		let aFilters = [];
-		if (options.speed && options.speed !== 1) {
-			vFilters.push(`setpts=${1 / options.speed}*PTS`);
-			let tempSpeed = options.speed;
-			while (tempSpeed > 2) {
-				aFilters.push("atempo=2.0");
-				tempSpeed /= 2;
-			}
-			while (tempSpeed < .5) {
-				aFilters.push("atempo=0.5");
-				tempSpeed /= .5;
-			}
-			aFilters.push(`atempo=${tempSpeed}`);
-		}
-		if (options.flip === "horizontal" || options.flip === "both") vFilters.push("hflip");
-		if (options.flip === "vertical" || options.flip === "both") vFilters.push("vflip");
-		if (options.rotate) {
-			if (options.rotate === 90) vFilters.push("transpose=1");
-			else if (options.rotate === 180) vFilters.push("transpose=2,transpose=2");
-			else if (options.rotate === 270) vFilters.push("transpose=2");
-		}
-		if (options.brightness !== void 0 || options.contrast !== void 0 || options.saturation !== void 0 || options.gamma !== void 0) vFilters.push(`eq=brightness=${options.brightness || 0}:contrast=${options.contrast !== void 0 ? options.contrast : 1}:saturation=${options.saturation !== void 0 ? options.saturation : 1}:gamma=${options.gamma !== void 0 ? options.gamma : 1}`);
-		if (options.grayscale) vFilters.push("hue=s=0");
-		if (options.sepia) vFilters.push("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131");
-		if (options.blur) vFilters.push(`boxblur=${options.blur}:1`);
-		if (options.noise) vFilters.push(`noise=alls=${options.noise}:allf=t+u`);
-		if (options.sharpen) vFilters.push("unsharp=5:5:1.0:5:5:0.0");
-		if (options.vintage) {
-			vFilters.push("curves=vintage");
-			vFilters.push("vignette=PI/4");
-		}
-		if (options.reverse) {
-			vFilters.push("reverse");
-			aFilters.push("areverse");
-		}
-		if (vFilters.length > 0) args.push("-vf", vFilters.join(","));
-		if (aFilters.length > 0) args.push("-af", aFilters.join(","));
-		if (options.quality === "low") args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "30");
-		else if (options.quality === "high") args.push("-c:v", "libx264", "-preset", "slow", "-crf", "18");
-		else args.push("-c:v", "libx264", "-preset", "medium", "-crf", "23");
-		args.push("-c:a", "aac", "-b:a", "128k");
-		args.push("-y", finalOutputPath);
-		return new Promise((resolve, reject) => {
-			const process$1 = spawn(this.ffmpegPath, args);
-			this.activeProcesses.set(id, process$1);
-			process$1.stderr.on("data", (data) => {
-				const output = data.toString();
-				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				if (timeMatch && progressCallback) {
-					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-					const percent = Math.min(currentTime / totalDuration * 100, 100);
-					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
-					progressCallback({
-						id,
-						percent,
-						state: "processing",
-						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
-					});
-				}
-			});
-			process$1.on("close", (code) => {
-				this.activeProcesses.delete(id);
-				if (code === 0) {
-					if (progressCallback) progressCallback({
-						id,
-						percent: 100,
-						state: "complete",
-						outputPath: finalOutputPath
-					});
-					resolve(finalOutputPath);
-				} else reject(/* @__PURE__ */ new Error(`Effects application failed with code ${code}`));
-			});
-			process$1.on("error", (err) => {
-				this.activeProcesses.delete(id);
-				reject(err);
-			});
-		});
-	}
-	async getVideoInfo(filePath) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		return new Promise((resolve, reject) => {
-			const process$1 = spawn(this.ffmpegPath, [
-				"-i",
-				filePath,
-				"-hide_banner"
-			]);
-			let output = "";
-			process$1.stderr.on("data", (data) => output += data.toString());
-			process$1.on("close", (code) => {
-				if (code !== 0 && !output.includes("Duration")) {
-					reject(/* @__PURE__ */ new Error("Failed to get video info"));
-					return;
-				}
-				const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				resolve({ duration: durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0 });
-			});
-			process$1.on("error", reject);
-		});
-	}
-	cancelEffects(id) {
-		const process$1 = this.activeProcesses.get(id);
-		if (process$1) {
-			process$1.kill();
-			this.activeProcesses.delete(id);
-		}
-	}
-};
-const videoEffects = new VideoEffects();
-var VideoCompressor = class {
-	constructor() {
-		this.ffmpegPath = null;
-		this.activeProcesses = /* @__PURE__ */ new Map();
-		this.initFFmpeg().catch((e) => console.error("FFmpeg init error:", e));
-	}
-	async initFFmpeg() {
-		try {
-			const { FFmpegHelper } = await import("./ffmpeg-helper-BRYxotvt.js");
-			const ffmpegPath = FFmpegHelper.getFFmpegPath();
-			if (ffmpegPath) {
-				this.ffmpegPath = ffmpegPath;
-				console.log("✅ Video Compressor: FFmpeg ready");
-			} else console.warn("⚠️ Video Compressor: FFmpeg not available");
-		} catch (e) {
-			console.warn("FFmpeg setup failed:", e);
-		}
-	}
-	async getVideoInfo(filePath) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		return new Promise((resolve, reject) => {
-			const args = [
-				"-i",
-				filePath,
-				"-hide_banner"
-			];
-			const process$1 = spawn(this.ffmpegPath, args);
-			let output = "";
-			process$1.stderr.on("data", (data) => {
-				output += data.toString();
-			});
-			process$1.on("close", () => {
-				try {
-					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
-					const resMatch = output.match(/Video:.*?, (\d{3,5})x(\d{3,5})/);
-					const width = resMatch ? parseInt(resMatch[1]) : 0;
-					const height = resMatch ? parseInt(resMatch[2]) : 0;
-					const fpsMatch = output.match(/(\d+\.?\d*) fps/);
-					const fps = fpsMatch ? parseFloat(fpsMatch[1]) : 0;
-					const codecMatch = output.match(/Video: (\w+)/);
-					const codec = codecMatch ? codecMatch[1] : "unknown";
-					const bitrateMatch = output.match(/bitrate: (\d+) kb\/s/);
-					const bitrate = bitrateMatch ? parseInt(bitrateMatch[1]) : 0;
-					resolve({
-						path: filePath,
-						duration,
-						width,
-						height,
-						codec,
-						fps,
-						size: fs$1.existsSync(filePath) ? fs$1.statSync(filePath).size : 0,
-						bitrate
-					});
-				} catch (error) {
-					reject(/* @__PURE__ */ new Error("Failed to parse video info"));
-				}
-			});
-			process$1.on("error", reject);
-		});
-	}
-	async compress(options, progressCallback) {
-		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
-		const id = options.id || randomUUID$1();
-		const { inputPath, outputPath, format, resolution, preset, crf, bitrate, scaleMode, keepAudio } = options;
-		if (!fs$1.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
-		const totalDuration = (await this.getVideoInfo(inputPath)).duration;
-		const outputDir = outputPath ? path$1.dirname(outputPath) : app.getPath("downloads");
-		const outputFilename = outputPath ? path$1.basename(outputPath) : `compressed_${path$1.basename(inputPath, path$1.extname(inputPath))}_${Date.now()}.${format}`;
-		const finalOutputPath = path$1.join(outputDir, outputFilename);
-		if (!fs$1.existsSync(outputDir)) fs$1.mkdirSync(outputDir, { recursive: true });
-		const args = ["-i", inputPath];
-		const filters = [];
-		if (resolution) {
-			let scaleString = `scale=${resolution.width}:${resolution.height}`;
-			if (scaleMode === "fit") scaleString = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=decrease,pad=${resolution.width}:${resolution.height}:(ow-iw)/2:(oh-ih)/2`;
-			else if (scaleMode === "fill") scaleString = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=increase,crop=${resolution.width}:${resolution.height}`;
-			filters.push(scaleString);
-		}
-		if (filters.length > 0 || resolution) filters.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
-		if (filters.length > 0) args.push("-vf", filters.join(","));
-		if (format === "mp4" || format === "mov") {
-			args.push("-c:v", "libx264");
-			if (bitrate) args.push("-b:v", bitrate);
-			else args.push("-crf", (crf || 23).toString());
-			args.push("-preset", preset || "medium");
-			args.push("-pix_fmt", "yuv420p");
-		} else if (format === "webm") {
-			args.push("-c:v", "libvpx-vp9");
-			if (bitrate) args.push("-b:v", bitrate);
-			else {
-				args.push("-crf", (crf || 30).toString());
-				args.push("-b:v", "0");
-			}
-		}
-		if (!keepAudio) args.push("-an");
-		else args.push("-c:a", "aac", "-b:a", "128k");
-		args.push("-y", finalOutputPath);
-		return new Promise((resolve, reject) => {
-			console.log(`[VideoCompressor] Command: ${this.ffmpegPath} ${args.join(" ")}`);
-			const process$1 = spawn(this.ffmpegPath, args);
-			this.activeProcesses.set(id, process$1);
-			process$1.stderr.on("data", (data) => {
-				const output = data.toString();
-				const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-				if (timeMatch && progressCallback) {
-					const currentTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
-					const percent = Math.min(currentTime / totalDuration * 100, 100);
-					const speedMatch = output.match(/speed=\s*(\d+\.?\d*)x/);
-					progressCallback({
-						id,
-						percent,
-						state: "processing",
-						speed: speedMatch ? parseFloat(speedMatch[1]) : 1
-					});
-				}
-			});
-			process$1.on("close", (code) => {
-				this.activeProcesses.delete(id);
-				if (code === 0) {
-					if (progressCallback) progressCallback({
-						id,
-						percent: 100,
-						state: "complete",
-						outputPath: finalOutputPath
-					});
-					resolve(finalOutputPath);
-				} else reject(/* @__PURE__ */ new Error(`Compression failed with code ${code}`));
-			});
-			process$1.on("error", (err) => {
-				this.activeProcesses.delete(id);
-				reject(err);
-			});
-		});
-	}
-	cancel(id) {
-		const process$1 = this.activeProcesses.get(id);
-		if (process$1) {
-			process$1.kill();
-			this.activeProcesses.delete(id);
-		}
-	}
-};
-const videoCompressor = new VideoCompressor();
 var HTTP_AGENT = new http.Agent({
 	keepAlive: true,
 	maxSockets: 128,
@@ -6374,320 +6744,6 @@ function setupDownloadManagerHandlers() {
 		return { success: true };
 	});
 }
-var require$1 = createRequire(import.meta.url);
-var PluginManager = class {
-	constructor() {
-		this.loadedPlugins = /* @__PURE__ */ new Map();
-		const userDataPath = app.getPath("userData");
-		this.pluginsDir = path$1.join(userDataPath, "plugins");
-		this.binariesDir = path$1.join(userDataPath, "binaries");
-		this.registryUrl = "https://raw.githubusercontent.com/devtools-app/plugin-registry/main/registry.json";
-		this.store = new Store({
-			name: "plugin-manager",
-			defaults: {
-				installed: {},
-				registry: null,
-				lastRegistryUpdate: 0
-			}
-		});
-		this.ensureDirectories();
-	}
-	async ensureDirectories() {
-		await fs$2.mkdir(this.pluginsDir, { recursive: true });
-		await fs$2.mkdir(this.binariesDir, { recursive: true });
-	}
-	async initialize() {
-		console.log("[PluginManager] Initializing...");
-		await this.updateRegistry();
-		await this.loadInstalledPlugins();
-		console.log("[PluginManager] Initialized with", this.loadedPlugins.size, "active plugins");
-	}
-	async updateRegistry(force = false) {
-		const lastUpdate = this.store.get("lastRegistryUpdate");
-		if (!force && Date.now() - lastUpdate < 3600 * 1e3) {
-			console.log("[PluginManager] Registry is up to date");
-			return;
-		}
-		try {
-			console.log("[PluginManager] Fetching plugin registry...");
-			const response = await axios.get(this.registryUrl, { timeout: 1e4 });
-			this.store.set("registry", response.data);
-			this.store.set("lastRegistryUpdate", Date.now());
-			console.log("[PluginManager] Registry updated:", response.data.plugins.length, "plugins available");
-		} catch (error) {
-			console.error("[PluginManager] Failed to update registry:", error.message);
-			if (!this.store.get("registry")) await this.loadEmbeddedRegistry();
-		}
-	}
-	async loadEmbeddedRegistry() {
-		try {
-			let registryPath = "";
-			if (app.isPackaged) registryPath = path$1.join(process.resourcesPath, "plugin-registry.json");
-			else registryPath = path$1.join(app.getAppPath(), "resources", "plugin-registry.json");
-			console.log("[PluginManager] Loading registry from:", registryPath);
-			const data = await fs$2.readFile(registryPath, "utf-8");
-			const registry = JSON.parse(data);
-			this.store.set("registry", registry);
-			console.log("[PluginManager] Loaded embedded registry");
-		} catch (error) {
-			console.error("[PluginManager] Failed to load embedded registry:", error);
-		}
-	}
-	getRegistry() {
-		return this.store.get("registry");
-	}
-	getAvailablePlugins() {
-		return this.store.get("registry")?.plugins || [];
-	}
-	async installPlugin(pluginId, onProgress) {
-		console.log("[PluginManager] Installing plugin:", pluginId);
-		const manifest = this.getPluginManifest(pluginId);
-		if (!manifest) throw new Error(`Plugin not found in registry: ${pluginId}`);
-		if (this.store.get("installed")[pluginId]) throw new Error(`Plugin already installed: ${pluginId}`);
-		this.checkCompatibility(manifest);
-		try {
-			onProgress?.({
-				stage: "download",
-				percent: 0,
-				message: "Downloading plugin..."
-			});
-			const pluginZipPath = await this.downloadFile(manifest.downloadUrl, path$1.join(app.getPath("temp"), `${pluginId}.zip`), (percent) => onProgress?.({
-				stage: "download",
-				percent,
-				message: `Downloading... ${percent}%`
-			}));
-			onProgress?.({
-				stage: "verify",
-				percent: 50,
-				message: "Verifying integrity..."
-			});
-			await this.verifyChecksum(pluginZipPath, manifest.checksum);
-			onProgress?.({
-				stage: "extract",
-				percent: 60,
-				message: "Extracting files..."
-			});
-			const pluginPath = path$1.join(this.pluginsDir, pluginId);
-			await this.extractZip(pluginZipPath, pluginPath);
-			if (manifest.dependencies?.binary && manifest.dependencies.binary.length > 0) {
-				onProgress?.({
-					stage: "dependencies",
-					percent: 70,
-					message: "Installing dependencies..."
-				});
-				await this.installBinaryDependencies(manifest.dependencies.binary, onProgress);
-			}
-			onProgress?.({
-				stage: "validate",
-				percent: 90,
-				message: "Validating plugin..."
-			});
-			await this.validatePlugin(pluginPath, manifest);
-			onProgress?.({
-				stage: "register",
-				percent: 95,
-				message: "Registering plugin..."
-			});
-			const installedPlugin = {
-				manifest,
-				installPath: pluginPath,
-				installedAt: Date.now(),
-				active: true
-			};
-			const updatedInstalled = {
-				...this.store.get("installed"),
-				[pluginId]: installedPlugin
-			};
-			this.store.set("installed", updatedInstalled);
-			onProgress?.({
-				stage: "complete",
-				percent: 100,
-				message: "Plugin installed successfully!"
-			});
-			await this.loadPlugin(pluginId);
-			await fs$2.unlink(pluginZipPath).catch(() => {});
-			console.log("[PluginManager] Plugin installed successfully:", pluginId);
-		} catch (error) {
-			console.error("[PluginManager] Installation failed:", error);
-			const pluginPath = path$1.join(this.pluginsDir, pluginId);
-			await fs$2.rm(pluginPath, {
-				recursive: true,
-				force: true
-			}).catch(() => {});
-			throw new Error(`Installation failed: ${error.message}`);
-		}
-	}
-	async uninstallPlugin(pluginId) {
-		console.log("[PluginManager] Uninstalling plugin:", pluginId);
-		const installed = this.store.get("installed");
-		const plugin = installed[pluginId];
-		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
-		try {
-			this.unloadPlugin(pluginId);
-			await fs$2.rm(plugin.installPath, {
-				recursive: true,
-				force: true
-			});
-			if (plugin.manifest.dependencies?.binary) await this.cleanupDependencies(plugin.manifest.dependencies.binary);
-			const { [pluginId]: removed, ...remaining } = installed;
-			this.store.set("installed", remaining);
-			console.log("[PluginManager] Plugin uninstalled:", pluginId);
-		} catch (error) {
-			console.error("[PluginManager] Uninstallation failed:", error);
-			throw new Error(`Uninstallation failed: ${error.message}`);
-		}
-	}
-	async loadInstalledPlugins() {
-		const installed = this.store.get("installed");
-		for (const [pluginId, plugin] of Object.entries(installed)) if (plugin.active) try {
-			await this.loadPlugin(pluginId);
-		} catch (error) {
-			console.error(`[PluginManager] Failed to load plugin ${pluginId}:`, error.message);
-		}
-	}
-	async loadPlugin(pluginId) {
-		const plugin = this.store.get("installed")[pluginId];
-		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
-		try {
-			const pluginModule = require$1(path$1.join(plugin.installPath, plugin.manifest.main));
-			if (pluginModule.activate) await pluginModule.activate();
-			this.loadedPlugins.set(pluginId, pluginModule);
-			console.log("[PluginManager] Plugin loaded:", pluginId);
-		} catch (error) {
-			console.error(`[PluginManager] Failed to load plugin ${pluginId}:`, error);
-			throw error;
-		}
-	}
-	unloadPlugin(pluginId) {
-		const pluginModule = this.loadedPlugins.get(pluginId);
-		if (pluginModule?.deactivate) try {
-			pluginModule.deactivate();
-		} catch (error) {
-			console.error(`[PluginManager] Error during plugin deactivation:`, error);
-		}
-		this.loadedPlugins.delete(pluginId);
-		console.log("[PluginManager] Plugin unloaded:", pluginId);
-	}
-	async installBinaryDependencies(dependencies, onProgress) {
-		const platform = process.platform;
-		for (let i = 0; i < dependencies.length; i++) {
-			const dep = dependencies[i];
-			const platformInfo = dep.platforms[platform];
-			if (!platformInfo) {
-				console.warn(`[PluginManager] Binary ${dep.name} not available for ${platform}`);
-				continue;
-			}
-			const binaryPath = path$1.join(this.binariesDir, dep.name);
-			if (await this.fileExists(binaryPath)) {
-				console.log(`[PluginManager] Binary ${dep.name} already exists`);
-				continue;
-			}
-			const basePercent = 70 + i / dependencies.length * 20;
-			onProgress?.({
-				stage: "dependencies",
-				percent: basePercent,
-				message: `Installing ${dep.name}...`
-			});
-			const tempPath = path$1.join(app.getPath("temp"), `${dep.name}.zip`);
-			await this.downloadFile(platformInfo.url, tempPath);
-			await this.verifyChecksum(tempPath, platformInfo.checksum);
-			await this.extractZip(tempPath, this.binariesDir);
-			if (platform !== "win32") await fs$2.chmod(binaryPath, 493);
-			await fs$2.unlink(tempPath).catch(() => {});
-			console.log(`[PluginManager] Binary installed: ${dep.name}`);
-		}
-	}
-	async cleanupDependencies(dependencies) {
-		const installed = this.store.get("installed");
-		for (const dep of dependencies) {
-			let inUse = false;
-			for (const plugin of Object.values(installed)) if (plugin.manifest.dependencies?.binary?.some((d) => d.name === dep.name)) {
-				inUse = true;
-				break;
-			}
-			if (!inUse) {
-				const binaryPath = path$1.join(this.binariesDir, dep.name);
-				await fs$2.rm(binaryPath, {
-					force: true,
-					recursive: true
-				}).catch(() => {});
-				console.log(`[PluginManager] Removed unused binary: ${dep.name}`);
-			}
-		}
-	}
-	getPluginManifest(pluginId) {
-		return this.store.get("registry")?.plugins.find((p) => p.id === pluginId) || null;
-	}
-	checkCompatibility(manifest) {
-		if (!manifest.platforms.includes(process.platform)) throw new Error(`Plugin not compatible with ${process.platform}`);
-		if (app.getVersion() < manifest.minAppVersion) throw new Error(`Plugin requires app version ${manifest.minAppVersion} or higher`);
-	}
-	async downloadFile(url, destination, onProgress) {
-		const response = await axios({
-			method: "GET",
-			url,
-			responseType: "stream",
-			timeout: 3e5
-		});
-		const totalSize = parseInt(response.headers["content-length"], 10);
-		let downloadedSize = 0;
-		const writer = require$1("fs").createWriteStream(destination);
-		response.data.on("data", (chunk) => {
-			downloadedSize += chunk.length;
-			const percent = Math.round(downloadedSize / totalSize * 100);
-			onProgress?.(percent);
-		});
-		response.data.pipe(writer);
-		return new Promise((resolve, reject) => {
-			writer.on("finish", () => resolve(destination));
-			writer.on("error", reject);
-		});
-	}
-	async verifyChecksum(filePath, expectedChecksum) {
-		const fileBuffer = await fs$2.readFile(filePath);
-		if (createHash$1("sha256").update(fileBuffer).digest("hex") !== expectedChecksum) throw new Error("Checksum verification failed - file may be corrupted");
-	}
-	async extractZip(zipPath, destination) {
-		new AdmZip(zipPath).extractAllTo(destination, true);
-	}
-	async validatePlugin(pluginPath, manifest) {
-		const mainPath = path$1.join(pluginPath, manifest.main);
-		if (!await this.fileExists(mainPath)) throw new Error(`Plugin main file not found: ${manifest.main}`);
-		const manifestPath = path$1.join(pluginPath, "manifest.json");
-		if (!await this.fileExists(manifestPath)) throw new Error("Plugin manifest.json not found");
-	}
-	async fileExists(filePath) {
-		try {
-			await fs$2.access(filePath);
-			return true;
-		} catch {
-			return false;
-		}
-	}
-	getInstalledPlugins() {
-		const installed = this.store.get("installed");
-		return Object.values(installed);
-	}
-	isInstalled(pluginId) {
-		return pluginId in this.store.get("installed");
-	}
-	getPlugin(pluginId) {
-		return this.loadedPlugins.get(pluginId);
-	}
-	getBinaryPath(binaryName) {
-		return path$1.join(this.binariesDir, binaryName);
-	}
-	async togglePlugin(pluginId, active) {
-		const installed = this.store.get("installed");
-		const plugin = installed[pluginId];
-		if (!plugin) throw new Error(`Plugin not installed: ${pluginId}`);
-		if (active && !plugin.active) await this.loadPlugin(pluginId);
-		else if (!active && plugin.active) this.unloadPlugin(pluginId);
-		plugin.active = active;
-		this.store.set("installed", installed);
-	}
-};
-const pluginManager = new PluginManager();
 var execAsync = promisify(exec);
 var store = new Store();
 var __dirname = dirname(fileURLToPath(import.meta.url));
@@ -7243,7 +7299,7 @@ function createWindow() {
 		win?.webContents.send("window-maximized", false);
 	});
 	ipcMain.handle("get-home-dir", () => {
-		return os.homedir();
+		return os$1.homedir();
 	});
 	ipcMain.handle("select-folder", async () => {
 		const result = await dialog.showOpenDialog(win, {
@@ -7367,7 +7423,7 @@ function createWindow() {
 				await fs.access(testPath);
 				return { status: "granted" };
 			} catch (e) {}
-			const homeDir = os.homedir();
+			const homeDir = os$1.homedir();
 			try {
 				await fs.readdir(homeDir);
 				return {
@@ -7440,7 +7496,7 @@ function createWindow() {
 	async function checkFileAccessPermission() {
 		if (process.platform !== "win32") return { status: "not-applicable" };
 		try {
-			const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
+			const testPath = join(os$1.tmpdir(), `permission-test-${Date.now()}.txt`);
 			const testContent = "permission test";
 			await fs.writeFile(testPath, testContent);
 			const readContent = await fs.readFile(testPath, "utf-8");
@@ -7497,7 +7553,7 @@ function createWindow() {
 	}
 	async function testFileAccessPermission() {
 		try {
-			const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
+			const testPath = join(os$1.tmpdir(), `permission-test-${Date.now()}.txt`);
 			const testContent = `Test ${Date.now()}`;
 			await fs.writeFile(testPath, testContent);
 			const readContent = await fs.readFile(testPath, "utf-8");
@@ -7879,7 +7935,7 @@ app.whenReady().then(() => {
 	});
 	ipcMain.handle("system:get-info", async () => {
 		try {
-			const [cpu, mem, os$1, graphics, disk, net] = await Promise.all([
+			const [cpu, mem, os$2, graphics, disk, net] = await Promise.all([
 				si.cpu(),
 				si.mem(),
 				si.osInfo(),
@@ -7890,7 +7946,7 @@ app.whenReady().then(() => {
 			return {
 				cpu,
 				memory: mem,
-				os: os$1,
+				os: os$2,
 				graphics: graphics.controllers,
 				disks: disk,
 				network: net.filter((n) => n.operstate === "up")

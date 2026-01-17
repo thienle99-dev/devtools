@@ -1,30 +1,29 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, desktopCapturer, protocol } from 'electron'
-import { join } from 'node:path'
-import path from 'node:path';
-import { fileURLToPath } from 'node:url'
-import { dirname } from 'node:path'
-import { randomUUID, createHash } from 'node:crypto'
-import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
-import fs from 'node:fs/promises'
-import os from 'node:os'
-import { setupCleanerHandlers } from './cleaner'
-import { setupScreenshotHandlers } from './screenshot'
-import { createReadStream } from 'node:fs'
-import { Readable } from 'node:stream'
-import { youtubeDownloader } from './youtube-downloader'
-import { tiktokDownloader } from './tiktok-downloader'
-import { universalDownloader } from './universal-downloader'
-import { audioExtractor } from './audio-extractor'
-import { videoMerger } from './video-merger'
-import { audioManager } from './audio-manager'
-import { videoTrimmer } from './video-trimmer'
-import { videoEffects } from './video-effects'
-import { videoCompressor } from './video-compressor'
-import si from 'systeminformation'
-import Store from 'electron-store'
-import { setupDownloadManagerHandlers } from './download-manager-handlers'
-import { pluginManager } from './plugin-manager'
+import path, { dirname, join } from 'node:path'
+import { promisify } from 'node:util';
+import { exec } from 'node:child_process';
+import Store from 'electron-store';
+import { fileURLToPath } from 'node:url';
+import fs from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import * as os from 'node:os';
+import { randomUUID, createHash } from 'node:crypto';
+import { Readable } from 'node:stream';
+import si from 'systeminformation';
+
+import { videoMerger } from './video-merger';
+import { audioManager } from './audio-manager';
+import { audioExtractor } from './audio-extractor';
+import { videoTrimmer } from './video-trimmer';
+import { videoEffects } from './video-effects';
+import { videoCompressor } from './video-compressor';
+import { youtubeDownloader } from './youtube-downloader';
+import { tiktokDownloader } from './tiktok-downloader';
+import { universalDownloader } from './universal-downloader';
+import { pluginManager } from './plugin-manager';
+import { setupScreenshotHandlers } from './screenshot';
+import { setupCleanerHandlers } from './cleaner';
+import { setupDownloadManagerHandlers } from './download-manager-handlers';
 
 const execAsync = promisify(exec)
 
