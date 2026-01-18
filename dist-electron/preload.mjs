@@ -317,6 +317,7 @@ electron.contextBridge.exposeInMainWorld("pluginAPI", {
 });
 electron.contextBridge.exposeInMainWorld("videoCompressorAPI", {
 	getInfo: (filePath) => electron.ipcRenderer.invoke("video-compressor:get-info", filePath),
+	generateThumbnail: (filePath) => electron.ipcRenderer.invoke("video-compressor:generate-thumbnail", filePath),
 	compress: (options) => electron.ipcRenderer.invoke("video-compressor:compress", options),
 	cancel: (id) => electron.ipcRenderer.invoke("video-compressor:cancel", id),
 	onProgress: (callback) => {

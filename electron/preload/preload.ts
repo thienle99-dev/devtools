@@ -343,6 +343,7 @@ contextBridge.exposeInMainWorld('pluginAPI', {
 
 contextBridge.exposeInMainWorld('videoCompressorAPI', {
   getInfo: (filePath: string) => ipcRenderer.invoke('video-compressor:get-info', filePath),
+  generateThumbnail: (filePath: string) => ipcRenderer.invoke('video-compressor:generate-thumbnail', filePath),
   compress: (options: any) => ipcRenderer.invoke('video-compressor:compress', options),
   cancel: (id: string) => ipcRenderer.invoke('video-compressor:cancel', id),
   onProgress: (callback: (progress: any) => void) => {

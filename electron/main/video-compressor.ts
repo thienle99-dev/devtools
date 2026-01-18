@@ -3,6 +3,7 @@ import path from 'path';
 import { app } from 'electron';
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
+import { Readable } from 'stream';
 import type {
     VideoCompressOptions,
     VideoCompressProgress,
@@ -12,6 +13,43 @@ import type {
 export class VideoCompressor {
     private ffmpegPath: string | null = null;
     private activeProcesses: Map<string, any> = new Map();
+
+    getPreviewStream(filePath: string): Readable {
+        if (!this.ffmpegPath) {
+            throw new Error('FFmpeg not available');
+        }
+
+        const args = [
+            '-i', filePath,
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast', // Fast encoding for realtime
+            '-tune', 'zerolatency', // Low latency
+            '-vf', 'scale=-2:720', // Downscale to 720p max to save CPU
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ac', '2',
+            '-f', 'ismv', // Fragmented MP4 for streaming
+            '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+            'pipe:1'
+        ];
+
+        console.log(`[VideoCompressor] Starting preview stream for ${filePath}`);
+        const process = spawn(this.ffmpegPath, args);
+
+        // Ensure process is killed when the stream is destroyed/closed
+        process.stdout.on('close', () => {
+            try {
+                process.kill();
+            } catch (e) { /* ignore */ }
+        });
+
+        // Log stderr errors just in case
+        process.stderr.on('data', (d) => {
+            // console.log('[Preview FFmpeg]', d.toString());
+        });
+
+        return process.stdout;
+    }
 
     constructor() {
         this.initFFmpeg().catch(e => console.error('FFmpeg init error:', e));
@@ -59,30 +97,42 @@ export class VideoCompressor {
                         ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3])
                         : 0;
 
+                    console.log('[VideoCompressor] Info Output:', output);
+
                     // Global bitrate
                     const globalBitrateMatch = output.match(/bitrate: (\d+) kb\/s/i);
                     let bitrate = globalBitrateMatch ? parseInt(globalBitrateMatch[1]) : 0;
 
                     // Parse video stream info
-                    // We look for "Stream #...: Video: ..."
-                    const videoStreamMatch = output.match(/Stream #.*: Video: ([^,\n]+), [^,\n]+, (\d+)x(\d+)/i);
+                    // Find the line containing "Video:"
+                    const videoLineMatch = output.match(/Stream #.*: Video: .*/i);
 
                     let codec = 'unknown';
                     let width = 0;
                     let height = 0;
                     let fps = 0;
 
-                    if (videoStreamMatch) {
-                        codec = videoStreamMatch[1].trim().split(' ')[0]; // Extract first word of codec
-                        width = parseInt(videoStreamMatch[2]);
-                        height = parseInt(videoStreamMatch[3]);
+                    if (videoLineMatch) {
+                        const videoLine = videoLineMatch[0];
 
-                        // Parse FPS from the same line or nearby
-                        // It usually looks like "23.98 fps" or "24 fps"
+                        // Extract Codec: First term after "Video:"
+                        const codecMatch = videoLine.match(/Video: ([^,\s]+)/i);
+                        if (codecMatch) {
+                            codec = codecMatch[1];
+                        }
+
+                        // Extract Resolution: Look for pattern DDDxDDD
+                        const resMatch = videoLine.match(/(\d{2,5})x(\d{2,5})/);
+                        if (resMatch) {
+                            width = parseInt(resMatch[1]);
+                            height = parseInt(resMatch[2]);
+                        }
+
+                        // Extract FPS
                         const fpsMatch = output.match(/, (\d+(?:\.\d+)?) fps/i);
                         if (fpsMatch) fps = parseFloat(fpsMatch[1]);
                     } else {
-                        // Fallback resolution check if the specific stream match failed
+                        // Fallback: Try to find resolution anywhere if specific stream line search failed
                         const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
                         if (resMatch) {
                             width = parseInt(resMatch[1]);
@@ -109,6 +159,18 @@ export class VideoCompressor {
 
             process.on('error', reject);
         });
+    }
+
+    async generateThumbnail(filePath: string): Promise<string | null> {
+        try {
+            const { nativeImage } = await import('electron');
+            const thumbnail = await nativeImage.createThumbnailFromPath(filePath, { width: 1280, height: 720 });
+            if (thumbnail.isEmpty()) return null;
+            return thumbnail.toDataURL(); // Returns base64 string
+        } catch (e) {
+            console.error('Thumbnail generation failed:', e);
+            return null;
+        }
     }
 
     async compress(

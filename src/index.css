@@ -35,6 +35,8 @@
     radial-gradient(at 10% 90%, rgba(30, 27, 75, 0.3) 0px, transparent 50%),
     radial-gradient(at 90% 90%, rgba(88, 28, 135, 0.2) 0px, transparent 50%),
     #050505;
+
+  --color-bg-main: #050505;
 }
 
 :root[data-layout="compact"] {
@@ -76,6 +78,8 @@
     radial-gradient(at 98% 1%, rgba(192, 132, 252, 0.3) 0px, transparent 50%),
     radial-gradient(at 50% 100%, rgba(248, 250, 252, 1) 0px, transparent 50%),
     #eff6ff;
+
+  --color-bg-main: #eff6ff;
 }
 
 body {
@@ -187,6 +191,7 @@ body {
 }
 
 @layer components {
+
   /* Premium Glass Cards */
   .glass-panel {
     background-color: var(--color-glass-panel);
@@ -464,15 +469,19 @@ body {
     background-color: var(--color-glass-panel);
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
-    border-right: none; /* Removed border for seamless design */
-    box-shadow: none; /* Removed shadow for seamless design */
+    border-right: none;
+    /* Removed border for seamless design */
+    box-shadow: none;
+    /* Removed shadow for seamless design */
   }
 
   /* Light mode for sidebar */
   :root.light .sidebar-macos {
     background-color: rgba(255, 255, 255, 0.7);
-    border-right: none; /* Removed border for seamless design */
-    box-shadow: none; /* Removed shadow for seamless design */
+    border-right: none;
+    /* Removed border for seamless design */
+    box-shadow: none;
+    /* Removed shadow for seamless design */
   }
 
   /* ============================================
@@ -555,11 +564,9 @@ body {
   }
 
   .sidebar-nav-item-active {
-    background: linear-gradient(
-      90deg,
-      rgba(0, 122, 255, 0.15) 0%,
-      rgba(0, 122, 255, 0.1) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(0, 122, 255, 0.15) 0%,
+        rgba(0, 122, 255, 0.1) 100%);
     color: var(--color-text-primary);
     font-weight: 500;
     box-shadow:
@@ -575,11 +582,9 @@ body {
     transform: translateY(-50%);
     width: 3px;
     height: 60%;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 122, 255, 0.8) 0%,
-      rgba(0, 122, 255, 0.6) 100%
-    );
+    background: linear-gradient(180deg,
+        rgba(0, 122, 255, 0.8) 0%,
+        rgba(0, 122, 255, 0.6) 100%);
     border-radius: 0 2px 2px 0;
     box-shadow: 0 0 8px rgba(0, 122, 255, 0.4);
   }
@@ -590,22 +595,18 @@ body {
   }
 
   :root.light .sidebar-nav-item-active {
-    background: linear-gradient(
-      90deg,
-      rgba(0, 122, 255, 0.12) 0%,
-      rgba(0, 122, 255, 0.08) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(0, 122, 255, 0.12) 0%,
+        rgba(0, 122, 255, 0.08) 100%);
     box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.08),
       0 0 0 0.5px rgba(0, 122, 255, 0.15) inset;
   }
 
   :root.light .sidebar-nav-item-active::before {
-    background: linear-gradient(
-      180deg,
-      rgba(0, 122, 255, 0.6) 0%,
-      rgba(0, 122, 255, 0.4) 100%
-    );
+    background: linear-gradient(180deg,
+        rgba(0, 122, 255, 0.6) 0%,
+        rgba(0, 122, 255, 0.4) 100%);
     box-shadow: 0 0 6px rgba(0, 122, 255, 0.3);
   }
 
@@ -652,7 +653,8 @@ body {
     -webkit-backdrop-filter: blur(20px);
     border: none;
     box-shadow: none;
-    isolation: isolate; /* Create new stacking context for tabs */
+    isolation: isolate;
+    /* Create new stacking context for tabs */
   }
 
   /* Light mode tab bar container */
@@ -714,7 +716,8 @@ body {
     border-bottom: none !important;
     background-color: transparent;
     box-sizing: border-box;
-    isolation: isolate; /* Create new stacking context */
+    isolation: isolate;
+    /* Create new stacking context */
     transition:
       background-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
       color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -749,7 +752,8 @@ body {
     border-bottom: none !important;
     color: var(--color-text-primary);
     z-index: 2;
-    position: relative; /* Ensure z-index works */
+    position: relative;
+    /* Ensure z-index works */
   }
 
   /* Light mode inactive */
@@ -775,18 +779,17 @@ body {
     border-top-right-radius: 0.5rem;
     color: var(--color-text-primary);
     z-index: 5;
-    position: relative; /* Ensure z-index works */
+    position: relative;
+    /* Ensure z-index works */
     box-shadow: none !important;
     margin-bottom: 0 !important;
     margin-top: 0 !important;
   }
 
   .tab-item-chrome-active::before {
-    background: linear-gradient(
-      90deg,
-      rgba(99, 102, 241, 0.6) 0%,
-      rgba(139, 92, 246, 0.6) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(99, 102, 241, 0.6) 0%,
+        rgba(139, 92, 246, 0.6) 100%);
     height: 2px;
     transition:
       background-color 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -801,9 +804,11 @@ body {
       transform: scaleX(0);
       opacity: 0;
     }
+
     50% {
       opacity: 1;
     }
+
     100% {
       transform: scaleX(1);
       opacity: 1;
@@ -821,11 +826,9 @@ body {
   }
 
   :root.light .tab-item-chrome-active::before {
-    background: linear-gradient(
-      90deg,
-      rgba(99, 102, 241, 0.8) 0%,
-      rgba(139, 92, 246, 0.8) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(99, 102, 241, 0.8) 0%,
+        rgba(139, 92, 246, 0.8) 100%);
   }
 
   /* Close Button - Chrome Style */
@@ -888,7 +891,8 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    z-index: 30; /* Ensure scroll buttons are above tabs */
+    z-index: 30;
+    /* Ensure scroll buttons are above tabs */
     border: none;
     outline: none;
   }
@@ -922,20 +926,16 @@ body {
 
   .tab-scroll-shadow-left {
     left: 0;
-    background: linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.08) 0%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(0, 0, 0, 0.08) 0%,
+        transparent 100%);
   }
 
   .tab-scroll-shadow-right {
     right: 0;
-    background: linear-gradient(
-      270deg,
-      rgba(0, 0, 0, 0.08) 0%,
-      transparent 100%
-    );
+    background: linear-gradient(270deg,
+        rgba(0, 0, 0, 0.08) 0%,
+        transparent 100%);
   }
 
   /* Dark mode scroll shadows */
@@ -944,11 +944,9 @@ body {
   }
 
   :root.dark .tab-scroll-shadow-right {
-    background: linear-gradient(
-      270deg,
-      rgba(0, 0, 0, 0.2) 0%,
-      transparent 100%
-    );
+    background: linear-gradient(270deg,
+        rgba(0, 0, 0, 0.2) 0%,
+        transparent 100%);
   }
 }
 
@@ -993,6 +991,7 @@ body {
 
 /* Respect reduced motion preference - macOS accessibility */
 @media (prefers-reduced-motion: reduce) {
+
   .glass-button,
   .glass-button-primary,
   .glass-button-secondary,

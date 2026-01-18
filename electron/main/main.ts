@@ -2046,6 +2046,10 @@ app.whenReady().then(() => {
     return await videoMerger.generateThumbnail(filePath, time);
   });
 
+  ipcMain.handle('video-compressor:generate-thumbnail', async (_, filePath: string) => {
+    return await videoCompressor.generateThumbnail(filePath);
+  });
+
   ipcMain.handle('video-filmstrip:generate', async (_, filePath: string, duration: number, count?: number) => {
     return await videoMerger.generateFilmstrip(filePath, duration, count);
   });
@@ -2206,14 +2210,8 @@ app.whenReady().then(() => {
   // Handle local-media protocol
   protocol.handle('local-media', async (request) => {
     try {
-      console.log('[LocalMedia] Request:', request.url);
-
       const url = new URL(request.url);
-      // On Windows, the path might start with / followed by drive letter (e.g. /C:/)
-      // On Mac/Unix, it starts with / followed by Users
       let decodedPath = decodeURIComponent(url.pathname);
-
-      console.log('[LocalMedia] Initial Path:', decodedPath);
 
       // Fix Windows path issues
       if (process.platform === 'win32') {
@@ -2223,13 +2221,10 @@ app.whenReady().then(() => {
           decodedPath = decodedPath.charAt(0) + ':' + decodedPath.slice(1);
         }
       } else {
-        // Unix: Ensure it's not double-slashed at start
         decodedPath = decodedPath.replace(/^\/+/, '/');
       }
 
-      console.log('[LocalMedia] Final Path:', decodedPath);
-
-      // Verify file exists and get stats
+      // Verify file exists
       const stats = await fs.stat(decodedPath);
       const fileSize = stats.size;
 
@@ -2244,15 +2239,44 @@ app.whenReady().then(() => {
       else if (ext === '.mp3') mimeType = 'audio/mpeg';
       else if (ext === '.wav') mimeType = 'audio/wav';
 
-      // Handle Range Header
+      // Smart Preview: Check if transcoding is needed for modern codecs not supported by Chromium (HEVC)
+      let useTranscoding = false;
+      const unsupportedCodecs = ['hevc', 'hvc1', 'h265', 'dvhe', 'dvh1']; // HEVC variants
+
+      try {
+        // Only check for video containers
+        if (['.mp4', '.mov', '.mkv', '.webm'].includes(ext)) {
+          // This probing adds a small delay (~100ms) but ensures playback works
+          const info = await videoCompressor.getVideoInfo(decodedPath);
+          if (info.codec && unsupportedCodecs.some(c => info.codec.toLowerCase().includes(c))) {
+            useTranscoding = true;
+          }
+        }
+      } catch (e) {
+        // Fallback to direct play if probing fails
+      }
+
+      if (useTranscoding) {
+        console.log(`[LocalMedia] Transcoding ${decodedPath} for preview`);
+        const stream = videoCompressor.getPreviewStream(decodedPath);
+        const webStream = Readable.toWeb(stream as any);
+
+        return new Response(webStream as any, {
+          status: 200,
+          headers: {
+            'Content-Type': 'video/mp4',
+            // Transcoded stream doesn't support range requests easily, so we stream it as a whole
+          }
+        });
+      }
+
+      // Handle Range Header for direct playback
       const range = request.headers.get('Range');
       if (range) {
         const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
         const chunksize = (end - start) + 1;
-
-        console.log(`[LocalMedia] Streaming Range: ${start}-${end}/${fileSize}`);
 
         const nodeStream = createReadStream(decodedPath, { start, end });
         const webStream = Readable.toWeb(nodeStream as any);
@@ -2267,7 +2291,6 @@ app.whenReady().then(() => {
           }
         });
       } else {
-        console.log(`[LocalMedia] Streaming Full: ${fileSize}`);
         const nodeStream = createReadStream(decodedPath);
         const webStream = Readable.toWeb(nodeStream as any);
 
@@ -2282,7 +2305,6 @@ app.whenReady().then(() => {
 
     } catch (e) {
       console.error('[LocalMedia] Error:', e);
-      // Basic erro handling
       if ((e as any).code === 'ENOENT') {
         return new Response('File not found', { status: 404 });
       }

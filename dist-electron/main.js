@@ -1025,6 +1025,41 @@ var VideoEffects = class {
 };
 const videoEffects = new VideoEffects();
 var VideoCompressor = class {
+	getPreviewStream(filePath) {
+		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
+		const args = [
+			"-i",
+			filePath,
+			"-c:v",
+			"libx264",
+			"-preset",
+			"ultrafast",
+			"-tune",
+			"zerolatency",
+			"-vf",
+			"scale=-2:720",
+			"-c:a",
+			"aac",
+			"-b:a",
+			"128k",
+			"-ac",
+			"2",
+			"-f",
+			"ismv",
+			"-movflags",
+			"frag_keyframe+empty_moov+default_base_moof",
+			"pipe:1"
+		];
+		console.log(`[VideoCompressor] Starting preview stream for ${filePath}`);
+		const process$1 = spawn(this.ffmpegPath, args);
+		process$1.stdout.on("close", () => {
+			try {
+				process$1.kill();
+			} catch (e) {}
+		});
+		process$1.stderr.on("data", (d) => {});
+		return process$1.stdout;
+	}
 	constructor() {
 		this.ffmpegPath = null;
 		this.activeProcesses = /* @__PURE__ */ new Map();
@@ -1059,17 +1094,23 @@ var VideoCompressor = class {
 				try {
 					const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/i);
 					const duration = durationMatch ? parseInt(durationMatch[1]) * 3600 + parseInt(durationMatch[2]) * 60 + parseFloat(durationMatch[3]) : 0;
+					console.log("[VideoCompressor] Info Output:", output);
 					const globalBitrateMatch = output.match(/bitrate: (\d+) kb\/s/i);
 					let bitrate = globalBitrateMatch ? parseInt(globalBitrateMatch[1]) : 0;
-					const videoStreamMatch = output.match(/Stream #.*: Video: ([^,\n]+), [^,\n]+, (\d+)x(\d+)/i);
+					const videoLineMatch = output.match(/Stream #.*: Video: .*/i);
 					let codec = "unknown";
 					let width = 0;
 					let height = 0;
 					let fps = 0;
-					if (videoStreamMatch) {
-						codec = videoStreamMatch[1].trim().split(" ")[0];
-						width = parseInt(videoStreamMatch[2]);
-						height = parseInt(videoStreamMatch[3]);
+					if (videoLineMatch) {
+						const videoLine = videoLineMatch[0];
+						const codecMatch = videoLine.match(/Video: ([^,\s]+)/i);
+						if (codecMatch) codec = codecMatch[1];
+						const resMatch = videoLine.match(/(\d{2,5})x(\d{2,5})/);
+						if (resMatch) {
+							width = parseInt(resMatch[1]);
+							height = parseInt(resMatch[2]);
+						}
 						const fpsMatch = output.match(/, (\d+(?:\.\d+)?) fps/i);
 						if (fpsMatch) fps = parseFloat(fpsMatch[1]);
 					} else {
@@ -1095,6 +1136,20 @@ var VideoCompressor = class {
 			});
 			process$1.on("error", reject);
 		});
+	}
+	async generateThumbnail(filePath) {
+		try {
+			const { nativeImage: nativeImage$1 } = await import("electron");
+			const thumbnail = await nativeImage$1.createThumbnailFromPath(filePath, {
+				width: 1280,
+				height: 720
+			});
+			if (thumbnail.isEmpty()) return null;
+			return thumbnail.toDataURL();
+		} catch (e) {
+			console.error("Thumbnail generation failed:", e);
+			return null;
+		}
 	}
 	async compress(options, progressCallback) {
 		if (!this.ffmpegPath) throw new Error("FFmpeg not available");
@@ -8395,6 +8450,9 @@ app.whenReady().then(() => {
 	ipcMain.handle("video-merger:generate-thumbnail", async (_, filePath, time) => {
 		return await videoMerger.generateThumbnail(filePath, time);
 	});
+	ipcMain.handle("video-compressor:generate-thumbnail", async (_, filePath) => {
+		return await videoCompressor.generateThumbnail(filePath);
+	});
 	ipcMain.handle("video-filmstrip:generate", async (_, filePath, duration, count) => {
 		return await videoMerger.generateFilmstrip(filePath, duration, count);
 	});
@@ -8515,15 +8573,12 @@ app.whenReady().then(() => {
 	setupDownloadManagerHandlers();
 	protocol.handle("local-media", async (request) => {
 		try {
-			console.log("[LocalMedia] Request:", request.url);
 			const url = new URL(request.url);
 			let decodedPath = decodeURIComponent(url.pathname);
-			console.log("[LocalMedia] Initial Path:", decodedPath);
 			if (process.platform === "win32") {
 				if (/^\/[a-zA-Z]:/.test(decodedPath)) decodedPath = decodedPath.slice(1);
 				else if (/^[a-zA-Z]\//.test(decodedPath)) decodedPath = decodedPath.charAt(0) + ":" + decodedPath.slice(1);
 			} else decodedPath = decodedPath.replace(/^\/+/, "/");
-			console.log("[LocalMedia] Final Path:", decodedPath);
 			const fileSize = (await fs.stat(decodedPath)).size;
 			const ext = path.extname(decodedPath).toLowerCase();
 			let mimeType = "application/octet-stream";
@@ -8534,13 +8589,40 @@ app.whenReady().then(() => {
 			else if (ext === ".mkv") mimeType = "video/x-matroska";
 			else if (ext === ".mp3") mimeType = "audio/mpeg";
 			else if (ext === ".wav") mimeType = "audio/wav";
+			let useTranscoding = false;
+			const unsupportedCodecs = [
+				"hevc",
+				"hvc1",
+				"h265",
+				"dvhe",
+				"dvh1"
+			];
+			try {
+				if ([
+					".mp4",
+					".mov",
+					".mkv",
+					".webm"
+				].includes(ext)) {
+					const info = await videoCompressor.getVideoInfo(decodedPath);
+					if (info.codec && unsupportedCodecs.some((c) => info.codec.toLowerCase().includes(c))) useTranscoding = true;
+				}
+			} catch (e) {}
+			if (useTranscoding) {
+				console.log(`[LocalMedia] Transcoding ${decodedPath} for preview`);
+				const stream = videoCompressor.getPreviewStream(decodedPath);
+				const webStream = Readable.toWeb(stream);
+				return new Response(webStream, {
+					status: 200,
+					headers: { "Content-Type": "video/mp4" }
+				});
+			}
 			const range = request.headers.get("Range");
 			if (range) {
 				const parts = range.replace(/bytes=/, "").split("-");
 				const start = parseInt(parts[0], 10);
 				const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 				const chunksize = end - start + 1;
-				console.log(`[LocalMedia] Streaming Range: ${start}-${end}/${fileSize}`);
 				const nodeStream = createReadStream(decodedPath, {
 					start,
 					end
@@ -8556,7 +8638,6 @@ app.whenReady().then(() => {
 					}
 				});
 			} else {
-				console.log(`[LocalMedia] Streaming Full: ${fileSize}`);
 				const nodeStream = createReadStream(decodedPath);
 				const webStream = Readable.toWeb(nodeStream);
 				return new Response(webStream, { headers: {
