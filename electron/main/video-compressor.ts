@@ -134,6 +134,16 @@ export class VideoCompressor {
                     } else {
                         // Fallback: Try to find resolution anywhere if specific stream line search failed
                         const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
+                    }
+
+                    // Check if any streams were found (videoLineMatch is a good proxy)
+                    if (!videoLineMatch) {
+                        console.warn('[VideoCompressor] No video stream info found in output for', filePath, output);
+                    }
+
+                    if (width === 0 || height === 0) {
+                        // Fallback: Try to find resolution anywhere if specific stream line search failed or was incomplete
+                        const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
                         if (resMatch) {
                             width = parseInt(resMatch[1]);
                             height = parseInt(resMatch[2]);
@@ -245,53 +255,79 @@ export class VideoCompressor {
         // Codecs and Quality
         const useHW = options.useHardwareAcceleration;
         const platform = process.platform;
+        const targetCodec = options.codec || 'h264'; // Default to h264 if not specified
 
-        if (format === 'mp4' || format === 'mov') {
+        // Select Encoder based on Codec and Platform
+        let vCodec = 'libx264'; // Default fallback
+
+        if (targetCodec === 'h264') {
             if (useHW) {
-                if (platform === 'darwin') {
-                    args.push('-c:v', 'h264_videotoolbox');
-                    if (calculatedVideoBitrate) {
-                        args.push('-b:v', calculatedVideoBitrate);
-                    } else {
-                        const q = Math.max(0, Math.min(100, 100 - (crf || 23) * 1.5));
-                        args.push('-q:v', Math.round(q).toString());
-                    }
-                } else if (platform === 'win32') {
-                    args.push('-c:v', 'h264_nvenc');
-                    if (calculatedVideoBitrate) {
-                        args.push('-b:v', calculatedVideoBitrate);
-                    } else {
-                        args.push('-cq', (crf || 23).toString());
-                    }
+                if (platform === 'darwin') vCodec = 'h264_videotoolbox';
+                else if (platform === 'win32') vCodec = 'h264_nvenc';
+                else vCodec = 'libx264';
+            } else {
+                vCodec = 'libx264';
+            }
+        } else if (targetCodec === 'hevc') {
+            if (useHW) {
+                if (platform === 'darwin') vCodec = 'hevc_videotoolbox';
+                else if (platform === 'win32') vCodec = 'hevc_nvenc';
+                else vCodec = 'libx265';
+            } else {
+                vCodec = 'libx265';
+            }
+        } else if (targetCodec === 'vp9') {
+            vCodec = 'libvpx-vp9';
+        } else if (targetCodec === 'av1') {
+            vCodec = 'libsvtav1'; // preferred software AV1 encoder
+        }
+
+        args.push('-c:v', vCodec);
+
+        // Apply Codec specific settings
+        if (targetCodec === 'h264' || targetCodec === 'hevc') {
+            // H264/HEVC Quality Control
+            if (calculatedVideoBitrate) {
+                args.push('-b:v', calculatedVideoBitrate);
+            } else {
+                // If using hardware encoders on Mac, we use a global quality setting if supported, or bitrate.
+                // VideoToolbox doesn't support CRF directly in the same way x264 does.
+                // For simplicity in this tool, we map CRF to a quality scale if possible, or fallback to bitrate-like behavior.
+                // However, standard ffmpeg wrappers for videotoolbox often use -q:v.
+
+                const q = Math.max(0, Math.min(100, 100 - (crf || 23) * 1.5));
+
+                if (vCodec.includes('videotoolbox')) {
+                    args.push('-q:v', Math.round(q).toString());
+                } else if (vCodec.includes('nvenc')) {
+                    args.push('-cq', (crf || 23).toString());
                     args.push('-preset', 'p4');
                 } else {
-                    args.push('-c:v', 'libx264');
-                    if (calculatedVideoBitrate) {
-                        args.push('-b:v', calculatedVideoBitrate);
-                    } else {
-                        args.push('-crf', (crf || 23).toString());
-                    }
+                    // Software (libx264 / libx265)
+                    args.push('-crf', (crf || 23).toString());
                     args.push('-preset', preset || 'medium');
                 }
-            } else {
-                args.push('-c:v', 'libx264');
-                if (calculatedVideoBitrate) {
-                    args.push('-b:v', calculatedVideoBitrate);
-                } else {
-                    args.push('-crf', (crf || 23).toString());
-                }
-                args.push('-preset', preset || 'medium');
             }
-            args.push('-pix_fmt', 'yuv420p');
-        } else if (format === 'webm') {
-            args.push('-c:v', 'libvpx-vp9');
+            if (!vCodec.includes('videotoolbox')) {
+                args.push('-pix_fmt', 'yuv420p');
+            }
+        } else if (targetCodec === 'vp9') {
+            // VP9 Settings
             if (calculatedVideoBitrate) {
                 args.push('-b:v', calculatedVideoBitrate);
             } else {
                 args.push('-crf', (crf || 30).toString());
-                args.push('-b:v', '0');
+                args.push('-b:v', '0'); // Must be 0 for CRF in VP9
             }
             args.push('-row-mt', '1');
+        } else if (targetCodec === 'av1') {
+            // AV1 Settings
+            if (calculatedVideoBitrate) {
+                args.push('-b:v', calculatedVideoBitrate);
+            } else {
+                args.push('-crf', (crf || 30).toString());
+            }
+            args.push('-preset', preset ? (preset === 'veryslow' ? '3' : '5') : '5'); // SVT-AV1 presets are 0-13 (higher is faster)
         }
 
         // Audio

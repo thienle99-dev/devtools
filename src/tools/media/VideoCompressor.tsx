@@ -45,6 +45,7 @@ export const VideoCompressor: React.FC = () => {
 
     // Settings
     const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'webm' | 'mkv' | 'avi' | 'mov'>('mp4');
+    const [selectedCodec, setSelectedCodec] = useState<'h264' | 'hevc' | 'vp9' | 'av1'>('h264');
     const [targetResolution, setTargetResolution] = useState<{ width: number; height: number } | null>(null);
     const [scaleMode, setScaleMode] = useState<'fit' | 'fill' | 'stretch'>('fit');
     const [crf, setCrf] = useState(23);
@@ -457,12 +458,49 @@ export const VideoCompressor: React.FC = () => {
                                         </div>
                                     </div>
 
+                                    {/* Codec Selection */}
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-foreground/50 uppercase tracking-widest pl-1">Video Codec</label>
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {[
+                                                { id: 'h264', label: 'H.264', desc: 'Universal' },
+                                                { id: 'hevc', label: 'HEVC', desc: 'High Efficiency' },
+                                                { id: 'vp9', label: 'VP9', desc: 'Valid for Web' },
+                                                { id: 'av1', label: 'AV1', desc: 'Next Gen' }
+                                            ].map(codec => (
+                                                <button
+                                                    key={codec.id}
+                                                    onClick={() => setSelectedCodec(codec.id as any)}
+                                                    className={cn(
+                                                        "group relative py-3 rounded-xl transition-all border overflow-hidden flex flex-col items-center gap-1",
+                                                        selectedCodec === codec.id
+                                                            ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20 scale-105 z-10"
+                                                            : "bg-foreground/5 border-foreground/5 text-foreground/60 hover:bg-foreground/10"
+                                                    )}
+                                                >
+                                                    <span className="text-xs font-black uppercase z-10">{codec.label}</span>
+                                                    <span className={cn(
+                                                        "text-[10px] font-medium z-10",
+                                                        selectedCodec === codec.id ? "text-indigo-200" : "text-foreground/40"
+                                                    )}>{codec.desc}</span>
+                                                    {selectedCodec === codec.id && (
+                                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent" />
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     {/* Resolution Selection - Grid with icons */}
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-foreground/50 uppercase tracking-widest pl-1">Resolution Strategy</label>
                                         <div className="grid grid-cols-4 gap-3">
                                             <button
-                                                onClick={() => setTargetResolution(null)}
+                                                onClick={() => {
+                                                    setTargetResolution(null);
+                                                    setSelectedFormat('mp4');
+                                                    setSelectedCodec('h264');
+                                                }}
                                                 className={cn(
                                                     "py-3 rounded-2xl text-[10px] font-black transition-all border flex flex-col items-center gap-2 uppercase relative overflow-hidden",
                                                     targetResolution === null

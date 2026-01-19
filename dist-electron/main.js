@@ -1113,7 +1113,9 @@ var VideoCompressor = class {
 						}
 						const fpsMatch = output.match(/, (\d+(?:\.\d+)?) fps/i);
 						if (fpsMatch) fps = parseFloat(fpsMatch[1]);
-					} else {
+					} else output.match(/ (\d{2,5})x(\d{2,5})/);
+					if (!videoLineMatch) console.warn("[VideoCompressor] No video stream info found in output for", filePath, output);
+					if (width === 0 || height === 0) {
 						const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
 						if (resMatch) {
 							width = parseInt(resMatch[1]);
@@ -1184,40 +1186,44 @@ var VideoCompressor = class {
 		if (filters.length > 0) args.push("-vf", filters.join(","));
 		const useHW = options.useHardwareAcceleration;
 		const platform = process.platform;
-		if (format === "mp4" || format === "mov") {
-			if (useHW) if (platform === "darwin") {
-				args.push("-c:v", "h264_videotoolbox");
-				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
-				else {
-					const q = Math.max(0, Math.min(100, 100 - (crf || 23) * 1.5));
-					args.push("-q:v", Math.round(q).toString());
-				}
-			} else if (platform === "win32") {
-				args.push("-c:v", "h264_nvenc");
-				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
-				else args.push("-cq", (crf || 23).toString());
-				args.push("-preset", "p4");
-			} else {
-				args.push("-c:v", "libx264");
-				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
-				else args.push("-crf", (crf || 23).toString());
-				args.push("-preset", preset || "medium");
-			}
+		const targetCodec = options.codec || "h264";
+		let vCodec = "libx264";
+		if (targetCodec === "h264") if (useHW) if (platform === "darwin") vCodec = "h264_videotoolbox";
+		else if (platform === "win32") vCodec = "h264_nvenc";
+		else vCodec = "libx264";
+		else vCodec = "libx264";
+		else if (targetCodec === "hevc") if (useHW) if (platform === "darwin") vCodec = "hevc_videotoolbox";
+		else if (platform === "win32") vCodec = "hevc_nvenc";
+		else vCodec = "libx265";
+		else vCodec = "libx265";
+		else if (targetCodec === "vp9") vCodec = "libvpx-vp9";
+		else if (targetCodec === "av1") vCodec = "libsvtav1";
+		args.push("-c:v", vCodec);
+		if (targetCodec === "h264" || targetCodec === "hevc") {
+			if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
 			else {
-				args.push("-c:v", "libx264");
-				if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
-				else args.push("-crf", (crf || 23).toString());
-				args.push("-preset", preset || "medium");
+				const q = Math.max(0, Math.min(100, 100 - (crf || 23) * 1.5));
+				if (vCodec.includes("videotoolbox")) args.push("-q:v", Math.round(q).toString());
+				else if (vCodec.includes("nvenc")) {
+					args.push("-cq", (crf || 23).toString());
+					args.push("-preset", "p4");
+				} else {
+					args.push("-crf", (crf || 23).toString());
+					args.push("-preset", preset || "medium");
+				}
 			}
-			args.push("-pix_fmt", "yuv420p");
-		} else if (format === "webm") {
-			args.push("-c:v", "libvpx-vp9");
+			if (!vCodec.includes("videotoolbox")) args.push("-pix_fmt", "yuv420p");
+		} else if (targetCodec === "vp9") {
 			if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
 			else {
 				args.push("-crf", (crf || 30).toString());
 				args.push("-b:v", "0");
 			}
 			args.push("-row-mt", "1");
+		} else if (targetCodec === "av1") {
+			if (calculatedVideoBitrate) args.push("-b:v", calculatedVideoBitrate);
+			else args.push("-crf", (crf || 30).toString());
+			args.push("-preset", preset ? preset === "veryslow" ? "3" : "5" : "5");
 		}
 		if (!keepAudio) args.push("-an");
 		else args.push("-c:a", "aac", "-b:a", "128k");

@@ -14,6 +14,7 @@ export interface VideoCompressOptions {
     keepAudio?: boolean;
     useHardwareAcceleration?: boolean;
     targetSize?: number; // Target size in bytes
+    codec?: 'h264' | 'hevc' | 'vp9' | 'av1';
 }
 
 export interface VideoCompressProgress {
