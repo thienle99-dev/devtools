@@ -1,8 +1,17 @@
-import React from 'react';
-import { Stage, Layer, Transformer } from 'react-konva';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { AnnotationType } from '../types';
 import type { ShapeData } from './types';
-import { URLImage, ShapeItem } from './ShapeItems';
+import { createShapeComponents } from './ShapeItems';
+
+type ReactKonvaModule = typeof import('react-konva');
+let konvaModulePromise: Promise<ReactKonvaModule> | null = null;
+
+function loadKonvaModule() {
+    if (!konvaModulePromise) {
+        konvaModulePromise = import('react-konva');
+    }
+    return konvaModulePromise;
+}
 
 interface CanvasStageViewProps {
     containerRef: React.RefObject<HTMLDivElement>;
@@ -51,9 +60,38 @@ export const CanvasStageView: React.FC<CanvasStageViewProps> = ({
     onTextCommit,
     onTextCancel,
 }) => {
+    const [konvaModule, setKonvaModule] = useState<ReactKonvaModule | null>(null);
+    const [moduleError, setModuleError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        loadKonvaModule()
+            .then((mod) => {
+                if (mounted) setKonvaModule(mod);
+            })
+            .catch((err) => {
+                console.error('Failed to load react-konva', err);
+                if (mounted) setModuleError('Unable to load drawing engine');
+            });
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    if (moduleError) {
+        return <div className="flex items-center justify-center h-full text-rose-400 text-sm">{moduleError}</div>;
+    }
+
+    if (!konvaModule) {
+        return <div className="flex items-center justify-center h-full text-foreground-muted">Loading canvas engine…</div>;
+    }
+
     if (!baseDataUrl) {
         return <div className="flex items-center justify-center h-full text-foreground-muted">Preparing canvas...</div>;
     }
+
+    const { Stage, Layer, Transformer } = konvaModule;
+    const { URLImage, ShapeItem } = useMemo(() => createShapeComponents(konvaModule), [konvaModule]);
 
     const width = imageSize.width * scale * baseZoom;
     const height = imageSize.height * scale * baseZoom;
