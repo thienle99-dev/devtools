@@ -15,8 +15,6 @@ import {
 import { cn } from '@utils/cn';
 import { CATEGORIES, TOOLS, getToolsByCategory, getToolById } from '@tools/registry';
 import { useSettingsStore } from '@store/settingsStore';
-import { usePluginStore } from '@store/pluginStore';
-import { getCategoryIcon, getCategoryColor } from '@tools/plugins/plugin-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { NavItem } from './sidebar/NavItem';
@@ -55,50 +53,21 @@ export const Sidebar: React.FC = React.memo(() => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const activePlugins = usePluginStore(state => state.activePlugins);
-    const fetchActivePlugins = usePluginStore(state => state.fetchActivePlugins);
-
-    useEffect(() => {
-        fetchActivePlugins();
-        
-        // Listen for progress to refresh sidebar
-        const cleanup = window.pluginAPI.onPluginProgress((progress) => {
-            if (progress.stage === 'complete') {
-                fetchActivePlugins();
-            }
-        });
-
-        return () => cleanup();
-    }, []);
 
     const filteredContent = useMemo(() => {
         const query = searchQuery.toLowerCase().trim();
         if (!query) return null;
 
-        const pluginTools = activePlugins.map(p => ({
-            id: p.manifest.id,
-            name: p.manifest.name,
-            description: p.manifest.description,
-            path: `/plugin/${p.manifest.id}`,
-            icon: getCategoryIcon(p.manifest.category),
-            color: getCategoryColor(p.manifest.category),
-            category: 'Plugin',
-            isPlugin: true,
-            keywords: p.manifest.tags || []
-        }));
-
-        const allTools = [...TOOLS, ...pluginTools];
-        
-        const results = allTools.filter(tool => {
+        const results = TOOLS.filter(tool => {
             if (tool.id === 'settings' || tool.id === 'dashboard') return false;
-            
+
             return tool.name.toLowerCase().includes(query) ||
                 tool.description.toLowerCase().includes(query) ||
                 (tool as any).keywords?.some((k: string) => k.toLowerCase().includes(query));
         });
 
         return results.sort((a, b) => a.name.localeCompare(b.name));
-    }, [searchQuery, activePlugins]);
+    }, [searchQuery]);
 
     const categoriesWithTools = useMemo(() => {
         const mapped = CATEGORIES.map(category => {
@@ -106,43 +75,11 @@ export const Sidebar: React.FC = React.memo(() => {
             if (category.id === 'favorites') {
                 const uniqueFavorites = Array.from(new Set(favorites));
                 tools = uniqueFavorites.map(id => getToolById(id)).filter((t): t is any => Boolean(t));
-                
-                const favPlugins = activePlugins
-                    .filter(p => favorites.includes(p.manifest.id))
-                    .map(p => ({
-                        id: p.manifest.id,
-                        name: p.manifest.name,
-                        description: p.manifest.description,
-                        path: `/plugin/${p.manifest.id}`,
-                        icon: getCategoryIcon(p.manifest.category),
-                        color: getCategoryColor(p.manifest.category),
-                        category: 'Plugin',
-                        isPlugin: true
-                    }));
-                tools = [...tools, ...favPlugins];
 
             } else if (category.id === 'recent') {
                 const seen = new Set<string>();
                 tools = history
-                    .map(h => {
-                        const tool = getToolById(h.id);
-                        if (tool) return tool;
-                        
-                        const plugin = activePlugins.find(p => p.manifest.id === h.id);
-                        if (plugin) {
-                            return {
-                                id: plugin.manifest.id,
-                                name: plugin.manifest.name,
-                                description: plugin.manifest.description,
-                                path: `/plugin/${plugin.manifest.id}`,
-                                icon: getCategoryIcon(plugin.manifest.category),
-                                color: getCategoryColor(plugin.manifest.category),
-                                category: 'Plugin',
-                                isPlugin: true
-                            };
-                        }
-                        return null;
-                    })
+                    .map(h => getToolById(h.id))
                     .filter((t): t is any => {
                         if (!t || seen.has(t.id)) return false;
                         seen.add(t.id);
@@ -152,21 +89,6 @@ export const Sidebar: React.FC = React.memo(() => {
             } else {
                 // Uses the pre-computed map from the registry
                 tools = getToolsByCategory(category.id);
-                
-                const matchingPlugins = activePlugins
-                    .filter(p => p.manifest.category === category.id || (category.id === 'plugins' && !CATEGORIES.some(c => c.id === p.manifest.category)))
-                    .map(p => ({
-                        id: p.manifest.id,
-                        name: p.manifest.name,
-                        description: p.manifest.description,
-                        path: `/plugin/${p.manifest.id}`,
-                        icon: getCategoryIcon(p.manifest.category),
-                        color: getCategoryColor(p.manifest.category),
-                        category: category.name,
-                        isPlugin: true
-                    }));
-                
-                tools = [...tools, ...matchingPlugins];
             }
             return { ...category, tools: tools.filter((t: any) => t.id !== 'settings' && t.id !== 'dashboard') };
         });
@@ -182,7 +104,7 @@ export const Sidebar: React.FC = React.memo(() => {
             if (indexB === undefined) return -1;
             return indexA - indexB;
         });
-    }, [favorites, history, categoryOrder, activePlugins]);
+    }, [favorites, history, categoryOrder]);
 
     return (
         <aside
@@ -330,7 +252,7 @@ export const Sidebar: React.FC = React.memo(() => {
                                 return (
                                     <div key={category.id} className="space-y-1.5">
                                         {!sidebarCollapsed && (
-                                            <button 
+                                            <button
                                                 onClick={() => toggleCategoryCollapsed(category.id)}
                                                 className="w-full px-5 mb-1 flex items-center justify-between group/cat hover:bg-white/5 py-1 rounded-lg transition-colors"
                                             >
@@ -347,7 +269,7 @@ export const Sidebar: React.FC = React.memo(() => {
 
                                         <AnimatePresence initial={false}>
                                             {(!isCollapsed || sidebarCollapsed) && (
-                                                <motion.div 
+                                                <motion.div
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: "auto", opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}

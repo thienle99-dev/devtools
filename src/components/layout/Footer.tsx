@@ -14,15 +14,17 @@ import {
     ChevronUp,
     HardDrive,
     Wifi,
-    Cpu,
-    Database,
     Zap,
-    Clipboard
+    Clipboard,
+    Puzzle
 } from 'lucide-react';
 import { useSettingsStore } from '@store/settingsStore';
 import { useClipboardStore } from '@store/clipboardStore';
+import { usePluginStore } from '@store/pluginStore';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getCategoryIcon, getCategoryColor } from '@tools/plugins/plugin-utils';
+import { useNavigate } from 'react-router-dom';
 
 const StatusDot = ({ status }: { status: 'ready' | 'busy' | 'error' }) => {
     const colors = {
@@ -37,24 +39,6 @@ const StatusDot = ({ status }: { status: 'ready' | 'busy' | 'error' }) => {
         </div>
     );
 };
-
-const ResourcePill = ({ icon: Icon, label, value, colorClass }: { icon: any, label: string, value: number, colorClass: string }) => (
-    <div className="flex items-center gap-2 px-2 py-0.5 rounded-md hover:bg-foreground/5 transition-colors group cursor-default">
-        <Icon size={10} className="text-foreground-muted group-hover:text-foreground transition-colors" />
-        <div className="flex flex-col">
-            <div className="flex items-center justify-between w-10">
-                <span className="text-[7px] font-black uppercase tracking-tighter opacity-40">{label}</span>
-                <span className={cn("text-[8px] font-mono font-bold", colorClass)}>{Math.round(value)}%</span>
-            </div>
-            <div className="h-0.5 w-full bg-foreground/10 rounded-full overflow-hidden mt-0.5">
-            <div 
-                    className={cn("h-full transition-all duration-300 ease-out", colorClass.replace('text-', 'bg-'))} 
-                    style={{ width: `${value}%` }}
-                />
-            </div>
-        </div>
-    </div>
-);
 
 const TaskMonitor = () => {
     const [taskCount, setTaskCount] = useState(0);
@@ -75,13 +59,81 @@ const TaskMonitor = () => {
     if (taskCount === 0) return null;
 
     return (
-        <div 
+        <div
             className="flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded-md shadow-sm animate-in fade-in zoom-in duration-300"
         >
             <Zap size={10} className="text-sky-400 animate-pulse" />
             <span className="text-[9px] font-black text-sky-400 uppercase tracking-tight">
                 {taskCount} {taskCount === 1 ? 'Job' : 'Jobs'}
             </span>
+        </div>
+    );
+};
+
+const PluginBar = () => {
+    const activePlugins = usePluginStore(state => state.activePlugins);
+    const fetchActivePlugins = usePluginStore(state => state.fetchActivePlugins);
+    const openTab = useTabStore(state => state.openTab);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        fetchActivePlugins();
+
+        const cleanup = window.pluginAPI?.onPluginProgress?.((progress) => {
+            if (progress.stage === 'complete') {
+                fetchActivePlugins();
+            }
+        });
+
+        return () => cleanup?.();
+    }, [fetchActivePlugins]);
+
+    if (activePlugins.length === 0) return null;
+
+    const handlePluginClick = (plugin: any) => {
+        const path = `/plugin/${plugin.manifest.id}`;
+        openTab(
+            plugin.manifest.id,
+            path,
+            plugin.manifest.name,
+            plugin.manifest.description,
+            false,
+            false
+        );
+        navigate(path);
+    };
+
+    return (
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-foreground/5 border border-foreground/10 rounded-lg shadow-sm">
+            <Puzzle size={10} className="text-violet-400" />
+            <div className="flex items-center gap-1">
+                {activePlugins.slice(0, 5).map((plugin) => {
+                    const Icon = getCategoryIcon(plugin.manifest.category);
+                    const color = getCategoryColor(plugin.manifest.category);
+
+                    return (
+                        <button
+                            key={plugin.manifest.id}
+                            onClick={() => handlePluginClick(plugin)}
+                            className={cn(
+                                "p-1.5 rounded-md transition-all hover:scale-110 group relative",
+                                "hover:bg-foreground/10"
+                            )}
+                            title={plugin.manifest.name}
+                        >
+                            <Icon size={12} className={color} />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-background border border-border-glass rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                                <span className="text-[10px] font-semibold text-foreground">{plugin.manifest.name}</span>
+                            </div>
+                        </button>
+                    );
+                })}
+                {activePlugins.length > 5 && (
+                    <div className="px-1.5 py-0.5 bg-foreground/10 rounded text-[8px] font-black text-foreground-muted">
+                        +{activePlugins.length - 5}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -102,37 +154,37 @@ export const Footer = () => {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [stats, setStats] = useState({ totalItems: 0, totalCopies: 0 });
     const [showMoreMenu, setShowMoreMenu] = useState(false);
-    const [systemStats, setSystemStats] = useState({ cpu: 0, ram: 0, disk: 0 });
+    const [currentTime, setCurrentTime] = useState(() => new Date());
     const menuRef = useRef<HTMLDivElement>(null);
+    const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
     const activeTool = useMemo(() => activeTab ? TOOLS.find(t => t.id === activeTab.toolId) : null, [activeTab]);
 
     useEffect(() => {
-        const fetchSystem = async () => {
-            try {
-                const [cpu, mem, disk] = await Promise.all([
-                    (window as any).statsAPI?.getCPUStats(),
-                    (window as any).statsAPI?.getMemoryStats(),
-                    (window as any).statsAPI?.getDiskStats()
-                ]);
-                const diskMain = disk?.fsSize?.find((d: any) => d.mount === '/' || d.mount === 'C:') || disk?.fsSize?.[0];
-                setSystemStats({
-                    cpu: cpu?.load?.currentLoad || 0,
-                    ram: mem ? (mem.used / mem.total) * 100 : 0,
-                    disk: diskMain ? diskMain.use : 0
-                });
-            } catch (e) { }
-        };
-        fetchSystem();
-        const interval = setInterval(fetchSystem, 4000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
         const s = getStatistics();
         setStats({ totalItems: s.totalItems, totalCopies: s.totalCopies });
     }, [items, getStatistics]);
+
+    useEffect(() => {
+        const updateClock = () => setCurrentTime(new Date());
+        updateClock();
+        const interval = setInterval(() => {
+            if (!document.hidden) {
+                updateClock();
+            }
+        }, 30000);
+        const handleVisibility = () => {
+            if (!document.hidden) {
+                updateClock();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, []);
 
     const handleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -161,45 +213,51 @@ export const Footer = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const getStatColor = (val: number) => {
-        if (val > 80) return 'text-rose-400';
-        if (val > 60) return 'text-amber-400';
-        return 'text-emerald-400';
-    };
+    const formattedTime = useMemo(() => currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: undefined, hour12: false }), [currentTime]);
+    const formattedDate = useMemo(() => currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }), [currentTime]);
 
     return (
         <footer className={cn(
-            "h-9 px-4 flex items-center justify-between border-t border-border-glass bg-bg-glass-panel backdrop-blur-2xl z-50 relative shrink-0",
-            theme === 'light' ? "bg-white/80" : "bg-black/40"
+            "px-4 py-1.5 flex flex-wrap items-center gap-3 border-t border-border-glass bg-bg-glass-panel backdrop-blur-2xl z-50 relative shrink-0",
+            theme === 'light' ? "bg-white/85" : "bg-black/40"
         )}>
-            {/* Top decorative line */}
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-foreground/10 to-transparent pointer-events-none" />
-            
-            {/* Left: App Identity & Context */}
-            <div className="flex items-center gap-4 min-w-0">
-                <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-foreground/5 border border-foreground/5 hover:bg-foreground/10 transition-colors cursor-default">
+
+            <div className="flex items-center gap-3 min-w-0 flex-1 order-1">
+                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-foreground/5 border border-foreground/10 shadow-sm">
                     <StatusDot status="ready" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-foreground-secondary/80">System Ready</span>
+                    <div className="flex flex-col leading-none">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground-secondary/80">Ready</span>
+                        <span className="text-[8px] text-foreground-muted font-mono">v0.2 alpha</span>
+                    </div>
                 </div>
-
-                <div className="h-4 w-px bg-foreground/10 shrink-0" />
-
-                <div className="flex items-center gap-2 overflow-hidden">
+                <div className="flex items-center gap-3 overflow-hidden">
                     {activeTool ? (
-                        <div 
-                            className="flex items-center gap-2 animate-in slide-in-from-left-2 fade-in duration-300"
-                        >
-                            <activeTool.icon size={12} className={activeTool.color || 'text-indigo-400'} />
-                            <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{activeTool.name}</span>
-                        </div>
+                        <>
+                            <div className="flex items-center gap-2 max-w-[180px]">
+                                <activeTool.icon size={14} className={activeTool.color || 'text-indigo-400'} />
+                                <span className="text-xs font-semibold text-foreground truncate">{activeTool.name}</span>
+                            </div>
+                            <span className="text-[8px] uppercase tracking-[0.3em] text-foreground-muted hidden sm:block">
+                                {activeTool.category}
+                            </span>
+                        </>
                     ) : (
                         <span className="text-xs font-medium text-foreground-disabled italic">DevTools Dashboard</span>
                     )}
                 </div>
+                <div className="hidden lg:flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-foreground-muted px-2 py-1 rounded-lg bg-foreground/5 border border-foreground/5">
+                        <Clipboard size={10} />
+                        <span>{stats.totalItems} items</span>
+                    </div>
+                    <div className="text-[9px] uppercase tracking-[0.3em] text-foreground-muted">
+                        {tabs.length} Tabs
+                    </div>
+                </div>
             </div>
 
-            {/* Center: Controls & Quick Actions */}
-            <div className="flex items-center gap-1 bg-foreground/5 rounded-full p-1 border border-foreground/5 shadow-inner">
+            <div className="flex items-center justify-center gap-1 bg-foreground/5 rounded-full px-2 py-1 border border-foreground/5 shadow-inner order-3 w-full md:w-auto md:order-2">
                 <button
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     className={cn("p-1.5 rounded-full transition-all hover:scale-110", theme === 'dark' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-indigo-500 hover:bg-indigo-500/10')}
@@ -214,7 +272,6 @@ export const Footer = () => {
                 >
                     {notificationsEnabled ? <Bell size={12} /> : <BellOff size={12} />}
                 </button>
-                <div className="w-px h-3 bg-foreground/10 mx-0.5" />
                 <button
                     onClick={handleFullscreen}
                     className="p-1.5 text-violet-400 rounded-full hover:bg-violet-400/10 hover:scale-110 transition-all"
@@ -235,99 +292,87 @@ export const Footer = () => {
                 </button>
             </div>
 
-            {/* Right: Monitoring & Info */}
-            <div className="flex items-center gap-4">
-                <div className="hidden md:flex items-center gap-4">
-                    <ResourcePill icon={Cpu} label="CPU" value={systemStats.cpu} colorClass={getStatColor(systemStats.cpu)} />
-                    <ResourcePill icon={Database} label="RAM" value={systemStats.ram} colorClass={getStatColor(systemStats.ram)} />
+            <div className="flex items-center gap-3 order-2 md:order-3 flex-1 justify-end min-w-0">
+                <TaskMonitor />
+                <PluginBar />
+                <div className="flex flex-col text-right leading-tight">
+                    <span className="text-xs font-mono font-semibold text-foreground">{formattedTime}</span>
+                    <span className="text-[9px] text-foreground-muted uppercase tracking-widest">{formattedDate}</span>
+                    <span className="text-[7px] text-foreground-muted uppercase tracking-widest">{timeZone}</span>
                 </div>
+                <div className="relative" ref={menuRef}>
+                    <button
+                        onClick={() => setShowMoreMenu(!showMoreMenu)}
+                        className={cn(
+                            "p-1.5 rounded-md transition-all",
+                            showMoreMenu ? "bg-indigo-500 text-white" : "hover:bg-foreground/10 text-foreground-muted"
+                        )}
+                        title="System Status & Telemetry"
+                    >
+                        <MoreHorizontal size={14} />
+                    </button>
 
-                <div className="h-4 w-px bg-foreground/10 shrink-0" />
-
-                <div className="flex items-center gap-3">
-                    <TaskMonitor />
-                    
-                    <div className="flex flex-col items-end leading-none">
-                        <span className="text-[10px] font-mono font-bold text-foreground">
-                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                        </span>
-                        <span className="text-[7px] font-black text-foreground-secondary uppercase tracking-widest mt-0.5">Local Time</span>
-                    </div>
-
-                    <div className="relative" ref={menuRef}>
-                        <button
-                            onClick={() => setShowMoreMenu(!showMoreMenu)}
-                            className={cn(
-                                "p-1.5 rounded-md transition-all",
-                                showMoreMenu ? "bg-indigo-500 text-white" : "hover:bg-foreground/10 text-foreground-muted"
-                            )}
-                            title="System Status & Telemetry"
-                        >
-                            <MoreHorizontal size={14} />
-                        </button>
-
-                        <AnimatePresence>
-                            {showMoreMenu && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute bottom-full right-0 mb-4 w-64 bg-bg-glass-panel backdrop-blur-3xl border border-border-glass rounded-xl shadow-2xl p-4 overflow-hidden z-[60]"
-                                >
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between text-[10px] font-black text-foreground/30 tracking-widest uppercase border-b border-border-glass pb-2">
-                                            <span>Telemetry</span>
-                                            <span className="text-[8px] opacity-100 bg-foreground/5 px-1.5 py-0.5 rounded">v0.2.0-stable</span>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="p-2 rounded-lg bg-foreground/5 border border-border-glass">
-                                                <div className="flex items-center gap-2 mb-1 opacity-50">
-                                                    <HardDrive size={10} />
-                                                    <span className="text-[8px] font-bold uppercase tracking-tight text-foreground">Disk</span>
-                                                </div>
-                                                <span className="text-xs font-mono font-bold text-foreground">{Math.round(systemStats.disk)}%</span>
-                                            </div>
-                                            <div className="p-2 rounded-lg bg-foreground/5 border border-border-glass">
-                                                <div className="flex items-center gap-2 mb-1 opacity-50">
-                                                    <Clipboard size={10} />
-                                                    <span className="text-[8px] font-bold uppercase tracking-tight text-foreground">Stats</span>
-                                                </div>
-                                                <span className="text-xs font-mono font-bold text-foreground">{stats.totalItems} items</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Wifi size={12} className="text-indigo-400" />
-                                                    <span className="text-[10px] font-bold text-foreground">Connectivity</span>
-                                                </div>
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                            </div>
-                                            <div className="text-[10px] text-foreground-secondary italic">
-                                                System communicating via optimized local protocols.
-                                            </div>
-                                        </div>
-
-                                        <button 
-                                            onClick={() => {
-                                                openSettings();
-                                                setShowMoreMenu(false);
-                                            }}
-                                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-indigo-500/10 text-foreground transition-colors group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Settings size={14} className="group-hover:rotate-45 transition-transform text-indigo-400" />
-                                                <span className="text-xs font-bold">Preferences</span>
-                                            </div>
-                                            <ChevronUp size={10} className="rotate-90 opacity-30" />
-                                        </button>
+                    <AnimatePresence>
+                        {showMoreMenu && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                className="absolute bottom-full right-0 mb-4 w-64 bg-bg-glass-panel backdrop-blur-3xl border border-border-glass rounded-xl shadow-2xl p-4 overflow-hidden z-[60]"
+                            >
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between text-[10px] font-black text-foreground/30 tracking-widest uppercase border-b border-border-glass pb-2">
+                                        <span>Telemetry</span>
+                                        <span className="text-[8px] opacity-100 bg-foreground/5 px-1.5 py-0.5 rounded">v0.2.0-stable</span>
                                     </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="p-2 rounded-lg bg-foreground/5 border border-border-glass">
+                                            <div className="flex items-center gap-2 mb-1 opacity-50">
+                                                <Clipboard size={10} />
+                                                <span className="text-[8px] font-bold uppercase tracking-tight text-foreground">Clipboard</span>
+                                            </div>
+                                            <span className="text-xs font-mono font-bold text-foreground">{stats.totalItems} saved</span>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-foreground/5 border border-border-glass">
+                                            <div className="flex items-center gap-2 mb-1 opacity-50">
+                                                <HardDrive size={10} />
+                                                <span className="text-[8px] font-bold uppercase tracking-tight text-foreground">Workspace</span>
+                                            </div>
+                                            <span className="text-xs font-mono font-bold text-foreground">{tabs.length} tabs</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Wifi size={12} className="text-indigo-400" />
+                                                <span className="text-[10px] font-bold text-foreground">Connectivity</span>
+                                            </div>
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        </div>
+                                        <div className="text-[10px] text-foreground-secondary italic">
+                                            System communicating via optimized local protocols.
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            openSettings();
+                                            setShowMoreMenu(false);
+                                        }}
+                                        className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-indigo-500/10 text-foreground transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Settings size={14} className="group-hover:rotate-45 transition-transform text-indigo-400" />
+                                            <span className="text-xs font-bold">Preferences</span>
+                                        </div>
+                                        <ChevronUp size={10} className="rotate-90 opacity-30" />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </footer>

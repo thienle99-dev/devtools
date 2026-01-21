@@ -3,7 +3,7 @@
 - [x] Dọn state tool khi đóng tab: `TabBar` đang gọi `removeToolData(tab.id)` nhưng dữ liệu lưu theo `toolId`. Cần xoá đúng key (`toolId`) để tránh rò rỉ state/persist storage.
 - [x] Truyền `toolId` cho tất cả `<ToolPane>`: đa số tool không set prop này nên các tiện ích (paste/import, piping, presets/history) không xuất hiện → cập nhật từng tool hoặc tạo HOC để đảm bảo `toolId` luôn có.
 - [x] Tôn trọng danh sách `ignoredApps` trong `useClipboardMonitor`: bỏ qua clipboard event (và tránh IPC call dư thừa) khi nguồn thuộc app người dùng đã chặn.
-- [ ] Đồng bộ đồng hồ ở Footer: hiện tại `new Date().toLocaleTimeString()` render một lần. Thêm state + interval (hoặc `requestAnimationFrame`) để cập nhật mỗi 30–60 giây.
+- [x] Đồng bộ đồng hồ ở Footer: hiện tại `new Date().toLocaleTimeString()` render một lần. Thêm state + interval (hoặc `requestAnimationFrame`) để cập nhật mỗi 30–60 giây.
 - [ ] Cải thiện accessibility TabBar: thêm semantics `role="tablist"`/`role="tab"`, `aria-selected`, `tabIndex` và phím tắt (Enter, Delete, Ctrl+F4) để tabstrip dùng được bằng bàn phím/trợ năng.
 - [x] Tách `xlsx` và `pdf-lib` ra khỏi critical path: chuyển các import trong `CsvExcelConverter` và `PdfSecurity` sang dynamic import để giảm bundle/chunk size.
 - [ ] Tối ưu `CodeEditor`: lazy-load `@uiw/react-codemirror` và cắt `basicSetup` không cần thiết để tránh kéo CodeMirror khi người dùng không mở editor.
