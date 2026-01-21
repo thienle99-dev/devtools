@@ -1,21 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { FileUp, Image as ImageIcon, FileText, Download, Loader2, AlertCircle } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
-// Basic worker setup for Vite - in production this might need adjustment for offline
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
-import JSZip from 'jszip';
+import type JSZip from 'jszip';
 import { Button } from '@components/ui/Button';
 import { Card } from '@components/ui/Card';
 import { Label } from '@components/ui/Label';
 import { toast } from 'sonner';
 import { cn } from '@utils/cn';
-
-// Set worker when running in the browser (avoids SSR errors)
-if (typeof window !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
-}
+import { loadPdfJs, loadJsZip } from './utils/lazyDeps';
 
 type ConvertMode = 'to-image' | 'to-text';
+type PdfJsModule = typeof import('pdfjs-dist/build/pdf.mjs');
+type JSZipConstructor = typeof JSZip;
 
 export function PdfConverter() {
     const [file, setFile] = useState<File | null>(null);
@@ -35,63 +30,6 @@ export function PdfConverter() {
         }
     };
 
-    const convertToImages = async (pdfData: ArrayBuffer) => {
-        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-        const zip = new JSZip();
-        const totalPages = pdf.numPages;
-
-        for (let i = 1; i <= totalPages; i++) {
-            setProgress(Math.round((i / totalPages) * 100));
-            const page = await pdf.getPage(i);
-            const viewport = page.getViewport({ scale: 2.0 }); // High quality
-
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            if (context) {
-                await page.render({ canvasContext: context, viewport, canvas } as any).promise;
-                const imgData = canvas.toDataURL('image/png').split(',')[1];
-                zip.file(`page-${i}.png`, imgData, { base64: true });
-            }
-        }
-
-        const content = await zip.generateAsync({ type: 'blob' });
-        downloadBlob(content, `${file?.name.replace('.pdf', '')}-images.zip`);
-    };
-
-    const convertToText = async (pdfData: ArrayBuffer) => {
-        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-        let fullText = '';
-        const totalPages = pdf.numPages;
-
-        for (let i = 1; i <= totalPages; i++) {
-            setProgress(Math.round((i / totalPages) * 100));
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
-                // @ts-ignore
-                .map((item: any) => item.str)
-                .join(' ');
-            fullText += `--- Page ${i} ---\n\n${pageText}\n\n`;
-        }
-
-        const blob = new Blob([fullText], { type: 'text/plain' });
-        downloadBlob(blob, `${file?.name.replace('.pdf', '')}.txt`);
-    };
-
-    const downloadBlob = (blob: Blob, filename: string) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
     const handleConvert = async () => {
         if (!file) return;
 
@@ -99,12 +37,14 @@ export function PdfConverter() {
         setProgress(0);
 
         try {
+            const pdfjsLib = await loadPdfJs();
             const arrayBuffer = await file.arrayBuffer();
 
             if (mode === 'to-image') {
-                await convertToImages(arrayBuffer);
+                const JSZipLib = await loadJsZip();
+                await convertToImages(pdfjsLib, JSZipLib, arrayBuffer, file.name, setProgress);
             } else {
-                await convertToText(arrayBuffer);
+                await convertToText(pdfjsLib, arrayBuffer, file.name, setProgress);
             }
 
             toast.success("Conversion completed successfully!");
@@ -231,4 +171,75 @@ export function PdfConverter() {
             </Card>
         </div>
     );
+}
+
+async function convertToImages(
+    pdfjsLib: PdfJsModule,
+    JSZipLib: JSZipConstructor,
+    pdfData: ArrayBuffer,
+    fileName: string,
+    onProgress: (value: number) => void
+) {
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    const zip = new JSZipLib();
+    const totalPages = pdf.numPages;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+        throw new Error('Canvas context is not available in this browser.');
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+        onProgress(Math.round((i / totalPages) * 100));
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context, viewport } as any).promise;
+        const imgData = canvas.toDataURL('image/png').split(',')[1];
+        zip.file(`page-${i}.png`, imgData, { base64: true });
+    }
+
+    const content = await zip.generateAsync({ type: 'blob', streamFiles: true });
+    downloadBlob(content, `${getBaseName(fileName)}-images.zip`);
+}
+
+async function convertToText(
+    pdfjsLib: PdfJsModule,
+    pdfData: ArrayBuffer,
+    fileName: string,
+    onProgress: (value: number) => void
+) {
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    let fullText = '';
+    const totalPages = pdf.numPages;
+
+    for (let i = 1; i <= totalPages; i++) {
+        onProgress(Math.round((i / totalPages) * 100));
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+            .map((item: any) => (typeof item?.str === 'string' ? item.str : ''))
+            .join(' ');
+        fullText += `--- Page ${i} ---\n\n${pageText}\n\n`;
+    }
+
+    const blob = new Blob([fullText], { type: 'text/plain' });
+    downloadBlob(blob, `${getBaseName(fileName)}.txt`);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function getBaseName(fileName: string) {
+    return fileName?.replace(/\.pdf$/i, '') || 'document';
 }

@@ -28,6 +28,11 @@ export default defineConfig({
           react: 'React',
           'react-dom': 'ReactDOM',
         },
+        manualChunks(id) {
+          if (id.includes('pdfjs-dist') || id.includes('jszip')) {
+            return 'pdf-vendors';
+          }
+        },
       },
     },
   },

@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { RedactionArea } from '../utils/redaction';
-import type { Background } from '../utils/backgroundGenerator';
-import type { AnnotationType, AnnotationConfig } from '../utils/annotations';
-import { DEFAULT_ANNOTATION_CONFIG } from '../utils/annotations';
-import type { CropBounds } from '../utils/crop';
+import type { RedactionArea } from '@utils/screenshot-utils/redaction';
+import type { Background } from '@utils/screenshot-utils/backgroundGenerator';
+import type { AnnotationType, AnnotationConfig } from '@utils/screenshot-utils/annotations';
+import { DEFAULT_ANNOTATION_CONFIG } from '@utils/screenshot-utils/annotations';
+import type { CropBounds } from '@utils/screenshot-utils/crop';
 
 export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url' | 'upload';
 export type ExportFormat = 'png' | 'jpg' | 'webp';
