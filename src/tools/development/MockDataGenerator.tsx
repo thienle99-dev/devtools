@@ -2,12 +2,12 @@ import React from 'react';
 import { faker } from '@faker-js/faker';
 import { useToolState } from '../../store/toolStore';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/Select';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
+import { Select } from '@components/ui/Select';
 import { Trash2, Plus, RefreshCw, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
-import { VirtualizedOutput } from '../../components/ui/VirtualizedOutput';
+import { VirtualizedOutput } from '@components/ui/VirtualizedOutput';
 import { useTask } from '../../hooks/useTask';
 
 const TOOL_ID = 'mock-data-generator';

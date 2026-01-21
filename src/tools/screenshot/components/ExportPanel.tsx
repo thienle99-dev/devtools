@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { CanvasPreviewHandle } from './CanvasPreview';
 import { Download, Copy, FileImage, CloudUpload, Link } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { ExportFormat } from '../../../store/xnapperStore';
 import { cn } from '@utils/cn';

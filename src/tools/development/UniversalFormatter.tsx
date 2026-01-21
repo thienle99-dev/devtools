@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
+import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Select';
-import { Checkbox } from '../../components/ui/Checkbox';
+import { Button } from '@components/ui/Button';
+import { Select } from '@components/ui/Select';
+import { Checkbox } from '@components/ui/Checkbox';
 import { cn } from '@utils/cn';
 import { formatJson, minifyJson } from '../json/logic';
 import xmlFormatter from 'xml-formatter';

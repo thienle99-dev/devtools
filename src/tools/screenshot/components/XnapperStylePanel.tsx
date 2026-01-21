@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Layout, Maximize2, Palette, Eye, Type, Share2 } from 'lucide-react';
-import { useXnapperStore } from '../../../store/xnapperStore';
+import { useXnapperStore } from '@store/xnapperStore';
 import { XNAPPER_BG_PRESETS, ASPECT_RATIO_PRESETS, SOCIAL_PRESETS, generateGradientCSS } from '../utils/xnapperPresets';
 import { cn } from '@utils/cn';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@components/ui/Tabs';
 import { ExportPanel } from './ExportPanel';
 import { AnnotationToolbar } from './AnnotationToolbar';
 import type { CanvasPreviewHandle } from './CanvasPreview';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { toast } from 'sonner';
 
 interface XnapperStylePanelProps {

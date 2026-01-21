@@ -2,7 +2,7 @@ import React from 'react';
 import { useXnapperStore } from '../store/xnapperStore';
 import { format } from 'date-fns';
 import { Clock, Trash2, Image as ImageIcon } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { cn } from '@utils/cn';
 
 export const HistoryPanel: React.FC = () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
-import { CodeEditor } from '../../components/ui/CodeEditor';
+import { Button } from '@components/ui/Button';
+import { CodeEditor } from '@components/ui/CodeEditor';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { FileDiff, Braces, RefreshCw, Copy, FileText } from 'lucide-react';
 import { toast } from 'sonner';

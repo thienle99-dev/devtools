@@ -13,6 +13,20 @@ export const NumberBaseConverter = React.lazy(() => import('@tools/converters/Nu
 export const TextCaseConverter = React.lazy(() => import('@tools/converters/TextCaseConverter').then(m => ({ default: m.TextCaseConverter })));
 export const ColorConverter = React.lazy(() => import('@tools/converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
 export const DateConverter = React.lazy(() => import('@tools/converters/DateConverter').then(m => ({ default: m.DateConverter })));
+export const CharacterEncodingConverter = React.lazy(() => import('@tools/converters/CharacterEncodingConverter').then(m => ({ default: m.CharacterEncodingConverter })));
+export const UnicodeConverter = React.lazy(() => import('@tools/converters/UnicodeConverter').then(m => ({ default: m.UnicodeConverter })));
+export const BinaryHexTextConverter = React.lazy(() => import('@tools/converters/BinaryHexTextConverter').then(m => ({ default: m.BinaryHexTextConverter })));
+export const IpAddressConverter = React.lazy(() => import('@tools/converters/IpAddressConverter').then(m => ({ default: m.IpAddressConverter })));
+export const MacAddressConverter = React.lazy(() => import('@tools/converters/MacAddressConverter').then(m => ({ default: m.MacAddressConverter })));
+export const FileSizeConverter = React.lazy(() => import('@tools/converters/FileSizeConverter').then(m => ({ default: m.FileSizeConverter })));
+export const UnitConverter = React.lazy(() => import('@tools/converters/UnitConverter').then(m => ({ default: m.UnitConverter })));
+export const QueryStringConverter = React.lazy(() => import('@tools/converters/QueryStringConverter').then(m => ({ default: m.QueryStringConverter })));
+export const CodeMinifier = React.lazy(() => import('@tools/converters/CodeMinifier').then(m => ({ default: m.CodeMinifier })));
+export const EpochTimestampConverter = React.lazy(() => import('@tools/converters/EpochTimestampConverter').then(m => ({ default: m.EpochTimestampConverter })));
+export const TimeZoneConverter = React.lazy(() => import('@tools/converters/TimeZoneConverter').then(m => ({ default: m.TimeZoneConverter })));
+export const PercentageFractionConverter = React.lazy(() => import('@tools/converters/PercentageFractionConverter').then(m => ({ default: m.PercentageFractionConverter })));
+export const MimeTypeConverter = React.lazy(() => import('@tools/converters/MimeTypeConverter').then(m => ({ default: m.MimeTypeConverter })));
+export const CurrencyConverter = React.lazy(() => import('@tools/converters/CurrencyConverter').then(m => ({ default: m.CurrencyConverter })));
 
 // Crypto
 export const HashGenerator = React.lazy(() => import('@tools/crypto/HashGenerator').then(m => ({ default: m.HashGenerator })));

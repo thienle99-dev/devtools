@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createPatch } from 'diff';
-import { Button } from '../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
+import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@components/ui/Tabs';
 import { GitCompare, FileText, ArrowRightLeft, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 

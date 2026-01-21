@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Scan, Trash2, Eye, EyeOff, Sparkles } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../store/xnapperStore';
 import { analyzeSensitiveInfo } from '../utils/ocrDetection';
 import type { RedactionType } from '../utils/redaction';

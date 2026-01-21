@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, AlertTriangle, Loader2 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
 
 interface PluginHostProps {
     tabId: string;

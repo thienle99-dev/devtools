@@ -1,7 +1,7 @@
 import React from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 

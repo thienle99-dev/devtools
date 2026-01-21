@@ -111,16 +111,38 @@
 
 ### 3.1 Converter Tools
 
-- [x] Base64 string encoder/decoder
-- [x] Base64 file converter
-- [x] YAML ⇄ JSON converter
-- [x] JSON ⇄ XML converter
-- [x] XML ⇄ JSON converter
-- [x] Markdown to HTML
-- [x] Case converter
-- [x] Color converter (hex, rgb, hsl)
-- [x] Date-time converter
-- [x] Integer base converter
+- [x] Base64 Converter (text & file support)
+- [x] URL Encode/Decode
+- [x] HTML Entity Encode/Decode
+- [x] YAML ⇄ JSON converter (Universal Converter)
+- [x] JSON ⇄ XML converter (Universal Converter)
+- [x] JSON ⇄ CSV converter (Universal Converter)
+- [x] Markdown ↔ HTML converter (Universal Converter)
+- [x] Text Case Converter (uppercase, lowercase, title, camelCase, snake_case, kebab-case)
+- [x] Number Base Converter (decimal, hex, octal, binary)
+- [x] Color Converter (HEX, RGB, HSL, CMYK)
+- [x] Date Converter (timestamps and date formats)
+
+**Additional Converter Tools:**
+- [x] Character Encoding Converter (UTF-8 ↔ ASCII ↔ ISO-8859-1 ↔ Windows-1252)
+- [x] Unicode Converter (Text ↔ Unicode codes, escape sequences)
+- [ ] Morse Code Encoder/Decoder (Text ↔ Morse code)
+- [ ] Roman Numeral Converter (Decimal ↔ Roman numerals)
+- [x] Binary/Hex to Text Converter (Binary/Hex string ↔ ASCII text)
+- [x] IP Address Converter (Dotted notation ↔ Decimal ↔ Binary)
+- [x] MAC Address Converter (Format converter)
+- [x] File Size Converter (Bytes ↔ KB ↔ MB ↔ GB ↔ TB ↔ PB)
+- [x] Unit Converters (Length, Weight, Volume, Speed)
+- [x] Query String Parser/Builder (URL query string ↔ JSON, Form data ↔ JSON)
+- [x] JSON/XML/HTML/CSS/JS Minifier (Minify/Beautify)
+- [x] Epoch Timestamp Converter (Unix timestamp ↔ Human-readable date)
+- [x] Time Zone Converter (UTC ↔ Local ↔ Other timezones)
+- [x] Percentage/Fraction/Decimal Converter
+- [ ] QR Code Decoder (Decode QR code from image)
+- [ ] UUID Format Converter (Convert between UUID formats v1/v4/v6/v7)
+- [ ] Hash Format Converter (Hex ↔ Base64 ↔ Binary)
+- [x] MIME Type Converter (File extension ↔ MIME type)
+- [x] Currency Converter (Convert between currencies with exchange rates)
 
 ### 3.2 Crypto Tools
 

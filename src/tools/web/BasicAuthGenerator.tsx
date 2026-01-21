@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
 

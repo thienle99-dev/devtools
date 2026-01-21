@@ -1,9 +1,9 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Checkbox } from '../../components/ui/Checkbox';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
+import { Checkbox } from '@components/ui/Checkbox';
 import { Copy, RefreshCw, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 

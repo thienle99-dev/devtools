@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
 import { Copy, Trash2, Clock, Plus, Key } from 'lucide-react';
 import * as OTPAuth from 'otpauth';
 import { toast } from 'sonner';

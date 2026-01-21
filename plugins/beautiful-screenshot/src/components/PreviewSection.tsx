@@ -1,6 +1,6 @@
 import React, { useState, type JSX } from 'react';
 import { Check, X, Copy, Image as ImageIcon } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../store/xnapperStore';
 import { CanvasPreview } from './CanvasPreview';
 import { KonvaCanvas } from '../konva/KonvaCanvas';

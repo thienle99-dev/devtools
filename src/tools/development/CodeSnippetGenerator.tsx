@@ -1,10 +1,10 @@
 import React from 'react';
 import { useToolState } from '../../store/toolStore';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/Select';
-import { CodeEditor } from '../../components/ui/CodeEditor';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
+import { Select } from '@components/ui/Select';
+import { CodeEditor } from '@components/ui/CodeEditor';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateSnippet, type RequestData } from './snippet-logic';

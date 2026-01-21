@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
-import { Input } from '../../components/ui/Input';
-import { Checkbox } from '../../components/ui/Checkbox';
+import { Input } from '@components/ui/Input';
+import { Checkbox } from '@components/ui/Checkbox';
 
 const TOOL_ID = 'chmod-calculator';
 

@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Lock, Link, Globe, Binary, Type } from 'lucide-react';
+import { ArrowRightLeft, Lock, Link, Globe, Binary, Type, FileCode, Hash, Network, HardDrive, Ruler, Minus, Clock, Percent, FileType, DollarSign } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../converters/logic';
@@ -118,6 +118,160 @@ export const converters: ToolDefinition[] = [
         inputTypes: ['text'],
         outputTypes: ['text'],
         process: (input, options) => Logic.convertDate(input, options?.format || 'iso')
+    },
+    {
+        id: 'character-encoding',
+        name: 'Character Encoding Converter',
+        path: '/character-encoding',
+        description: 'Convert between different character encodings',
+        category: 'converters',
+        icon: FileCode,
+        color: 'text-cyan-400',
+        component: Lazy.CharacterEncodingConverter,
+        keywords: ['encoding', 'utf-8', 'ascii', 'iso-8859-1', 'windows-1252', 'character', 'convert']
+    },
+    {
+        id: 'unicode',
+        name: 'Unicode Converter',
+        path: '/unicode',
+        description: 'Convert between text and Unicode codes/escape sequences',
+        category: 'converters',
+        icon: Hash,
+        color: 'text-purple-400',
+        component: Lazy.UnicodeConverter,
+        keywords: ['unicode', 'escape', 'code', 'u+', 'convert']
+    },
+    {
+        id: 'binary-hex-text',
+        name: 'Binary/Hex to Text Converter',
+        path: '/binary-hex-text',
+        description: 'Convert between binary/hex strings and ASCII text',
+        category: 'converters',
+        icon: Binary,
+        color: 'text-green-400',
+        component: Lazy.BinaryHexTextConverter,
+        keywords: ['binary', 'hex', 'text', 'ascii', 'convert']
+    },
+    {
+        id: 'ip-address',
+        name: 'IP Address Converter',
+        path: '/ip-address',
+        description: 'Convert between IPv4 address formats',
+        category: 'converters',
+        icon: Network,
+        color: 'text-blue-400',
+        component: Lazy.IpAddressConverter,
+        keywords: ['ip', 'address', 'ipv4', 'dotted', 'decimal', 'binary', 'convert']
+    },
+    {
+        id: 'mac-address',
+        name: 'MAC Address Converter',
+        path: '/mac-address',
+        description: 'Convert between different MAC address formats',
+        category: 'converters',
+        icon: Network,
+        color: 'text-indigo-400',
+        component: Lazy.MacAddressConverter,
+        keywords: ['mac', 'address', 'format', 'colon', 'hyphen', 'convert']
+    },
+    {
+        id: 'file-size',
+        name: 'File Size Converter',
+        path: '/file-size',
+        description: 'Convert between bytes, KB, MB, GB, TB, PB',
+        category: 'converters',
+        icon: HardDrive,
+        color: 'text-amber-400',
+        component: Lazy.FileSizeConverter,
+        keywords: ['file', 'size', 'bytes', 'kb', 'mb', 'gb', 'tb', 'pb', 'convert']
+    },
+    {
+        id: 'unit-converter',
+        name: 'Unit Converter',
+        path: '/unit-converter',
+        description: 'Convert between length, weight, volume, and speed units',
+        category: 'converters',
+        icon: Ruler,
+        color: 'text-teal-400',
+        component: Lazy.UnitConverter,
+        keywords: ['unit', 'length', 'weight', 'volume', 'speed', 'meter', 'kilogram', 'liter', 'convert']
+    },
+    {
+        id: 'query-string',
+        name: 'Query String Converter',
+        path: '/query-string',
+        description: 'Convert between query strings, form data, and JSON',
+        category: 'converters',
+        icon: Link,
+        color: 'text-blue-400',
+        component: Lazy.QueryStringConverter,
+        keywords: ['query', 'string', 'url', 'form', 'data', 'json', 'parse', 'convert']
+    },
+    {
+        id: 'code-minifier',
+        name: 'Code Minifier/Beautifier',
+        path: '/code-minifier',
+        description: 'Minify or beautify JSON, XML, HTML, CSS, and JavaScript',
+        category: 'converters',
+        icon: Minus,
+        color: 'text-violet-400',
+        component: Lazy.CodeMinifier,
+        keywords: ['minify', 'beautify', 'json', 'xml', 'html', 'css', 'javascript', 'format']
+    },
+    {
+        id: 'epoch-timestamp',
+        name: 'Epoch Timestamp Converter',
+        path: '/epoch-timestamp',
+        description: 'Convert between Unix timestamps and dates',
+        category: 'converters',
+        icon: Clock,
+        color: 'text-orange-400',
+        component: Lazy.EpochTimestampConverter,
+        keywords: ['epoch', 'timestamp', 'unix', 'date', 'time', 'convert']
+    },
+    {
+        id: 'timezone-converter',
+        name: 'Time Zone Converter',
+        path: '/timezone-converter',
+        description: 'Convert dates between different time zones',
+        category: 'converters',
+        icon: Globe,
+        color: 'text-cyan-400',
+        component: Lazy.TimeZoneConverter,
+        keywords: ['timezone', 'time', 'zone', 'utc', 'convert', 'date']
+    },
+    {
+        id: 'percentage-fraction',
+        name: 'Percentage/Fraction/Decimal Converter',
+        path: '/percentage-fraction',
+        description: 'Convert between percentage, fraction, and decimal formats',
+        category: 'converters',
+        icon: Percent,
+        color: 'text-pink-400',
+        component: Lazy.PercentageFractionConverter,
+        keywords: ['percentage', 'fraction', 'decimal', 'convert', 'percent']
+    },
+    {
+        id: 'mime-type',
+        name: 'MIME Type Converter',
+        path: '/mime-type',
+        description: 'Convert between file extensions and MIME types',
+        category: 'converters',
+        icon: FileType,
+        color: 'text-indigo-400',
+        component: Lazy.MimeTypeConverter,
+        keywords: ['mime', 'type', 'extension', 'file', 'convert']
+    },
+    {
+        id: 'currency-converter',
+        name: 'Currency Converter',
+        path: '/currency-converter',
+        description: 'Convert between different currencies',
+        category: 'converters',
+        icon: DollarSign,
+        color: 'text-green-400',
+        component: Lazy.CurrencyConverter,
+        keywords: ['currency', 'money', 'exchange', 'rate', 'usd', 'eur', 'gbp', 'convert']
     },
 
 ];

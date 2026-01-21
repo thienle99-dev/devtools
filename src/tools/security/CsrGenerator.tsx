@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
 import { FileKey, Download, RefreshCw, Copy } from 'lucide-react';
 import { generateCsr } from './logic';
 import { toast } from 'sonner';

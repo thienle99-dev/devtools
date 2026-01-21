@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { CodeEditor } from '../../components/ui/CodeEditor';
+import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
+import { Button } from '@components/ui/Button';
 import { cn } from '@utils/cn';
 import { ArrowRightLeft, Code, Type, FileSpreadsheet, FileText, Copy, Eye, EyeOff, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
 import yaml from 'js-yaml';

@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { UAParser } from 'ua-parser-js';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
-import { Button } from '../../components/ui/Button';
-import { TextArea } from '../../components/ui/TextArea';
+import { Button } from '@components/ui/Button';
+import { TextArea } from '@components/ui/TextArea';
 
 const TOOL_ID = 'user-agent-parser';
 

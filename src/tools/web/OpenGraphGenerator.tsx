@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ToolPane } from '../../components/layout/ToolPane';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Card } from '@components/ui/Card';
+import { Button } from '@components/ui/Button';
+import { Input } from '@components/ui/Input';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { ToolPane } from '../../components/layout/ToolPane';
 import { useToolState } from '../../store/toolStore';
-import { Input } from '../../components/ui/Input';
+import { Input } from '@components/ui/Input';
 
 const TOOL_ID = 'http-status-codes';
 
