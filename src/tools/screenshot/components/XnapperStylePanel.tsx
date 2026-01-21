@@ -881,7 +881,7 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                 </TabsContent>
 
                 <TabsContent value="export" className="flex-1 overflow-y-auto">
-                    <ExportPanel />
+                    <ExportPanel canvasRef={canvasRef} />
                 </TabsContent>
             </Tabs>
         </div>

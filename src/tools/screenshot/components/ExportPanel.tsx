@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
+import type { CanvasPreviewHandle } from './CanvasPreview';
 import { Download, Copy, FileImage, CloudUpload, Link } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import type { ExportFormat } from '../../../store/xnapperStore';
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
-import { generateFinalImage, SOCIAL_PRESETS, type SocialPreset, type OutputConfig } from '../utils/exportUtils';
+import { generateFinalImage, SOCIAL_PRESETS, type SocialPreset, type OutputConfig, applyOutputConfig } from '../utils/exportUtils';
 import { uploadToImgur } from '../utils/uploadUtils';
 
-export const ExportPanel: React.FC = () => {
+interface ExportPanelProps {
+    canvasRef?: React.RefObject<CanvasPreviewHandle | null>;
+}
+
+export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
     const {
         currentScreenshot,
         exportFormat,
@@ -63,20 +68,32 @@ export const ExportPanel: React.FC = () => {
         setIsSaving(true);
         try {
             // Generate final processed image
-            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
-                autoBalance,
-                redactionAreas,
-                background,
-                backgroundPadding,
-                annotations: canvasData || undefined,
-                outputConfig: getOutputConfig(),
-                borderRadius,
-                shadowBlur,
-                shadowOpacity,
-                shadowOffsetX,
-                shadowOffsetY,
-                inset,
-            });
+            // Generate final processed image
+            let processedDataUrl: string;
+            if (canvasRef?.current?.exportImage) {
+                const fullRes = canvasRef.current.exportImage();
+                const config = getOutputConfig();
+                if (config) {
+                    processedDataUrl = await applyOutputConfig(fullRes, config, background);
+                } else {
+                    processedDataUrl = fullRes;
+                }
+            } else {
+                processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                    autoBalance,
+                    redactionAreas,
+                    background,
+                    backgroundPadding,
+                    annotations: canvasData || undefined,
+                    outputConfig: getOutputConfig(),
+                    borderRadius,
+                    shadowBlur,
+                    shadowOpacity,
+                    shadowOffsetX,
+                    shadowOffsetY,
+                    inset,
+                });
+            }
 
             const result = await (window as any).screenshotAPI?.saveFile(
                 processedDataUrl,
@@ -106,20 +123,32 @@ export const ExportPanel: React.FC = () => {
 
         try {
             // Generate final processed image
-            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
-                autoBalance,
-                redactionAreas,
-                background,
-                backgroundPadding,
-                annotations: canvasData || undefined,
-                outputConfig: getOutputConfig(),
-                borderRadius,
-                shadowBlur,
-                shadowOpacity,
-                shadowOffsetX,
-                shadowOffsetY,
-                inset,
-            });
+            // Generate final processed image
+            let processedDataUrl: string;
+            if (canvasRef?.current?.exportImage) {
+                 const fullRes = canvasRef.current.exportImage();
+                 const config = getOutputConfig();
+                 if (config) {
+                     processedDataUrl = await applyOutputConfig(fullRes, config, background);
+                 } else {
+                     processedDataUrl = fullRes;
+                 }
+            } else {
+                processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                    autoBalance,
+                    redactionAreas,
+                    background,
+                    backgroundPadding,
+                    annotations: canvasData || undefined,
+                    outputConfig: getOutputConfig(),
+                    borderRadius,
+                    shadowBlur,
+                    shadowOpacity,
+                    shadowOffsetX,
+                    shadowOffsetY,
+                    inset,
+                });
+            }
 
             // Convert data URL to blob
             const response = await fetch(processedDataUrl);
@@ -147,20 +176,32 @@ export const ExportPanel: React.FC = () => {
 
         try {
             // Generate final processed image
-            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
-                autoBalance,
-                redactionAreas,
-                background,
-                backgroundPadding,
-                annotations: canvasData || undefined,
-                outputConfig: getOutputConfig(),
-                borderRadius,
-                shadowBlur,
-                shadowOpacity,
-                shadowOffsetX,
-                shadowOffsetY,
-                inset,
-            });
+            // Generate final processed image
+            let processedDataUrl: string;
+            if (canvasRef?.current?.exportImage) {
+                const fullRes = canvasRef.current.exportImage();
+                const config = getOutputConfig();
+                if (config) {
+                    processedDataUrl = await applyOutputConfig(fullRes, config, background);
+                } else {
+                    processedDataUrl = fullRes;
+                }
+            } else {
+                processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                    autoBalance,
+                    redactionAreas,
+                    background,
+                    backgroundPadding,
+                    annotations: canvasData || undefined,
+                    outputConfig: getOutputConfig(),
+                    borderRadius,
+                    shadowBlur,
+                    shadowOpacity,
+                    shadowOffsetX,
+                    shadowOffsetY,
+                    inset,
+                });
+            }
 
             // Upload to Imgur
             const result = await uploadToImgur(processedDataUrl);

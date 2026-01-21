@@ -1960,8 +1960,8 @@
 - [x] Phase 0: Prep (Deps, Prototype)
 - [x] Phase 1: Core Canvas & Rendering (Stage, Layer, Image Background)
 - [x] Phase 2: Interaction & Selection (Transformer, Basic Shapes)
-- [ ] Phase 3: Shape Tools & Text (Rect, Arrow, Text, etc.)
-- [ ] Phase 4: History & State (Undo/Redo integration)
-- [ ] Phase 5: Export & Import (Replacement of Fabric export)
+- [x] Phase 3: Shape Tools & Text (Rect, Arrow, Text, etc.)
+- [x] Phase 4: History & State (Undo/Redo integration)
+- [x] Phase 5: Export & Import (Replacement of Fabric export)
 - [ ] Phase 6: Performance & Polish
 - [x] Phase 7: QA & Rollout (Feature Flag Integration)

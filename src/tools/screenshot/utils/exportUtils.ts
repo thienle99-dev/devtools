@@ -216,7 +216,7 @@ export const SOCIAL_PRESETS: Record<SocialPreset, { ratio: number; label: string
     'instagram-story': { ratio: 9 / 16, label: 'Story (9:16)' },
 };
 
-async function applyOutputConfig(
+export async function applyOutputConfig(
     dataUrl: string,
     config: OutputConfig,
     background: Background | null | undefined

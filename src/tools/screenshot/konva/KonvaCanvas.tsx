@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage, Rect, Transformer } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText } from 'react-konva';
 import useImage from 'use-image';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
@@ -36,6 +36,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         watermark,
         aspectRatio,
         activeAnnotationTool,
+        annotationConfig,
     } = useXnapperStore();
 
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -122,26 +123,50 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         onZoomChange?.(baseZoom);
     }, [baseZoom, onZoomChange]);
 
-    const [shapes, setShapes] = useState<any[]>([
-        {
-            id: 'rect1',
-            type: 'rect',
-            x: 50,
-            y: 50,
-            width: 100,
-            height: 100,
-            fill: 'red',
-            draggable: true,
-        },
-    ]);
+    const [shapes, setShapes] = useState<any[]>([]);
     const [selectedId, selectShape] = useState<string | null>(null);
     const transformerRef = useRef<any>(null);
+    const stageRef = useRef<any>(null);
     const isDrawing = useRef(false);
     const activeShapeIdRef = useRef<string | null>(null);
 
+    // History
+    const [history, setHistory] = useState<any[][]>([[]]);
+    const [historyStep, setHistoryStep] = useState(0);
+
+    // Sync History to Parent
+    useEffect(() => {
+        onHistoryChange?.(historyStep > 0, historyStep < history.length - 1, shapes.length);
+    }, [historyStep, history, shapes.length, onHistoryChange]);
+
+    const addToHistory = (newShapes: any[]) => {
+        const newHistory = history.slice(0, historyStep + 1);
+        newHistory.push(newShapes);
+        setHistory(newHistory);
+        setHistoryStep(newHistory.length - 1);
+    };
+
+    const handleUndo = () => {
+        if (historyStep > 0) {
+            const prevStep = historyStep - 1;
+            setHistoryStep(prevStep);
+            setShapes(history[prevStep]);
+            selectShape(null);
+        }
+    };
+
+    const handleRedo = () => {
+        if (historyStep < history.length - 1) {
+            const nextStep = historyStep + 1;
+            setHistoryStep(nextStep);
+            setShapes(history[nextStep]);
+            selectShape(null);
+        }
+    };
+
+    // Transformer Logic
     useEffect(() => {
         if (selectedId && transformerRef.current) {
-            // Find the node by id. Requires setting id on the node.
             const stage = transformerRef.current.getStage();
             const node = stage.findOne('#' + selectedId);
             if (node) {
@@ -154,8 +179,22 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         }
     }, [selectedId]);
 
+    // Keyboard support for Delete
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+                const newShapes = shapes.filter(s => s.id !== selectedId);
+                setShapes(newShapes);
+                addToHistory(newShapes);
+                selectShape(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedId, shapes]);
+
+    // Drawing Logic
     const handleMouseDown = (e: any) => {
-        // deselect when clicked on empty area
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
             selectShape(null);
@@ -163,26 +202,86 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
 
         if (!activeAnnotationTool) return;
 
+        // Deselect when starting to draw
+        selectShape(null);
+
         const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
+        const id = `${activeAnnotationTool}-${Date.now()}`;
         
+        // Common props
+        const baseProps = {
+            id,
+            draggable: false, // Initially false while drawing
+            stroke: annotationConfig.color || 'red',
+            strokeWidth: annotationConfig.strokeWidth || 4,
+            opacity: 1,
+        };
+
+        let newShape: any = null;
+
         if (activeAnnotationTool === 'rectangle') {
-            const id = `rect-${Date.now()}`;
-            const newShape = {
-                 id,
-                 type: 'rect',
-                 x: pos.x,
-                 y: pos.y,
-                 width: 0, 
-                 height: 0,
-                 stroke: 'red',
-                 strokeWidth: 4,
-                 draggable: false
+            newShape = {
+                ...baseProps,
+                type: 'rect',
+                x: pos.x,
+                y: pos.y,
+                width: 0,
+                height: 0,
+                // Simplify: just stroke or fill? Xnapper usually stroke for rects or blur
+                fill: 'transparent',
             };
-            setShapes([...shapes, newShape]);
+        } else if (activeAnnotationTool === 'circle') {
+             newShape = {
+                ...baseProps,
+                type: 'circle',
+                x: pos.x,
+                y: pos.y,
+                radius: 0,
+                fill: 'transparent',
+            };
+        } else if (activeAnnotationTool === 'arrow') {
+             newShape = {
+                ...baseProps,
+                type: 'arrow',
+                points: [pos.x, pos.y, pos.x, pos.y],
+                pointerLength: 10,
+                pointerWidth: 10,
+                fill: annotationConfig.color || 'red', // Arrow head fill
+            };
+        } else if (activeAnnotationTool === 'line') {
+             newShape = {
+                ...baseProps,
+                type: 'line',
+                points: [pos.x, pos.y, pos.x, pos.y],
+            };
+        } else if (activeAnnotationTool === 'text') {
+            // Instant create text
+            newShape = {
+                id,
+                type: 'text',
+                x: pos.x,
+                y: pos.y,
+                text: 'Double click to edit',
+                fontSize: annotationConfig.fontSize || 24,
+                fill: annotationConfig.color || '#ff0000',
+                draggable: true,
+                fontFamily: annotationConfig.fontFamily || 'Inter, sans-serif',
+            };
+            // For text, we don't drag-to-draw
+            const newShapes = [...shapes, newShape];
+            setShapes(newShapes);
+            addToHistory(newShapes);
+            // Select it immediately
+            selectShape(id);
+            return; 
+        }
+
+        if (newShape) {
+            const newShapes = [...shapes, newShape];
+            setShapes(newShapes);
             isDrawing.current = true;
             activeShapeIdRef.current = id;
-            selectShape(null); // Deselect others while drawing
         }
     };
 
@@ -194,11 +293,26 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         
         setShapes(prev => prev.map(s => {
             if (s.id === activeShapeIdRef.current) {
-                return {
-                    ...s,
-                    width: pos.x - s.x,
-                    height: pos.y - s.y
-                };
+                if (s.type === 'rect') {
+                    return {
+                        ...s,
+                        width: pos.x - s.x,
+                        height: pos.y - s.y
+                    };
+                } else if (s.type === 'circle') {
+                    const dx = pos.x - s.x;
+                    const dy = pos.y - s.y;
+                    const radius = Math.sqrt(dx*dx + dy*dy);
+                    return {
+                        ...s,
+                         radius
+                    };
+                } else if (s.type === 'arrow' || s.type === 'line') {
+                    return {
+                        ...s,
+                        points: [s.points[0], s.points[1], pos.x, pos.y]
+                    };
+                }
             }
             return s;
         }));
@@ -208,27 +322,87 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         if (isDrawing.current && activeShapeIdRef.current) {
             isDrawing.current = false;
             // Enable draggable after drawing
-            setShapes(prev => prev.map(s => {
+            const finalShapes = shapes.map(s => {
                 if (s.id === activeShapeIdRef.current) {
                     return { ...s, draggable: true };
                 }
                 return s;
-            }));
+            });
+            setShapes(finalShapes);
+            addToHistory(finalShapes);
             selectShape(activeShapeIdRef.current);
             activeShapeIdRef.current = null;
         }
     };
 
+    const handleTextDblClick = (e: any, shapeId: string) => {
+        const textNode = e.target;
+        // Simple prompt for now
+        const newText = prompt('Edit text:', textNode.text());
+        if (newText !== null) {
+            const newShapes = shapes.map(s => s.id === shapeId ? { ...s, text: newText } : s);
+            setShapes(newShapes);
+            addToHistory(newShapes);
+        }
+    };
+
+    // Update history on transform end (drag/resize)
+    const handleTransformEnd = () => {
+         addToHistory(shapes);
+    };
+
+    const handleDragEnd = (e: any) => {
+        // Update shape position in state
+        const id = e.target.id();
+        const newShapes = shapes.map(s => {
+            if (s.id === id) {
+                return {
+                    ...s,
+                    x: e.target.x(),
+                    y: e.target.y(),
+                    rotation: e.target.rotation(),
+                    scaleX: e.target.scaleX(),
+                    scaleY: e.target.scaleY(),
+                };
+            }
+            return s;
+        });
+        setShapes(newShapes);
+        addToHistory(newShapes);
+    };
+
     useImperativeHandle(ref, () => ({
-        undo: () => {},
-        redo: () => {},
-        clear: () => setShapes([]),
-        canUndo: false,
-        canRedo: false,
+        undo: handleUndo,
+        redo: handleRedo,
+        clear: () => {
+            setShapes([]);
+            addToHistory([]);
+        },
+        canUndo: historyStep > 0,
+        canRedo: historyStep < history.length - 1,
         zoomIn: () => setBaseZoom(prev => Math.min(prev + 0.25, 3)),
         zoomOut: () => setBaseZoom(prev => Math.max(prev - 0.25, 0.25)),
         resetZoom: () => setBaseZoom(1),
-        getZoom: () => baseZoom
+        getZoom: () => baseZoom,
+        // Export logic
+        exportImage: () => {
+            if (stageRef.current) {
+                // Deselect before export to hide transformer
+                selectShape(null);
+                // Force sync draw
+                stageRef.current.getLayer().batchDraw();
+                
+                // Export at original size
+                // stage scale is (scale * baseZoom)
+                // we want output to be (imageSize.width)
+                // so pixelRatio should be 1 / (scale * baseZoom)
+                const currentScale = scale * baseZoom;
+                const pixelRatio = 1 / currentScale;
+                
+                return stageRef.current.toDataURL({ pixelRatio });
+            }
+            return '';
+        }
     }));
 
     if (!baseDataUrl) return <div className="flex items-center justify-center h-full text-foreground-muted">Preparing canvas...</div>;
@@ -239,6 +413,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             className="w-full h-full flex items-center justify-center overflow-hidden bg-transparent"
         >
             <Stage 
+                ref={stageRef}
                 width={imageSize.width * scale * baseZoom} 
                 height={imageSize.height * scale * baseZoom}
                 scaleX={scale * baseZoom}
@@ -262,17 +437,21 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 </Layer>
                 <Layer>
                     {shapes.map((shape) => {
-                        if (shape.type === 'rect') {
-                            return (
-                                <Rect
-                                    key={shape.id}
-                                    {...shape}
-                                    onClick={() => selectShape(shape.id)}
-                                    onTap={() => selectShape(shape.id)}
-                                />
-                            );
-                        }
-                        // Mock circle for now, or import Circle
+                        const commonProps = {
+                            key: shape.id,
+                            ...shape,
+                            onClick: () => selectShape(shape.id),
+                            onTap: () => selectShape(shape.id),
+                            onDragEnd: handleDragEnd,
+                            onTransformEnd: handleTransformEnd,
+                        };
+                        
+                        if (shape.type === 'rect') return <Rect {...commonProps} />;
+                        if (shape.type === 'circle') return <Circle {...commonProps} />;
+                        if (shape.type === 'arrow') return <Arrow {...commonProps} />;
+                        if (shape.type === 'line') return <Arrow {...commonProps} pointerLength={0} pointerWidth={0} />;
+                        if (shape.type === 'text') return <KonvaText {...commonProps} onDblClick={(e) => handleTextDblClick(e, shape.id)} />;
+                        
                         return null;
                     })}
                     <Transformer ref={transformerRef} />
