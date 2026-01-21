@@ -16,7 +16,8 @@ import {
     Wifi,
     Zap,
     Clipboard,
-    Puzzle
+    Puzzle,
+    Store
 } from 'lucide-react';
 import { useSettingsStore } from '@store/settingsStore';
 import { useClipboardStore } from '@store/clipboardStore';
@@ -142,6 +143,7 @@ export const Footer = () => {
     const tabs = useTabStore(state => state.tabs);
     const activeTabId = useTabStore(state => state.activeTabId);
     const openTab = useTabStore(state => state.openTab);
+    const navigate = useNavigate();
 
     const theme = useSettingsStore(state => state.theme);
     const setTheme = useSettingsStore(state => state.setTheme);
@@ -200,6 +202,21 @@ export const Footer = () => {
         const settingsTool = TOOLS.find(t => t.id === 'settings');
         if (settingsTool) {
             openTab(settingsTool.id, settingsTool.path, settingsTool.name, settingsTool.description, false, false);
+        }
+    };
+
+    const openPluginMarketplace = () => {
+        const marketplaceTool = TOOLS.find(t => t.id === 'plugin-marketplace');
+        if (marketplaceTool) {
+            openTab(
+                marketplaceTool.id,
+                marketplaceTool.path,
+                marketplaceTool.name,
+                marketplaceTool.description,
+                false,
+                false
+            );
+            navigate(marketplaceTool.path);
         }
     };
 
@@ -283,6 +300,13 @@ export const Footer = () => {
                     <Command size={10} className="group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] font-black uppercase">K</span>
                 </div>
+                <button
+                    onClick={openPluginMarketplace}
+                    className="p-1.5 text-violet-400 hover:text-violet-300 rounded-full hover:bg-violet-400/10 transition-all hover:scale-110"
+                    title="Plugin Marketplace"
+                >
+                    <Store size={12} />
+                </button>
                 <button
                     onClick={openSettings}
                     className="p-1.5 text-foreground-muted hover:text-foreground rounded-full hover:bg-foreground/10 transition-all"

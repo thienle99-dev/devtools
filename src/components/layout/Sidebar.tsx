@@ -54,12 +54,14 @@ export const Sidebar: React.FC = React.memo(() => {
     }, []);
 
 
+
     const filteredContent = useMemo(() => {
         const query = searchQuery.toLowerCase().trim();
         if (!query) return null;
 
         const results = TOOLS.filter(tool => {
             if (tool.id === 'settings' || tool.id === 'dashboard') return false;
+            if (tool.hideFromSidebar) return false; // Hide tools marked as footer-only
 
             return tool.name.toLowerCase().includes(query) ||
                 tool.description.toLowerCase().includes(query) ||
@@ -90,7 +92,14 @@ export const Sidebar: React.FC = React.memo(() => {
                 // Uses the pre-computed map from the registry
                 tools = getToolsByCategory(category.id);
             }
-            return { ...category, tools: tools.filter((t: any) => t.id !== 'settings' && t.id !== 'dashboard') };
+            return {
+                ...category,
+                tools: tools.filter((t: any) =>
+                    t.id !== 'settings' &&
+                    t.id !== 'dashboard' &&
+                    !t.hideFromSidebar // Hide footer-only tools
+                )
+            };
         });
 
         if (categoryOrder.length === 0) return mapped;

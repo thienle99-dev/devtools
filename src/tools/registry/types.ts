@@ -16,6 +16,7 @@ export interface ToolDefinition {
     keywords?: string[];
     shortcut?: string;
     color?: string;
+    hideFromSidebar?: boolean; // Hide from sidebar navigation (e.g., marketplace accessible via footer)
 
     // Pipeline Support
     inputTypes?: ToolDataType[];
