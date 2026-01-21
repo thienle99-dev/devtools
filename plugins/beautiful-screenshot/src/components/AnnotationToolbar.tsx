@@ -12,9 +12,11 @@ import {
     Trash2,
     Pen,
     BringToFront,
-    SendToBack
+    SendToBack,
+    Hand
 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
+import { Slider } from '@components/ui/Slider';
 import { useXnapperStore } from '../store/xnapperStore';
 import type { AnnotationType } from '../utils/annotations';
 import { cn } from '@utils/cn';
@@ -55,6 +57,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         label: string;
         description: string;
     }> = [
+            { type: 'select', icon: Hand, label: 'Select', description: 'Select and move tools' },
             { type: 'arrow', icon: ArrowRight, label: 'Arrow', description: 'Draw arrows' },
             { type: 'pen', icon: Pen, label: 'Pen', description: 'Free draw' },
             { type: 'text', icon: Type, label: 'Text', description: 'Add text' },
@@ -127,54 +130,96 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                 <label className="text-xs font-medium text-foreground-secondary mb-2 block">
                     Color
                 </label>
-                <div className="flex flex-wrap gap-2">
-                    {colors.map((color) => (
-                        <button
-                            key={color}
-                            onClick={() => setAnnotationConfig({ color })}
-                            className={cn(
-                                "w-8 h-8 rounded-lg border-2 transition-all",
-                                annotationConfig.color === color
-                                    ? "border-indigo-500 ring-2 ring-indigo-500/50 scale-110"
-                                    : "border-border-glass hover:border-indigo-500/50"
+                <div className="space-y-2">
+                    {/* Preset Colors Grid */}
+                    <div className="grid grid-cols-5 gap-1.5">
+                        {colors.map((color) => (
+                            <button
+                                key={color}
+                                onClick={() => setAnnotationConfig({ color })}
+                                className={cn(
+                                    "relative w-full aspect-square rounded-lg border-2 transition-all group",
+                                    annotationConfig.color === color
+                                        ? "border-indigo-500 ring-2 ring-indigo-500/50 scale-105 shadow-lg shadow-indigo-500/30"
+                                        : "border-border-glass hover:border-indigo-500/50 hover:scale-105"
+                                )}
+                                style={{ backgroundColor: color }}
+                                title={color}
+                            >
+                                {annotationConfig.color === color && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-2 h-2 rounded-full bg-white shadow-sm" />
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Custom Color Picker */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-medium text-foreground-muted uppercase tracking-wider flex-1">
+                            Custom
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="color"
+                                value={annotationConfig.color}
+                                onChange={(e) => setAnnotationConfig({ color: e.target.value })}
+                                className="w-8 h-8 rounded-lg cursor-pointer border-2 border-border-glass hover:border-indigo-500/50 transition-all"
+                                title="Custom color"
+                            />
+                            {!colors.includes(annotationConfig.color) && (
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-indigo-500 border border-white" />
                             )}
-                            style={{ backgroundColor: color }}
-                            title={color}
-                        />
-                    ))}
-                    <input
-                        type="color"
-                        value={annotationConfig.color}
-                        onChange={(e) => setAnnotationConfig({ color: e.target.value })}
-                        className="w-8 h-8 rounded-lg cursor-pointer border-2 border-border-glass"
-                        title="Custom color"
-                    />
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Stroke Width */}
             <div>
-                <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-medium text-foreground-secondary">
-                        Stroke Width
-                    </label>
-                    <span className="text-xs text-foreground-muted">
-                        {annotationConfig.strokeWidth}px
-                    </span>
+                <Slider
+                    label="Stroke Width"
+                    value={annotationConfig.strokeWidth}
+                    onChange={(value) => setAnnotationConfig({ strokeWidth: value })}
+                    min={1}
+                    max={20}
+                    step={1}
+                    unit="px"
+                />
+                {/* Preview Line */}
+                <div className="flex items-center justify-center mt-2 px-3 py-2 rounded-md bg-background/50 border border-border-glass">
+                    <div
+                        className="rounded-full transition-all"
+                        style={{
+                            width: '100%',
+                            height: `${annotationConfig.strokeWidth}px`,
+                            backgroundColor: annotationConfig.color,
+                            maxWidth: '100px',
+                        }}
+                    />
                 </div>
-                <div className="flex gap-2">
+                {/* Quick Presets */}
+                <div className="flex gap-1.5 mt-2">
                     {strokeWidths.map((width) => (
                         <button
                             key={width}
                             onClick={() => setAnnotationConfig({ strokeWidth: width })}
                             className={cn(
-                                "flex-1 py-2 rounded-lg border-2 transition-all text-xs",
+                                "flex items-center justify-center flex-1 py-2 rounded-md border transition-all",
                                 annotationConfig.strokeWidth === width
-                                    ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                    : "border-border-glass bg-glass-panel hover:border-indigo-500/50 text-foreground-secondary"
+                                    ? "border-indigo-500 bg-indigo-500/10"
+                                    : "border-border-glass bg-glass-panel hover:border-indigo-500/50"
                             )}
+                            title={`${width}px`}
                         >
-                            {width}
+                            <div
+                                className="rounded-full transition-all"
+                                style={{
+                                    width: `${Math.min(width * 3, 24)}px`,
+                                    height: `${width}px`,
+                                    backgroundColor: annotationConfig.color,
+                                }}
+                            />
                         </button>
                     ))}
                 </div>

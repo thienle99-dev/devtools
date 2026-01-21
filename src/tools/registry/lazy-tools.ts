@@ -63,8 +63,8 @@ export const JsonDiff = React.lazy(() => import('@tools/json/JsonDiff').then(m =
 
 // Screenshot & Media
 export const Xnapper = React.lazy(() => import('../../../plugins/beautiful-screenshot/src/Xnapper').then(m => ({ default: m.Xnapper })));
-export const VoiceRecorder = React.lazy(() => import('@tools/media/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
-export const Camera = React.lazy(() => import('@tools/media/Camera').then(m => ({ default: m.Camera })));
+export const VoiceRecorder = React.lazy(() => import('../../../plugins/media-tools/src/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
+export const Camera = React.lazy(() => import('../../../plugins/media-tools/src/Camera').then(m => ({ default: m.Camera })));
 
 // Image
 export const QrCodeGenerator = React.lazy(() => import('@tools/image/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));
@@ -92,14 +92,14 @@ export const DashboardPage = React.lazy(() => import('@pages/Dashboard').then(m 
 export const UniversalFormatter = React.lazy(() => import('@tools/development/UniversalFormatter').then(m => ({ default: m.UniversalFormatter })));
 export const Converter = React.lazy(() => import('@tools/converters/Converter').then(m => ({ default: m.Converter })));
 
-export const VideoCompressor = React.lazy(() => import('@tools/media/VideoCompressor'));
+export const VideoCompressor = React.lazy(() => import('../../../plugins/media-tools/src/VideoCompressor').then(m => ({ default: m.VideoCompressor })));
 
 export const PluginMarketplace = React.lazy(() => import('@tools/plugins/PluginMarketplace').then(m => ({ default: m.default })));
 
 
 // PDF
-export const PdfConverter = React.lazy(() => import('@tools/pdf/PdfConverter'));
-export const PdfSecurity = React.lazy(() => import('@tools/pdf/PdfSecurity'));
+export const PdfConverter = React.lazy(() => import('../../../plugins/pdf-tools/src/PdfConverter').then(m => ({ default: m.PdfConverter })));
+export const PdfSecurity = React.lazy(() => import('../../../plugins/pdf-tools/src/PdfSecurity').then(m => ({ default: m.PdfSecurity })));
 
 // Data
 export const DataParser = React.lazy(() => import('@tools/data/DataParser'));

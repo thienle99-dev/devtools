@@ -9,7 +9,7 @@ import {
     Canvas
 } from 'fabric';
 
-export type AnnotationType = 'arrow' | 'text' | 'rectangle' | 'circle' | 'ellipse' | 'line' | 'blur' | 'pen';
+export type AnnotationType = 'arrow' | 'text' | 'rectangle' | 'circle' | 'ellipse' | 'line' | 'blur' | 'pen' | 'select';
 
 export interface AnnotationConfig {
     type: AnnotationType;

@@ -171,6 +171,49 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         canvas.on('object:added', saveState);
         canvas.on('object:modified', saveState);
         canvas.on('object:removed', saveState);
+        
+        // Handle path created from free drawing
+        canvas.on('path:created', (opt: any) => {
+            const path = opt.path;
+            path.set({
+                selectable: true,
+                hasControls: true,
+            });
+            saveState();
+        });
+
+        // Update cursor on hover for select tool
+        canvas.on('mouse:over', (opt: any) => {
+            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                if (opt.target && opt.target !== canvas.backgroundImage) {
+                    canvas.defaultCursor = 'grab';
+                    canvas.renderAll();
+                }
+            }
+        });
+
+        canvas.on('mouse:out', (opt: any) => {
+            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                canvas.defaultCursor = 'default';
+                canvas.renderAll();
+            }
+        });
+
+        canvas.on('mouse:down', (opt: any) => {
+            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                if (opt.target && opt.target !== canvas.backgroundImage) {
+                    canvas.defaultCursor = 'grabbing';
+                    canvas.renderAll();
+                }
+            }
+        });
+
+        canvas.on('mouse:up', () => {
+            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                canvas.defaultCursor = 'default';
+                canvas.renderAll();
+            }
+        });
 
         // Pan state - use refs to persist across renders
         const panStateRef = useRef({ isPanning: false, lastPanPoint: { x: 0, y: 0 } });
@@ -337,16 +380,25 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             if (!fabricCanvasRef.current) return;
             const canvas = fabricCanvasRef.current;
             
-            canvas.selection = !activeAnnotationTool;
-            canvas.defaultCursor = activeAnnotationTool ? 'crosshair' : 'default';
-            
-            // Enable/disable drawing mode for pen tool
-            if (activeAnnotationTool === 'pen') {
-                canvas.isDrawingMode = true;
-                canvas.freeDrawingBrush.color = annotationConfig.color;
-                canvas.freeDrawingBrush.width = annotationConfig.strokeWidth;
-            } else {
+            // Select tool enables selection and move
+            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                canvas.selection = true;
+                canvas.defaultCursor = 'default';
+                canvas.moveCursor = 'move';
                 canvas.isDrawingMode = false;
+            } else {
+                canvas.selection = false;
+                canvas.defaultCursor = 'crosshair';
+                canvas.moveCursor = 'crosshair';
+                
+                // Enable/disable drawing mode for pen tool
+                if (activeAnnotationTool === 'pen') {
+                    canvas.isDrawingMode = true;
+                    canvas.freeDrawingBrush.color = annotationConfig.color;
+                    canvas.freeDrawingBrush.width = annotationConfig.strokeWidth;
+                } else {
+                    canvas.isDrawingMode = false;
+                }
             }
         };
 
@@ -357,10 +409,41 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             window.removeEventListener('keydown', handleSpaceDown);
             window.removeEventListener('keyup', handleSpaceUp);
             canvas.off('mouse:wheel', handleWheel);
+            canvas.off('mouse:over');
+            canvas.off('mouse:out');
+            canvas.off('mouse:down');
+            canvas.off('mouse:up');
+            canvas.off('path:created');
             canvas.dispose();
             fabricCanvasRef.current = null;
         };
-    }, [saveState, handleRedo, handleUndo, activeAnnotationTool]);
+    }, [saveState, handleRedo, handleUndo, activeAnnotationTool, annotationConfig]);
+
+    // Update drawing mode when tool or config changes
+    useEffect(() => {
+        if (!fabricCanvasRef.current) return;
+        const canvas = fabricCanvasRef.current;
+        
+        // Select tool enables selection and move
+        if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+            canvas.selection = true;
+            canvas.defaultCursor = 'default';
+            canvas.moveCursor = 'move';
+            canvas.isDrawingMode = false;
+        } else {
+            canvas.selection = false;
+            canvas.defaultCursor = 'crosshair';
+            canvas.moveCursor = 'crosshair';
+            
+            if (activeAnnotationTool === 'pen') {
+                canvas.isDrawingMode = true;
+                canvas.freeDrawingBrush.color = annotationConfig.color;
+                canvas.freeDrawingBrush.width = annotationConfig.strokeWidth;
+            } else {
+                canvas.isDrawingMode = false;
+            }
+        }
+    }, [activeAnnotationTool, annotationConfig.color, annotationConfig.strokeWidth]);
 
     const updateCanvasScale = useCallback((imgWidth: number, imgHeight: number) => {
         if (!canvasContainerRef.current) return;
@@ -656,7 +739,12 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             return;
         }
 
-        if (!activeAnnotationTool || !fabricCanvasRef.current) return;
+        // Select tool: allow normal fabric.js selection (no drawing)
+        if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+            return; // Let fabric.js handle selection/move
+        }
+
+        if (!fabricCanvasRef.current) return;
 
         const canvas = fabricCanvasRef.current;
         const pointer = canvas.getScenePoint(opt.e);
