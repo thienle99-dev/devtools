@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Layout, Maximize2, Palette, Eye, Type, Share2, ChevronDown, Settings2, Layers, Wand2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Layout, Maximize2, Palette, Eye, Type, Share2, Settings2, Layers, Wand2 } from 'lucide-react';
 import { useXnapperStore } from '../store/xnapperStore';
 import { XNAPPER_BG_PRESETS, ASPECT_RATIO_PRESETS, SOCIAL_PRESETS, generateGradientCSS } from '../utils/xnapperPresets';
 import { cn } from '@utils/cn';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@components/ui/Tabs';
 import { ExportPanel } from './ExportPanel';
 import { AnnotationToolbar } from './AnnotationToolbar';
 import type { CanvasPreviewHandle } from '../konva/KonvaCanvas';
+import { CollapsibleSection, CompactSlider, ToggleSwitch } from './ui/screenshot';
 
 interface XnapperStylePanelProps {
     canvasRef?: React.RefObject<CanvasPreviewHandle | null>;
@@ -17,149 +18,6 @@ interface XnapperStylePanelProps {
     };
     zoom?: number;
 }
-
-// Collapsible Section Component
-const CollapsibleSection: React.FC<{
-    icon: React.ReactNode;
-    title: string;
-    children: React.ReactNode;
-    defaultOpen?: boolean;
-    badge?: React.ReactNode;
-    iconBg?: string;
-}> = ({ icon, title, children, defaultOpen = true, badge, iconBg = 'from-indigo-500/20 to-purple-500/20' }) => {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
-
-    return (
-        <div className="border border-border-glass/50 rounded-xl overflow-hidden bg-glass-subtle/30">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors"
-            >
-                <div className={cn(
-                    "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0",
-                    iconBg
-                )}>
-                    {icon}
-                </div>
-                <span className="text-sm font-semibold text-foreground flex-1 text-left">{title}</span>
-                {badge}
-                <ChevronDown className={cn(
-                    "w-4 h-4 text-foreground-muted transition-transform duration-200",
-                    !isOpen && "-rotate-90"
-                )} />
-            </button>
-            <div className={cn(
-                "overflow-hidden transition-all duration-200",
-                isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-            )}>
-                <div className="p-3 pt-0">
-                    {children}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Compact Slider Component
-const CompactSlider: React.FC<{
-    label: string;
-    value: number;
-    onChange: (value: number) => void;
-    min: number;
-    max: number;
-    unit?: string;
-    color?: string;
-}> = ({ label, value, onChange, min, max, unit = 'px', color = 'indigo' }) => {
-    const colorClasses: Record<string, string> = {
-        indigo: 'from-indigo-500 to-purple-500 border-indigo-500',
-        blue: 'from-blue-500 to-cyan-500 border-blue-500',
-        amber: 'from-amber-500 to-orange-500 border-amber-500',
-        pink: 'from-pink-500 to-rose-500 border-pink-500',
-    };
-
-    const percentage = ((value - min) / (max - min)) * 100;
-
-    return (
-        <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-foreground-muted">{label}</label>
-                <div className="flex items-center gap-1">
-                    <input
-                        type="number"
-                        min={min}
-                        max={max}
-                        value={value}
-                        onChange={(e) => onChange(Number(e.target.value))}
-                        className="w-12 px-1.5 py-0.5 text-xs text-center bg-background/60 border border-border-glass rounded text-foreground-primary focus:outline-none focus:border-indigo-500"
-                    />
-                    <span className="text-[10px] text-foreground-tertiary w-4">{unit}</span>
-                </div>
-            </div>
-            <div className="relative h-1.5 group">
-                <div className="absolute inset-0 bg-background/60 rounded-full overflow-hidden border border-border-glass/50">
-                    <div
-                        className={cn("h-full bg-gradient-to-r transition-all duration-100", colorClasses[color]?.split(' ').slice(0, 2).join(' '))}
-                        style={{ width: `${percentage}%` }}
-                    />
-                </div>
-                <input
-                    type="range"
-                    min={min}
-                    max={max}
-                    value={value}
-                    onChange={(e) => onChange(Number(e.target.value))}
-                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                />
-                <div
-                    className={cn(
-                        "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 rounded-full shadow-sm pointer-events-none transition-all duration-100 group-hover:scale-110",
-                        colorClasses[color]?.split(' ').slice(2).join(' ')
-                    )}
-                    style={{ left: `calc(${percentage}% - 6px)` }}
-                />
-            </div>
-        </div>
-    );
-};
-
-// Toggle Switch Component
-const ToggleSwitch: React.FC<{
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-    size?: 'sm' | 'md';
-}> = ({ checked, onChange, size = 'md' }) => {
-    const sizes = {
-        sm: 'h-5 w-9',
-        md: 'h-6 w-11',
-    };
-    const thumbSizes = {
-        sm: 'h-3.5 w-3.5',
-        md: 'h-4 w-4',
-    };
-    const translateSizes = {
-        sm: 'translate-x-4',
-        md: 'translate-x-5',
-    };
-
-    return (
-        <button
-            onClick={() => onChange(!checked)}
-            className={cn(
-                "relative inline-flex items-center rounded-full transition-colors duration-200 focus:outline-none",
-                sizes[size],
-                checked ? "bg-indigo-500" : "bg-gray-600"
-            )}
-        >
-            <span
-                className={cn(
-                    "inline-block transform rounded-full bg-white shadow-sm transition-transform duration-200",
-                    thumbSizes[size],
-                    checked ? translateSizes[size] : "translate-x-1"
-                )}
-            />
-        </button>
-    );
-};
 
 export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
     canvasRef,
