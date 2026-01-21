@@ -18,6 +18,18 @@ export function PdfConverter() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const hasPrefetchedDeps = useRef(false);
+
+    const prefetchDeps = React.useCallback(() => {
+        if (hasPrefetchedDeps.current) return;
+        hasPrefetchedDeps.current = true;
+        loadPdfJs().catch(() => {
+            hasPrefetchedDeps.current = false;
+        });
+        loadJsZip().catch(() => {
+            // keep prefetched flag true; next call can retry manually if convert fails
+        });
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -74,7 +86,15 @@ export function PdfConverter() {
                         "border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all cursor-pointer",
                         file ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/50"
                     )}
-                    onClick={() => !isProcessing && fileInputRef.current?.click()}
+                    onMouseEnter={prefetchDeps}
+                    onFocus={prefetchDeps}
+                    onDragOver={prefetchDeps}
+                    onClick={() => {
+                        if (!isProcessing) {
+                            prefetchDeps();
+                            fileInputRef.current?.click();
+                        }
+                    }}
                 >
                     <input
                         type="file"
@@ -143,6 +163,7 @@ export function PdfConverter() {
                             variant="primary"
                             disabled={!file || isProcessing}
                             onClick={handleConvert}
+                            onMouseEnter={prefetchDeps}
                         >
                             {isProcessing ? (
                                 <>
