@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Lock, Unlock, FileUp, Loader2, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { Card } from '@components/ui/Card';
@@ -17,6 +17,15 @@ export function PdfSecurity() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [activeTab, setActiveTab] = useState('protect');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const hasPrefetchedLib = useRef(false);
+
+    const prefetchPdfLib = useCallback(() => {
+        if (hasPrefetchedLib.current) return;
+        hasPrefetchedLib.current = true;
+        loadPdfLib().catch(() => {
+            hasPrefetchedLib.current = false;
+        });
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -136,7 +145,14 @@ export function PdfSecurity() {
                         "border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all cursor-pointer",
                         file ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/50"
                     )}
-                    onClick={() => !isProcessing && fileInputRef.current?.click()}
+                    onMouseEnter={prefetchPdfLib}
+                    onFocus={prefetchPdfLib}
+                    onDragOver={prefetchPdfLib}
+                    onClick={() => {
+                        if (isProcessing) return;
+                        prefetchPdfLib();
+                        fileInputRef.current?.click();
+                    }}
                 >
                     <input 
                         type="file" 
