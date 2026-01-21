@@ -1,4 +1,4 @@
-import { Fingerprint, ShieldCheck, ScanLine, Key, KeyRound } from 'lucide-react';
+import { Fingerprint, ScanLine, Key } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../crypto/logic';
@@ -18,21 +18,6 @@ export const cryptoTools: ToolDefinition[] = [
         outputTypes: ['text'],
         process: (input, options) => Logic.generateHash(input, options?.algorithm)
     },
-    {
-        id: 'hmac',
-        name: 'HMAC Generator',
-        path: '/hmac',
-        description: 'Keyed-hash message authentication code',
-        category: 'crypto',
-        icon: ShieldCheck,
-        color: 'text-fuchsia-400',
-        component: Lazy.HmacGenerator,
-        keywords: ['hmac', 'key', 'hash', 'security'],
-        inputTypes: ['text'],
-        outputTypes: ['text'],
-        process: (input, options) => Logic.generateHmac(input, options?.key || '', options?.algorithm || 'sha256')
-    },
-
     {
         id: 'uuid',
         name: 'UUID / ULID',
@@ -59,19 +44,8 @@ export const cryptoTools: ToolDefinition[] = [
         keywords: ['token', 'password', 'random', 'secure', 'bearer', 'api', 'key'],
         outputTypes: ['text'],
         process: (_, options) => Logic.generateTokens(options)
-    },
-    {
-        id: 'bearer-token',
-        name: 'Bearer Token',
-        path: '/bearer-token',
-        description: 'Generate secure API secret tokens',
-        category: 'crypto',
-        icon: KeyRound,
-        color: 'text-indigo-400',
-        component: Lazy.BearerTokenGenerator,
-        keywords: ['token', 'bearer', 'api', 'key', 'secret'],
-        outputTypes: ['text'],
-        process: (options) => Logic.generateBearerToken(options?.length || 32)
-    },
-
+    }
+    // Removed tools (moved to Crypto Advanced plugin):
+    // - HMAC Generator
+    // - Bearer Token Generator
 ];

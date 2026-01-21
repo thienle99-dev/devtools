@@ -1,19 +1,8 @@
-import { FileCode, Hash, Binary, Link, FileType } from 'lucide-react';
+import { Hash, Binary, Link } from 'lucide-react';
 import * as Lazy from '../../../lazy-tools';
 import type { ToolDefinition } from '../../../types';
 
 export const structuredConverters: ToolDefinition[] = [
-    {
-        id: 'character-encoding',
-        name: 'Character Encoding Converter',
-        path: '/character-encoding',
-        description: 'Convert between different character encodings',
-        category: 'converters',
-        icon: FileCode,
-        color: 'text-cyan-400',
-        component: Lazy.CharacterEncodingConverter,
-        keywords: ['encoding', 'utf-8', 'ascii', 'iso-8859-1', 'windows-1252', 'character', 'convert']
-    },
     {
         id: 'unicode',
         name: 'Unicode Converter',
@@ -46,17 +35,9 @@ export const structuredConverters: ToolDefinition[] = [
         color: 'text-blue-400',
         component: Lazy.QueryStringConverter,
         keywords: ['query', 'string', 'url', 'form', 'data', 'json', 'parse', 'convert']
-    },
-    {
-        id: 'mime-type',
-        name: 'MIME Type Converter',
-        path: '/mime-type',
-        description: 'Convert between file extensions and MIME types',
-        category: 'converters',
-        icon: FileType,
-        color: 'text-indigo-400',
-        component: Lazy.MimeTypeConverter,
-        keywords: ['mime', 'type', 'extension', 'file', 'convert']
-    },
-    // CSV-Excel converter has been moved to data-converters plugin
+    }
+    // Removed tools (moved to Advanced Converters plugin):
+    // - Character Encoding Converter
+    // - MIME Type Converter
+    // - CSV-Excel Converter (already in data-converters plugin)
 ];

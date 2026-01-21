@@ -27,10 +27,9 @@ export const formatters: ToolDefinition[] = [
                     return JSON.stringify(parsed, null, minify ? 0 : (options?.indent || 2));
                 }
                 if (format === 'sql') {
-                    // Very basic SQL formatting mockup for now
                     return input.replace(/\s+SELECT\s+/gi, '\nSELECT ')
-                                .replace(/\s+FROM\s+/gi, '\nFROM ')
-                                .replace(/\s+WHERE\s+/gi, '\nWHERE ');
+                        .replace(/\s+FROM\s+/gi, '\nFROM ')
+                        .replace(/\s+WHERE\s+/gi, '\nWHERE ');
                 }
                 if (format === 'xml') {
                     const builder = new XMLBuilder({ ignoreAttributes: false, format: !minify, indentBy: "  " });
@@ -48,23 +47,6 @@ export const formatters: ToolDefinition[] = [
         }
     },
     {
-        id: 'json-minifier',
-        name: 'JSON Minifier',
-        path: '/json-minifier',
-        description: 'Compress JSON for production',
-        category: 'formatters',
-        icon: Braces,
-        color: 'text-yellow-400',
-        component: Lazy.UniversalFormatter,
-        props: { initialMode: 'json' },
-        keywords: ['json', 'minify', 'compress'],
-        inputTypes: ['json'],
-        outputTypes: ['json'],
-        process: (input) => {
-            try { return JSON.stringify(JSON.parse(input)); } catch { return input; }
-        }
-    },
-    {
         id: 'json-diff',
         name: 'JSON Diff',
         path: '/json-diff',
@@ -77,4 +59,6 @@ export const formatters: ToolDefinition[] = [
         inputTypes: ['json'],
         outputTypes: ['text']
     }
+    // Removed tools (moved to plugins):
+    // - JSON Minifier → Advanced Formatters plugin (redundant with Code Formatter)
 ];
