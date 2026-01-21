@@ -1,4 +1,4 @@
-import { FileCode, Hash, Binary, Link, FileType, Table } from 'lucide-react';
+import { FileCode, Hash, Binary, Link, FileType } from 'lucide-react';
 import * as Lazy from '../../../lazy-tools';
 import type { ToolDefinition } from '../../../types';
 
@@ -58,17 +58,5 @@ export const structuredConverters: ToolDefinition[] = [
         component: Lazy.MimeTypeConverter,
         keywords: ['mime', 'type', 'extension', 'file', 'convert']
     },
-    {
-        id: 'csv-excel',
-        name: 'CSV → Excel Converter',
-        path: '/csv-excel',
-        description: 'Convert CSV files to Excel (XLSX) with formatting, filters, and presets',
-        category: 'converters',
-        icon: Table,
-        color: 'text-emerald-400',
-        component: Lazy.CsvExcelConverter,
-        keywords: ['csv', 'excel', 'xlsx', 'data', 'spreadsheet', 'converter', 'table', 'import', 'export'],
-        inputTypes: ['text', 'csv'],
-        outputTypes: ['file']
-    },
+    // CSV-Excel converter has been moved to data-converters plugin
 ];
