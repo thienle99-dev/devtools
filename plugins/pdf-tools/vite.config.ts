@@ -22,7 +22,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: ['react', 'react-dom', /pdfjs-dist/],
       output: {
         globals: {
           react: 'React',

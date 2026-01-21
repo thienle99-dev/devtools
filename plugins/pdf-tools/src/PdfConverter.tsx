@@ -35,11 +35,17 @@ export function PdfConverter() {
         });
     }, []);
 
+    const MAX_FILE_MB = 150;
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             if (selectedFile.type !== 'application/pdf') {
                 toast.error("Please select a valid PDF file");
+                return;
+            }
+            if (selectedFile.size / (1024 * 1024) > MAX_FILE_MB) {
+                toast.error(`PDF is too large. Maximum allowed size is ${MAX_FILE_MB} MB.`);
                 return;
             }
             setFile(selectedFile);
@@ -221,6 +227,7 @@ async function convertToImages(
         await page.render({ canvasContext: context, viewport } as any).promise;
         const imgData = canvas.toDataURL('image/png').split(',')[1];
         zip.file(`page-${i}.png`, imgData, { base64: true });
+        await yieldToBrowser();
     }
 
     const content = await zip.generateAsync({ type: 'blob', streamFiles: true });
@@ -237,15 +244,31 @@ async function convertToText(
     const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
     let fullText = '';
     const totalPages = pdf.numPages;
+    const hardwareConcurrency = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4;
+    const batchSize = Math.min(5, Math.max(1, Math.floor(hardwareConcurrency / 2) || 2));
 
-    for (let i = 1; i <= totalPages; i++) {
-        onProgress(Math.round((i / totalPages) * 100));
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-            .map((item: any) => (typeof item?.str === 'string' ? item.str : ''))
-            .join(' ');
-        fullText += `--- Page ${i} ---\n\n${pageText}\n\n`;
+    for (let start = 1; start <= totalPages; start += batchSize) {
+        const tasks = [];
+        for (let i = start; i < start + batchSize && i <= totalPages; i++) {
+            tasks.push(
+                (async (pageIndex: number) => {
+                    const page = await pdf.getPage(pageIndex);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items
+                        .map((item: any) => (typeof item?.str === 'string' ? item.str : ''))
+                        .join(' ');
+                    return { pageIndex, pageText };
+                })(i)
+            );
+        }
+
+        const results = await Promise.all(tasks);
+        for (const { pageIndex, pageText } of results) {
+            onProgress(Math.round((pageIndex / totalPages) * 100));
+            fullText += `--- Page ${pageIndex} ---\n\n${pageText}\n\n`;
+        }
+
+        await yieldToBrowser();
     }
 
     const blob = new Blob([fullText], { type: 'text/plain' });
@@ -280,4 +303,15 @@ function getCanvasCache(): CanvasCache {
     }
     canvasCache = { canvas, context };
     return canvasCache;
+}
+
+function yieldToBrowser() {
+    return new Promise<void>((resolve) => {
+        const cb = () => resolve();
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(cb, { timeout: 50 });
+        } else {
+            requestAnimationFrame(cb);
+        }
+    });
 }
