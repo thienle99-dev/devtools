@@ -1,13 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-    v1 as uuidv1, 
+import {
+    v1 as uuidv1,
     v3 as uuidv3,
-    v4 as uuidv4, 
-    v5 as uuidv5, 
+    v4 as uuidv4,
+    v5 as uuidv5,
     v6 as uuidv6,
     v7 as uuidv7,
-    validate as uuidValidate, 
-    version as uuidVersion 
 } from 'uuid';
 import { ulid, decodeTime } from 'ulid';
 import { Button } from '@components/ui/Button';
@@ -15,128 +13,21 @@ import { Input } from '@components/ui/Input';
 import { Checkbox } from '@components/ui/Checkbox';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
-import { 
-    Copy, Check, RefreshCw, Fingerprint, Clock, Shuffle, Hash, 
-    CheckCircle2, XCircle, Info, Sparkles, Calendar, ArrowUpDown,
-    Zap, Shield, Server
+import {
+    Copy,
+    Check,
+    RefreshCw,
+    Fingerprint,
+    CheckCircle2,
+    XCircle,
+    Info,
+    Sparkles,
+    Calendar,
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
-
-const TOOL_ID = 'uuid-generator';
-
-// ID type configurations - All UUID versions + ULID
-const ID_TYPES = [
-    { 
-        id: 'v7', 
-        name: 'UUID v7', 
-        subtitle: 'Unix Time',
-        icon: Zap,
-        color: 'text-rose-400', 
-        bgColor: 'bg-rose-500/10', 
-        borderColor: 'border-rose-500/20',
-        description: 'Modern sortable UUID with Unix timestamp. Best for databases.',
-        bits: 128,
-        supportsHyphens: true,
-        hasTimestamp: true,
-        recommended: true
-    },
-    { 
-        id: 'v4', 
-        name: 'UUID v4', 
-        subtitle: 'Random',
-        icon: Shuffle,
-        color: 'text-emerald-400', 
-        bgColor: 'bg-emerald-500/10', 
-        borderColor: 'border-emerald-500/20',
-        description: 'Cryptographically random. Most common choice.',
-        bits: 122,
-        supportsHyphens: true,
-        hasTimestamp: false,
-        recommended: true
-    },
-    { 
-        id: 'ulid', 
-        name: 'ULID', 
-        subtitle: 'Sortable',
-        icon: ArrowUpDown,
-        color: 'text-amber-400', 
-        bgColor: 'bg-amber-500/10', 
-        borderColor: 'border-amber-500/20',
-        description: 'Lexicographically sortable, URL-safe, Crockford Base32.',
-        bits: 128,
-        supportsHyphens: false,
-        hasTimestamp: true,
-        recommended: false
-    },
-    { 
-        id: 'v6', 
-        name: 'UUID v6', 
-        subtitle: 'Reordered Time',
-        icon: Clock,
-        color: 'text-sky-400', 
-        bgColor: 'bg-sky-500/10', 
-        borderColor: 'border-sky-500/20',
-        description: 'Like v1 but sortable. Time bits reordered.',
-        bits: 128,
-        supportsHyphens: true,
-        hasTimestamp: true,
-        recommended: false
-    },
-    { 
-        id: 'v1', 
-        name: 'UUID v1', 
-        subtitle: 'Time + MAC',
-        icon: Server,
-        color: 'text-cyan-400', 
-        bgColor: 'bg-cyan-500/10', 
-        borderColor: 'border-cyan-500/20',
-        description: 'Based on timestamp and MAC address. Legacy.',
-        bits: 60,
-        supportsHyphens: true,
-        hasTimestamp: true,
-        recommended: false
-    },
-    { 
-        id: 'v5', 
-        name: 'UUID v5', 
-        subtitle: 'SHA-1 Name',
-        icon: Shield,
-        color: 'text-violet-400', 
-        bgColor: 'bg-violet-500/10', 
-        borderColor: 'border-violet-500/20',
-        description: 'SHA-1 hash of namespace + name. Deterministic.',
-        bits: 122,
-        supportsHyphens: true,
-        hasTimestamp: false,
-        recommended: false
-    },
-    { 
-        id: 'v3', 
-        name: 'UUID v3', 
-        subtitle: 'MD5 Name',
-        icon: Hash,
-        color: 'text-orange-400', 
-        bgColor: 'bg-orange-500/10', 
-        borderColor: 'border-orange-500/20',
-        description: 'MD5 hash of namespace + name. Use v5 instead.',
-        bits: 122,
-        supportsHyphens: true,
-        hasTimestamp: false,
-        recommended: false
-    },
-] as const;
-
-// Predefined namespaces for UUID v3/v5
-const NAMESPACES = [
-    { id: 'dns', name: 'DNS', value: '6ba7b810-9dad-11d1-80b4-00c04fd430c8', example: 'example.com' },
-    { id: 'url', name: 'URL', value: '6ba7b811-9dad-11d1-80b4-00c04fd430c8', example: 'https://example.com/page' },
-    { id: 'oid', name: 'OID', value: '6ba7b812-9dad-11d1-80b4-00c04fd430c8', example: '1.2.3.4' },
-    { id: 'x500', name: 'X500', value: '6ba7b814-9dad-11d1-80b4-00c04fd430c8', example: 'cn=John,dc=example,dc=com' },
-    { id: 'custom', name: 'Custom', value: '', example: '' },
-];
-
-type IdType = typeof ID_TYPES[number]['id'];
+import { TOOL_ID, ID_TYPES, NAMESPACES, DEFAULT_OPTIONS, type IdType } from './uuid/constants';
+import { extractV1Timestamp, extractV6Timestamp, extractV7Timestamp, validateIdentifier } from './uuid/helpers';
 
 interface GeneratedId {
     value: string;
@@ -156,19 +47,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
     const [activeTab, setActiveTab] = useState<'generate' | 'validate'>('generate');
     const [validateInput, setValidateInput] = useState('');
 
-    // Default options
-    const defaultOptions = {
-        type: 'v4' as IdType,
-        count: 5,
-        hyphens: true,
-        uppercase: false,
-        prefix: '',
-        namespace: 'url',
-        customNamespace: '',
-        name: ''
-    };
-
-    const options = { ...defaultOptions, ...toolData?.options };
+    const options = { ...DEFAULT_OPTIONS, ...toolData?.options };
     const generatedIds: GeneratedId[] = toolData?.options?.generatedIds || [];
 
     useEffect(() => {
@@ -255,67 +134,6 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
         toast.success(`Generated ${count} ${typeConfig?.name || type.toUpperCase()}${count > 1 ? 's' : ''}`);
     }, [effectiveId, options, setToolData]);
 
-    // Extract timestamp from UUID v1
-    const extractV1Timestamp = (uuid: string): Date | undefined => {
-        try {
-            const parts = uuid.split('-');
-            if (parts.length !== 5) return undefined;
-            
-            const timeLow = parts[0];
-            const timeMid = parts[1];
-            const timeHigh = parts[2].substring(1); // Remove version nibble
-            
-            const timestampHex = timeHigh + timeMid + timeLow;
-            const timestamp = parseInt(timestampHex, 16);
-            
-            // UUID timestamp is 100-nanosecond intervals since Oct 15, 1582
-            const epochDiff = 122192928000000000n;
-            const unixTimestamp = (BigInt(timestamp) - epochDiff) / 10000n;
-            
-            return new Date(Number(unixTimestamp));
-        } catch {
-            return undefined;
-        }
-    };
-
-    // Extract timestamp from UUID v6 (reordered v1)
-    const extractV6Timestamp = (uuid: string): Date | undefined => {
-        try {
-            const parts = uuid.split('-');
-            if (parts.length !== 5) return undefined;
-            
-            // v6 has time bits in order: time_high, time_mid, time_low
-            const timeHigh = parts[0];
-            const timeMid = parts[1];
-            const timeLow = parts[2].substring(1); // Remove version nibble
-            
-            const timestampHex = timeHigh + timeMid + timeLow;
-            const timestamp = parseInt(timestampHex, 16);
-            
-            // UUID timestamp is 100-nanosecond intervals since Oct 15, 1582
-            const epochDiff = 122192928000000000n;
-            const unixTimestamp = (BigInt(timestamp) - epochDiff) / 10000n;
-            
-            return new Date(Number(unixTimestamp));
-        } catch {
-            return undefined;
-        }
-    };
-
-    // Extract timestamp from UUID v7 (Unix epoch milliseconds)
-    const extractV7Timestamp = (uuid: string): Date | undefined => {
-        try {
-            const hex = uuid.replace(/-/g, '');
-            // First 48 bits (12 hex chars) are Unix timestamp in milliseconds
-            const timestampHex = hex.substring(0, 12);
-            const timestamp = parseInt(timestampHex, 16);
-            
-            return new Date(timestamp);
-        } catch {
-            return undefined;
-        }
-    };
-
     const handleCopy = (index: number, value: string) => {
         navigator.clipboard.writeText(value);
         setCopiedIndex(index);
@@ -336,62 +154,11 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
         setValidateInput('');
     };
 
-    // Validation logic
-    const validateId = (input: string): { valid: boolean; type?: string; version?: number; timestamp?: Date; versionName?: string } => {
-        const trimmed = input.trim();
-        if (!trimmed) return { valid: false };
-
-        // Check if ULID (26 chars, Crockford Base32)
-        if (/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(trimmed)) {
-            try {
-                const timestamp = new Date(decodeTime(trimmed.toUpperCase()));
-                return { valid: true, type: 'ULID', timestamp, versionName: 'ULID' };
-            } catch {
-                return { valid: false };
-            }
-        }
-
-        // Check UUID (with or without hyphens)
-        const uuidWithHyphens = trimmed.length === 32 
-            ? `${trimmed.slice(0,8)}-${trimmed.slice(8,12)}-${trimmed.slice(12,16)}-${trimmed.slice(16,20)}-${trimmed.slice(20)}`
-            : trimmed;
-
-        if (uuidValidate(uuidWithHyphens)) {
-            const version = uuidVersion(uuidWithHyphens);
-            let timestamp: Date | undefined;
-            let versionName = `v${version}`;
-            
-            switch (version) {
-                case 1:
-                    timestamp = extractV1Timestamp(uuidWithHyphens);
-                    versionName = 'v1 (Time + MAC)';
-                    break;
-                case 3:
-                    versionName = 'v3 (MD5 Name)';
-                    break;
-                case 4:
-                    versionName = 'v4 (Random)';
-                    break;
-                case 5:
-                    versionName = 'v5 (SHA-1 Name)';
-                    break;
-                case 6:
-                    timestamp = extractV6Timestamp(uuidWithHyphens);
-                    versionName = 'v6 (Reordered Time)';
-                    break;
-                case 7:
-                    timestamp = extractV7Timestamp(uuidWithHyphens);
-                    versionName = 'v7 (Unix Time)';
-                    break;
-            }
-            
-            return { valid: true, type: 'UUID', version, timestamp, versionName };
-        }
-
-        return { valid: false };
-    };
-
-    const validationResult = validateId(validateInput);
+    const validationResult = validateIdentifier(validateInput, {
+        extractV1: extractV1Timestamp,
+        extractV6: extractV6Timestamp,
+        extractV7: extractV7Timestamp,
+    });
     const selectedType = ID_TYPES.find(t => t.id === options.type);
 
     return (
