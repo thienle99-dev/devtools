@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Monitor, Square, MousePointer2, Camera, Clock, Globe, Upload } from 'lucide-react';
-import { useXnapperStore } from '../../../store/xnapperStore';
+import { useXnapperStore } from '../store/xnapperStore';
 import type { CaptureMode, CaptureSource } from '../types';
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';

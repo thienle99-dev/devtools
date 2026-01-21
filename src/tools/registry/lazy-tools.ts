@@ -44,7 +44,7 @@ export const CodeSnippetGenerator = React.lazy(() => import('@tools/development/
 export const JsonDiff = React.lazy(() => import('@tools/json/JsonDiff').then(m => ({ default: m.JsonDiff })));
 
 // Screenshot & Media
-export const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper'));
+export const Xnapper = React.lazy(() => import('@tools/screenshot/Xnapper').then(m => ({ default: m.Xnapper })));
 export const VoiceRecorder = React.lazy(() => import('@tools/media/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
 export const Camera = React.lazy(() => import('@tools/media/Camera').then(m => ({ default: m.Camera })));
 

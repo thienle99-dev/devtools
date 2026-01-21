@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
 import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText, Line } from 'react-konva';
 import useImage from 'use-image';
-import { useXnapperStore } from '../../../store/xnapperStore';
+import { useXnapperStore } from '../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
 import type { CanvasPreviewHandle } from '../components/CanvasPreview';
 

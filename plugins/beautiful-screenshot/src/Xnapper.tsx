@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera, ArrowLeft, Sparkles, Image as ImageIcon, PanelRightClose, PanelRightOpen } from 'lucide-react';
-import { useXnapperStore } from '../../store/xnapperStore';
+import { useXnapperStore } from './store/xnapperStore';
 import { CaptureSection } from './components/CaptureSection';
 import { PreviewSection } from './components/PreviewSection';
 import { XnapperStylePanel } from './components/XnapperStylePanel';

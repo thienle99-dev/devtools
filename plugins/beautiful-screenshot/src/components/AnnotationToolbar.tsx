@@ -15,7 +15,7 @@ import {
     SendToBack
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { useXnapperStore } from '../../../store/xnapperStore';
+import { useXnapperStore } from '../store/xnapperStore';
 import type { AnnotationType } from '../utils/annotations';
 import { cn } from '@utils/cn';
 

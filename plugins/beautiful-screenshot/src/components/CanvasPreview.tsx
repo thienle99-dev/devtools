@@ -10,7 +10,7 @@ import {
     Object as FabricObject,
     util
 } from 'fabric';
-import { useXnapperStore } from '../../../store/xnapperStore';
+import { useXnapperStore } from '../store/xnapperStore';
 import {
     createArrow,
     createText,
