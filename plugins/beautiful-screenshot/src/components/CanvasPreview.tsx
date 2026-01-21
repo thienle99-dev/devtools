@@ -87,6 +87,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
     const startPointRef = useRef<{ x: number; y: number } | null>(null);
     const activeObjectRef = useRef<FabricObject | null>(null);
     const cropRectRef = useRef<Rect | null>(null);
+    const penPathRef = useRef<number[]>([]); // For pen/free draw tool
 
     const updateHistoryState = useCallback(() => {
         if (onHistoryChange) {
@@ -158,9 +159,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         if (!canvasRef.current || fabricCanvasRef.current) return;
 
         const canvas = new Canvas(canvasRef.current, {
-            selection: true,
+            selection: !activeAnnotationTool, // Allow selection only when no tool is active
             preserveObjectStacking: true,
             renderOnAddRemove: true,
+            moveCursor: 'move',
+            defaultCursor: activeAnnotationTool ? 'crosshair' : 'default',
         });
 
         fabricCanvasRef.current = canvas;
@@ -169,12 +172,139 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         canvas.on('object:modified', saveState);
         canvas.on('object:removed', saveState);
 
-        canvas.on('mouse:down', handleMouseDown);
-        canvas.on('mouse:move', handleMouseMove);
-        canvas.on('mouse:up', handleMouseUp);
+        // Pan state - use refs to persist across renders
+        const panStateRef = useRef({ isPanning: false, lastPanPoint: { x: 0, y: 0 } });
+
+        // Track spacebar state for panning
+        const spacePressedRef = useRef(false);
+        
+        // Track spacebar keydown/keyup
+        const handleSpaceDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                spacePressedRef.current = true;
+            }
+        };
+        
+        const handleSpaceUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                spacePressedRef.current = false;
+                if (panStateRef.current.isPanning) {
+                    panStateRef.current.isPanning = false;
+                    canvas.selection = true;
+                    canvas.defaultCursor = 'default';
+                }
+            }
+        };
+        
+        window.addEventListener('keydown', handleSpaceDown);
+        window.addEventListener('keyup', handleSpaceUp);
+
+        // Enhanced mouse handlers with pan support
+        const enhancedMouseDown = (opt: any) => {
+            if (!fabricCanvasRef.current) return;
+            
+            // Allow panning only with spacebar + drag or middle mouse button
+            const shouldPan = spacePressedRef.current || opt.e.button === 1;
+            
+            if (shouldPan && !activeAnnotationTool) {
+                panStateRef.current.isPanning = true;
+                const pointer = fabricCanvasRef.current.getPointer(opt.e);
+                panStateRef.current.lastPanPoint = { x: pointer.x, y: pointer.y };
+                canvas.selection = false;
+                canvas.defaultCursor = 'grabbing';
+                opt.e.preventDefault();
+                return;
+            }
+            
+            // If tool is active, use normal handler for drawing
+            if (activeAnnotationTool) {
+                handleMouseDown(opt);
+                return;
+            }
+            
+            // Otherwise, allow normal fabric.js selection/drag (for moving objects)
+            handleMouseDown(opt);
+        };
+
+        const enhancedMouseMove = (opt: any) => {
+            if (!fabricCanvasRef.current) return;
+            
+            if (panStateRef.current.isPanning) {
+                const pointer = fabricCanvasRef.current.getPointer(opt.e);
+                const deltaX = pointer.x - panStateRef.current.lastPanPoint.x;
+                const deltaY = pointer.y - panStateRef.current.lastPanPoint.y;
+                
+                const vpt = fabricCanvasRef.current.viewportTransform;
+                if (vpt) {
+                    vpt[4] += deltaX;
+                    vpt[5] += deltaY;
+                    fabricCanvasRef.current.setViewportTransform(vpt);
+                    fabricCanvasRef.current.requestRenderAll();
+                }
+                
+                panStateRef.current.lastPanPoint = { x: pointer.x, y: pointer.y };
+                opt.e.preventDefault();
+                return;
+            }
+            
+            handleMouseMove(opt);
+        };
+
+        const enhancedMouseUp = () => {
+            if (panStateRef.current.isPanning) {
+                panStateRef.current.isPanning = false;
+                canvas.selection = true;
+                canvas.defaultCursor = 'default';
+                return;
+            }
+            
+            handleMouseUp();
+        };
+
+        canvas.on('mouse:down', enhancedMouseDown);
+        canvas.on('mouse:move', enhancedMouseMove);
+        canvas.on('mouse:up', enhancedMouseUp);
+
+        // Handle wheel zoom (Ctrl/Cmd + wheel)
+        const handleWheel = (opt: any) => {
+            if (!fabricCanvasRef.current) return;
+            
+            const e = opt.e;
+            // Only zoom if Ctrl/Cmd is pressed
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const delta = e.deltaY;
+                if (delta < 0) {
+                    setBaseZoom(z => Math.min(z + 0.1, 3));
+                } else {
+                    setBaseZoom(z => Math.max(z - 0.1, 0.25));
+                }
+            }
+        };
+
+        canvas.on('mouse:wheel', handleWheel);
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!fabricCanvasRef.current) return;
+
+            // Handle zoom with Ctrl/Cmd + +/-/=
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
+                e.preventDefault();
+                setBaseZoom(z => Math.min(z + 0.25, 3));
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+                e.preventDefault();
+                setBaseZoom(z => Math.max(z - 0.25, 0.25));
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+                e.preventDefault();
+                setBaseZoom(1);
+                return;
+            }
 
             if (e.key === 'Backspace' || e.key === 'Delete') {
                 if (fabricCanvasRef.current.getActiveObject()) {
@@ -202,12 +332,35 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
 
         window.addEventListener('keydown', handleKeyDown);
 
+        // Update canvas selection and cursor based on active tool
+        const updateCanvasMode = () => {
+            if (!fabricCanvasRef.current) return;
+            const canvas = fabricCanvasRef.current;
+            
+            canvas.selection = !activeAnnotationTool;
+            canvas.defaultCursor = activeAnnotationTool ? 'crosshair' : 'default';
+            
+            // Enable/disable drawing mode for pen tool
+            if (activeAnnotationTool === 'pen') {
+                canvas.isDrawingMode = true;
+                canvas.freeDrawingBrush.color = annotationConfig.color;
+                canvas.freeDrawingBrush.width = annotationConfig.strokeWidth;
+            } else {
+                canvas.isDrawingMode = false;
+            }
+        };
+
+        updateCanvasMode();
+
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keydown', handleSpaceDown);
+            window.removeEventListener('keyup', handleSpaceUp);
+            canvas.off('mouse:wheel', handleWheel);
             canvas.dispose();
             fabricCanvasRef.current = null;
         };
-    }, [saveState, handleRedo, handleUndo]);
+    }, [saveState, handleRedo, handleUndo, activeAnnotationTool]);
 
     const updateCanvasScale = useCallback((imgWidth: number, imgHeight: number) => {
         if (!canvasContainerRef.current) return;
@@ -495,6 +648,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             isDrawingRef.current = true;
             startPointRef.current = { x: pointer.x, y: pointer.y };
 
+            return;
+        }
+
+        // Skip normal handler for pen tool (uses isDrawingMode instead)
+        if (activeAnnotationTool === 'pen') {
             return;
         }
 

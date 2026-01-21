@@ -85,7 +85,12 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             setIsCropping(!isCropping);
             setActiveAnnotationTool(null);
         } else {
-            setActiveAnnotationTool(tool);
+            // Toggle: if clicking the same tool, deselect it
+            if (activeAnnotationTool === tool) {
+                setActiveAnnotationTool(null);
+            } else {
+                setActiveAnnotationTool(tool);
+            }
             setIsCropping(false);
         }
     };
