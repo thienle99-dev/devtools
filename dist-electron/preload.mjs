@@ -1,1 +1,95 @@
-let e=require(`electron`);e.contextBridge.exposeInMainWorld(`ipcRenderer`,{on(...t){let[n,r]=t,i=(e,...t)=>r(e,...t);return e.ipcRenderer.on(n,i),()=>{e.ipcRenderer.removeListener(n,i)}},off(...t){let[n,...r]=t;return e.ipcRenderer.off(n,...r)},send(...t){let[n,...r]=t;return e.ipcRenderer.send(n,...r)},invoke(...t){let[n,...r]=t;return e.ipcRenderer.invoke(n,...r)},process:{platform:process.platform,versions:process.versions},tray:{updateMenu:t=>e.ipcRenderer.send(`tray-update-menu`,t),updateClipboard:t=>e.ipcRenderer.send(`tray-update-clipboard`,t),syncMonitoring:t=>e.ipcRenderer.send(`sync-clipboard-monitoring`,t)},clipboard:{readText:()=>e.ipcRenderer.invoke(`clipboard-read-text`),readImage:()=>e.ipcRenderer.invoke(`clipboard-read-image`)},window:{minimize:()=>e.ipcRenderer.send(`window-minimize`),maximize:()=>e.ipcRenderer.send(`window-maximize`),close:()=>e.ipcRenderer.send(`window-close`),openDevTools:()=>e.ipcRenderer.send(`window-open-devtools`)},system:{getHomeDir:()=>e.ipcRenderer.invoke(`get-home-dir`),selectFolder:()=>e.ipcRenderer.invoke(`select-folder`),getInfo:()=>e.ipcRenderer.invoke(`system:get-info`)}}),e.contextBridge.exposeInMainWorld(`screenshotAPI`,{getSources:()=>e.ipcRenderer.invoke(`screenshot:get-sources`),captureScreen:()=>e.ipcRenderer.invoke(`screenshot:capture-screen`),captureWindow:t=>e.ipcRenderer.invoke(`screenshot:capture-window`,t),captureArea:()=>e.ipcRenderer.invoke(`screenshot:capture-area`),captureUrl:t=>e.ipcRenderer.invoke(`screenshot:capture-url`,t),saveFile:(t,n)=>e.ipcRenderer.invoke(`screenshot:save-file`,t,n)}),e.contextBridge.exposeInMainWorld(`permissionsAPI`,{checkAll:()=>e.ipcRenderer.invoke(`permissions:check-all`),checkAccessibility:()=>e.ipcRenderer.invoke(`permissions:check-accessibility`),checkFullDiskAccess:()=>e.ipcRenderer.invoke(`permissions:check-full-disk-access`),checkScreenRecording:()=>e.ipcRenderer.invoke(`permissions:check-screen-recording`),testClipboard:()=>e.ipcRenderer.invoke(`permissions:test-clipboard`),testFileAccess:()=>e.ipcRenderer.invoke(`permissions:test-file-access`),openSystemPreferences:t=>e.ipcRenderer.invoke(`permissions:open-system-preferences`,t)}),e.contextBridge.exposeInMainWorld(`electronAPI`,{sendSelection:t=>e.ipcRenderer.invoke(`screenshot:area-selected`,t),cancelSelection:()=>e.ipcRenderer.invoke(`screenshot:area-cancelled`)}),e.contextBridge.exposeInMainWorld(`pluginAPI`,{getAvailablePlugins:()=>e.ipcRenderer.invoke(`plugins:get-available`),getInstalledPlugins:()=>e.ipcRenderer.invoke(`plugins:get-installed`),installPlugin:t=>e.ipcRenderer.invoke(`plugins:install`,t),uninstallPlugin:t=>e.ipcRenderer.invoke(`plugins:uninstall`,t),togglePlugin:(t,n)=>e.ipcRenderer.invoke(`plugins:toggle`,t,n),onPluginProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`plugins:progress`,n),()=>e.ipcRenderer.removeListener(`plugins:progress`,n)},updateRegistry:()=>e.ipcRenderer.invoke(`plugins:update-registry`)});
+let electron = require("electron");
+electron.contextBridge.exposeInMainWorld("ipcRenderer", {
+	on(...args) {
+		const [channel, listener] = args;
+		const wrappedListener = (event, ...args$1) => listener(event, ...args$1);
+		electron.ipcRenderer.on(channel, wrappedListener);
+		return () => {
+			electron.ipcRenderer.removeListener(channel, wrappedListener);
+		};
+	},
+	off(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.off(channel, ...omit);
+	},
+	send(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.send(channel, ...omit);
+	},
+	invoke(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.invoke(channel, ...omit);
+	},
+	process: {
+		platform: process.platform,
+		versions: process.versions
+	},
+	tray: {
+		updateMenu: (items) => electron.ipcRenderer.send("tray-update-menu", items),
+		updateClipboard: (items) => electron.ipcRenderer.send("tray-update-clipboard", items),
+		syncMonitoring: (enabled) => electron.ipcRenderer.send("sync-clipboard-monitoring", enabled)
+	},
+	clipboard: {
+		readText: () => electron.ipcRenderer.invoke("clipboard-read-text"),
+		readImage: () => electron.ipcRenderer.invoke("clipboard-read-image")
+	},
+	window: {
+		minimize: () => electron.ipcRenderer.send("window-minimize"),
+		maximize: () => electron.ipcRenderer.send("window-maximize"),
+		close: () => electron.ipcRenderer.send("window-close"),
+		openDevTools: () => electron.ipcRenderer.send("window-open-devtools")
+	},
+	system: {
+		getHomeDir: () => electron.ipcRenderer.invoke("get-home-dir"),
+		selectFolder: () => electron.ipcRenderer.invoke("select-folder"),
+		getInfo: () => electron.ipcRenderer.invoke("system:get-info")
+	}
+});
+electron.contextBridge.exposeInMainWorld("screenshotAPI", {
+	getSources: () => electron.ipcRenderer.invoke("screenshot:get-sources"),
+	captureScreen: () => electron.ipcRenderer.invoke("screenshot:capture-screen"),
+	captureWindow: (sourceId) => electron.ipcRenderer.invoke("screenshot:capture-window", sourceId),
+	captureArea: () => electron.ipcRenderer.invoke("screenshot:capture-area"),
+	captureUrl: (url) => electron.ipcRenderer.invoke("screenshot:capture-url", url),
+	saveFile: (dataUrl, options) => electron.ipcRenderer.invoke("screenshot:save-file", dataUrl, options)
+});
+electron.contextBridge.exposeInMainWorld("permissionsAPI", {
+	checkAll: () => electron.ipcRenderer.invoke("permissions:check-all"),
+	checkAccessibility: () => electron.ipcRenderer.invoke("permissions:check-accessibility"),
+	checkFullDiskAccess: () => electron.ipcRenderer.invoke("permissions:check-full-disk-access"),
+	checkScreenRecording: () => electron.ipcRenderer.invoke("permissions:check-screen-recording"),
+	testClipboard: () => electron.ipcRenderer.invoke("permissions:test-clipboard"),
+	testFileAccess: () => electron.ipcRenderer.invoke("permissions:test-file-access"),
+	openSystemPreferences: (permissionType) => electron.ipcRenderer.invoke("permissions:open-system-preferences", permissionType)
+});
+electron.contextBridge.exposeInMainWorld("electronAPI", {
+	sendSelection: (bounds) => electron.ipcRenderer.invoke("screenshot:area-selected", bounds),
+	cancelSelection: () => electron.ipcRenderer.invoke("screenshot:area-cancelled")
+});
+electron.contextBridge.exposeInMainWorld("pluginAPI", {
+	getAvailablePlugins: () => electron.ipcRenderer.invoke("plugins:get-available"),
+	getInstalledPlugins: () => electron.ipcRenderer.invoke("plugins:get-installed"),
+	installPlugin: (pluginId) => electron.ipcRenderer.invoke("plugins:install", pluginId),
+	uninstallPlugin: (pluginId) => electron.ipcRenderer.invoke("plugins:uninstall", pluginId),
+	togglePlugin: (pluginId, active) => electron.ipcRenderer.invoke("plugins:toggle", pluginId, active),
+	onPluginProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("plugins:progress", listener);
+		return () => electron.ipcRenderer.removeListener("plugins:progress", listener);
+	},
+	updateRegistry: () => electron.ipcRenderer.invoke("plugins:update-registry")
+});
+electron.contextBridge.exposeInMainWorld("videoCompressorAPI", {
+	getInfo: (filePath) => electron.ipcRenderer.invoke("video-compressor:get-info", filePath),
+	generateThumbnail: (filePath) => electron.ipcRenderer.invoke("video-compressor:generate-thumbnail", filePath),
+	compress: (options) => electron.ipcRenderer.invoke("video-compressor:compress", options),
+	cancel: (id) => electron.ipcRenderer.invoke("video-compressor:cancel", id),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("video-compressor:progress", listener);
+		return () => electron.ipcRenderer.removeListener("video-compressor:progress", listener);
+	},
+	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});

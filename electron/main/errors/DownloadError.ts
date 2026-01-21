@@ -9,40 +9,40 @@ export const ErrorCode = {
     CONNECTION_TIMEOUT: 'CONNECTION_TIMEOUT',
     DNS_LOOKUP_FAILED: 'DNS_LOOKUP_FAILED',
     NO_INTERNET: 'NO_INTERNET',
-    
+
     // Authentication Errors (2xxx)
     AUTH_REQUIRED: 'AUTH_REQUIRED',
     LOGIN_REQUIRED: 'LOGIN_REQUIRED',
     INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
     COOKIES_EXPIRED: 'COOKIES_EXPIRED',
-    
+
     // Content Errors (3xxx)
     VIDEO_UNAVAILABLE: 'VIDEO_UNAVAILABLE',
     PRIVATE_VIDEO: 'PRIVATE_VIDEO',
     DELETED_VIDEO: 'DELETED_VIDEO',
     GEO_RESTRICTED: 'GEO_RESTRICTED',
     AGE_RESTRICTED: 'AGE_RESTRICTED',
-    
+
     // Server Errors (4xxx)
     SERVER_ERROR: 'SERVER_ERROR',
     RATE_LIMITED: 'RATE_LIMITED',
     SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
-    
+
     // System Errors (5xxx)
     DISK_FULL: 'DISK_FULL',
     PERMISSION_DENIED: 'PERMISSION_DENIED',
     INVALID_PATH: 'INVALID_PATH',
-    
+
     // Format Errors (6xxx)
     NO_FORMATS_AVAILABLE: 'NO_FORMATS_AVAILABLE',
     UNSUPPORTED_FORMAT: 'UNSUPPORTED_FORMAT',
     EXTRACTION_FAILED: 'EXTRACTION_FAILED',
-    
+
     // Unknown
     UNKNOWN_ERROR: 'UNKNOWN_ERROR'
 } as const;
 
-export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export interface ErrorSuggestion {
     title: string;
@@ -293,7 +293,7 @@ export class RateLimitError extends DownloadError {
             suggestions: [
                 {
                     title: 'Too Many Requests',
-                    description: retryAfter 
+                    description: retryAfter
                         ? `You've made too many requests. Please wait ${Math.ceil(retryAfter / 60)} minutes before trying again.`
                         : 'You\'ve made too many requests. Please wait a few minutes before trying again.',
                     action: 'retry-later'
@@ -351,7 +351,7 @@ export class DiskFullError extends DownloadError {
             suggestions: [
                 {
                     title: 'Insufficient Disk Space',
-                    description: availableSpace 
+                    description: availableSpace
                         ? `You have only ${(availableSpace / (1024 * 1024 * 1024)).toFixed(2)} GB available. Free up some space and try again.`
                         : 'Your disk is full. Free up some space and try again.'
                 },
