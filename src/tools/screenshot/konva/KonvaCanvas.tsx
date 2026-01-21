@@ -123,12 +123,24 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         onZoomChange?.(baseZoom);
     }, [baseZoom, onZoomChange]);
 
+    // Cursor Styling
+    useEffect(() => {
+        if (!stageRef.current) return;
+        const container = stageRef.current.container();
+        if (activeAnnotationTool) {
+            container.style.cursor = 'crosshair';
+        } else {
+            container.style.cursor = 'default';
+        }
+    }, [activeAnnotationTool]);
+
     const [shapes, setShapes] = useState<any[]>([]);
     const [selectedId, selectShape] = useState<string | null>(null);
     const transformerRef = useRef<any>(null);
     const stageRef = useRef<any>(null);
     const isDrawing = useRef(false);
     const activeShapeIdRef = useRef<string | null>(null);
+    const [editingShape, setEditingShape] = useState<string | null>(null);
 
     // History
     const [history, setHistory] = useState<any[][]>([[]]);
@@ -335,20 +347,66 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         }
     };
 
-    const handleTextDblClick = (e: any, shapeId: string) => {
-        const textNode = e.target;
-        // Simple prompt for now
-        const newText = prompt('Edit text:', textNode.text());
-        if (newText !== null) {
-            const newShapes = shapes.map(s => s.id === shapeId ? { ...s, text: newText } : s);
-            setShapes(newShapes);
-            addToHistory(newShapes);
-        }
+    const handleTextDblClick = (_e: any, shapeId: string) => {
+        setEditingShape(shapeId);
     };
 
     // Update history on transform end (drag/resize)
-    const handleTransformEnd = () => {
-         addToHistory(shapes);
+    // Update history on transform end (drag/resize)
+    const handleTransformEnd = (e: any) => {
+         const node = e.target;
+         const id = node.id();
+         
+         const newShapes = shapes.map(s => {
+             if (s.id === id) {
+                 const scaleX = node.scaleX();
+                 const scaleY = node.scaleY();
+                 
+                 // Normalize scale for shapes where stroke shouldn't scale
+                 if (s.type === 'rect') {
+                     node.scaleX(1);
+                     node.scaleY(1);
+                     return {
+                         ...s,
+                         x: node.x(),
+                         y: node.y(),
+                         rotation: node.rotation(),
+                         width: Math.max(5, node.width() * scaleX),
+                         height: Math.max(5, node.height() * scaleY),
+                         scaleX: 1,
+                         scaleY: 1
+                     };
+                 } else if (s.type === 'circle') {
+                     node.scaleX(1);
+                     node.scaleY(1);
+                     // Use max scale for radius to avoid ellipse if locked aspect ratio not enforcing
+                     const scale = Math.max(Math.abs(scaleX), Math.abs(scaleY));
+                     return {
+                         ...s,
+                         x: node.x(),
+                         y: node.y(),
+                         rotation: node.rotation(),
+                         radius: Math.max(5, node.radius() * scale),
+                         scaleX: 1,
+                         scaleY: 1
+                     };
+                 }
+                 
+                 // For Text/Arrow, keep the scale (font size/points scaling)
+                 return {
+                     ...s,
+                     x: node.x(),
+                     y: node.y(),
+                     rotation: node.rotation(),
+                     scaleX: scaleX,
+                     scaleY: scaleY,
+                 };
+             }
+             return s;
+         });
+         
+         setShapes(newShapes);
+         addToHistory(newShapes);
     };
 
     const handleDragEnd = (e: any) => {
@@ -412,51 +470,129 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             ref={containerRef} 
             className="w-full h-full flex items-center justify-center overflow-hidden bg-transparent"
         >
-            <Stage 
-                ref={stageRef}
-                width={imageSize.width * scale * baseZoom} 
-                height={imageSize.height * scale * baseZoom}
-                scaleX={scale * baseZoom}
-                scaleY={scale * baseZoom}
-                onMouseDown={handleMouseDown}
-                onTouchStart={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onTouchMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onTouchEnd={handleMouseUp}
-                style={{
-                    boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-                }}
-            >
-                <Layer>
-                     <URLImage 
-                        src={baseDataUrl} 
-                        width={imageSize.width} 
-                        height={imageSize.height} 
-                     />
-                </Layer>
-                <Layer>
-                    {shapes.map((shape) => {
-                        const commonProps = {
-                            key: shape.id,
-                            ...shape,
-                            onClick: () => selectShape(shape.id),
-                            onTap: () => selectShape(shape.id),
-                            onDragEnd: handleDragEnd,
-                            onTransformEnd: handleTransformEnd,
-                        };
-                        
-                        if (shape.type === 'rect') return <Rect {...commonProps} />;
-                        if (shape.type === 'circle') return <Circle {...commonProps} />;
-                        if (shape.type === 'arrow') return <Arrow {...commonProps} />;
-                        if (shape.type === 'line') return <Arrow {...commonProps} pointerLength={0} pointerWidth={0} />;
-                        if (shape.type === 'text') return <KonvaText {...commonProps} onDblClick={(e) => handleTextDblClick(e, shape.id)} />;
-                        
-                        return null;
-                    })}
-                    <Transformer ref={transformerRef} />
-                </Layer>
-            </Stage>
+            <div style={{ position: 'relative', width: imageSize.width * scale * baseZoom, height: imageSize.height * scale * baseZoom }}>
+                <Stage 
+                    ref={stageRef}
+                    width={imageSize.width * scale * baseZoom} 
+                    height={imageSize.height * scale * baseZoom}
+                    scaleX={scale * baseZoom}
+                    scaleY={scale * baseZoom}
+                    onMouseDown={handleMouseDown}
+                    onTouchStart={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onTouchMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onTouchEnd={handleMouseUp}
+                    style={{
+                        boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+                    }}
+                >
+                    <Layer>
+                        <URLImage 
+                            src={baseDataUrl} 
+                            width={imageSize.width} 
+                            height={imageSize.height} 
+                        />
+                    </Layer>
+                    <Layer>
+                        {shapes.map((shape) => {
+                            const commonProps = {
+                                key: shape.id,
+                                ...shape,
+                                onClick: () => selectShape(shape.id),
+                                onTap: () => selectShape(shape.id),
+                                onDragEnd: handleDragEnd,
+                                onTransformEnd: handleTransformEnd,
+                                onMouseEnter: (e: any) => {
+                                    if (activeAnnotationTool) return;
+                                    const container = e.target.getStage().container();
+                                    container.style.cursor = 'move';
+                                },
+                                onMouseLeave: (e: any) => {
+                                    if (activeAnnotationTool) return;
+                                    const container = e.target.getStage().container();
+                                    container.style.cursor = 'default';
+                                },
+                            };
+                            
+                            if (shape.type === 'rect') return <Rect {...commonProps} />;
+                            if (shape.type === 'circle') return <Circle {...commonProps} />;
+                            if (shape.type === 'arrow') return <Arrow {...commonProps} />;
+                            if (shape.type === 'line') return <Arrow {...commonProps} pointerLength={0} pointerWidth={0} />;
+                            if (shape.type === 'text') {
+                                return (
+                                    <KonvaText 
+                                        {...commonProps} 
+                                        opacity={editingShape === shape.id ? 0 : (shape.opacity ?? 1)}
+                                        onDblClick={(e) => handleTextDblClick(e, shape.id)} 
+                                    />
+                                );
+                            }
+                            
+                            return null;
+                        })}
+                        <Transformer ref={transformerRef} />
+                    </Layer>
+                </Stage>
+                
+                {/* Text Editing Overlay */}
+                {editingShape && (() => {
+                    const shape = shapes.find(s => s.id === editingShape);
+                    if (!shape || shape.type !== 'text') return null;
+
+                    const currentScale = scale * baseZoom;
+                    // Apply scaleY map if text was resized vertically
+                    const fontSize = (shape.fontSize || 24) * currentScale * (shape.scaleY || 1);
+                    const x = shape.x * currentScale;
+                    const y = shape.y * currentScale;
+                    const rotation = shape.rotation || 0;
+                    const fontFamily = shape.fontFamily || 'Inter, sans-serif';
+                    
+                    return (
+                        <textarea
+                            value={shape.text}
+                            onChange={(e) => {
+                                const newText = e.target.value;
+                                setShapes(prev => prev.map(s => s.id === editingShape ? { ...s, text: newText } : s));
+                            }}
+                            onBlur={() => {
+                                addToHistory(shapes);
+                                setEditingShape(null);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                    setEditingShape(null);
+                                }
+                                e.stopPropagation();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                left: `${x}px`,
+                                top: `${y}px`,
+                                fontSize: `${fontSize}px`,
+                                lineHeight: 1,
+                                color: shape.fill,
+                                fontFamily: fontFamily,
+                                background: 'transparent',
+                                border: '1px solid rgba(99, 102, 241, 0.5)',
+                                outline: 'none',
+                                padding: '0px',
+                                margin: '0px',
+                                resize: 'none',
+                                overflow: 'hidden',
+                                whiteSpace: 'pre',
+                                transform: `rotate(${rotation}deg)`,
+                                transformOrigin: 'top left',
+                                zIndex: 50,
+                                width: `${(shape.width || 100) * currentScale * (shape.scaleX || 1) + 20}px`, // Slight buffer
+                                height: `${(shape.height || fontSize) * currentScale * (shape.scaleY || 1) + 20}px`,
+                                boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
+                            }}
+                            autoFocus
+                        />
+                    );
+                })()}
+            </div>
         </div>
     );
 });
