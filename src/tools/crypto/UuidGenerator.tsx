@@ -409,44 +409,44 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                 )
             }
         >
-            <div className="max-w-5xl mx-auto space-y-6 py-6 px-4">
+            <div className="max-w-5xl mx-auto space-y-4 py-4 px-4">
                 {/* Tab Switcher */}
-                <div className="flex rounded-xl overflow-hidden border border-border-glass bg-black/20 p-1 w-fit">
+                <div className="flex rounded-lg overflow-hidden border border-border-glass bg-black/20 p-0.5 w-fit">
                     <button
                         onClick={() => setActiveTab('generate')}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all",
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                             activeTab === 'generate' 
                                 ? "bg-indigo-500 text-white shadow-lg" 
                                 : "text-foreground-muted hover:text-foreground hover:bg-white/5"
                         )}
                     >
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-3.5 h-3.5" />
                         Generate
                     </button>
                     <button
                         onClick={() => setActiveTab('validate')}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all",
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                             activeTab === 'validate' 
                                 ? "bg-indigo-500 text-white shadow-lg" 
                                 : "text-foreground-muted hover:text-foreground hover:bg-white/5"
                         )}
                     >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                         Validate
                     </button>
                 </div>
 
                 {activeTab === 'generate' ? (
                     <>
-                        {/* Type Selector */}
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                                <Fingerprint className="w-3.5 h-3.5" />
+                        {/* Type Selector - Compact */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                                <Fingerprint className="w-3 h-3" />
                                 ID Type
                             </label>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
                                 {ID_TYPES.map((type) => {
                                     const Icon = type.icon;
                                     const isSelected = options.type === type.id;
@@ -456,32 +456,29 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                             key={type.id}
                                             onClick={() => updateOption('type', type.id)}
                                             className={cn(
-                                                "relative p-4 rounded-xl border transition-all text-left",
+                                                "relative p-2.5 rounded-lg border transition-all text-left group",
                                                 isSelected 
-                                                    ? `${type.borderColor} ${type.bgColor} ring-2 ring-offset-2 ring-offset-background ring-current ${type.color}`
+                                                    ? `${type.borderColor} ${type.bgColor} ring-1 ring-offset-1 ring-offset-background ring-current`
                                                     : "border-border-glass bg-black/20 hover:bg-white/5"
                                             )}
                                         >
-                                            <div className="flex items-center gap-3 mb-2">
+                                            <div className="flex items-center gap-2">
                                                 <div className={cn(
-                                                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                                                    "w-6 h-6 rounded-md flex items-center justify-center shrink-0",
                                                     isSelected ? type.bgColor : "bg-white/5"
                                                 )}>
-                                                    <Icon className={cn("w-4 h-4", isSelected ? type.color : "text-foreground-muted")} />
+                                                    <Icon className={cn("w-3.5 h-3.5", isSelected ? type.color : "text-foreground-muted")} />
                                                 </div>
-                                                <div>
-                                                    <p className={cn("font-bold text-sm", isSelected ? type.color : "text-foreground")}>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className={cn("font-bold text-xs truncate", isSelected ? type.color : "text-foreground")}>
                                                         {type.name}
                                                     </p>
-                                                    <p className="text-[10px] text-foreground-muted">{type.subtitle}</p>
+                                                    <p className="text-[9px] text-foreground-muted truncate">{type.subtitle}</p>
                                                 </div>
                                             </div>
-                                            <p className="text-[10px] text-foreground-muted/70 line-clamp-2">
-                                                {type.description}
-                                            </p>
                                             {isSelected && (
-                                                <div className="absolute top-2 right-2">
-                                                    <CheckCircle2 className={cn("w-4 h-4", type.color)} />
+                                                <div className="absolute top-1.5 right-1.5">
+                                                    <CheckCircle2 className={cn("w-3 h-3", type.color)} />
                                                 </div>
                                             )}
                                         </button>
@@ -490,8 +487,8 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                             </div>
                         </div>
 
-                        {/* Options */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Options - Compact */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <Input
                                 label="Quantity"
                                 type="number"
@@ -499,19 +496,21 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                 max="100"
                                 value={options.count}
                                 onChange={(e) => updateOption('count', parseInt(e.target.value) || 1)}
+                                className="text-xs"
                                 fullWidth
                             />
                             
                             <Input
-                                label="Prefix (optional)"
+                                label="Prefix"
                                 type="text"
-                                placeholder="e.g., user_, order_"
+                                placeholder="user_, order_"
                                 value={options.prefix}
                                 onChange={(e) => updateOption('prefix', e.target.value)}
+                                className="text-xs"
                                 fullWidth
                             />
 
-                            <div className="flex items-end pb-2 gap-4">
+                            <div className="flex items-end gap-2">
                                 <Checkbox
                                     id="hyphens"
                                     label="Hyphens"
@@ -519,6 +518,8 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                     disabled={!selectedType?.supportsHyphens}
                                     onChange={(e) => updateOption('hyphens', e.target.checked)}
                                 />
+                            </div>
+                            <div className="flex items-end">
                                 <Checkbox
                                     id="uppercase"
                                     label="Uppercase"
@@ -528,31 +529,29 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                             </div>
                         </div>
 
-                        {/* UUID v3/v5 specific options (namespace-based) */}
+                        {/* UUID v3/v5 specific options (namespace-based) - Compact */}
                         {(options.type === 'v3' || options.type === 'v5') && (
                             <div className={cn(
-                                "p-4 rounded-xl border space-y-4",
+                                "p-3 rounded-lg border space-y-3",
                                 options.type === 'v5' ? "border-violet-500/20 bg-violet-500/5" : "border-orange-500/20 bg-orange-500/5"
                             )}>
                                 <div className={cn(
-                                    "flex items-center gap-2",
+                                    "flex items-center gap-1.5 text-xs",
                                     options.type === 'v5' ? "text-violet-400" : "text-orange-400"
                                 )}>
-                                    <Info className="w-4 h-4" />
-                                    <span className="text-xs font-semibold">
-                                        UUID {options.type} requires a namespace and name (deterministic output)
-                                    </span>
+                                    <Info className="w-3.5 h-3.5" />
+                                    <span className="font-semibold">Namespace + Name required</span>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest">Namespace</label>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1.5">
                                             {NAMESPACES.map(ns => (
                                                 <button
                                                     key={ns.id}
                                                     onClick={() => updateOption('namespace', ns.id)}
                                                     className={cn(
-                                                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                                                        "px-2 py-1 rounded-md text-[10px] font-medium transition-all",
                                                         options.namespace === ns.id
                                                             ? options.type === 'v5' ? "bg-violet-500 text-white" : "bg-orange-500 text-white"
                                                             : "bg-white/5 text-foreground-muted hover:bg-white/10"
@@ -567,22 +566,23 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                                 placeholder="Custom namespace UUID..."
                                                 value={options.customNamespace}
                                                 onChange={(e) => updateOption('customNamespace', e.target.value)}
-                                                className="font-mono text-xs mt-2"
+                                                className="font-mono text-xs mt-1.5"
                                                 fullWidth
                                             />
                                         )}
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         <Input
                                             label="Name"
-                                            placeholder={NAMESPACES.find(n => n.id === options.namespace)?.example || "e.g., example.com"}
+                                            placeholder={NAMESPACES.find(n => n.id === options.namespace)?.example || "example.com"}
                                             value={options.name}
                                             onChange={(e) => updateOption('name', e.target.value)}
+                                            className="text-xs"
                                             fullWidth
                                         />
                                         {options.type === 'v3' && (
-                                            <p className="text-[10px] text-orange-400/80">
-                                                Note: v3 uses MD5 (less secure). Consider using v5 (SHA-1) instead.
+                                            <p className="text-[9px] text-orange-400/80">
+                                                Note: v3 uses MD5. Use v5 (SHA-1) instead.
                                             </p>
                                         )}
                                     </div>
@@ -590,22 +590,22 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                             </div>
                         )}
 
-                        {/* Generated IDs */}
-                        <div className="space-y-3">
+                        {/* Generated IDs - Compact */}
+                        <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                                    <Sparkles className="w-3.5 h-3.5" />
+                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                                    <Sparkles className="w-3 h-3" />
                                     Generated IDs
                                 </label>
                                 {generatedIds.length > 0 && (
-                                    <span className="text-xs text-foreground-muted">
+                                    <span className="text-[10px] text-foreground-muted">
                                         {generatedIds.length} {generatedIds[0]?.type.toUpperCase()}(s)
                                     </span>
                                 )}
                             </div>
 
                             {generatedIds.length > 0 ? (
-                                <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                                <div className="space-y-1.5 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
                                     {generatedIds.map((id, index) => {
                                         const typeConfig = ID_TYPES.find(t => t.id === id.type);
                                         const isCopied = copiedIndex === index;
@@ -614,21 +614,19 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                             <div
                                                 key={index}
                                                 className={cn(
-                                                    "group flex items-center gap-3 p-3 rounded-xl border transition-all",
+                                                    "group flex items-center gap-2 p-2 rounded-lg border transition-all",
                                                     typeConfig?.borderColor,
                                                     typeConfig?.bgColor,
                                                     "hover:border-opacity-50"
                                                 )}
                                             >
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className={cn("font-mono text-sm truncate", typeConfig?.color)}>
-                                                            {id.value}
-                                                        </span>
-                                                    </div>
+                                                    <span className={cn("font-mono text-xs truncate block", typeConfig?.color)}>
+                                                        {id.value}
+                                                    </span>
                                                     {id.timestamp && (
-                                                        <div className="flex items-center gap-1.5 text-[10px] text-foreground-muted">
-                                                            <Calendar className="w-3 h-3" />
+                                                        <div className="flex items-center gap-1 text-[9px] text-foreground-muted mt-0.5">
+                                                            <Calendar className="w-2.5 h-2.5" />
                                                             {id.timestamp.toLocaleString()}
                                                         </div>
                                                     )}
@@ -638,14 +636,14 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                                     size="sm"
                                                     onClick={() => handleCopy(index, id.value)}
                                                     className={cn(
-                                                        "shrink-0 opacity-0 group-hover:opacity-100 transition-all",
+                                                        "shrink-0 opacity-0 group-hover:opacity-100 transition-all h-7 w-7 p-0",
                                                         isCopied && "opacity-100 bg-emerald-500/20 border-emerald-500/30"
                                                     )}
                                                 >
                                                     {isCopied ? (
-                                                        <Check className="w-4 h-4 text-emerald-400" />
+                                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
                                                     ) : (
-                                                        <Copy className="w-4 h-4" />
+                                                        <Copy className="w-3.5 h-3.5" />
                                                     )}
                                                 </Button>
                                             </div>
@@ -653,12 +651,12 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-center py-12 border border-dashed border-border-glass rounded-xl">
-                                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-4">
-                                        <Fingerprint className="w-8 h-8 text-indigo-400" />
+                                <div className="text-center py-8 border border-dashed border-border-glass rounded-lg">
+                                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-3">
+                                        <Fingerprint className="w-6 h-6 text-indigo-400" />
                                     </div>
-                                    <p className="text-foreground-muted font-medium">No IDs generated yet</p>
-                                    <p className="text-xs text-foreground-muted/60 mt-1">
+                                    <p className="text-sm text-foreground-muted font-medium">No IDs generated yet</p>
+                                    <p className="text-[10px] text-foreground-muted/60 mt-1">
                                         Click "Generate" to create unique identifiers
                                     </p>
                                 </div>
@@ -666,20 +664,20 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                         </div>
                     </>
                 ) : (
-                    /* Validate Tab */
-                    <div className="space-y-6">
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
+                    /* Validate Tab - Compact */
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3 h-3" />
                                 Enter UUID or ULID to validate
                             </label>
                             <Input
                                 type="text"
-                                placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000 or 01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                                placeholder="550e8400-e29b-41d4-a716-446655440000 or 01ARZ3NDEKTSV4RRFFQ69G5FAV"
                                 value={validateInput}
                                 onChange={(e) => setValidateInput(e.target.value)}
                                 className={cn(
-                                    "font-mono",
+                                    "font-mono text-xs",
                                     validateInput && validationResult.valid && "border-emerald-500/50 bg-emerald-500/5",
                                     validateInput && !validationResult.valid && "border-red-500/50 bg-red-500/5"
                                 )}
@@ -689,43 +687,43 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
 
                         {validateInput && (
                             <div className={cn(
-                                "p-6 rounded-xl border",
+                                "p-4 rounded-lg border",
                                 validationResult.valid 
                                     ? "border-emerald-500/30 bg-emerald-500/5" 
                                     : "border-red-500/30 bg-red-500/5"
                             )}>
-                                <div className="flex items-center gap-3 mb-4">
+                                <div className="flex items-center gap-2.5 mb-3">
                                     {validationResult.valid ? (
                                         <>
-                                            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                                                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                                            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                                             </div>
                                             <div>
-                                                <p className="font-bold text-emerald-400">Valid {validationResult.type}</p>
+                                                <p className="font-bold text-sm text-emerald-400">Valid {validationResult.type}</p>
                                                 {validationResult.versionName && (
-                                                    <p className="text-sm text-foreground-muted">{validationResult.versionName}</p>
+                                                    <p className="text-xs text-foreground-muted">{validationResult.versionName}</p>
                                                 )}
                                             </div>
                                         </>
                                     ) : (
                                         <>
-                                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
-                                                <XCircle className="w-6 h-6 text-red-400" />
+                                            <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
+                                                <XCircle className="w-5 h-5 text-red-400" />
                                             </div>
                                             <div>
-                                                <p className="font-bold text-red-400">Invalid ID</p>
-                                                <p className="text-sm text-foreground-muted">Not a valid UUID or ULID format</p>
+                                                <p className="font-bold text-sm text-red-400">Invalid ID</p>
+                                                <p className="text-xs text-foreground-muted">Not a valid UUID or ULID format</p>
                                             </div>
                                         </>
                                     )}
                                 </div>
 
                                 {validationResult.valid && validationResult.timestamp && (
-                                    <div className="flex items-center gap-2 p-3 rounded-lg bg-black/20 border border-white/5">
-                                        <Calendar className="w-4 h-4 text-cyan-400" />
+                                    <div className="flex items-center gap-2 p-2.5 rounded-md bg-black/20 border border-white/5">
+                                        <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                                         <div>
-                                            <p className="text-xs text-foreground-muted">Embedded Timestamp</p>
-                                            <p className="font-mono text-sm text-cyan-400">
+                                            <p className="text-[10px] text-foreground-muted">Embedded Timestamp</p>
+                                            <p className="font-mono text-xs text-cyan-400">
                                                 {validationResult.timestamp.toLocaleString()}
                                             </p>
                                         </div>
@@ -734,32 +732,20 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                             </div>
                         )}
 
-                        {/* Info Panel */}
-                        <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20">
-                            <div className="flex items-start gap-3">
-                                <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                                <div className="space-y-3">
-                                    <p className="text-sm font-semibold text-indigo-400">Supported Formats & Versions</p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-foreground-muted">
-                                        <div className="space-y-1">
-                                            <p className="font-semibold text-foreground">UUID Versions:</p>
-                                            <ul className="space-y-0.5">
-                                                <li>• <strong className="text-cyan-400">v1</strong> - Time + MAC address</li>
-                                                <li>• <strong className="text-orange-400">v3</strong> - MD5 namespace hash</li>
-                                                <li>• <strong className="text-emerald-400">v4</strong> - Random</li>
-                                                <li>• <strong className="text-violet-400">v5</strong> - SHA-1 namespace hash</li>
-                                                <li>• <strong className="text-sky-400">v6</strong> - Reordered time (sortable)</li>
-                                                <li>• <strong className="text-rose-400">v7</strong> - Unix timestamp (sortable)</li>
-                                            </ul>
+                        {/* Info Panel - Compact */}
+                        <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
+                            <div className="flex items-start gap-2">
+                                <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                                <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-indigo-400">Supported Formats</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[10px] text-foreground-muted">
+                                        <div className="space-y-0.5">
+                                            <p className="font-semibold text-foreground text-xs">UUID: v1-v7</p>
+                                            <p className="text-[10px]">Timestamps: v1, v6, v7</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="font-semibold text-foreground">Timestamps:</p>
-                                            <ul className="space-y-0.5">
-                                                <li>• v1, v6: Gregorian timestamp</li>
-                                                <li>• v7: Unix milliseconds</li>
-                                                <li>• ULID: Unix milliseconds</li>
-                                                <li>• v3, v4, v5: No timestamp</li>
-                                            </ul>
+                                        <div className="space-y-0.5">
+                                            <p className="font-semibold text-foreground text-xs">ULID: 26 chars</p>
+                                            <p className="text-[10px]">Base32, sortable</p>
                                         </div>
                                     </div>
                                 </div>
@@ -768,24 +754,20 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                     </div>
                 )}
 
-                {/* Version Comparison Info */}
+                {/* Version Comparison Info - Compact */}
                 {activeTab === 'generate' && generatedIds.length === 0 && (
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-500/5 to-violet-500/5 border border-indigo-500/20">
-                        <div className="flex items-start gap-3">
-                            <Sparkles className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                            <div className="space-y-2">
-                                <p className="text-sm font-semibold text-indigo-400">Choosing the Right UUID Version</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-foreground-muted">
-                                    <div className="space-y-1.5">
-                                        <p><strong className="text-rose-400">v7</strong> - Best for databases (sortable, modern)</p>
-                                        <p><strong className="text-emerald-400">v4</strong> - Best for general use (random)</p>
-                                        <p><strong className="text-amber-400">ULID</strong> - URL-safe alternative to v7</p>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <p><strong className="text-violet-400">v5</strong> - Deterministic from name</p>
-                                        <p><strong className="text-sky-400">v6</strong> - v1 but sortable</p>
-                                        <p><strong className="text-cyan-400">v1</strong> - Legacy, avoid if possible</p>
-                                    </div>
+                    <div className="p-3 rounded-lg bg-gradient-to-r from-indigo-500/5 to-violet-500/5 border border-indigo-500/20">
+                        <div className="flex items-start gap-2">
+                            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                            <div className="space-y-1.5">
+                                <p className="text-xs font-semibold text-indigo-400">Quick Guide</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[10px] text-foreground-muted">
+                                    <p><strong className="text-rose-400">v7</strong> - Databases</p>
+                                    <p><strong className="text-emerald-400">v4</strong> - General</p>
+                                    <p><strong className="text-amber-400">ULID</strong> - URL-safe</p>
+                                    <p><strong className="text-violet-400">v5</strong> - Deterministic</p>
+                                    <p><strong className="text-sky-400">v6</strong> - Sortable</p>
+                                    <p><strong className="text-cyan-400">v1</strong> - Legacy</p>
                                 </div>
                             </div>
                         </div>
