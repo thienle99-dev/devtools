@@ -277,7 +277,7 @@ export const CaptureSection: React.FC = () => {
     const delayOptions = [0, 3, 5, 10];
 
     return (
-        <div 
+        <div
             className={cn(
                 "space-y-8 min-h-[500px] transition-colors duration-300 rounded-3xl p-4 relative",
                 isDragging && "bg-indigo-500/10 border-2 border-dashed border-indigo-500"
@@ -305,25 +305,25 @@ export const CaptureSection: React.FC = () => {
 
             {/* Hero Section */}
             <div className="text-center space-y-3 py-8">
-                <h2 
+                <h2
                     className="text-3xl font-bold"
                     style={{ color: 'var(--color-text-primary)' }}
                 >
                     {captureMode === 'upload' ? 'Upload or Drop Image' : 'Capture Your Screen'}
                 </h2>
-                <p 
+                <p
                     className="text-sm max-w-md mx-auto"
                     style={{ color: 'var(--color-text-secondary)' }}
                 >
-                    {captureMode === 'upload' 
-                        ? 'Drag and drop an image file or click below to browse' 
+                    {captureMode === 'upload'
+                        ? 'Drag and drop an image file or click below to browse'
                         : 'Choose your capture mode and create beautiful screenshots in seconds'}
                 </p>
             </div>
 
             {/* Capture Modes - Premium Cards */}
             <div>
-                <h3 
+                <h3
                     className="text-sm font-bold uppercase tracking-wider mb-4"
                     style={{ color: 'var(--color-text-muted)' }}
                 >
@@ -346,7 +346,7 @@ export const CaptureSection: React.FC = () => {
                             {captureMode === mode && (
                                 <div className="absolute top-3 right-3 w-3 h-3 rounded-full bg-indigo-500 animate-pulse" />
                             )}
-                            
+
                             {/* Icon with Glow */}
                             <div className={cn(
                                 "relative p-4 rounded-2xl transition-all duration-300",
@@ -362,20 +362,20 @@ export const CaptureSection: React.FC = () => {
                                     captureMode === mode ? "text-white" : "text-indigo-400 group-hover:text-indigo-500"
                                 )} />
                             </div>
-                            
+
                             {/* Label & Description */}
                             <div className="text-center space-y-1">
-                                <div 
+                                <div
                                     className="font-bold text-base"
-                                    style={{ 
-                                        color: captureMode === mode 
-                                            ? 'var(--color-text-primary)' 
+                                    style={{
+                                        color: captureMode === mode
+                                            ? 'var(--color-text-primary)'
                                             : 'var(--color-text-secondary)'
                                     }}
                                 >
                                     {label}
                                 </div>
-                                <div 
+                                <div
                                     className="text-xs"
                                     style={{ color: 'var(--color-text-muted)' }}
                                 >
@@ -390,11 +390,11 @@ export const CaptureSection: React.FC = () => {
             {/* Timer Delay - Refined */}
             <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                    <Clock 
+                    <Clock
                         className="w-4 h-4"
                         style={{ color: 'var(--color-text-muted)' }}
                     />
-                    <h3 
+                    <h3
                         className="text-sm font-bold uppercase tracking-wider"
                         style={{ color: 'var(--color-text-muted)' }}
                     >
@@ -413,8 +413,8 @@ export const CaptureSection: React.FC = () => {
                                     : "bg-glass-panel border-border-glass hover:border-indigo-500/30 hover:bg-glass-panel-light"
                             )}
                             style={{
-                                color: captureDelay === seconds 
-                                    ? '#818cf8' 
+                                color: captureDelay === seconds
+                                    ? '#818cf8'
                                     : 'var(--color-text-secondary)'
                             }}
                         >
@@ -426,7 +426,7 @@ export const CaptureSection: React.FC = () => {
 
             {captureMode === 'window' && (
                 <div className="space-y-3">
-                    <h3 
+                    <h3
                         className="text-sm font-bold uppercase tracking-wider"
                         style={{ color: 'var(--color-text-muted)' }}
                     >
@@ -436,7 +436,7 @@ export const CaptureSection: React.FC = () => {
                     {(window as any).screenshotAPI ? (
                         /* Electron Window Selection */
                         isLoadingSources ? (
-                            <div 
+                            <div
                                 className="text-center py-12 text-sm"
                                 style={{ color: 'var(--color-text-muted)' }}
                             >
@@ -460,17 +460,17 @@ export const CaptureSection: React.FC = () => {
                                         {selectedSource === source.id && (
                                             <div className="absolute top-3 right-3 w-3 h-3 rounded-full bg-indigo-500 animate-pulse" />
                                         )}
-                                        
+
                                         <img
                                             src={source.thumbnail}
                                             alt={source.name}
                                             className="w-full h-28 object-cover rounded-xl border border-border-glass"
                                         />
-                                        <span 
+                                        <span
                                             className="text-sm font-medium text-center truncate w-full"
-                                            style={{ 
-                                                color: selectedSource === source.id 
-                                                    ? 'var(--color-text-primary)' 
+                                            style={{
+                                                color: selectedSource === source.id
+                                                    ? 'var(--color-text-primary)'
                                                     : 'var(--color-text-secondary)'
                                             }}
                                         >
@@ -480,7 +480,7 @@ export const CaptureSection: React.FC = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div 
+                            <div
                                 className="text-center py-12 text-sm"
                                 style={{ color: 'var(--color-text-muted)' }}
                             >
@@ -490,7 +490,7 @@ export const CaptureSection: React.FC = () => {
                     ) : (
                         /* Browser Fallback */
                         <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border-2 border-indigo-500/20 text-center">
-                            <p 
+                            <p
                                 className="text-sm font-medium"
                                 style={{ color: 'var(--color-text-secondary)' }}
                             >
@@ -503,7 +503,7 @@ export const CaptureSection: React.FC = () => {
 
             {captureMode === 'url' && (
                 <div className="space-y-3">
-                    <h3 
+                    <h3
                         className="text-sm font-bold uppercase tracking-wider"
                         style={{ color: 'var(--color-text-muted)' }}
                     >
@@ -521,7 +521,7 @@ export const CaptureSection: React.FC = () => {
                             onKeyDown={(e) => e.key === 'Enter' && handleCapture()}
                             autoFocus
                         />
-                        <p 
+                        <p
                             className="text-xs flex items-start gap-2 px-2"
                             style={{ color: 'var(--color-text-muted)' }}
                         >
@@ -542,25 +542,25 @@ export const CaptureSection: React.FC = () => {
                     {/* Background Gradient with Animation */}
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl" />
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
-                    
+
                     {/* Button Content */}
                     <div className="relative px-12 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-2xl shadow-indigo-500/50 transition-all duration-300 group-hover:shadow-indigo-500/70 group-hover:scale-105 group-disabled:opacity-50 group-disabled:cursor-not-allowed group-disabled:scale-100">
                         <div className="flex items-center gap-3">
                             {captureMode === 'upload' ? (
                                 <Upload className="w-6 h-6 text-white transition-transform duration-300 group-hover:scale-110" />
                             ) : (
-                                <Camera 
+                                <Camera
                                     className={cn(
                                         "w-6 h-6 text-white transition-transform duration-300 group-hover:rotate-12",
                                         countdown !== null && "animate-pulse"
-                                    )} 
+                                    )}
                                 />
                             )}
                             <span className="text-lg font-bold text-white">
-                                {countdown !== null 
-                                    ? `Capturing in ${countdown}s...` 
-                                    : captureMode === 'upload' 
-                                        ? 'Select Image' 
+                                {countdown !== null
+                                    ? `Capturing in ${countdown}s...`
+                                    : captureMode === 'upload'
+                                        ? 'Select Image'
                                         : 'Capture Screenshot'}
                             </span>
                         </div>
@@ -572,21 +572,21 @@ export const CaptureSection: React.FC = () => {
             {history.length > 0 && (
                 <div className="pt-8 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 
+                        <h3
                             className="text-sm font-bold uppercase tracking-wider flex items-center gap-2"
                             style={{ color: 'var(--color-text-muted)' }}
                         >
                             <Clock className="w-4 h-4" />
                             Recent Captures
                         </h3>
-                        <span 
+                        <span
                             className="text-xs font-mono px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20"
                             style={{ color: '#818cf8' }}
                         >
                             {history.length} total
                         </span>
                     </div>
-                    
+
                     <div className="grid grid-cols-4 gap-4">
                         {history.slice(0, 4).map((item) => (
                             <button
@@ -608,7 +608,7 @@ export const CaptureSection: React.FC = () => {
                                         />
                                         {/* Gradient Overlay */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                        
+
                                         {/* Timestamp Badge */}
                                         <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                                             <span className="text-xs text-white font-bold truncate block">
@@ -618,13 +618,13 @@ export const CaptureSection: React.FC = () => {
                                     </>
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center">
-                                        <Square 
+                                        <Square
                                             className="w-8 h-8"
                                             style={{ color: 'var(--color-text-muted)', opacity: 0.3 }}
                                         />
                                     </div>
                                 )}
-                                
+
                                 {/* Play Icon Overlay */}
                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                     <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">

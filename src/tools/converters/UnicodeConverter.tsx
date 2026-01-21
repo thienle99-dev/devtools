@@ -66,7 +66,7 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
                 case 'unicode-to-text':
                     // Unicode codes (U+0041) to Text
                     const unicodeRegex = /U\+([0-9A-Fa-f]{1,6})/g;
-                    result = input.replace(unicodeRegex, (match, hex) => {
+                    result = input.replace(unicodeRegex, (_, hex) => {
                         const code = parseInt(hex, 16);
                         return String.fromCharCode(code);
                     });
@@ -88,12 +88,12 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
 
                 case 'escape-to-text':
                     // Unicode escape sequences (\u0041) to Text
-                    result = input.replace(/\\u([0-9A-Fa-f]{4})/g, (match, hex) => {
+                    result = input.replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex) => {
                         const code = parseInt(hex, 16);
                         return String.fromCharCode(code);
                     });
                     // Handle surrogate pairs
-                    result = result.replace(/\\u([Dd][89ABab][0-9A-Fa-f]{2})\\u([Dd][CDEFcdef][0-9A-Fa-f]{2})/g, (match, high, low) => {
+                    result = result.replace(/\\u([Dd][89ABab][0-9A-Fa-f]{2})\\u([Dd][CDEFcdef][0-9A-Fa-f]{2})/g, (_, high, low) => {
                         const highCode = parseInt(high, 16);
                         const lowCode = parseInt(low, 16);
                         const code = (highCode - 0xD800) * 0x400 + (lowCode - 0xDC00) + 0x10000;
@@ -102,12 +102,12 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
                     break;
             }
 
-            setToolData(effectiveId, { 
+            setToolData(effectiveId, {
                 output: result,
                 options: { ...data.options, mode }
             });
             toast.success('Conversion completed');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -132,8 +132,8 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
                             }}
                             className={cn(
                                 "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all min-w-[120px] justify-center",
-                                mode === m.id 
-                                    ? "bg-indigo-500 text-white shadow-lg" 
+                                mode === m.id
+                                    ? "bg-indigo-500 text-white shadow-lg"
                                     : "text-foreground-muted hover:text-foreground hover:bg-[var(--color-glass-button)]"
                             )}
                         >
@@ -153,8 +153,8 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-foreground-muted">Input</span>
                             </div>
                             {input && (
-                                <button 
-                                    onClick={() => handleCopy(input, 'Input')} 
+                                <button
+                                    onClick={() => handleCopy(input, 'Input')}
                                     className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400"
                                     title="Copy Input"
                                 >
@@ -172,10 +172,10 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
                             />
                         </div>
                         <div className="p-2.5 border-t border-border-glass/30 bg-[var(--color-glass-panel-light)] shrink-0">
-                            <Button 
-                                variant="primary" 
-                                size="sm" 
-                                onClick={convert} 
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={convert}
                                 className="w-full font-semibold gap-2"
                                 disabled={!input.trim()}
                             >
@@ -194,8 +194,8 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
                             </div>
                             <div className="flex items-center gap-2">
                                 {output && (
-                                    <button 
-                                        onClick={() => handleCopy(output, 'Output')} 
+                                    <button
+                                        onClick={() => handleCopy(output, 'Output')}
                                         className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400"
                                         title="Copy Output"
                                     >

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
-import type { AnnotationType } from '../utils/annotations';
+import type { AnnotationType } from '../types';
 import { cn } from '@utils/cn';
 
 interface AnnotationToolbarProps {
@@ -58,7 +58,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             { type: 'arrow', icon: ArrowRight, label: 'Arrow', description: 'Draw arrows' },
             { type: 'pen', icon: Pen, label: 'Pen', description: 'Free draw' },
             { type: 'text', icon: Type, label: 'Text', description: 'Add text' },
-            { type: 'rectangle', icon: Square, label: 'Rectangle', description: 'Draw rectangle' },
+            { type: 'rect', icon: Square, label: 'Rectangle', description: 'Draw rectangle' },
             { type: 'circle', icon: Circle, label: 'Circle', description: 'Draw circle' },
             { type: 'line', icon: Minus, label: 'Line', description: 'Draw line' },
             { type: 'blur', icon: Eraser, label: 'Blur', description: 'Blur area' },

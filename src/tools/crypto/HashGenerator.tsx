@@ -52,8 +52,8 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
 
     // Handle both new format (hashes) and old format (options) from store
     const input = toolData?.input || '';
-    const fileName = toolData?.fileName || '';
-    const hashes = toolData?.hashes || toolData?.options || defaultHashes;
+    const fileName = toolData?.meta?.fileName || '';
+    const hashes = toolData?.options || defaultHashes;
 
     useEffect(() => {
         addToHistory(TOOL_ID);
@@ -61,14 +61,14 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
 
     const generateAllHashes = useCallback((text: string) => {
         if (!text) {
-            setToolData(effectiveId, { 
-                hashes: { md5: '', sha1: '', sha256: '', sha512: '', sha3: '', ripemd160: '' } 
+            setToolData(effectiveId, {
+                options: { md5: '', sha1: '', sha256: '', sha512: '', sha3: '', ripemd160: '' }
             });
             return;
         }
 
         setIsProcessing(true);
-        
+
         // Use setTimeout to avoid blocking UI for large inputs
         setTimeout(() => {
             const newHashes = {
@@ -79,13 +79,13 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                 sha3: generateHash(text, 'sha3'),
                 ripemd160: generateHash(text, 'ripemd160')
             };
-            setToolData(effectiveId, { hashes: newHashes });
+            setToolData(effectiveId, { options: newHashes });
             setIsProcessing(false);
         }, 0);
     }, [effectiveId, setToolData]);
 
     const handleInputChange = (val: string) => {
-        setToolData(effectiveId, { input: val, fileName: '' });
+        setToolData(effectiveId, { input: val, meta: { fileName: '' } });
         generateAllHashes(val);
     };
 
@@ -100,8 +100,8 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                 const filePath = result.filePaths[0];
                 const fileContent = await (window as any).ipcRenderer.invoke('fs:readFile', filePath);
                 const name = filePath.split(/[/\\]/).pop() || 'file';
-                
-                setToolData(effectiveId, { input: fileContent, fileName: name });
+
+                setToolData(effectiveId, { input: fileContent, meta: { fileName: name } });
                 generateAllHashes(fileContent);
                 toast.success(`File loaded: ${name}`);
             }
@@ -122,7 +122,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
             .filter(algo => hashes[algo.id])
             .map(algo => `${algo.name}: ${hashes[algo.id]}`)
             .join('\n');
-        
+
         if (allHashes) {
             navigator.clipboard.writeText(allHashes);
             toast.success('All hashes copied');
@@ -135,7 +135,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
     };
 
     const compareResult = compareHash.trim().toLowerCase();
-    const matchedAlgo = compareResult 
+    const matchedAlgo = compareResult
         ? HASH_ALGORITHMS.find(algo => hashes[algo.id]?.toLowerCase() === compareResult)
         : null;
 
@@ -154,8 +154,8 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                             onClick={() => setInputMode('text')}
                             className={cn(
                                 "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
-                                inputMode === 'text' 
-                                    ? "bg-indigo-500 text-white" 
+                                inputMode === 'text'
+                                    ? "bg-indigo-500 text-white"
                                     : "bg-transparent text-foreground-muted hover:text-foreground hover:bg-white/5"
                             )}
                         >
@@ -166,8 +166,8 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                             onClick={() => setInputMode('file')}
                             className={cn(
                                 "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
-                                inputMode === 'file' 
-                                    ? "bg-indigo-500 text-white" 
+                                inputMode === 'file'
+                                    ? "bg-indigo-500 text-white"
                                     : "bg-transparent text-foreground-muted hover:text-foreground hover:bg-white/5"
                             )}
                         >
@@ -193,7 +193,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                             </span>
                         )}
                     </div>
-                    
+
                     {inputMode === 'text' ? (
                         <CodeEditor
                             className="min-h-[120px]"
@@ -203,7 +203,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                             onChange={handleInputChange}
                         />
                     ) : (
-                        <div 
+                        <div
                             onClick={handleFileSelect}
                             className="min-h-[120px] border-2 border-dashed border-border-glass rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all"
                         >
@@ -272,7 +272,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                             {HASH_ALGORITHMS.map((algo) => {
                                 const hash = hashes[algo.id];
                                 if (!hash) return null;
-                                
+
                                 const isMatched = compareResult && hash.toLowerCase() === compareResult;
                                 const isCopied = copiedAlgo === algo.id;
 
@@ -281,8 +281,8 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                                         key={algo.id}
                                         className={cn(
                                             "group relative rounded-xl border p-4 transition-all",
-                                            isMatched 
-                                                ? "border-emerald-500/50 bg-emerald-500/10" 
+                                            isMatched
+                                                ? "border-emerald-500/50 bg-emerald-500/10"
                                                 : `${algo.borderColor} ${algo.bgColor} hover:border-opacity-50`
                                         )}
                                     >
@@ -311,7 +311,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex items-center gap-2">
                                                 {isMatched && (
                                                     <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
@@ -385,7 +385,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
                         <div>
                             <p className="text-xs font-semibold text-amber-400">Security Recommendation</p>
                             <p className="text-[11px] text-foreground-muted mt-1">
-                                For security-critical applications, use <strong className="text-emerald-400">SHA-256</strong>, <strong className="text-cyan-400">SHA-512</strong>, or <strong className="text-violet-400">SHA-3</strong>. 
+                                For security-critical applications, use <strong className="text-emerald-400">SHA-256</strong>, <strong className="text-cyan-400">SHA-512</strong>, or <strong className="text-violet-400">SHA-3</strong>.
                                 Avoid MD5 and SHA-1 for password hashing or security verification.
                             </p>
                         </div>

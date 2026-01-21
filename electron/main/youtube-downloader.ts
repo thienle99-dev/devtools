@@ -1,4 +1,3 @@
-import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
@@ -9,8 +8,7 @@ import { promisify } from 'util';
 import https from 'https';
 import si from 'systeminformation';
 
-// Create require function for ES modules
-const require = createRequire(import.meta.url);
+
 
 export interface DownloadOptions {
     url: string;
@@ -101,7 +99,7 @@ export class YouTubeDownloader {
     private hasFFmpeg: boolean = false;
     private ffmpegPath: string | null = null;
     private store: Store<StoreSchema>;
-    
+
     // Queue System
     private downloadQueue: Array<{
         run: () => Promise<string>;
@@ -109,11 +107,11 @@ export class YouTubeDownloader {
         reject: (reason?: any) => void;
     }> = [];
     private activeDownloadsCount = 0;
-    
+
     constructor() {
         this.store = new Store<StoreSchema>({
             name: 'youtube-download-history',
-            defaults: { 
+            defaults: {
                 history: [],
                 settings: {
                     defaultVideoQuality: '1080p',
@@ -126,17 +124,15 @@ export class YouTubeDownloader {
         // Set binary path in app data directory (add .exe for Windows)
         const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
         this.binaryPath = path.join(app.getPath('userData'), binaryName);
-        
+
         // Initialize yt-dlp wrapper asynchronously
         this.initPromise = this.initYtDlp();
     }
 
     private async initYtDlp(): Promise<void> {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const ytDlpModule = require('yt-dlp-wrap');
-            const YTDlpWrap = ytDlpModule.default || ytDlpModule;
-            
+            const { YTDlpWrap } = await import('./yt-dlp');
+
             // Download yt-dlp binary if it doesn't exist
             if (!fs.existsSync(this.binaryPath)) {
                 console.log('Downloading yt-dlp binary to:', this.binaryPath);
@@ -150,14 +146,14 @@ export class YouTubeDownloader {
             } else {
                 console.log('Using existing yt-dlp binary at:', this.binaryPath);
             }
-            
+
             // Initialize with binary path
             this.ytDlp = new YTDlpWrap(this.binaryPath);
 
             // Setup FFmpeg using smart helper (handles multiple fallbacks)
             const { FFmpegHelper } = await import('./ffmpeg-helper');
             const ffmpegPath = FFmpegHelper.getFFmpegPath();
-            
+
             if (ffmpegPath) {
                 this.ffmpegPath = ffmpegPath;
                 this.hasFFmpeg = true;
@@ -166,7 +162,7 @@ export class YouTubeDownloader {
             } else {
                 console.warn('⚠️ FFmpeg not available - video features may be limited');
             }
-            
+
             // Check for helpers
             await this.checkHelpers();
         } catch (error) {
@@ -178,7 +174,7 @@ export class YouTubeDownloader {
     private async checkHelpers(): Promise<void> {
         // Check Aria2c
         this.hasAria2c = false;
-        
+
         // 1. Check local bin (priority)
         try {
             const userData = app.getPath('userData');
@@ -188,7 +184,7 @@ export class YouTubeDownloader {
                 // this.aria2Path = localBin; // Removed
                 console.log('✅ Aria2c found locally:', localBin);
             }
-        } catch {}
+        } catch { }
 
         // 2. Check global if not found locally
         if (!this.hasAria2c) {
@@ -223,20 +219,20 @@ export class YouTubeDownloader {
             const userData = app.getPath('userData');
             const binDir = path.join(userData, 'bin');
             if (!fs.existsSync(binDir)) fs.mkdirSync(binDir, { recursive: true });
-            
+
             const zipPath = path.join(binDir, 'aria2.zip');
             // Using a specific mirror or github release
             const url = 'https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip';
-            
+
             await new Promise<void>((resolve, reject) => {
                 const file = fs.createWriteStream(zipPath);
                 https.get(url, (res) => {
                     if (res.statusCode === 302 || res.statusCode === 301) {
-                         https.get(res.headers.location!, (res2) => {
-                             if (res2.statusCode !== 200) { reject(new Error('DL Fail ' + res2.statusCode)); return; }
-                             res2.pipe(file);
-                             file.on('finish', () => { file.close(); resolve(); });
-                         }).on('error', reject);
+                        https.get(res.headers.location!, (res2) => {
+                            if (res2.statusCode !== 200) { reject(new Error('DL Fail ' + res2.statusCode)); return; }
+                            res2.pipe(file);
+                            file.on('finish', () => { file.close(); resolve(); });
+                        }).on('error', reject);
                     } else if (res.statusCode === 200) {
                         res.pipe(file);
                         file.on('finish', () => { file.close(); resolve(); });
@@ -245,25 +241,25 @@ export class YouTubeDownloader {
                     }
                 }).on('error', reject);
             });
-            
+
             const execAsync = promisify(exec);
             // Expand using Powershell
             await execAsync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${binDir}' -Force"`);
-            
+
             // Move exe
             const subDir = path.join(binDir, 'aria2-1.36.0-win-64bit-build1');
             const exePath = path.join(subDir, 'aria2c.exe');
             const targetPath = path.join(binDir, 'aria2c.exe');
-            
+
             if (fs.existsSync(exePath)) {
                 fs.copyFileSync(exePath, targetPath);
             }
-            
+
             // Cleanup
-            try { 
+            try {
                 fs.unlinkSync(zipPath);
                 // fs.rmSync(subDir, { recursive: true, force: true });
-            } catch {}
+            } catch { }
 
             await this.checkHelpers();
             return this.hasAria2c;
@@ -304,7 +300,7 @@ export class YouTubeDownloader {
      */
     async getVideoInfo(url: string): Promise<VideoInfo> {
         await this.ensureInitialized();
-        
+
         // Check cache
         const cached = this.videoInfoCache.get(url);
         if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
@@ -320,7 +316,7 @@ export class YouTubeDownloader {
                 '--no-playlist',
                 '--no-check-certificate',
             ]);
-            
+
             // Parse available formats
             const formats: VideoFormat[] = (info.formats || []).map((format: any) => ({
                 itag: format.format_id ? parseInt(format.format_id) : 0,
@@ -354,7 +350,7 @@ export class YouTubeDownloader {
 
             const hasVideo = formats.some(f => f.hasVideo);
             const hasAudio = formats.some(f => f.hasAudio);
-            
+
             // Parse upload date
             let uploadDate: string | undefined;
             if (info.upload_date) {
@@ -370,7 +366,7 @@ export class YouTubeDownloader {
                     console.warn('Failed to parse upload date:', info.upload_date);
                 }
             }
-            
+
             const videoInfo: VideoInfo = {
                 videoId: info.id || '',
                 title: info.title || 'Unknown',
@@ -394,7 +390,7 @@ export class YouTubeDownloader {
             throw new Error(`Failed to get video info: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
-    
+
     async getPlaylistInfo(url: string): Promise<{
         playlistId: string;
         title: string;
@@ -408,7 +404,7 @@ export class YouTubeDownloader {
         }>;
     }> {
         await this.ensureInitialized();
-        
+
         try {
             const info: any = await this.ytDlp.getVideoInfo([
                 url,
@@ -416,11 +412,11 @@ export class YouTubeDownloader {
                 '--skip-download',
                 '--no-check-certificate', // Fix SSL certificate verification on macOS
             ]);
-            
+
             if (!info.entries || !Array.isArray(info.entries)) {
                 throw new Error('Not a valid playlist URL');
             }
-            
+
             const videos = info.entries.map((entry: any) => ({
                 id: entry.id || entry.url,
                 title: entry.title || 'Unknown Title',
@@ -428,7 +424,7 @@ export class YouTubeDownloader {
                 thumbnail: entry.thumbnail || entry.thumbnails?.[0]?.url || '',
                 url: entry.url || `https://www.youtube.com/watch?v=${entry.id}`,
             }));
-            
+
             return {
                 playlistId: info.id || info.playlist_id || 'unknown',
                 title: info.title || info.playlist_title || 'Unknown Playlist',
@@ -439,7 +435,7 @@ export class YouTubeDownloader {
             throw new Error(`Failed to get playlist info: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
-    
+
 
 
     /**
@@ -449,10 +445,10 @@ export class YouTubeDownloader {
         try {
             // Get all filesystems
             const filesystems = await si.fsSize();
-            
+
             // Find the drive that contains the directory
             const root = path.parse(path.resolve(directory)).root.toLowerCase();
-            
+
             // Normalize mount points for comparison (e.g. "C:" -> "c:")
             const fs = filesystems.find(d => {
                 const mount = d.mount.toLowerCase();
@@ -464,7 +460,7 @@ export class YouTubeDownloader {
                 // Add 100MB buffer
                 const buffer = 100 * 1024 * 1024;
                 if (fs.available < requiredBytes + buffer) {
-                     throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs.available / 1024 / 1024).toFixed(2)} MB`);
+                    throw new Error(`Insufficient disk space. Required: ${(requiredBytes / 1024 / 1024).toFixed(2)} MB, Available: ${(fs.available / 1024 / 1024).toFixed(2)} MB`);
                 }
             }
         } catch (error) {
@@ -472,7 +468,7 @@ export class YouTubeDownloader {
             // Don't block download if check fails, just warn
         }
     }
-    
+
     /**
      * Queue download task
      */
@@ -498,19 +494,19 @@ export class YouTubeDownloader {
         progressCallback?: (progress: DownloadProgress) => void
     ): Promise<string> {
         await this.ensureInitialized();
-        
+
         console.log('ExecuteDownload - hasFFmpeg:', this.hasFFmpeg, 'path:', this.ffmpegPath);
-        
+
         const { url, format, quality, container, outputPath, maxSpeed, embedSubs, id } = options;
         const downloadId = id || randomUUID(); // Use provided ID or generate new one
-        
+
         try {
             const info = await this.getVideoInfo(url);
             const sanitizedTitle = this.sanitizeFilename(info.title);
-            
+
             const downloadsPath = outputPath || app.getPath('downloads');
             const extension = container || (format === 'audio' ? 'mp3' : 'mp4');
-            
+
             // Add quality/format suffix to filename to avoid overwriting
             let filenameSuffix = '';
             if (format === 'audio') {
@@ -518,9 +514,9 @@ export class YouTubeDownloader {
             } else if (format === 'video' && quality) {
                 filenameSuffix = `_${quality}`;
             }
-            
+
             const outputTemplate = path.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.%(ext)s`);
-            
+
             if (!fs.existsSync(downloadsPath)) {
                 fs.mkdirSync(downloadsPath, { recursive: true });
             }
@@ -535,13 +531,13 @@ export class YouTubeDownloader {
                 // Estimate video + audio
                 let videoFormat;
                 if (quality && quality !== 'best') {
-                     videoFormat = info.formats.find(f => f.qualityLabel?.startsWith(quality) && f.hasVideo);
+                    videoFormat = info.formats.find(f => f.qualityLabel?.startsWith(quality) && f.hasVideo);
                 } else {
-                     videoFormat = info.formats.find(f => f.hasVideo); // Best usually first or use logic
+                    videoFormat = info.formats.find(f => f.hasVideo); // Best usually first or use logic
                 }
-                
+
                 const audioFormat = info.formats.find(f => f.hasAudio && !f.hasVideo); // Best audio
-                
+
                 if (videoFormat) estimatedSize += (videoFormat.filesize || 0);
                 if (audioFormat) estimatedSize += (audioFormat.filesize || 0);
             }
@@ -563,7 +559,7 @@ export class YouTubeDownloader {
                 '--concurrent-fragments', `${options.concurrentFragments || 4}`,
                 '--buffer-size', '1M',
                 '--retries', '10',
-                '--fragment-retries', '10', 
+                '--fragment-retries', '10',
                 '-c', // Resume interrupted downloads
                 // Metadata embedding disabled due to ffprobe dependency
                 // '--embed-thumbnail',
@@ -627,11 +623,11 @@ export class YouTubeDownloader {
                     // Select best mp4 video + best m4a audio for better compatibility
                     args.push('-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best');
                 }
-                
+
                 // Merge format and post-processing options
                 const outputFormat = container || 'mp4';
                 args.push('--merge-output-format', outputFormat);
-                
+
                 // Add recode option if needed for compatibility
                 if (outputFormat === 'mp4') {
                     args.push('--postprocessor-args', 'ffmpeg:-c:v copy -c:a aac');
@@ -652,12 +648,12 @@ export class YouTubeDownloader {
                 // Listen to ytDlpProcess events
                 if (process.ytDlpProcess) {
                     const ytDlpProc = process.ytDlpProcess;
-                    
+
                     // Capture all output
                     ytDlpProc.stdout?.on('data', (data: Buffer) => {
                         const output = data.toString();
                         console.log(`[${downloadId}] stdout:`, output);
-                        
+
                         // Parse each line
                         output.split(/\r?\n/).forEach(line => {
                             if (!line.trim()) return;
@@ -666,7 +662,7 @@ export class YouTubeDownloader {
                                 if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
                                 if (progress.percent > 0) percent = progress.percent;
                                 downloadedBytes = (percent / 100) * totalBytes;
-                                
+
                                 progressCallback({
                                     id: downloadId,
                                     percent: Math.round(percent),
@@ -680,11 +676,11 @@ export class YouTubeDownloader {
                             }
                         });
                     });
-                    
+
                     ytDlpProc.stderr?.on('data', (data: Buffer) => {
                         const output = data.toString();
                         console.log(`[${downloadId}] stderr:`, output);
-                        
+
                         // Parse each line
                         output.split(/\r?\n/).forEach(line => {
                             if (!line.trim()) return;
@@ -693,7 +689,7 @@ export class YouTubeDownloader {
                                 if (progress.totalBytes > 0) totalBytes = progress.totalBytes;
                                 if (progress.percent > 0) percent = progress.percent;
                                 downloadedBytes = (percent / 100) * totalBytes;
-                                
+
                                 progressCallback({
                                     id: downloadId,
                                     percent: Math.round(percent),
@@ -711,11 +707,11 @@ export class YouTubeDownloader {
 
                 process.on('close', (code: number) => {
                     this.activeProcesses.delete(downloadId);
-                    
+
                     if (code === 0) {
 
                         const expectedFile = path.join(downloadsPath, `${sanitizedTitle}${filenameSuffix}.${extension}`);
-                        
+
                         // Get actual file size from disk
                         let actualFileSize = totalBytes;
                         try {
@@ -726,10 +722,10 @@ export class YouTubeDownloader {
                         } catch (e) {
                             console.warn('Failed to get file size:', e);
                         }
-                        
+
                         // Final success callback with filename to clear active download
                         if (progressCallback) {
-                             progressCallback({
+                            progressCallback({
                                 id: downloadId,
                                 percent: 100,
                                 downloaded: actualFileSize,
@@ -752,7 +748,7 @@ export class YouTubeDownloader {
                             duration: info.lengthSeconds,
                             status: 'completed'
                         });
-                        
+
                         resolve(expectedFile);
                     } else {
                         this.cleanupPartialFiles(downloadsPath, sanitizedTitle, extension);
@@ -771,7 +767,7 @@ export class YouTubeDownloader {
             throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
-    
+
     /**
      * Cancel download(s)
      * @param id Optional download ID to cancel specific download. If omitted, cancels all.
@@ -809,7 +805,7 @@ export class YouTubeDownloader {
             this.activeProcesses.clear();
         }
     }
-    
+
     // ... helper methods ...
     private cleanupPartialFiles(directory: string, filename: string, extension: string): void {
         try {
@@ -824,7 +820,7 @@ export class YouTubeDownloader {
             console.error('Cleanup failed:', error);
         }
     }
-    
+
     private sanitizeFilename(filename: string): string {
         return filename
             .replace(/[<>:"/\\|?*]/g, '')
@@ -832,7 +828,7 @@ export class YouTubeDownloader {
             .trim()
             .substring(0, 200);
     }
-    
+
     /**
      * Parse yt-dlp progress output
      * Handles standard format: [download] 12.3% of 10.00MiB at 1.23MiB/s ETA 00:05
@@ -905,7 +901,7 @@ export class YouTubeDownloader {
                 };
             }
         }
-        
+
         return null;
     }
 
@@ -916,13 +912,13 @@ export class YouTubeDownloader {
         const newItem: HistoryItem = { ...item, id: randomUUID(), timestamp: Date.now() };
         this.store.set('history', [newItem, ...history].slice(0, 50));
     }
-    
+
     removeFromHistory(id: string): void {
         const history = this.store.get('history', []);
         const filtered = history.filter(item => item.id !== id);
         this.store.set('history', filtered);
     }
-    
+
     clearHistory(): void { this.store.set('history', []); }
 
     getCapabilities(): { hasAria2c: boolean; hasFFmpeg: boolean } {

@@ -44,7 +44,7 @@ export class VideoCompressor {
         });
 
         // Log stderr errors just in case
-        process.stderr.on('data', (d) => {
+        process.stderr.on('data', () => {
             // console.log('[Preview FFmpeg]', d.toString());
         });
 
@@ -134,6 +134,10 @@ export class VideoCompressor {
                     } else {
                         // Fallback: Try to find resolution anywhere if specific stream line search failed
                         const resMatch = output.match(/ (\d{2,5})x(\d{2,5})/);
+                        if (resMatch) {
+                            width = parseInt(resMatch[1]);
+                            height = parseInt(resMatch[2]);
+                        }
                     }
 
                     // Check if any streams were found (videoLineMatch is a good proxy)

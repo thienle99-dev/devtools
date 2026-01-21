@@ -578,7 +578,6 @@ export default function DownloadManager() {
                 isOpen={isAddDialogOpen}
                 onClose={() => setIsAddDialogOpen(false)}
                 onAdd={handleCreateDownload}
-                defaultDownloadPath={settings?.downloadPath}
             />
 
             {settings && (

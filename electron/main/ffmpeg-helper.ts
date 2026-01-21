@@ -36,7 +36,7 @@ export class FFmpegHelper {
             for (const testPath of resourcesPaths) {
                 if (fs.existsSync(testPath)) {
                     console.log('✅ FFmpeg found in bundled resources:', testPath);
-                    
+
                     // Set executable permissions on Unix-like systems
                     if (process.platform !== 'win32') {
                         try {
@@ -45,7 +45,7 @@ export class FFmpegHelper {
                             // Ignore permission errors
                         }
                     }
-                    
+
                     this.ffmpegPath = testPath;
                     return testPath;
                 }
@@ -56,12 +56,12 @@ export class FFmpegHelper {
 
         // Strategy 2: Try ffmpeg-static package
         try {
-            const ffmpegStatic = require('ffmpeg-static');
-            const ffmpegPath = ffmpegStatic;
-            
+            const { getStaticFFmpegPath } = require('./ffmpeg');
+            const ffmpegPath = getStaticFFmpegPath();
+
             if (ffmpegPath && fs.existsSync(ffmpegPath)) {
                 console.log('✅ FFmpeg found via ffmpeg-static:', ffmpegPath);
-                
+
                 // Set executable permissions on Unix-like systems
                 if (process.platform !== 'win32') {
                     try {
@@ -70,7 +70,7 @@ export class FFmpegHelper {
                         // Ignore permission errors
                     }
                 }
-                
+
                 this.ffmpegPath = ffmpegPath;
                 return ffmpegPath;
             } else {

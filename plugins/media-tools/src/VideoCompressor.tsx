@@ -2,58 +2,37 @@ import React, { useState, useEffect } from 'react';
 import {
     Video,
     Upload,
-    Settings2,
     Download,
-    Play,
-    Folder,
     Loader2,
-    AlertCircle,
-    CheckCircle2,
     X,
-    Maximize,
-    Scaling,
-    Zap,
-    Scale,
-    Volume2,
-    VolumeX
+    Zap
 } from 'lucide-react';
 import { cn } from '@utils/cn';
-import { formatDuration, formatBytes, formatETA } from '@utils/format';
+import { formatBytes } from '@utils/format';
 import { useTask } from '@hooks/useTask';
 import type { VideoMetadata, VideoCompressOptions, VideoCompressProgress } from './types';
-
-const FORMATS = ['mp4', 'webm', 'mkv', 'avi', 'mov'];
-const PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'];
-const RESOLUTIONS = [
-    { label: '4K', width: 3840, height: 2160 },
-    { label: '2K', width: 2560, height: 1440 },
-    { label: '1080p', width: 1920, height: 1080 },
-    { label: '720p', width: 1280, height: 720 },
-    { label: '480p', width: 854, height: 480 },
-    { label: '360p', width: 640, height: 360 },
-];
 
 export const VideoCompressor: React.FC = () => {
     const [file, setFile] = useState<VideoMetadata | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState<VideoCompressProgress | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [outputPath, setOutputPath] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
+    const [_outputPath, setOutputPath] = useState<string | null>(null);
     const [previewError, setPreviewError] = useState(false);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
 
     // Settings
-    const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'webm' | 'mkv' | 'avi' | 'mov'>('mp4');
-    const [selectedCodec, setSelectedCodec] = useState<'h264' | 'hevc' | 'vp9' | 'av1'>('h264');
-    const [targetResolution, setTargetResolution] = useState<{ width: number; height: number } | null>(null);
-    const [scaleMode, setScaleMode] = useState<'fit' | 'fill' | 'stretch'>('fit');
-    const [crf, setCrf] = useState(23);
-    const [preset, setPreset] = useState('medium');
-    const [keepAudio, setKeepAudio] = useState(true);
-    const [useHardwareAcceleration, setUseHardwareAcceleration] = useState(true);
-    const [compressionMode, setCompressionMode] = useState<'quality' | 'target'>('quality');
-    const [targetSizeMB, setTargetSizeMB] = useState(25);
+    const [selectedFormat, _setSelectedFormat] = useState<'mp4' | 'webm' | 'mkv' | 'avi' | 'mov'>('mp4');
+    const [_selectedCodec, _setSelectedCodec] = useState<'h264' | 'hevc' | 'vp9' | 'av1'>('h264');
+    const [targetResolution, _setTargetResolution] = useState<{ width: number; height: number } | null>(null);
+    const [scaleMode, _setScaleMode] = useState<'fit' | 'fill' | 'stretch'>('fit');
+    const [crf, _setCrf] = useState(23);
+    const [preset, _setPreset] = useState('medium');
+    const [keepAudio, _setKeepAudio] = useState(true);
+    const [useHardwareAcceleration, _setUseHardwareAcceleration] = useState(true);
+    const [compressionMode, _setCompressionMode] = useState<'quality' | 'target'>('quality');
+    const [targetSizeMB, _setTargetSizeMB] = useState(25);
 
     const { runTask } = useTask('video-compressor');
 

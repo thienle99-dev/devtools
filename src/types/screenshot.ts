@@ -20,7 +20,7 @@ export interface CaptureOptions {
     height?: number;
 }
 
-export type AnnotationType = 'arrow' | 'rectangle' | 'circle' | 'text' | 'line' | 'highlight' | 'blur' | 'number';
+export type AnnotationType = 'arrow' | 'rectangle' | 'circle' | 'text' | 'line' | 'highlight' | 'blur' | 'number' | 'pen' | 'image';
 
 export interface Annotation {
     id: string;

@@ -1,7 +1,6 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, desktopCapturer, protocol } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, clipboard, Notification, dialog, protocol } from 'electron'
 import path, { dirname, join } from 'node:path'
-import { promisify } from 'node:util';
-import { exec } from 'node:child_process';
+
 import Store from 'electron-store';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
@@ -9,8 +8,6 @@ import { createReadStream } from 'node:fs';
 import * as os from 'node:os';
 import { randomUUID, createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
-import si from 'systeminformation';
-
 import { videoMerger } from './video-merger';
 import { audioManager } from './audio-manager';
 import { audioExtractor } from './audio-extractor';
@@ -24,8 +21,9 @@ import { pluginManager } from './plugin-manager';
 import { setupScreenshotHandlers } from './screenshot';
 import { setupCleanerHandlers } from './cleaner';
 import { setupDownloadManagerHandlers } from './download-manager-handlers';
-
-const execAsync = promisify(exec)
+import { setupCryptoHandlers } from './crypto';
+import { setupSystemHandlers } from './system';
+import { setupZipHandlers } from './zip';
 
 const store = new Store()
 
@@ -161,26 +159,26 @@ function updateTrayMenu() {
           }
         },
         {
-           label: '# Hash Text (SHA-256)',
-           click: () => {
-             try {
-               const text = clipboard.readText();
-               if (!text) throw new Error('Empty clipboard');
-               const hash = createHash('sha256').update(text).digest('hex');
-               clipboard.writeText(hash);
-               new Notification({
-                 title: '✓ Hash Generated',
-                 body: `SHA-256: ${hash.substring(0, 20)}...`,
-                 silent: true
-               }).show();
-             } catch (e) {
-                new Notification({
-                 title: '✗ Hash Failed',
-                 body: 'Could not hash clipboard content',
-                 silent: true
-               }).show();
-             }
-           }
+          label: '# Hash Text (SHA-256)',
+          click: () => {
+            try {
+              const text = clipboard.readText();
+              if (!text) throw new Error('Empty clipboard');
+              const hash = createHash('sha256').update(text).digest('hex');
+              clipboard.writeText(hash);
+              new Notification({
+                title: '✓ Hash Generated',
+                body: `SHA-256: ${hash.substring(0, 20)}...`,
+                silent: true
+              }).show();
+            } catch (e) {
+              new Notification({
+                title: '✗ Hash Failed',
+                body: 'Could not hash clipboard content',
+                silent: true
+              }).show();
+            }
+          }
         },
         { type: 'separator' },
         {
@@ -197,11 +195,11 @@ function updateTrayMenu() {
                 silent: true
               }).show();
             } catch (e) {
-               new Notification({
+              new Notification({
                 title: '✗ Encode Failed',
                 body: 'Could not encode clipboard content',
                 silent: true
-               }).show();
+              }).show();
             }
           }
         },
@@ -219,11 +217,11 @@ function updateTrayMenu() {
                 silent: true
               }).show();
             } catch (e) {
-               new Notification({
+              new Notification({
                 title: '✗ Decode Failed',
                 body: 'Invalid Base64 in clipboard',
                 silent: true
-               }).show();
+              }).show();
             }
           }
         }
@@ -379,305 +377,6 @@ function createWindow() {
     }
   });
 
-  // ========== Permissions IPC Handlers ==========
-
-  // Check all permissions
-  ipcMain.handle('permissions:check-all', async () => {
-    const platform = process.platform;
-    const results: Record<string, any> = {};
-
-    if (platform === 'darwin') {
-      // macOS permissions
-      results.accessibility = await checkAccessibilityPermission();
-      results.fullDiskAccess = await checkFullDiskAccessPermission();
-      results.screenRecording = await checkScreenRecordingPermission();
-    } else if (platform === 'win32') {
-      // Windows permissions
-      results.fileAccess = await checkFileAccessPermission();
-      results.registryAccess = await checkRegistryAccessPermission();
-    }
-
-    // Common permissions
-    results.clipboard = await checkClipboardPermission();
-    results.launchAtLogin = await checkLaunchAtLoginPermission();
-
-    return results;
-  });
-
-  // Check Accessibility (macOS)
-  ipcMain.handle('permissions:check-accessibility', async () => {
-    if (process.platform !== 'darwin') {
-      return { status: 'not-applicable', message: 'Only available on macOS' };
-    }
-    return await checkAccessibilityPermission();
-  });
-
-  // Check Full Disk Access (macOS)
-  ipcMain.handle('permissions:check-full-disk-access', async () => {
-    if (process.platform !== 'darwin') {
-      return { status: 'not-applicable', message: 'Only available on macOS' };
-    }
-    return await checkFullDiskAccessPermission();
-  });
-
-  // Check Screen Recording (macOS)
-  ipcMain.handle('permissions:check-screen-recording', async () => {
-    if (process.platform !== 'darwin') {
-      return { status: 'not-applicable', message: 'Only available on macOS' };
-    }
-    return await checkScreenRecordingPermission();
-  });
-
-  // Test Clipboard
-  ipcMain.handle('permissions:test-clipboard', async () => {
-    return await testClipboardPermission();
-  });
-
-  // Test File Access
-  ipcMain.handle('permissions:test-file-access', async () => {
-    return await testFileAccessPermission();
-  });
-
-  // Open System Preferences/Settings
-  ipcMain.handle('permissions:open-system-preferences', async (_event, permissionType?: string) => {
-    return await openSystemPreferences(permissionType);
-  });
-
-  // ========== Permission Check Functions ==========
-
-  async function checkAccessibilityPermission(): Promise<{ status: string; message?: string }> {
-    if (process.platform !== 'darwin') {
-      return { status: 'not-applicable' };
-    }
-
-    try {
-      // Try to test by attempting to register a global shortcut
-      try {
-        const testShortcut = 'CommandOrControl+Shift+TestPermission';
-        const registered = globalShortcut.register(testShortcut, () => { });
-        if (registered) {
-          globalShortcut.unregister(testShortcut);
-          return { status: 'granted' };
-        }
-      } catch (e) {
-        // If registration fails, likely no permission
-      }
-
-      // Alternative: Check if we can access accessibility features
-      // This is a heuristic - if global shortcuts work, accessibility is likely granted
-      const existingShortcuts = globalShortcut.isRegistered('CommandOrControl+Shift+D');
-      if (existingShortcuts) {
-        return { status: 'granted' };
-      }
-
-      return { status: 'not-determined', message: 'Unable to determine status. Try testing.' };
-    } catch (error) {
-      return { status: 'error', message: (error as Error).message };
-    }
-  }
-
-  async function checkFullDiskAccessPermission(): Promise<{ status: string; message?: string }> {
-    if (process.platform !== 'darwin') {
-      return { status: 'not-applicable' };
-    }
-
-    try {
-      // Test by trying to access a protected directory
-      const protectedPaths = [
-        '/Library/Application Support',
-        '/System/Library',
-        '/private/var/db'
-      ];
-
-      for (const testPath of protectedPaths) {
-        try {
-          await fs.access(testPath);
-          // If we can access, likely have permission
-          return { status: 'granted' };
-        } catch (e) {
-          // Continue to next path
-        }
-      }
-
-      // If we can read home directory without issues, might be granted
-      const homeDir = os.homedir();
-      try {
-        await fs.readdir(homeDir);
-        return { status: 'granted', message: 'Basic file access available' };
-      } catch (e) {
-        return { status: 'denied', message: 'Cannot access protected directories' };
-      }
-    } catch (error) {
-      return { status: 'error', message: (error as Error).message };
-    }
-  }
-
-  async function checkScreenRecordingPermission(): Promise<{ status: string; message?: string }> {
-    if (process.platform !== 'darwin') {
-      return { status: 'not-applicable' };
-    }
-
-    try {
-      // Test by trying to use desktopCapturer (Electron's way)
-      try {
-        // Use desktopCapturer to check screen recording permission
-        const sources = await desktopCapturer.getSources({ types: ['screen'] });
-        if (sources && sources.length > 0) {
-          return { status: 'granted' };
-        }
-      } catch (e) {
-        // If getSources fails, likely no permission
-      }
-
-      return { status: 'not-determined', message: 'Unable to determine. Try testing screenshot feature.' };
-    } catch (error) {
-      return { status: 'error', message: (error as Error).message };
-    }
-  }
-
-  async function checkClipboardPermission(): Promise<{ status: string; message?: string }> {
-    try {
-      // Test read and write
-      const originalText = clipboard.readText();
-      clipboard.writeText('__PERMISSION_TEST__');
-      const written = clipboard.readText();
-      clipboard.writeText(originalText); // Restore
-
-      if (written === '__PERMISSION_TEST__') {
-        return { status: 'granted' };
-      }
-      return { status: 'denied', message: 'Clipboard access failed' };
-    } catch (error) {
-      return { status: 'error', message: (error as Error).message };
-    }
-  }
-
-  async function checkLaunchAtLoginPermission(): Promise<{ status: string; message?: string }> {
-    try {
-      const loginItemSettings = app.getLoginItemSettings();
-      // This doesn't check permission, just if it's enabled
-      // Permission is usually granted automatically, but may fail if not code-signed
-      return {
-        status: loginItemSettings.openAtLogin ? 'granted' : 'not-determined',
-        message: loginItemSettings.openAtLogin ? 'Launch at login is enabled' : 'Launch at login is not enabled'
-      };
-    } catch (error) {
-      return { status: 'error', message: (error as Error).message };
-    }
-  }
-
-  async function checkFileAccessPermission(): Promise<{ status: string; message?: string }> {
-    if (process.platform !== 'win32') {
-      return { status: 'not-applicable' };
-    }
-
-    try {
-      // Test by trying to read/write a temp file
-      const testPath = join(os.tmpdir(), `permission-test-${Date.now()}.txt`);
-      const testContent = 'permission test';
-
-      await fs.writeFile(testPath, testContent);
-      const readContent = await fs.readFile(testPath, 'utf-8');
-      await fs.unlink(testPath);
-
-      if (readContent === testContent) {
-        return { status: 'granted' };
-      }
-      return { status: 'denied', message: 'File access test failed' };
-    } catch (error) {
-      return { status: 'denied', message: (error as Error).message };
-    }
-  }
-
-  async function checkRegistryAccessPermission(): Promise<{ status: string; message?: string }> {
-    if (process.platform !== 'win32') {
-      return { status: 'not-applicable' };
-    }
-
-    try {
-      // Test by trying to read a registry key (read-only, safe)
-      const { stdout } = await execAsync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion" /v ProgramFilesDir 2>&1');
-      if (stdout && !stdout.includes('ERROR')) {
-        return { status: 'granted' };
-      }
-      return { status: 'denied', message: 'Registry access test failed' };
-    } catch (error) {
-      return { status: 'denied', message: (error as Error).message };
-    }
-  }
-
-  async function testClipboardPermission(): Promise<{ status: string; message?: string }> {
-    try {
-      const originalText = clipboard.readText();
-      const testText = `Permission test ${Date.now()}`;
-
-      clipboard.writeText(testText);
-      const readText = clipboard.readText();
-      clipboard.writeText(originalText); // Restore
-
-      if (readText === testText) {
-        return { status: 'granted', message: 'Clipboard read/write test passed' };
-      }
-      return { status: 'denied', message: 'Clipboard test failed' };
-    } catch (error) {
-      return { status: 'error', message: (error as Error).message };
-    }
-  }
-
-  async function testFileAccessPermission(): Promise<{ status: string; message?: string }> {
-    try {
-      const testDir = os.tmpdir();
-      const testPath = join(testDir, `permission-test-${Date.now()}.txt`);
-      const testContent = `Test ${Date.now()}`;
-
-      // Test write
-      await fs.writeFile(testPath, testContent);
-
-      // Test read
-      const readContent = await fs.readFile(testPath, 'utf-8');
-
-      // Test delete
-      await fs.unlink(testPath);
-
-      if (readContent === testContent) {
-        return { status: 'granted', message: 'File access test passed' };
-      }
-      return { status: 'denied', message: 'File access test failed' };
-    } catch (error) {
-      return { status: 'denied', message: (error as Error).message };
-    }
-  }
-
-  async function openSystemPreferences(permissionType?: string): Promise<{ success: boolean; message?: string }> {
-    const platform = process.platform;
-
-    try {
-      if (platform === 'darwin') {
-        // macOS - Open System Preferences to specific pane
-        let command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy"';
-
-        if (permissionType === 'accessibility') {
-          command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"';
-        } else if (permissionType === 'full-disk-access') {
-          command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"';
-        } else if (permissionType === 'screen-recording') {
-          command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"';
-        }
-
-        await execAsync(command);
-        return { success: true, message: 'Opened System Preferences' };
-      } else if (platform === 'win32') {
-        // Windows - Open Settings to Privacy section
-        await execAsync('start ms-settings:privacy');
-        return { success: true, message: 'Opened Windows Settings' };
-      }
-
-      return { success: false, message: 'Unsupported platform' };
-    } catch (error) {
-      return { success: false, message: (error as Error).message };
-    }
-  }
-
 
 
   // Clipboard read IPC - Use Electron's clipboard API (no permission needed)
@@ -787,360 +486,15 @@ app.whenReady().then(() => {
   const launchAtLogin = store.get('launchAtLogin') as boolean;
   setLoginItemSettingsSafely(launchAtLogin === true);
 
+  setupSystemHandlers();
+  setupCryptoHandlers();
+  setupZipHandlers();
+  setupCleanerHandlers();
+  setupDownloadManagerHandlers();
 
 
 
-  ipcMain.handle('get-disk-stats', async () => {
-    try {
-      const [fsSize, ioStatsRaw] = await Promise.all([
-        si.fsSize(),
-        si.disksIO()
-      ]);
 
-      // si.disksIO() returns an array, we need to aggregate or use the first disk
-      let ioStats = null;
-      if (ioStatsRaw && Array.isArray(ioStatsRaw) && ioStatsRaw.length > 0) {
-        // Use the first disk's IO stats, or aggregate all
-        const firstDisk = ioStatsRaw[0];
-        ioStats = {
-          rIO: firstDisk.rIO || 0,
-          wIO: firstDisk.wIO || 0,
-          tIO: firstDisk.tIO || 0,
-          rIO_sec: firstDisk.rIO_sec || 0,
-          wIO_sec: firstDisk.wIO_sec || 0,
-          tIO_sec: firstDisk.tIO_sec || 0,
-        };
-      } else if (ioStatsRaw && typeof ioStatsRaw === 'object' && !Array.isArray(ioStatsRaw)) {
-        // If it's an object (single disk)
-        ioStats = {
-          rIO: ioStatsRaw.rIO || 0,
-          wIO: ioStatsRaw.wIO || 0,
-          tIO: ioStatsRaw.tIO || 0,
-          rIO_sec: ioStatsRaw.rIO_sec || 0,
-          wIO_sec: ioStatsRaw.wIO_sec || 0,
-          tIO_sec: ioStatsRaw.tIO_sec || 0,
-        };
-      }
-
-      return { fsSize, ioStats };
-    } catch (error) {
-      console.error('Error fetching disk stats:', error);
-      // Return fsSize even if ioStats fails
-      const fsSize = await si.fsSize().catch(() => []);
-      return { fsSize, ioStats: null };
-    }
-  });
-
-  ipcMain.handle('get-gpu-stats', async () => {
-    return await si.graphics();
-  });
-
-  ipcMain.handle('get-battery-stats', async () => {
-    try {
-      const battery = await si.battery();
-
-      // Tính toán power consumption và charging power
-      let powerConsumptionRate: number | undefined;
-      let chargingPower: number | undefined;
-
-      // Nếu systeminformation có sẵn powerConsumptionRate
-      if ('powerConsumptionRate' in battery && battery.powerConsumptionRate && typeof battery.powerConsumptionRate === 'number') {
-        powerConsumptionRate = battery.powerConsumptionRate;
-      }
-
-      // Nếu có voltage và currentCapacity, có thể ước tính
-      if (battery.voltage && battery.voltage > 0) {
-        // Ước tính power consumption dựa trên voltage và trạng thái
-        // Power (mW) = Voltage (V) * Current (mA)
-        // Nếu đang discharge, ước tính current từ capacity và time remaining
-        if (!battery.isCharging && battery.timeRemaining > 0 && battery.currentCapacity > 0) {
-          // Ước tính: current = (currentCapacity / timeRemaining) * 60 (mA)
-          const estimatedCurrent = (battery.currentCapacity / battery.timeRemaining) * 60;
-          powerConsumptionRate = battery.voltage * estimatedCurrent;
-        }
-
-        // Nếu đang charge, ước tính charging power
-        if (battery.isCharging && battery.voltage > 0) {
-          // Ước tính charging current (thường 1-3A cho laptop)
-          const estimatedChargingCurrent = 2000; // 2A = 2000mA (ước tính)
-          chargingPower = battery.voltage * estimatedChargingCurrent;
-        }
-      }
-
-      return {
-        ...battery,
-        powerConsumptionRate,
-        chargingPower,
-      };
-    } catch (error) {
-      console.error('Error fetching battery stats:', error);
-      return null;
-    }
-  });
-
-  ipcMain.handle('get-sensor-stats', async () => {
-    return await si.cpuTemperature();
-  });
-
-  // Bluetooth stats
-  ipcMain.handle('get-bluetooth-stats', async () => {
-    try {
-      const bluetooth = await si.bluetoothDevices();
-      return {
-        enabled: bluetooth.length > 0 || await checkBluetoothEnabled(),
-        devices: bluetooth.map((device: any) => ({
-          name: device.name || 'Unknown',
-          mac: device.mac || device.address || '',
-          type: device.type || device.deviceClass || 'unknown',
-          battery: device.battery || device.batteryLevel || undefined,
-          connected: device.connected !== false,
-          rssi: device.rssi || device.signalStrength || undefined,
-          manufacturer: device.manufacturer || device.vendor || undefined,
-        }))
-      };
-    } catch (error) {
-      console.error('Error fetching bluetooth stats:', error);
-      return { enabled: false, devices: [] };
-    }
-  });
-
-  // Time zones stats
-  ipcMain.handle('get-timezones-stats', async () => {
-    try {
-      const time = await si.time();
-      const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      // Default time zones (có thể config từ preferences)
-      const defaultZones = [
-        'America/New_York',
-        'Europe/London',
-        'Asia/Tokyo',
-        'Asia/Shanghai',
-      ];
-
-      const zones = defaultZones.map(tz => {
-        const now = new Date();
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: tz,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        });
-        const dateFormatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: tz,
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        });
-
-        const offset = getTimezoneOffset(tz);
-        const cityName = tz.split('/').pop()?.replace('_', ' ') || tz;
-
-        return {
-          timezone: tz,
-          city: cityName,
-          time: formatter.format(now),
-          date: dateFormatter.format(now),
-          offset,
-        };
-      });
-
-      return {
-        local: {
-          timezone: localTz,
-          city: localTz.split('/').pop()?.replace('_', ' ') || 'Local',
-          time: time.current,
-          date: time.uptime ? new Date().toLocaleDateString() : '',
-          offset: getTimezoneOffset(localTz),
-        },
-        zones,
-      };
-    } catch (error) {
-      console.error('Error fetching timezones stats:', error);
-      return null;
-    }
-  });
-
-  // System Info IPC Handlers
-  ipcMain.handle('system:get-info', async () => {
-    try {
-      const [cpu, mem, os, graphics, disk, net] = await Promise.all([
-        si.cpu(),
-        si.mem(),
-        si.osInfo(),
-        si.graphics(),
-        si.diskLayout(),
-        si.networkInterfaces()
-      ]);
-
-      return {
-        cpu,
-        memory: mem,
-        os,
-        graphics: graphics.controllers,
-        disks: disk,
-        network: net.filter(n => n.operstate === 'up')
-      };
-    } catch (error) {
-      console.error('Error fetching system info:', error);
-      return null;
-    }
-  });
-
-  // Application Manager IPC Handlers
-  ipcMain.handle('app-manager:get-installed-apps', async () => {
-    try {
-      const platform = process.platform;
-      const apps: any[] = [];
-
-      if (platform === 'darwin') {
-        const appsDir = '/Applications';
-        const files = await fs.readdir(appsDir, { withFileTypes: true }).catch(() => []);
-        for (const file of files) {
-          if (file.name.endsWith('.app')) {
-            const appPath = join(appsDir, file.name);
-            try {
-              const stats = await fs.stat(appPath);
-              const appName = file.name.replace('.app', '');
-              const isSystemApp = appPath.startsWith('/System') ||
-                appPath.startsWith('/Library') ||
-                appName.startsWith('com.apple.');
-
-              apps.push({
-                id: `macos-${appName}-${stats.ino}`,
-                name: appName,
-                version: undefined,
-                publisher: undefined,
-                installDate: stats.birthtime.toISOString(),
-                installLocation: appPath,
-                size: await getDirSize(appPath).catch(() => 0),
-                isSystemApp,
-              });
-            } catch (e) {
-              // Skip errors
-            }
-          }
-        }
-      } else if (platform === 'win32') {
-        try {
-          const script = `
-            Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
-            Where-Object { $_.DisplayName } | 
-            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, InstallLocation, EstimatedSize | 
-            ConvertTo-Json -Depth 3
-          `;
-          const { stdout } = await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
-          const data = JSON.parse(stdout);
-          const list = Array.isArray(data) ? data : [data];
-
-          for (const item of list) {
-            if (item.DisplayName) {
-              const publisher = item.Publisher || '';
-              const installLocation = item.InstallLocation || '';
-              const isSystemApp = publisher.includes('Microsoft') ||
-                publisher.includes('Windows') ||
-                installLocation.includes('Windows\\') ||
-                installLocation.includes('Program Files\\Windows');
-
-              apps.push({
-                id: `win-${item.DisplayName}-${item.InstallDate || 'unknown'}`,
-                name: item.DisplayName,
-                version: item.DisplayVersion || undefined,
-                publisher: publisher || undefined,
-                installDate: item.InstallDate ? formatWindowsDate(item.InstallDate) : undefined,
-                installLocation: installLocation || undefined,
-                size: item.EstimatedSize ? item.EstimatedSize * 1024 : undefined, // KB to bytes
-                isSystemApp,
-              });
-            }
-          }
-        } catch (e) {
-          console.error('Error fetching Windows apps:', e);
-        }
-      }
-
-      return apps;
-    } catch (error) {
-      console.error('Error fetching installed apps:', error);
-      return [];
-    }
-  });
-
-  ipcMain.handle('app-manager:get-running-processes', async () => {
-    try {
-      const processes = await si.processes();
-      const memInfo = await si.mem();
-
-      return processes.list.map((proc: any) => ({
-        pid: proc.pid,
-        name: proc.name,
-        cpu: proc.cpu || 0,
-        memory: proc.mem || 0,
-        memoryPercent: memInfo.total > 0 ? ((proc.mem || 0) / memInfo.total) * 100 : 0,
-        started: proc.started || '',
-        user: proc.user || undefined,
-        command: proc.command || undefined,
-        path: proc.path || undefined,
-      }));
-    } catch (error) {
-      console.error('Error fetching running processes:', error);
-      return [];
-    }
-  });
-
-  ipcMain.handle('app-manager:uninstall-app', async (_event, app: any) => {
-    try {
-      const platform = process.platform;
-
-      if (platform === 'darwin') {
-        // macOS: Remove .app bundle
-        if (app.installLocation) {
-          await fs.rm(app.installLocation, { recursive: true, force: true });
-          return { success: true };
-        }
-      } else if (platform === 'win32') {
-        // Windows: Use uninstall string from registry or wmic
-        try {
-          const script = `
-            $app = Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | 
-                   Where-Object { $_.DisplayName -eq "${app.name.replace(/"/g, '\\"')}" } | 
-                   Select-Object -First 1
-            if ($app.UninstallString) {
-              $uninstallString = $app.UninstallString
-              if ($uninstallString -match '^"(.+)"') {
-                $exe = $matches[1]
-                $args = $uninstallString.Substring($matches[0].Length).Trim()
-                Start-Process -FilePath $exe -ArgumentList $args -Wait
-              } else {
-                Start-Process -FilePath $uninstallString -Wait
-              }
-              Write-Output "Success"
-            } else {
-              Write-Output "No uninstall string found"
-            }
-          `;
-          await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
-          return { success: true };
-        } catch (e) {
-          return { success: false, error: (e as Error).message };
-        }
-      }
-
-      return { success: false, error: 'Unsupported platform' };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle('app-manager:kill-process', async (_event, pid: number) => {
-    try {
-      process.kill(pid, 'SIGTERM');
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
 
   // YouTube Downloader IPC Handlers
   ipcMain.handle('youtube:getInfo', async (_event, url: string) => {

@@ -438,7 +438,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
 
         let newShape: ShapeData | null = null;
 
-        if (activeAnnotationTool === 'rectangle') {
+        if (activeAnnotationTool === 'rect') {
             newShape = {
                 ...baseProps,
                 type: 'rect',

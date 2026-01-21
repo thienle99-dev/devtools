@@ -139,13 +139,7 @@ export async function generateFinalImage(
     return styledBaseUrl;
 }
 
-// 5. Apply output dimensions / presets if specified
-if (options.outputConfig) {
-    return applyOutputConfig(finalDataUrl, options.outputConfig, options.background);
-}
 
-return finalDataUrl;
-}
 
 export type SocialPreset = 'twitter' | 'instagram-square' | 'instagram-portrait' | 'instagram-story';
 

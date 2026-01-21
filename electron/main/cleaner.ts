@@ -7,6 +7,8 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import si from 'systeminformation';
 
+import { getDirSize } from './system';
+
 const execAsync = promisify(exec);
 
 // Cache for directory sizes to avoid recalculation
@@ -1624,23 +1626,7 @@ export function setupCleanerHandlers() {
     });
 }
 
-// Helper Functions (unchanged logic, reused)
-async function getDirSize(dirPath: string): Promise<number> {
-    let size = 0;
-    try {
-        const files = await fs.readdir(dirPath, { withFileTypes: true });
-        for (const file of files) {
-            const filePath = path.join(dirPath, file.name);
-            if (file.isDirectory()) {
-                size += await getDirSize(filePath);
-            } else {
-                const stats = await fs.stat(filePath).catch(() => null);
-                if (stats) size += stats.size;
-            }
-        }
-    } catch (e) { }
-    return size;
-}
+
 
 // Limited depth version for faster calculation at max depth
 async function getDirSizeLimited(dirPath: string, maxDepth: number, currentDepth: number = 0): Promise<number> {

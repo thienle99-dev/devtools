@@ -4,7 +4,7 @@ import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '@components/ui/Button';
 import { cn } from '@utils/cn';
-import { ArrowRightLeft, Code, Type, FileSpreadsheet, FileText, Copy, Eye, EyeOff, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
+import { ArrowRightLeft, Code, FileSpreadsheet, FileText, Copy, Eye, EyeOff, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
 import yaml from 'js-yaml';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import Papa from 'papaparse';
@@ -12,40 +12,40 @@ import { marked } from 'marked';
 import { toast } from 'sonner';
 
 const MODES = [
-    { 
-        id: 'json-yaml', 
-        name: 'JSON ↔ YAML', 
-        icon: ArrowRightLeft, 
+    {
+        id: 'json-yaml',
+        name: 'JSON ↔ YAML',
+        icon: ArrowRightLeft,
         category: 'data',
         color: 'text-emerald-400',
         bgColor: 'bg-emerald-500/10',
         borderColor: 'border-emerald-500/20',
         description: 'Convert between JSON and YAML formats'
     },
-    { 
-        id: 'json-xml', 
-        name: 'JSON ↔ XML', 
-        icon: Code, 
+    {
+        id: 'json-xml',
+        name: 'JSON ↔ XML',
+        icon: Code,
         category: 'data',
         color: 'text-cyan-400',
         bgColor: 'bg-cyan-500/10',
         borderColor: 'border-cyan-500/20',
         description: 'Convert between JSON and XML formats'
     },
-    { 
-        id: 'json-csv', 
-        name: 'JSON ↔ CSV', 
-        icon: FileSpreadsheet, 
+    {
+        id: 'json-csv',
+        name: 'JSON ↔ CSV',
+        icon: FileSpreadsheet,
         category: 'data',
         color: 'text-violet-400',
         bgColor: 'bg-violet-500/10',
         borderColor: 'border-violet-500/20',
         description: 'Convert between JSON arrays and CSV'
     },
-    { 
-        id: 'markdown-html', 
-        name: 'Markdown ↔ HTML', 
-        icon: FileText, 
+    {
+        id: 'markdown-html',
+        name: 'Markdown ↔ HTML',
+        icon: FileText,
         category: 'markup',
         color: 'text-amber-400',
         bgColor: 'bg-amber-500/10',
@@ -67,7 +67,6 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
 
     const data = toolData || { input: '', output: '', options: { mode: initialMode } };
     const { input, output } = data;
-    const values = data.options?.values || {};
     const mode = (data.options?.mode || initialMode) as Mode;
     const [previewMarkdown, setPreviewMarkdown] = useState(false);
 
@@ -105,7 +104,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             const res = yaml.dump(parsed);
             setToolData(effectiveId, { output: res });
             toast.success('Converted JSON to YAML');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -122,7 +121,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             const res = JSON.stringify(parsed, null, 2);
             setToolData(effectiveId, { output: res });
             toast.success('Converted YAML to JSON');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -141,7 +140,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             const res = builder.build(parsed);
             setToolData(effectiveId, { output: res });
             toast.success('Converted JSON to XML');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -158,7 +157,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             const res = JSON.stringify(parser.parse(input), null, 2);
             setToolData(effectiveId, { output: res });
             toast.success('Converted XML to JSON');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -176,7 +175,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             const csv = Papa.unparse(parsed, { quotes: true, header: true });
             setToolData(effectiveId, { output: csv });
             toast.success('Converted JSON to CSV');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -193,7 +192,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             if (res.errors.length > 0) throw new Error(res.errors[0].message);
             setToolData(effectiveId, { output: JSON.stringify(res.data, null, 2) });
             toast.success('Converted CSV to JSON');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -210,7 +209,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
             const html = await marked.parse(input);
             setToolData(effectiveId, { output: html });
             toast.success('Converted Markdown to HTML');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -266,10 +265,10 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
                         />
                     </div>
                     <div className="p-2.5 border-t border-border-glass/30 bg-[var(--color-glass-panel-light)] shrink-0">
-                        <Button 
-                            variant="primary" 
-                            size="sm" 
-                            onClick={leftAction} 
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={leftAction}
                             className="w-full font-semibold gap-2"
                             disabled={!input.trim()}
                         >
@@ -299,9 +298,9 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
                                     {previewMarkdown ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                 </button>
                             )}
-                            <button 
-                                onClick={() => handleCopy(output, 'Output')} 
-                                disabled={!output} 
+                            <button
+                                onClick={() => handleCopy(output, 'Output')}
+                                disabled={!output}
                                 className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed"
                                 title="Copy output"
                             >
@@ -327,10 +326,10 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
                         )}
                     </div>
                     <div className="p-2.5 border-t border-border-glass/30 bg-[var(--color-glass-panel-light)] shrink-0">
-                        <Button 
-                            variant="primary" 
-                            size="sm" 
-                            onClick={rightAction} 
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={rightAction}
                             className="w-full font-semibold gap-2"
                             disabled={!input.trim() || rightLabel.includes('N/A')}
                         >
@@ -377,14 +376,14 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
                         {MODES.map(m => {
                             const Icon = m.icon;
                             const isActive = mode === m.id;
-                            
+
                             return (
                                 <button
                                     key={m.id}
                                     onClick={() => handleModeChange(m.id)}
                                     className={cn(
                                         "relative p-2 rounded-lg transition-all text-left group",
-                                        isActive 
+                                        isActive
                                             ? `${m.bgColor} ${m.borderColor} border-2`
                                             : "border border-border-glass/40 bg-[var(--color-glass-panel-light)] hover:bg-[var(--color-glass-button)] hover:border-border-glass/60"
                                     )}

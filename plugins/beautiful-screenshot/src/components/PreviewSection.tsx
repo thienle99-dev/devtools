@@ -21,25 +21,11 @@ export const PreviewSection = ({
 }: PreviewSectionProps): JSX.Element => {
     const {
         currentScreenshot,
-        autoBalance,
-        redactionAreas,
         isCropping,
         setIsCropping,
         cropBounds,
         setCropBounds,
         setCurrentScreenshot,
-        background,
-        backgroundPadding,
-        canvasData,
-        borderRadius,
-        shadowBlur,
-        shadowOpacity,
-        shadowOffsetX,
-        shadowOffsetY,
-        inset,
-        showWindowControls,
-        watermark,
-        aspectRatio,
     } = useXnapperStore();
 
 

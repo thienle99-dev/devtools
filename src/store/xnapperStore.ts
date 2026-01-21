@@ -2,9 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { RedactionArea } from '../tools/screenshot/utils/redaction';
 import type { Background } from '../tools/screenshot/utils/backgroundGenerator';
-import type { AnnotationType, AnnotationConfig } from '../tools/screenshot/utils/annotations';
-import { DEFAULT_ANNOTATION_CONFIG } from '../tools/screenshot/utils/annotations';
+import type { AnnotationType, AnnotationConfig } from '../tools/screenshot/types';
 import type { CropBounds } from '../tools/screenshot/utils/crop';
+import { DEFAULT_ANNOTATION_CONFIG } from '../tools/screenshot/types';
 
 export type CaptureMode = 'fullscreen' | 'window' | 'area' | 'url' | 'upload';
 export type ExportFormat = 'png' | 'jpg' | 'webp';

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import bcrypt from 'bcryptjs';
+// import bcrypt from 'bcryptjs'; // REMOVED
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
@@ -42,13 +42,11 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
 
     const handleHash = () => {
         setLoadingAction('Hash');
-        // Use timeout to allow UI update before blocking sync work if using sync bcrypt, 
-        // OR use async version. bcryptjs has async.
         setTimeout(async () => {
             try {
                 if (!input) return;
-                const salt = await bcrypt.genSalt(options.rounds);
-                const hash = await bcrypt.hash(input, salt);
+                // Use IPC
+                const hash = await (window as any).bcryptAPI.hash(input, options.rounds);
                 setToolData(effectiveId, { output: hash });
             } catch (e) {
                 setToolData(effectiveId, { output: 'Error generating hash' });
@@ -66,7 +64,7 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
                     setToolData(effectiveId, { meta: { isMatch: null } });
                     return;
                 }
-                const match = await bcrypt.compare(input, options.compareHash);
+                const match = await (window as any).bcryptAPI.compare(input, options.compareHash);
                 setToolData(effectiveId, { meta: { isMatch: match } });
             } catch (e) {
                 setToolData(effectiveId, { meta: { isMatch: false } }); // or error state

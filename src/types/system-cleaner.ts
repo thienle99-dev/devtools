@@ -329,9 +329,5 @@ export interface CleanerAPI {
     updateHealthTray: (data: HealthStatus) => void;
 }
 
-declare global {
-    interface Window {
-        cleanerAPI?: CleanerAPI;
-    }
-}
+
 

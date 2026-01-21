@@ -29,18 +29,18 @@ const gcd = (a: number, b: number): number => {
 const decimalToFraction = (decimal: number): string => {
     if (decimal === 0) return '0/1';
     if (decimal === 1) return '1/1';
-    
+
     const tolerance = 1.0E-6;
     let h1 = 1, h2 = 0, k1 = 0, k2 = 1;
     let b = decimal;
-    
+
     do {
         const a = Math.floor(b);
-        const aux = h1; h1 = a * h1 + h2; h2 = aux;
+        let aux = h1; h1 = a * h1 + h2; h2 = aux;
         aux = k1; k1 = a * k1 + k2; k2 = aux;
         b = 1 / (b - a);
     } while (Math.abs(decimal - h1 / k1) > decimal * tolerance);
-    
+
     const divisor = gcd(h1, k1);
     return `${h1 / divisor}/${k1 / divisor}`;
 };
@@ -124,12 +124,12 @@ export const PercentageFractionConverter: React.FC<PercentageFractionConverterPr
                     break;
             }
 
-            setToolData(effectiveId, { 
+            setToolData(effectiveId, {
                 output: result,
                 options: { ...data.options, mode }
             });
             toast.success('Conversion completed');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -175,8 +175,8 @@ export const PercentageFractionConverter: React.FC<PercentageFractionConverterPr
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-foreground-muted">Input</span>
                             </div>
                             {input && (
-                                <button 
-                                    onClick={() => handleCopy(input, 'Input')} 
+                                <button
+                                    onClick={() => handleCopy(input, 'Input')}
                                     className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400"
                                     title="Copy Input"
                                 >
@@ -194,10 +194,10 @@ export const PercentageFractionConverter: React.FC<PercentageFractionConverterPr
                             />
                         </div>
                         <div className="p-2.5 border-t border-border-glass/30 bg-[var(--color-glass-panel-light)] shrink-0">
-                            <Button 
-                                variant="primary" 
-                                size="sm" 
-                                onClick={convert} 
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={convert}
                                 className="w-full font-semibold gap-2"
                                 disabled={!input.trim()}
                             >
@@ -216,8 +216,8 @@ export const PercentageFractionConverter: React.FC<PercentageFractionConverterPr
                             </div>
                             <div className="flex items-center gap-2">
                                 {output && (
-                                    <button 
-                                        onClick={() => handleCopy(output, 'Output')} 
+                                    <button
+                                        onClick={() => handleCopy(output, 'Output')}
                                         className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400"
                                         title="Copy Output"
                                     >

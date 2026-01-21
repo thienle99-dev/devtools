@@ -143,6 +143,9 @@
 - [ ] Hash Format Converter (Hex ↔ Base64 ↔ Binary)
 - [x] MIME Type Converter (File extension ↔ MIME type)
 - [x] Currency Converter (Convert between currencies with exchange rates)
+- [ ] Base58/Base62 Converter (Text ↔ Base58/Base62)
+- [ ] dotenv ↔ JSON Converter (ENV string ↔ JSON object)
+- [ ] Protocol Buffers ↔ JSON Converter (proto definitions ↔ JSON sample)
 
 ### 3.2 Crypto Tools
 
@@ -279,6 +282,12 @@
 - [ ] Facebook Debugger Tool
 - [ ] LinkedIn Post Inspector
 - [ ] WhatsApp Link Preview Generator
+- [ ] DNS Propagation Checker (Monitor DNS record rollout globally)
+- [ ] SPF/DKIM/DMARC Validator
+- [ ] TLS Cipher Scanner (List supported TLS versions/ciphers)
+- [ ] HAR Viewer/Analyzer
+- [ ] Ping/Traceroute Tester
+- [ ] CDN Cache Tester (Purge & verify CDN cache state)
 
 ### 3.4 Development Tools
 
@@ -293,6 +302,10 @@
 - [x] Docker run → docker-compose converter
 - [x] Chmod calculator
 - [ ] Email normalizer
+- [ ] JSON Schema ↔ TypeScript Interface Generator
+- [ ] OpenAPI/Swagger Explorer & Mock Server
+- [ ] Log Formatter/Analyzer (NGINX/Apache/JSON logs)
+- [ ] HAR to cURL/Postman Converter
 
 ### 3.5 Text Tools
 
@@ -308,6 +321,9 @@
 - [x] IPv4 address converter
 - [x] MAC address generator
 - [x] MAC address lookup
+- [ ] Ping latency tester
+- [ ] Traceroute visualizer
+- [ ] DNS record inspector
 
 ### 3.7 Math & Measurement Tools
 
@@ -417,6 +433,10 @@
 
 - [x] Phone parser/formatter
 - [x] IBAN validator/parser
+- [ ] Credit Card BIN/IIN lookup
+- [ ] SWIFT/BIC lookup
+- [ ] VIN decoder
+- [ ] ISBN validator
 
 ### 3.11 PDF Tools
 

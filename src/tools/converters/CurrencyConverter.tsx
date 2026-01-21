@@ -104,15 +104,15 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ tabId }) =
             const usdAmount = amount / fromRate;
             const result = usdAmount * toRate;
 
-            const fromCurr = CURRENCIES.find(c => c.code === fromCurrency);
+            // const fromCurr = CURRENCIES.find(c => c.code === fromCurrency);
             const toCurr = CURRENCIES.find(c => c.code === toCurrency);
 
-            setToolData(effectiveId, { 
+            setToolData(effectiveId, {
                 output: `${toCurr?.symbol || ''}${result.toFixed(2)} ${toCurrency}\n\nRate: 1 ${fromCurrency} = ${(toRate / fromRate).toFixed(4)} ${toCurrency}`,
                 options: { ...data.options, fromCurrency, toCurrency }
             });
             toast.success('Conversion completed');
-        } catch (e) { 
+        } catch (e) {
             const errorMsg = `Error: ${(e as Error).message}`;
             setToolData(effectiveId, { output: errorMsg });
             toast.error('Conversion failed');
@@ -191,8 +191,8 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ tabId }) =
                                 </span>
                             </div>
                             {input && (
-                                <button 
-                                    onClick={() => handleCopy(input, 'Input')} 
+                                <button
+                                    onClick={() => handleCopy(input, 'Input')}
                                     className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400"
                                     title="Copy Input"
                                 >
@@ -210,10 +210,10 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ tabId }) =
                             />
                         </div>
                         <div className="p-2.5 border-t border-border-glass/30 bg-[var(--color-glass-panel-light)] shrink-0">
-                            <Button 
-                                variant="primary" 
-                                size="sm" 
-                                onClick={convert} 
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={convert}
                                 className="w-full font-semibold gap-2"
                                 disabled={!input.trim() || loading}
                             >
@@ -238,8 +238,8 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ tabId }) =
                             </div>
                             <div className="flex items-center gap-2">
                                 {output && (
-                                    <button 
-                                        onClick={() => handleCopy(output, 'Output')} 
+                                    <button
+                                        onClick={() => handleCopy(output, 'Output')}
                                         className="p-1.5 rounded-md transition-all hover:bg-[var(--color-glass-button)] hover:text-emerald-400"
                                         title="Copy Output"
                                     >

@@ -1,4 +1,3 @@
-import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
@@ -11,7 +10,7 @@ import type {
     TikTokDownloadProgress
 } from '../../src/types/tiktok';
 
-const require = createRequire(import.meta.url);
+
 
 interface TikTokSettings {
     downloadPath?: string;
@@ -65,9 +64,7 @@ export class TikTokDownloader {
 
     private async init(): Promise<void> {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const ytDlpModule = require('yt-dlp-wrap');
-            const YTDlpWrap = ytDlpModule.default || ytDlpModule;
+            const { YTDlpWrap } = await import('./yt-dlp');
 
             // Ensure binary exists (YouTube downloader should have handled this, but we check just in case)
             if (!fs.existsSync(this.binaryPath)) {
