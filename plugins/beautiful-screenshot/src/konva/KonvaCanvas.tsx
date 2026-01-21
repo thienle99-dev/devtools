@@ -159,6 +159,11 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     const activeShapeIdRef = useRef<string | null>(null);
     const [editingShape, setEditingShape] = useState<string | null>(null);
 
+    // Pan state
+    const isPanningRef = useRef(false);
+    const lastPointerPositionRef = useRef({ x: 0, y: 0 });
+    const spacePressedRef = useRef(false);
+
     // History
     const [history, setHistory] = useState<any[][]>([[]]);
     const [historyStep, setHistoryStep] = useState(0);
@@ -311,9 +316,55 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedId, shapes, editingShape]);
 
+    // Handle keyboard for panning
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                spacePressedRef.current = true;
+                if (stageRef.current) {
+                    const container = stageRef.current.container();
+                    container.style.cursor = 'grab';
+                }
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                spacePressedRef.current = false;
+                isPanningRef.current = false;
+                if (stageRef.current) {
+                    const container = stageRef.current.container();
+                    container.style.cursor = 'default';
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
     // Drawing Logic
     const handleMouseDown = (e: any) => {
-        const clickedOnEmpty = e.target === e.target.getStage();
+        const stage = e.target.getStage();
+        const clickedOnEmpty = e.target === stage;
+        
+        // Pan mode: spacebar + drag or middle mouse button
+        if (spacePressedRef.current || e.evt.button === 1) {
+            isPanningRef.current = true;
+            const pos = stage.getPointerPosition();
+            lastPointerPositionRef.current = { x: pos.x, y: pos.y };
+            if (stageRef.current) {
+                const container = stageRef.current.container();
+                container.style.cursor = 'grabbing';
+            }
+            return;
+        }
+
         if (clickedOnEmpty) {
             selectShape(null);
         }
@@ -326,7 +377,6 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         // Deselect when starting to draw
         selectShape(null);
 
-        const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
         const id = `${activeAnnotationTool}-${Date.now()}`;
         
@@ -419,9 +469,24 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     };
 
     const handleMouseMove = (e: any) => {
+        const stage = e.target.getStage();
+        
+        // Handle panning
+        if (isPanningRef.current && stageRef.current) {
+            const pos = stage.getPointerPosition();
+            const dx = pos.x - lastPointerPositionRef.current.x;
+            const dy = pos.y - lastPointerPositionRef.current.y;
+            
+            stageRef.current.x(stageRef.current.x() + dx);
+            stageRef.current.y(stageRef.current.y() + dy);
+            stageRef.current.batchDraw();
+            
+            lastPointerPositionRef.current = { x: pos.x, y: pos.y };
+            return;
+        }
+
         if (!isDrawing.current || !activeShapeIdRef.current) return;
         
-        const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
         
         setShapes(prev => prev.map(s => {
@@ -457,6 +522,15 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     };
 
     const handleMouseUp = () => {
+        // Stop panning
+        if (isPanningRef.current) {
+            isPanningRef.current = false;
+            if (stageRef.current) {
+                const container = stageRef.current.container();
+                container.style.cursor = spacePressedRef.current ? 'grab' : 'default';
+            }
+        }
+
         if (isDrawing.current && activeShapeIdRef.current) {
             isDrawing.current = false;
             // Enable draggable after drawing
@@ -623,7 +697,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     return (
         <div 
             ref={containerRef} 
-            className="w-full h-full flex items-center justify-center overflow-hidden bg-transparent"
+            className="w-full h-full flex items-center justify-center overflow-auto bg-transparent custom-scrollbar"
         >
             <div style={{ position: 'relative', width: imageSize.width * scale * baseZoom, height: imageSize.height * scale * baseZoom }}>
                 <Stage 

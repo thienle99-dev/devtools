@@ -138,11 +138,12 @@ export const PreviewSection = ({
                     width: '100%',
                     height: '100%',
                     position: 'relative',
-                    overflow: 'hidden',
+                    overflow: 'auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
+                className="custom-scrollbar"
             >
                 <KonvaCanvas
                     ref={canvasRef as any}
