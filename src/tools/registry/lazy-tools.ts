@@ -6,7 +6,11 @@ import React from 'react';
 // Handled by UniversalFormatter
 
 // Converters
-export const Base64FileConverter = React.lazy(() => import('@tools/converters/Base64FileConverter').then(m => ({ default: m.Base64FileConverter })));
+export const Base64Converter = React.lazy(() => import('@tools/converters/Base64Converter').then(m => ({ default: m.Base64Converter })));
+export const UrlEncoder = React.lazy(() => import('@tools/converters/UrlEncoder').then(m => ({ default: m.UrlEncoder })));
+export const HtmlEntityEncoder = React.lazy(() => import('@tools/converters/HtmlEntityEncoder').then(m => ({ default: m.HtmlEntityEncoder })));
+export const NumberBaseConverter = React.lazy(() => import('@tools/converters/NumberBaseConverter').then(m => ({ default: m.NumberBaseConverter })));
+export const TextCaseConverter = React.lazy(() => import('@tools/converters/TextCaseConverter').then(m => ({ default: m.TextCaseConverter })));
 export const ColorConverter = React.lazy(() => import('@tools/converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
 export const DateConverter = React.lazy(() => import('@tools/converters/DateConverter').then(m => ({ default: m.DateConverter })));
 

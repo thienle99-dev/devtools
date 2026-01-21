@@ -3,15 +3,12 @@ import { ToolPane } from '../../components/layout/ToolPane';
 import { CodeEditor } from '../../components/ui/CodeEditor';
 import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { cn } from '@utils/cn';
-import { ArrowRightLeft, Code, Binary, Lock, Type, FileSpreadsheet, FileText, Copy, Eye, EyeOff, Link, Globe, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
+import { ArrowRightLeft, Code, Type, FileSpreadsheet, FileText, Copy, Eye, EyeOff, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
 import yaml from 'js-yaml';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
-import CryptoJS from 'crypto-js';
 import Papa from 'papaparse';
 import { marked } from 'marked';
-import he from 'he';
 import { toast } from 'sonner';
 
 const MODES = [
@@ -54,56 +51,6 @@ const MODES = [
         bgColor: 'bg-amber-500/10',
         borderColor: 'border-amber-500/20',
         description: 'Convert Markdown to HTML and preview'
-    },
-    { 
-        id: 'base64', 
-        name: 'Base64', 
-        icon: Lock, 
-        category: 'string',
-        color: 'text-rose-400',
-        bgColor: 'bg-rose-500/10',
-        borderColor: 'border-rose-500/20',
-        description: 'Encode and decode Base64 strings'
-    },
-    { 
-        id: 'url-encode', 
-        name: 'URL Encode', 
-        icon: Link, 
-        category: 'string',
-        color: 'text-blue-400',
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/20',
-        description: 'URL encode and decode strings'
-    },
-    { 
-        id: 'html-entity', 
-        name: 'HTML Entity', 
-        icon: Globe, 
-        category: 'string',
-        color: 'text-indigo-400',
-        bgColor: 'bg-indigo-500/10',
-        borderColor: 'border-indigo-500/20',
-        description: 'Escape and unescape HTML entities'
-    },
-    { 
-        id: 'number-base', 
-        name: 'Number Base', 
-        icon: Binary, 
-        category: 'number',
-        color: 'text-orange-400',
-        bgColor: 'bg-orange-500/10',
-        borderColor: 'border-orange-500/20',
-        description: 'Convert between decimal, hex, octal, binary'
-    },
-    { 
-        id: 'case', 
-        name: 'Text Case', 
-        icon: Type, 
-        category: 'string',
-        color: 'text-pink-400',
-        bgColor: 'bg-pink-500/10',
-        borderColor: 'border-pink-500/20',
-        description: 'Convert text to different case formats'
     },
 ] as const;
 
@@ -275,163 +222,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
         setToolData(effectiveId, { output: "HTML to Markdown not fully supported yet." });
     };
 
-    // Base64
-    const encodeBase64 = () => {
-        try {
-            if (!input.trim()) {
-                toast.error('Input is empty');
-                return;
-            }
-            const res = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(input));
-            setToolData(effectiveId, { output: res });
-            toast.success('Encoded to Base64');
-        } catch (e) { 
-            const errorMsg = `Error: ${(e as Error).message}`;
-            setToolData(effectiveId, { output: errorMsg });
-            toast.error('Encoding failed');
-        }
-    };
 
-    const decodeBase64 = () => {
-        try {
-            if (!input.trim()) {
-                toast.error('Input is empty');
-                return;
-            }
-            const res = CryptoJS.enc.Base64.parse(input).toString(CryptoJS.enc.Utf8);
-            setToolData(effectiveId, { output: res });
-            toast.success('Decoded from Base64');
-        } catch (e) { 
-            const errorMsg = `Error: ${(e as Error).message}`;
-            setToolData(effectiveId, { output: errorMsg });
-            toast.error('Decoding failed');
-        }
-    };
-
-    // URL Encode
-    const encodeUrl = () => {
-        try {
-            if (!input.trim()) {
-                toast.error('Input is empty');
-                return;
-            }
-            setToolData(effectiveId, { output: encodeURIComponent(input) });
-            toast.success('URL encoded');
-        } catch (e) { 
-            const errorMsg = `Error: ${(e as Error).message}`;
-            setToolData(effectiveId, { output: errorMsg });
-            toast.error('Encoding failed');
-        }
-    };
-
-    const decodeUrl = () => {
-        try {
-            if (!input.trim()) {
-                toast.error('Input is empty');
-                return;
-            }
-            setToolData(effectiveId, { output: decodeURIComponent(input) });
-            toast.success('URL decoded');
-        } catch (e) { 
-            const errorMsg = `Error: ${(e as Error).message}`;
-            setToolData(effectiveId, { output: errorMsg });
-            toast.error('Decoding failed');
-        }
-    };
-
-    // HTML Entity
-    const encodeHtmlEntity = () => {
-        try {
-            if (!input.trim()) {
-                toast.error('Input is empty');
-                return;
-            }
-            setToolData(effectiveId, { output: he.encode(input) });
-            toast.success('HTML entities encoded');
-        } catch (e) { 
-            const errorMsg = `Error: ${(e as Error).message}`;
-            setToolData(effectiveId, { output: errorMsg });
-            toast.error('Encoding failed');
-        }
-    };
-
-    const decodeHtmlEntity = () => {
-        try {
-            if (!input.trim()) {
-                toast.error('Input is empty');
-                return;
-            }
-            setToolData(effectiveId, { output: he.decode(input) });
-            toast.success('HTML entities decoded');
-        } catch (e) { 
-            const errorMsg = `Error: ${(e as Error).message}`;
-            setToolData(effectiveId, { output: errorMsg });
-            toast.error('Decoding failed');
-        }
-    };
-
-    // Case Converter
-    const caseTypes = [
-        { id: 'upper', label: 'UPPERCASE' },
-        { id: 'lower', label: 'lowercase' },
-        { id: 'title', label: 'Title Case' },
-        { id: 'camel', label: 'camelCase' },
-        { id: 'snake', label: 'snake_case' },
-        { id: 'kebab', label: 'kebab-case' },
-    ];
-
-    const convertCase = (type: 'upper' | 'lower' | 'camel' | 'snake' | 'kebab' | 'title') => {
-        if (!input.trim()) {
-            toast.error('Input is empty');
-            return;
-        }
-        let res = input;
-
-        const splitWords = (s: string) => s.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[^a-zA-Z0-9]+/);
-
-        switch (type) {
-            case 'upper': res = input.toUpperCase(); break;
-            case 'lower': res = input.toLowerCase(); break;
-            case 'title': res = input.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); break;
-            case 'camel':
-                res = splitWords(input).map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
-                break;
-            case 'snake':
-                res = splitWords(input).map(w => w.toLowerCase()).join('_');
-                break;
-            case 'kebab':
-                res = splitWords(input).map(w => w.toLowerCase()).join('-');
-                break;
-        }
-        setToolData(effectiveId, { output: res });
-        toast.success(`Converted to ${caseTypes.find((c: { id: string; label: string }) => c.id === type)?.label || type}`);
-    };
-
-    // Number Base
-    const updateNumberBase = (type: 'decimal' | 'hex' | 'octal' | 'binary', val: string) => {
-        let decimalValue: number | null = null;
-        val = val.trim();
-        if (val === '') {
-            setToolData(effectiveId, { options: { ...data.options, values: {} } });
-            return;
-        }
-
-        try {
-            if (type === 'decimal' && /^-?\d+$/.test(val)) decimalValue = parseInt(val, 10);
-            if (type === 'hex' && /^[0-9A-Fa-f]+$/.test(val)) decimalValue = parseInt(val, 16);
-            if (type === 'octal' && /^[0-7]+$/.test(val)) decimalValue = parseInt(val, 8);
-            if (type === 'binary' && /^[01]+$/.test(val)) decimalValue = parseInt(val, 2);
-        } catch { }
-
-        const newValues: any = { [type]: val };
-        if (decimalValue !== null && !isNaN(decimalValue)) {
-            if (type !== 'decimal') newValues.decimal = decimalValue.toString(10);
-            if (type !== 'hex') newValues.hex = decimalValue.toString(16).toUpperCase();
-            if (type !== 'octal') newValues.octal = decimalValue.toString(8);
-            if (type !== 'binary') newValues.binary = decimalValue.toString(2);
-        }
-        setToolData(effectiveId, { options: { ...data.options, values: { ...values, ...newValues } } });
-    };
 
     // --- Render Helpers ---
 
@@ -552,6 +343,7 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
         );
     };
 
+
     const renderContent = () => {
         switch (mode) {
             case 'json-yaml':
@@ -562,116 +354,6 @@ export const Converter: React.FC<UniversalConverterProps> = ({ initialMode = 'js
                 return renderSplitEditor('json', 'text', convertJsonToCsv, convertCsvToJson, 'Convert JSON → CSV', 'Convert CSV → JSON');
             case 'markdown-html':
                 return renderSplitEditor('markdown', 'html', convertMarkdownToHtml, convertHtmlToMarkdown, 'Convert MD → HTML', 'HTML → MD (N/A)', true);
-            case 'base64':
-                return renderSplitEditor('text', 'text', encodeBase64, decodeBase64, 'Encode to Base64', 'Decode Base64');
-            case 'url-encode':
-                return renderSplitEditor('text', 'text', encodeUrl, decodeUrl, 'Encode URL', 'Decode URL');
-            case 'html-entity':
-                return renderSplitEditor('html', 'text', encodeHtmlEntity, decodeHtmlEntity, 'Escape HTML Entities', 'Unescape HTML Entities');
-            case 'case':
-                const caseTypesWithExamples = [
-                    { id: 'upper', label: 'UPPERCASE', example: 'HELLO WORLD' },
-                    { id: 'lower', label: 'lowercase', example: 'hello world' },
-                    { id: 'title', label: 'Title Case', example: 'Hello World' },
-                    { id: 'camel', label: 'camelCase', example: 'helloWorld' },
-                    { id: 'snake', label: 'snake_case', example: 'hello_world' },
-                    { id: 'kebab', label: 'kebab-case', example: 'hello-world' },
-                ];
-                return (
-                    <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto max-w-4xl mx-auto w-full">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                                <Type className="w-3.5 h-3.5" />
-                                Input Text
-                            </label>
-                            <CodeEditor 
-                                value={input} 
-                                onChange={handleInputChange} 
-                                className="h-32 rounded-lg border border-border-glass/30 bg-[var(--color-glass-panel)]" 
-                                language="text"
-                                placeholder="Enter text to convert..."
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {caseTypesWithExamples.map(caseType => (
-                                <button
-                                    key={caseType.id}
-                                    onClick={() => convertCase(caseType.id as any)}
-                                    disabled={!input.trim()}
-                                    className={cn(
-                                        "p-3 rounded-lg border transition-all text-left group",
-                                        "bg-[var(--color-glass-panel-light)] border-border-glass/30",
-                                        "hover:bg-[var(--color-glass-button)] hover:border-border-glass",
-                                        "disabled:opacity-40 disabled:cursor-not-allowed"
-                                    )}
-                                >
-                                    <div className="font-semibold text-sm text-foreground mb-1">{caseType.label}</div>
-                                    <div className="text-[10px] text-foreground-muted font-mono">{caseType.example}</div>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                                    <Zap className="w-3.5 h-3.5" />
-                                    Result
-                                </label>
-                                {output && (
-                                    <button
-                                        onClick={() => handleCopy(output, 'Result')}
-                                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] text-emerald-400 hover:bg-emerald-500/10 transition-all"
-                                    >
-                                        <Copy className="w-3 h-3" />
-                                        Copy
-                                    </button>
-                                )}
-                            </div>
-                            <CodeEditor 
-                                value={output} 
-                                readOnly 
-                                className="flex-1 rounded-lg border border-border-glass/30 bg-[var(--color-glass-panel)]" 
-                                language="text"
-                                placeholder="Converted text will appear here..."
-                            />
-                        </div>
-                    </div>
-                );
-            case 'number-base':
-                const numberBases = [
-                    { id: 'decimal', label: 'Decimal', base: 10, placeholder: '0', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10' },
-                    { id: 'hex', label: 'Hexadecimal', base: 16, placeholder: '00', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
-                    { id: 'octal', label: 'Octal', base: 8, placeholder: '0', color: 'text-violet-400', bgColor: 'bg-violet-500/10' },
-                    { id: 'binary', label: 'Binary', base: 2, placeholder: '0000', color: 'text-orange-400', bgColor: 'bg-orange-500/10' },
-                ];
-                return (
-                    <div className="flex-1 p-4 max-w-3xl mx-auto w-full space-y-3 overflow-auto">
-                        <div className="mb-4">
-                            <label className="text-[10px] font-bold text-foreground-muted uppercase tracking-widest pl-1 flex items-center gap-2 mb-3">
-                                <Binary className="w-3.5 h-3.5" />
-                                Number Base Converter
-                            </label>
-                            <p className="text-xs text-foreground-muted/70 px-1">
-                                Enter a value in any base to convert to all other bases
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {numberBases.map(base => (
-                                <div key={base.id} className={cn("p-3 rounded-lg border", base.bgColor, "border-border-glass/30")}>
-                                    <label className={cn("text-xs font-semibold mb-2 block", base.color)}>
-                                        {base.label} ({base.base})
-                                    </label>
-                                    <Input 
-                                        value={values[base.id] || ''} 
-                                        onChange={e => updateNumberBase(base.id as any, e.target.value)} 
-                                        className="font-mono text-sm bg-[var(--color-glass-panel)] border-border-glass/30" 
-                                        placeholder={base.placeholder}
-                                        fullWidth
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
             default: return null;
         }
     };

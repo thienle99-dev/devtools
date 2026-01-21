@@ -1,4 +1,4 @@
-import { ArrowRightLeft } from 'lucide-react';
+import { ArrowRightLeft, Lock, Link, Globe, Binary, Type } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../converters/logic';
@@ -8,7 +8,7 @@ export const converters: ToolDefinition[] = [
         id: 'converter',
         name: 'Universal Converter',
         path: '/converter',
-        description: 'Convert between JSON/YAML/XML, Base64, Number Bases, and Text Case',
+        description: 'Convert between JSON/YAML/XML, Markdown/HTML, and CSV',
         category: 'converters',
         icon: ArrowRightLeft,
         color: 'text-indigo-400',
@@ -16,12 +16,9 @@ export const converters: ToolDefinition[] = [
         props: { initialMode: 'json-yaml' },
         keywords: [
             'json', 'yaml', 'xml', 'convert', 'transform',
-            'base64', 'encode', 'decode', 'string',
-            'base', 'hex', 'binary', 'decimal', 'octal',
             'case', 'camel', 'snake', 'kebab', 'pascal', 'upper', 'lower',
             'csv', 'excel', 'export',
-            'markdown', 'html', 'parse',
-            'url', 'uri', 'encode', 'decode', 'entity', 'escape', 'unescape'
+            'markdown', 'html', 'parse'
         ],
         inputTypes: ['text', 'json', 'yaml', 'xml', 'csv'],
         outputTypes: ['text', 'json', 'yaml', 'xml', 'csv'],
@@ -34,22 +31,65 @@ export const converters: ToolDefinition[] = [
                 case 'xml-json': return Logic.xmlToJson(input);
                 case 'json-csv': return Logic.jsonToCsv(input);
                 case 'csv-json': return Logic.csvToJson(input);
-                case 'case': return Logic.convertCase(input, options?.caseType || 'upper');
                 default: return input;
             }
         }
     },
 
     {
-        id: 'base64-file',
-        name: 'Base64 File',
-        path: '/base64-file',
-        description: 'Convert files to Base64 strings',
+        id: 'base64',
+        name: 'Base64 Converter',
+        path: '/base64',
+        description: 'Encode and decode Base64 strings or files',
         category: 'converters',
-        icon: ArrowRightLeft,
-        color: 'text-amber-500',
-        component: Lazy.Base64FileConverter,
-        keywords: ['file', 'base64', 'encode', 'upload']
+        icon: Lock,
+        color: 'text-rose-400',
+        component: Lazy.Base64Converter,
+        keywords: ['base64', 'encode', 'decode', 'file', 'upload', 'string']
+    },
+    {
+        id: 'url-encode',
+        name: 'URL Encode/Decode',
+        path: '/url-encode',
+        description: 'Encode and decode URL strings',
+        category: 'converters',
+        icon: Link,
+        color: 'text-blue-400',
+        component: Lazy.UrlEncoder,
+        keywords: ['url', 'uri', 'encode', 'decode', 'percent', 'encoding']
+    },
+    {
+        id: 'html-entity',
+        name: 'HTML Entity Encode/Decode',
+        path: '/html-entity',
+        description: 'Escape and unescape HTML entities',
+        category: 'converters',
+        icon: Globe,
+        color: 'text-indigo-400',
+        component: Lazy.HtmlEntityEncoder,
+        keywords: ['html', 'entity', 'escape', 'unescape', 'encode', 'decode']
+    },
+    {
+        id: 'number-base',
+        name: 'Number Base Converter',
+        path: '/number-base',
+        description: 'Convert between decimal, hex, octal, and binary',
+        category: 'converters',
+        icon: Binary,
+        color: 'text-orange-400',
+        component: Lazy.NumberBaseConverter,
+        keywords: ['number', 'base', 'hex', 'binary', 'decimal', 'octal', 'convert']
+    },
+    {
+        id: 'text-case',
+        name: 'Text Case Converter',
+        path: '/text-case',
+        description: 'Convert text to different case formats',
+        category: 'converters',
+        icon: Type,
+        color: 'text-pink-400',
+        component: Lazy.TextCaseConverter,
+        keywords: ['text', 'case', 'camel', 'snake', 'kebab', 'pascal', 'upper', 'lower', 'title', 'convert']
     },
     {
         id: 'color-converter',
