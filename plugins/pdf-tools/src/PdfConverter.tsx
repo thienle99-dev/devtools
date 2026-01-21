@@ -11,6 +11,10 @@ import { loadPdfJs, loadJsZip } from './utils/lazyDeps';
 type ConvertMode = 'to-image' | 'to-text';
 type PdfJsModule = typeof import('pdfjs-dist/build/pdf.mjs');
 type JSZipConstructor = typeof JSZip;
+type CanvasCache = {
+    canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D;
+};
 
 export function PdfConverter() {
     const [file, setFile] = useState<File | null>(null);
@@ -204,19 +208,16 @@ async function convertToImages(
     const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
     const zip = new JSZipLib();
     const totalPages = pdf.numPages;
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-
-    if (!context) {
-        throw new Error('Canvas context is not available in this browser.');
-    }
+    const { canvas, context } = getCanvasCache();
 
     for (let i = 1; i <= totalPages; i++) {
         onProgress(Math.round((i / totalPages) * 100));
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 2 });
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        if (canvas.width !== viewport.width || canvas.height !== viewport.height) {
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+        }
         await page.render({ canvasContext: context, viewport } as any).promise;
         const imgData = canvas.toDataURL('image/png').split(',')[1];
         zip.file(`page-${i}.png`, imgData, { base64: true });
@@ -225,6 +226,7 @@ async function convertToImages(
     const content = await zip.generateAsync({ type: 'blob', streamFiles: true });
     downloadBlob(content, `${getBaseName(fileName)}-images.zip`);
 }
+
 
 async function convertToText(
     pdfjsLib: PdfJsModule,
@@ -263,4 +265,19 @@ function downloadBlob(blob: Blob, filename: string) {
 
 function getBaseName(fileName: string) {
     return fileName?.replace(/\.pdf$/i, '') || 'document';
+}
+
+let canvasCache: CanvasCache | null = null;
+function getCanvasCache(): CanvasCache {
+    if (canvasCache) return canvasCache;
+    if (typeof window === 'undefined') {
+        throw new Error('Canvas is not available in this environment.');
+    }
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) {
+        throw new Error('Canvas 2D context is not supported by this browser.');
+    }
+    canvasCache = { canvas, context };
+    return canvasCache;
 }
