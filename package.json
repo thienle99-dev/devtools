@@ -26,7 +26,8 @@
     "build:all": "npm run build && electron-builder --win --mac --linux",
     "pack": "npm run build && electron-builder --dir",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "analyze": "vite build --mode analyze"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
