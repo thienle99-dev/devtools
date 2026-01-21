@@ -1,5 +1,5 @@
 // Phase 2: Lazy load Fabric.js (15MB saved on initial load)
-import { loadFabric } from '@utils/lazyLoad';
+// Fabric removed - using Konva
 import { applyAutoBalance } from './imageEnhancement';
 import { applyRedaction, type RedactionArea } from './redaction';
 import { applyGradientBackground, applyImageBackground, applySolidBackground, addPaddingToScreenshot, type Background } from './backgroundGenerator';
@@ -14,7 +14,7 @@ export async function generateFinalImage(
         redactionAreas?: RedactionArea[];
         background?: Background | null;
         backgroundPadding?: number;
-        annotations?: string; // JSON string of Fabric.js objects
+        // annotations handled by Konva Stage
         outputConfig?: OutputConfig;
         // Xnapper-style controls
         borderRadius?: number;
@@ -107,9 +107,9 @@ export async function generateFinalImage(
 
     // 2. Apply border radius, shadow, and inset FIRST (before annotations)
     let styledBaseUrl = baseDataUrl;
-    const needsStyling = options.borderRadius || options.shadowBlur || options.inset || 
-                         options.showWindowControls || (options.watermark?.text && options.watermark.text.trim());
-    
+    const needsStyling = options.borderRadius || options.shadowBlur || options.inset ||
+        options.showWindowControls || (options.watermark?.text && options.watermark.text.trim());
+
     console.log('🎨 Checking if styling needed:', {
         borderRadius: options.borderRadius,
         shadowBlur: options.shadowBlur,
@@ -118,7 +118,7 @@ export async function generateFinalImage(
         watermarkText: options.watermark?.text,
         needsStyling
     });
-    
+
     if (needsStyling) {
         styledBaseUrl = await applyBorderRadiusAndShadow(baseDataUrl, {
             borderRadius: options.borderRadius,
@@ -132,72 +132,19 @@ export async function generateFinalImage(
         });
     }
 
-    // 3. If no annotations, return styled base image
-    if (!options.annotations || options.annotations === '[]') {
-        if (options.outputConfig) {
-            return applyOutputConfig(styledBaseUrl, options.outputConfig, options.background);
-        }
-        return styledBaseUrl;
-    }
-
-    // 4. Apply annotations using Fabric.js (lazy loaded)
-    // We create a temporary Fabric canvas, load the base image, overlay annotations, and export
-    const annotationPromise = new Promise<string>(async (resolve) => {
-        try {
-            // Lazy load Fabric.js
-            const fabric = await loadFabric();
-
-            // Create a virtual canvas element
-            const canvasEl = document.createElement('canvas');
-            const fabricCanvas = new fabric.StaticCanvas(canvasEl);
-
-            // Load styled base image (with border radius, shadow already applied)
-            fabric.Image.fromURL(styledBaseUrl, { crossOrigin: 'anonymous' }).then((bgImg) => {
-                const width = bgImg.width!;
-                const height = bgImg.height!;
-
-                fabricCanvas.setDimensions({ width, height });
-                fabricCanvas.backgroundImage = bgImg;
-
-                // Load annotations
-                const objects = JSON.parse(options.annotations!);
-
-                fabric.util.enlivenObjects(objects, {}).then((enlivenedObjects: any[]) => {
-                    enlivenedObjects.forEach((obj) => {
-                        fabricCanvas.add(obj);
-                    });
-
-                    fabricCanvas.renderAll();
-                    const finalDataUrl = fabricCanvas.toDataURL({
-                        format: 'png',
-                        multiplier: 1
-                    });
-
-                    // Cleanup
-                    fabricCanvas.dispose();
-                    resolve(finalDataUrl);
-                }).catch(err => {
-                    console.error('Error enlivening objects:', err);
-                    resolve(styledBaseUrl); // Fallback to styled base
-                });
-            }).catch(err => {
-                console.error('Error loading base image into fabric:', err);
-                resolve(styledBaseUrl);
-            });
-        } catch (e) {
-            console.error('Error in annotation export:', e);
-            resolve(styledBaseUrl);
-        }
-    });
-
-    const finalDataUrl = await annotationPromise;
-
-    // 5. Apply output dimensions / presets if specified
+    // 3. If no annotations (or if handled by Konva Stage), return styled base image
     if (options.outputConfig) {
-        return applyOutputConfig(finalDataUrl, options.outputConfig, options.background);
+        return applyOutputConfig(styledBaseUrl, options.outputConfig, options.background);
     }
+    return styledBaseUrl;
+}
 
-    return finalDataUrl;
+// 5. Apply output dimensions / presets if specified
+if (options.outputConfig) {
+    return applyOutputConfig(finalDataUrl, options.outputConfig, options.background);
+}
+
+return finalDataUrl;
 }
 
 export type SocialPreset = 'twitter' | 'instagram-square' | 'instagram-portrait' | 'instagram-story';
@@ -490,7 +437,7 @@ export async function applyBorderRadiusAndShadow(
                     position: watermark.position,
                     fontSize
                 });
-                
+
                 ctx.save();
                 ctx.font = `bold ${fontSize}px Inter, sans-serif`;
                 const opacity = watermark.opacity || 0.3;

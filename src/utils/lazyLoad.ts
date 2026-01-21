@@ -3,25 +3,6 @@
  * Phase 2 Optimization - Load heavy libraries only when needed
  */
 
-// Fabric.js lazy loader (~15MB)
-let fabricModule: typeof import('fabric') | null = null;
-
-export const loadFabric = async () => {
-  if (!fabricModule) {
-    console.log('🎨 Loading Fabric.js...');
-    fabricModule = await import('fabric');
-    console.log('✅ Fabric.js loaded');
-  }
-  return fabricModule;
-};
-
-export const getFabric = () => {
-  if (!fabricModule) {
-    throw new Error('Fabric.js not loaded. Call loadFabric() first.');
-  }
-  return fabricModule;
-};
-
 // Tesseract.js lazy loader (~30MB)
 let tesseractModule: typeof import('tesseract.js') | null = null;
 
@@ -44,37 +25,37 @@ export const getTesseract = () => {
 // CodeMirror language lazy loaders
 export const loadCodeMirrorLanguage = async (lang: string) => {
   console.log(`📝 Loading CodeMirror language: ${lang}...`);
-  
+
   switch (lang) {
     case 'javascript':
     case 'js':
     case 'jsx':
       return await import('@codemirror/lang-javascript');
-    
+
     case 'typescript':
     case 'ts':
     case 'tsx':
       return await import('@codemirror/lang-javascript');
-    
+
     case 'json':
       return await import('@codemirror/lang-json');
-    
+
     case 'html':
       return await import('@codemirror/lang-html');
-    
+
     case 'css':
       return await import('@codemirror/lang-css');
-    
+
     case 'xml':
       return await import('@codemirror/lang-xml');
-    
+
     case 'yaml':
     case 'yml':
       return await import('@codemirror/lang-yaml');
-    
+
     case 'sql':
       return await import('@codemirror/lang-sql');
-    
+
     default:
       console.warn(`Unknown language: ${lang}, using plain text`);
       return null;
@@ -91,35 +72,23 @@ export const lazyLoad = async <T>(
   if (moduleCache.has(moduleName)) {
     return moduleCache.get(moduleName);
   }
-  
+
   console.log(`📦 Loading ${moduleName}...`);
   const module = await loader();
   moduleCache.set(moduleName, module);
   console.log(`✅ ${moduleName} loaded`);
-  
+
   return module;
 };
 
 // Preload heavy modules on idle
 export const preloadHeavyModules = () => {
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => {
-      // Preload fabric if we might need it
-      loadFabric().catch(console.error);
-    });
-  } else {
-    // Fallback for browsers without requestIdleCallback
-    setTimeout(() => {
-      loadFabric().catch(console.error);
-    }, 2000);
-  }
+  // Fabric.js removed (using Konva)
 };
 
 // Check if a module is loaded
-export const isModuleLoaded = (moduleName: 'fabric' | 'tesseract'): boolean => {
+export const isModuleLoaded = (moduleName: 'tesseract'): boolean => {
   switch (moduleName) {
-    case 'fabric':
-      return fabricModule !== null;
     case 'tesseract':
       return tesseractModule !== null;
     default:

@@ -6,7 +6,7 @@ import { cn } from '@utils/cn';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@components/ui/Tabs';
 import { ExportPanel } from './ExportPanel';
 import { AnnotationToolbar } from './AnnotationToolbar';
-import type { CanvasPreviewHandle } from './CanvasPreview';
+import type { CanvasPreviewHandle } from '../types';
 import { Button } from '@components/ui/Button';
 import { toast } from 'sonner';
 
@@ -63,8 +63,8 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
             setSelectedBg('none');
         } else if ('colors' in background && background.colors) {
             // Find matching preset
-            const match = XNAPPER_BG_PRESETS.find(preset => 
-                preset.gradient && 
+            const match = XNAPPER_BG_PRESETS.find(preset =>
+                preset.gradient &&
                 preset.gradient.colors.length === background.colors.length &&
                 preset.gradient.colors.every((c, i) => c === background.colors[i])
             );
@@ -99,12 +99,12 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
 
     const handleBgSelect = (preset: typeof XNAPPER_BG_PRESETS[number]) => {
         console.log('🎨 Background selected:', preset.id, preset);
-        
+
         if (preset.id === 'custom') {
             setShowCustomPicker(true);
             return;
         }
-        
+
         setSelectedBg(preset.id);
         if (preset.gradient) {
             setBackground({
@@ -141,7 +141,7 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                         onClick={() => setAutoBalance(!autoBalance)}
                         className={cn(
                             "flex-1 mr-3 gap-2 text-xs font-bold transition-all duration-200",
-                            autoBalance 
+                            autoBalance
                                 ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/30"
                                 : "hover:scale-105"
                         )}
@@ -202,19 +202,19 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full min-h-0">
                 <div className="px-5 pb-3 pt-3">
                     <TabsList className="w-full grid grid-cols-3 p-1 bg-background/50 rounded-xl border border-border-glass">
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="annotate"
                             className="rounded-lg font-bold text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/30"
                         >
                             Annotate
                         </TabsTrigger>
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="design"
                             className="rounded-lg font-bold text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/30"
                         >
                             Design
                         </TabsTrigger>
-                        <TabsTrigger 
+                        <TabsTrigger
                             value="export"
                             className="rounded-lg font-bold text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/30"
                         >
@@ -263,13 +263,13 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                 </div>
                             )}
                         </div>
-                        
-                    <div className="space-y-2">
+
+                        <div className="space-y-2">
                             <label className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Aspect Ratio</label>
-                        <div className="flex flex-wrap gap-2">
-                            {ASPECT_RATIO_PRESETS.map((preset) => (
-                                <button
-                                    key={preset.id}
+                            <div className="flex flex-wrap gap-2">
+                                {ASPECT_RATIO_PRESETS.map((preset) => (
+                                    <button
+                                        key={preset.id}
                                         onClick={() => {
                                             console.log('📐 Canvas aspect ratio:', preset.id);
                                             setAspectRatio(preset.id);
@@ -278,17 +278,17 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                 duration: 2000,
                                             });
                                         }}
-                                    className={cn(
+                                        className={cn(
                                             "px-3 py-2 text-xs font-bold rounded-xl border-2 transition-all duration-200",
-                                        aspectRatio === preset.id
+                                            aspectRatio === preset.id
                                                 ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-transparent shadow-lg shadow-indigo-500/30 scale-105"
                                                 : "bg-glass-panel text-foreground-secondary border-border-glass hover:border-indigo-500/30 hover:bg-indigo-500/5"
-                                    )}
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
-                        </div>
+                                        )}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -324,27 +324,27 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                 <div className="absolute inset-0 bg-background/80 rounded-full overflow-hidden border border-border-glass">
                                     <div
                                         className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-150"
-                                    style={{ width: `${(backgroundPadding / 200) * 100}%` }}
+                                        style={{ width: `${(backgroundPadding / 200) * 100}%` }}
+                                    />
+                                </div>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={200}
+                                    value={backgroundPadding}
+                                    onChange={(e) => setBackgroundPadding(Number(e.target.value))}
+                                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
                                 />
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={200}
-                                value={backgroundPadding}
-                                onChange={(e) => setBackgroundPadding(Number(e.target.value))}
-                                className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                            />
-                            <div
+                                <div
                                     className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white dark:bg-gray-200 border-2 border-indigo-500 rounded-full shadow-lg pointer-events-none transition-all duration-150"
                                     style={{ left: `calc(${(backgroundPadding / 200) * 100}% - 10px)` }}
-                            />
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Inset Slider */}
+                        {/* Inset Slider */}
                         <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between">
                                 <label className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Inset</label>
                                 <div className="flex items-center gap-2">
                                     <input
@@ -357,32 +357,32 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                     />
                                     <span className="text-xs text-foreground-tertiary">px</span>
                                 </div>
-                        </div>
+                            </div>
                             <div className="relative h-2">
                                 <div className="absolute inset-0 bg-background/80 rounded-full overflow-hidden border border-border-glass">
-                                <div
+                                    <div
                                         className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-150"
-                                    style={{ width: `${(inset / 100) * 100}%` }}
+                                        style={{ width: `${(inset / 100) * 100}%` }}
+                                    />
+                                </div>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    value={inset}
+                                    onChange={(e) => setInset(Number(e.target.value))}
+                                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
                                 />
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                value={inset}
-                                onChange={(e) => setInset(Number(e.target.value))}
-                                className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                            />
-                            <div
+                                <div
                                     className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white dark:bg-gray-200 border-2 border-indigo-500 rounded-full shadow-lg pointer-events-none transition-all duration-150"
                                     style={{ left: `calc(${(inset / 100) * 100}% - 10px)` }}
-                            />
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Border Radius Slider */}
+                        {/* Border Radius Slider */}
                         <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between">
                                 <label className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Border Radius</label>
                                 <div className="flex items-center gap-2">
                                     <input
@@ -395,26 +395,26 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                     />
                                     <span className="text-xs text-foreground-tertiary">px</span>
                                 </div>
-                        </div>
+                            </div>
                             <div className="relative h-2">
                                 <div className="absolute inset-0 bg-background/80 rounded-full overflow-hidden border border-border-glass">
-                                <div
+                                    <div
                                         className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-150"
-                                    style={{ width: `${(borderRadius / 40) * 100}%` }}
+                                        style={{ width: `${(borderRadius / 40) * 100}%` }}
+                                    />
+                                </div>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={40}
+                                    value={borderRadius}
+                                    onChange={(e) => setBorderRadius(Number(e.target.value))}
+                                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
                                 />
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={40}
-                                value={borderRadius}
-                                onChange={(e) => setBorderRadius(Number(e.target.value))}
-                                className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                            />
-                            <div
+                                <div
                                     className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white dark:bg-gray-200 border-2 border-indigo-500 rounded-full shadow-lg pointer-events-none transition-all duration-150"
                                     style={{ left: `calc(${(borderRadius / 40) * 100}% - 10px)` }}
-                            />
+                                />
                             </div>
                         </div>
                     </div>
@@ -424,19 +424,19 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
 
                     {/* Shadow Section */}
                     <div className="space-y-4">
-                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center">
                                 <Eye className="w-4 h-4 text-blue-400" />
                             </div>
                             <h3 className="text-sm font-bold text-foreground">Shadow</h3>
-                            
+
                             {/* Premium Toggle Switch */}
-                        <button
-                            onClick={handleShadowToggle}
-                            className={cn(
+                            <button
+                                onClick={handleShadowToggle}
+                                className={cn(
                                     "ml-auto relative inline-flex items-center h-7 w-14 rounded-full transition-all duration-200 focus:outline-none",
-                                showShadow
-                                        ? "bg-indigo-600 dark:bg-indigo-500" 
+                                    showShadow
+                                        ? "bg-indigo-600 dark:bg-indigo-500"
                                         : "bg-gray-300 dark:bg-gray-600"
                                 )}
                             >
@@ -447,17 +447,17 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                         showShadow ? "translate-x-8" : "translate-x-1"
                                     )}
                                 />
-                            {showShadow && (
+                                {showShadow && (
                                     <div className="absolute inset-0 rounded-full bg-indigo-500 blur-md opacity-30" />
-                            )}
-                        </button>
-                    </div>
+                                )}
+                            </button>
+                        </div>
 
-                    {/* Shadow Settings (only when enabled) */}
-                    {showShadow && (
+                        {/* Shadow Settings (only when enabled) */}
+                        {showShadow && (
                             <div className="space-y-4 animate-in slide-in-from-top-2 duration-200 pl-10">
                                 <div className="space-y-2.5">
-                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between">
                                         <label className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Blur</label>
                                         <div className="flex items-center gap-2">
                                             <input
@@ -477,20 +477,20 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                 className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-150"
                                                 style={{ width: `${(shadowBlur / 100) * 100}%` }}
                                             />
-                                </div>
-                                <input
-                                    type="range"
-                                    min={0}
-                                    max={100}
-                                    value={shadowBlur}
-                                    onChange={(e) => setShadowBlur(Number(e.target.value))}
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            value={shadowBlur}
+                                            onChange={(e) => setShadowBlur(Number(e.target.value))}
                                             className="absolute inset-0 w-full opacity-0 cursor-pointer"
                                         />
                                         <div
                                             className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white dark:bg-gray-200 border-2 border-blue-500 rounded-full shadow-lg pointer-events-none transition-all duration-150"
                                             style={{ left: `calc(${(shadowBlur / 100) * 100}% - 10px)` }}
-                                />
-                            </div>
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2.5">
                                     <div className="flex items-center justify-between">
@@ -513,13 +513,13 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                 className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-150"
                                                 style={{ width: `${((shadowOffsetY + 50) / 100) * 100}%` }}
                                             />
-                                </div>
-                                <input
-                                    type="range"
-                                    min={-50}
-                                    max={50}
-                                    value={shadowOffsetY}
-                                    onChange={(e) => setShadowOffsetY(Number(e.target.value))}
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min={-50}
+                                            max={50}
+                                            value={shadowOffsetY}
+                                            onChange={(e) => setShadowOffsetY(Number(e.target.value))}
                                             className="absolute inset-0 w-full opacity-0 cursor-pointer"
                                         />
                                         <div
@@ -527,9 +527,9 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                             style={{ left: `calc(${((shadowOffsetY + 50) / 100) * 100}% - 10px)` }}
                                         />
                                     </div>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
                     </div>
 
                     {/* Divider */}
@@ -546,14 +546,14 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                 </div>
                             </div>
                             <h3 className="text-sm font-bold text-foreground">Window Controls</h3>
-                            
+
                             {/* Premium Toggle Switch */}
-                    <button
-                        onClick={() => setShowWindowControls(!showWindowControls)}
-                        className={cn(
+                            <button
+                                onClick={() => setShowWindowControls(!showWindowControls)}
+                                className={cn(
                                     "ml-auto relative inline-flex items-center h-7 w-14 rounded-full transition-all duration-200 focus:outline-none",
-                            showWindowControls
-                                        ? "bg-indigo-600 dark:bg-indigo-500" 
+                                    showWindowControls
+                                        ? "bg-indigo-600 dark:bg-indigo-500"
                                         : "bg-gray-300 dark:bg-gray-600"
                                 )}
                             >
@@ -583,7 +583,7 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                             </div>
                             <h3 className="text-sm font-bold text-foreground">Watermark</h3>
                         </div>
-                        
+
                         <div className="space-y-4 pl-10">
                             <input
                                 type="text"
@@ -620,13 +620,13 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                     className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-150"
                                                     style={{ width: `${(watermark.opacity || 0.3) * 100}%` }}
                                                 />
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min={0}
-                                            max={100}
-                                            value={(watermark.opacity || 0.3) * 100}
-                                            onChange={(e) => setWatermark({ opacity: Number(e.target.value) / 100 })}
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min={0}
+                                                max={100}
+                                                value={(watermark.opacity || 0.3) * 100}
+                                                onChange={(e) => setWatermark({ opacity: Number(e.target.value) / 100 })}
                                                 className="absolute inset-0 w-full opacity-0 cursor-pointer"
                                             />
                                             <div
@@ -676,21 +676,21 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
 
                                     <div className="space-y-2">
                                         <label className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Position</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'].map((pos) => (
-                                            <button
-                                                key={pos}
-                                                onClick={() => setWatermark({ position: pos as any })}
-                                                className={cn(
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'].map((pos) => (
+                                                <button
+                                                    key={pos}
+                                                    onClick={() => setWatermark({ position: pos as any })}
+                                                    className={cn(
                                                         "py-2 text-[10px] font-bold rounded-lg border transition-all duration-200",
-                                                    watermark.position === pos
+                                                        watermark.position === pos
                                                             ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-lg shadow-amber-500/20"
                                                             : "bg-glass-panel border-border-glass text-foreground-secondary hover:border-amber-500/30 hover:bg-amber-500/5"
-                                                )}
-                                            >
-                                                {pos.replace('-', ' ')}
-                                            </button>
-                                        ))}
+                                                    )}
+                                                >
+                                                    {pos.replace('-', ' ')}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -709,32 +709,32 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                             </div>
                             <h3 className="text-sm font-bold text-foreground">Background</h3>
                         </div>
-                        
+
                         {/* 2 rows of 5 columns = 10 presets */}
                         <div className="grid grid-cols-5 gap-2.5 pl-10">
                             {XNAPPER_BG_PRESETS.map((preset) => (
                                 <div key={preset.id} className="space-y-1.5">
-                                <button
-                                    onClick={() => handleBgSelect(preset)}
-                                    className={cn(
+                                    <button
+                                        onClick={() => handleBgSelect(preset)}
+                                        className={cn(
                                             "relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-200 hover:scale-110 group w-full",
-                                        selectedBg === preset.id
+                                            selectedBg === preset.id
                                                 ? "border-indigo-500 ring-4 ring-indigo-500/30 scale-105 shadow-lg shadow-indigo-500/20"
                                                 : "border-border-glass hover:border-indigo-500/50"
-                                    )}
-                                    title={preset.name}
-                                >
-                                    {preset.gradient ? (
-                                        <div
-                                            className="w-full h-full"
-                                            style={{
-                                                background: generateGradientCSS({
-                                                    ...preset.gradient,
-                                                    colors: [...preset.gradient.colors]
-                                                })
-                                            }}
-                                        />
-                                    ) : preset.id === 'none' ? (
+                                        )}
+                                        title={preset.name}
+                                    >
+                                        {preset.gradient ? (
+                                            <div
+                                                className="w-full h-full"
+                                                style={{
+                                                    background: generateGradientCSS({
+                                                        ...preset.gradient,
+                                                        colors: [...preset.gradient.colors]
+                                                    })
+                                                }}
+                                            />
+                                        ) : preset.id === 'none' ? (
                                             <div className="w-full h-full bg-background/50 dark:bg-background/30 border-2 border-dashed border-foreground-muted/30 flex items-center justify-center">
                                                 <div className="text-[8px] text-foreground-muted font-bold uppercase">None</div>
                                             </div>
@@ -743,10 +743,10 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                 <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_48%,rgba(255,255,255,0.3)_49%,rgba(255,255,255,0.3)_51%,transparent_52%)] bg-[length:8px_8px]"></div>
                                                 <Palette className="w-3 h-3 text-white z-10" />
                                             </div>
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
-                                    )}
-                                    {selectedBg === preset.id && (
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                                        )}
+                                        {selectedBg === preset.id && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px]">
                                                 <div className="w-3 h-3 bg-white rounded-full shadow-lg animate-pulse" />
                                             </div>
@@ -757,7 +757,7 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                 {preset.id === 'custom' ? 'Edit' : 'Select'}
                                             </span>
                                         </div>
-                                </button>
+                                    </button>
                                     <div className="text-[9px] text-foreground-muted text-center font-medium truncate">
                                         {preset.name}
                                     </div>
@@ -782,7 +782,7 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                         🚧 Custom gradient editor coming soon! For now, choose from the presets above.
                                     </p>
                                 </div>
-                        </div>
+                            </div>
                         )}
                     </div>
 
@@ -806,28 +806,28 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                 const simpleW = preset.width / divisor;
                                 const simpleH = preset.height / divisor;
                                 const ratioLabel = `${simpleW}:${simpleH}`;
-                                
+
                                 const isSelected = selectedSocialPreset === preset.id;
-                                
+
                                 return (
-                                <button
-                                    key={preset.id}
+                                    <button
+                                        key={preset.id}
                                         onClick={() => {
                                             console.log(`📱 Social preset: ${preset.label}`, {
                                                 dimensions: `${preset.width}×${preset.height}`,
                                                 ratio: ratioLabel,
                                                 currentAspectRatio: aspectRatio
                                             });
-                                            
+
                                             // Apply the simplified aspect ratio
                                             setAspectRatio(ratioLabel);
                                             setSelectedSocialPreset(preset.id);
-                                            
+
                                             // Force a slight delay to ensure state update
                                             setTimeout(() => {
                                                 console.log('✅ Aspect ratio updated to:', ratioLabel);
                                             }, 100);
-                                            
+
                                             toast.success(`Applied ${preset.label}`, {
                                                 description: `${ratioLabel} aspect ratio`,
                                                 duration: 2500,
@@ -846,8 +846,8 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                         </div>
                                         <div className={cn(
                                             "text-[8px]",
-                                            isSelected 
-                                                ? "text-white/80" 
+                                            isSelected
+                                                ? "text-white/80"
                                                 : "text-foreground-muted group-hover:text-green-400/70"
                                         )}>
                                             {ratioLabel}
@@ -857,12 +857,12 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                                             </div>
                                         )}
-                                </button>
+                                    </button>
                                 );
                             })}
                         </div>
 
-                        <button 
+                        <button
                             className="w-full px-4 py-2.5 text-xs font-bold rounded-xl bg-glass-panel hover:bg-green-500/10 hover:text-green-400 border-2 border-dashed border-border-glass hover:border-green-500/50 transition-all duration-200 text-foreground-secondary ml-10"
                             onClick={() => {
                                 toast.info('Custom dimensions', {
@@ -873,7 +873,7 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                         >
                             + Custom Size...
                         </button>
-                        
+
                         <div className="pl-10 pt-2">
                             <p className="text-[10px] text-foreground-muted leading-relaxed">
                                 💡 Click a preset to apply aspect ratio. Final dimensions will be applied when exporting.

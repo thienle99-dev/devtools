@@ -4,7 +4,7 @@ import { useXnapperStore } from '../../store/xnapperStore';
 import { CaptureSection } from './components/CaptureSection';
 import { PreviewSection } from './components/PreviewSection';
 import { XnapperStylePanel } from './components/XnapperStylePanel';
-import type { CanvasPreviewHandle } from './components/CanvasPreview';
+import type { CanvasPreviewHandle } from './types';
 
 export const Xnapper: React.FC = () => {
     const { currentScreenshot } = useXnapperStore();
@@ -46,7 +46,7 @@ export const Xnapper: React.FC = () => {
             <div className="relative px-6 py-4 border-b border-border-glass bg-glass-panel backdrop-blur-xl z-10">
                 {/* Background Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 opacity-50" />
-                
+
                 <div className="relative flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         {/* Icon with Animation */}
@@ -56,7 +56,7 @@ export const Xnapper: React.FC = () => {
                                 <Camera className="w-5 h-5 text-white" />
                             </div>
                         </div>
-                        
+
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -64,7 +64,7 @@ export const Xnapper: React.FC = () => {
                                 </h1>
                                 <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
                             </div>
-                            <p 
+                            <p
                                 className="text-xs mt-0.5 font-medium"
                                 style={{ color: 'var(--color-text-muted)' }}
                             >
@@ -95,21 +95,22 @@ export const Xnapper: React.FC = () => {
                             <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-glass-panel border border-border-glass">
                                 <div className="flex items-center gap-2">
                                     <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
-                                <span 
-                                    className="text-xs font-mono font-semibold"
-                                    style={{ color: 'var(--color-text-secondary)' }}
+                                    <span
+                                        className="text-xs font-mono font-semibold"
+                                        style={{ color: 'var(--color-text-secondary)' }}
+                                    >
+                                        {currentScreenshot.width} × {currentScreenshot.height}
+                                    </span>
+                                </div>
+                                <div className="w-px h-4 bg-border-glass" />
+                                <span
+                                    className="text-xs font-mono font-semibold text-indigo-400"
                                 >
-                                    {currentScreenshot.width} × {currentScreenshot.height}
+                                    {currentScreenshot.format.toUpperCase()}
                                 </span>
                             </div>
-                            <div className="w-px h-4 bg-border-glass" />
-                            <span 
-                                className="text-xs font-mono font-semibold text-indigo-400"
-                            >
-                                {currentScreenshot.format.toUpperCase()}
-                            </span>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -126,9 +127,9 @@ export const Xnapper: React.FC = () => {
                     /* Preview & Edit Mode */
                     <div className="h-full flex flex-row gap-0 relative overflow-hidden">
                         {/* Preview Canvas - Dynamic width */}
-                        <div 
+                        <div
                             className="relative transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                            style={{ 
+                            style={{
                                 width: isPanelOpen ? 'calc(100% - 400px)' : '100%',
                                 height: '100%',
                                 overflow: 'hidden',
@@ -145,9 +146,9 @@ export const Xnapper: React.FC = () => {
                         </div>
 
                         {/* Style Panel - Sliding sidebar with smooth animation */}
-                        <div 
+                        <div
                             className="transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-hidden shadow-2xl"
-                            style={{ 
+                            style={{
                                 width: isPanelOpen ? '400px' : '0px',
                                 opacity: isPanelOpen ? 1 : 0,
                                 transform: isPanelOpen ? 'translateX(0)' : 'translateX(20px)',
@@ -169,7 +170,7 @@ export const Xnapper: React.FC = () => {
                 <div className="relative px-6 py-3 border-t border-border-glass bg-glass-panel backdrop-blur-xl">
                     {/* Background Accent */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-500/5 to-transparent opacity-50" />
-                    
+
                     <div className="relative flex items-center justify-between">
                         {/* New Capture Button */}
                         <button
@@ -182,7 +183,7 @@ export const Xnapper: React.FC = () => {
                             className="group flex items-center gap-2 px-4 py-2 rounded-xl border border-border-glass transition-all duration-200 hover:border-indigo-500/50 hover:bg-indigo-500/10"
                         >
                             <ArrowLeft className="w-4 h-4 text-indigo-400 transition-transform group-hover:-translate-x-1" />
-                            <span 
+                            <span
                                 className="text-sm font-semibold text-indigo-400"
                             >
                                 New Capture
@@ -190,7 +191,7 @@ export const Xnapper: React.FC = () => {
                         </button>
 
                         {/* Quick Info */}
-                        <div 
+                        <div
                             className="flex items-center gap-4 text-xs font-mono"
                             style={{ color: 'var(--color-text-muted)' }}
                         >

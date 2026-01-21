@@ -4,7 +4,7 @@ import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Te
 import useImage from 'use-image';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
-import type { CanvasPreviewHandle } from '../components/CanvasPreview';
+import type { CanvasPreviewHandle } from '../types';
 
 interface KonvaCanvasProps {
     onHistoryChange?: (canUndo: boolean, canRedo: boolean, count: number) => void;
@@ -47,11 +47,11 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
     const [scale, setScale] = useState(1);
     const [baseZoom, setBaseZoom] = useState(1);
-    
+
     // Load the processed background image
     useEffect(() => {
         if (!currentScreenshot) return;
-        
+
         const load = async () => {
             try {
                 const url = await generateFinalImage(currentScreenshot.dataUrl, {
@@ -69,7 +69,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                     watermark,
                     aspectRatio,
                 });
-                
+
                 // Get dimensions
                 const img = new Image();
                 img.onload = () => {
@@ -87,36 +87,36 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     // Update container size
     useLayoutEffect(() => {
         if (!containerRef.current) return;
-        
+
         const updateSize = () => {
-             if (containerRef.current) {
+            if (containerRef.current) {
                 setContainerSize({
                     width: containerRef.current.clientWidth,
                     height: containerRef.current.clientHeight
                 });
-             }
+            }
         };
-        
+
         updateSize();
         const observer = new ResizeObserver(updateSize);
         observer.observe(containerRef.current);
-        
+
         return () => observer.disconnect();
     }, []);
 
     // Calculate Fit Scale
     useEffect(() => {
         if (containerSize.width === 0 || containerSize.height === 0 || imageSize.width === 0) return;
-        
+
         const padding = 40; // Space around
         const availableW = containerSize.width - padding;
         const availableH = containerSize.height - padding;
-        
+
         const scaleX = availableW / imageSize.width;
         const scaleY = availableH / imageSize.height;
         // Fit to screen
         const fitScale = Math.min(scaleX, scaleY);
-        
+
         setScale(fitScale);
     }, [containerSize, imageSize]);
 
@@ -170,7 +170,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             const json = JSON.stringify(shapes);
             // Check if different to avoid loop
             if (json !== canvasData) {
-                 setCanvasData(json);
+                setCanvasData(json);
             }
         }, 500);
         return () => clearTimeout(timeout);
@@ -311,7 +311,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
         const id = `${activeAnnotationTool}-${Date.now()}`;
-        
+
         // Common props
         const baseProps = {
             id,
@@ -335,7 +335,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 fill: 'transparent',
             };
         } else if (activeAnnotationTool === 'circle') {
-             newShape = {
+            newShape = {
                 ...baseProps,
                 type: 'circle',
                 x: pos.x,
@@ -344,7 +344,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 fill: 'transparent',
             };
         } else if (activeAnnotationTool === 'arrow') {
-             newShape = {
+            newShape = {
                 ...baseProps,
                 type: 'arrow',
                 points: [pos.x, pos.y, pos.x, pos.y],
@@ -353,7 +353,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 fill: annotationConfig.color || 'red', // Arrow head fill
             };
         } else if (activeAnnotationTool === 'line') {
-             newShape = {
+            newShape = {
                 ...baseProps,
                 type: 'line',
                 points: [pos.x, pos.y, pos.x, pos.y],
@@ -377,7 +377,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             addToHistory(newShapes);
             // Select it immediately
             selectShape(id);
-            return; 
+            return;
         } else if (activeAnnotationTool === 'pen') {
             newShape = {
                 ...baseProps,
@@ -402,10 +402,10 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
 
     const handleMouseMove = (e: any) => {
         if (!isDrawing.current || !activeShapeIdRef.current) return;
-        
+
         const stage = e.target.getStage();
         const pos = stage.getRelativePointerPosition();
-        
+
         setShapes(prev => prev.map(s => {
             if (s.id === activeShapeIdRef.current) {
                 if (s.type === 'rect') {
@@ -417,10 +417,10 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 } else if (s.type === 'circle') {
                     const dx = pos.x - s.x;
                     const dy = pos.y - s.y;
-                    const radius = Math.sqrt(dx*dx + dy*dy);
+                    const radius = Math.sqrt(dx * dx + dy * dy);
                     return {
                         ...s,
-                         radius
+                        radius
                     };
                 } else if (s.type === 'arrow' || s.type === 'line') {
                     return {
@@ -462,59 +462,59 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     // Update history on transform end (drag/resize)
     // Update history on transform end (drag/resize)
     const handleTransformEnd = (e: any) => {
-         const node = e.target;
-         const id = node.id();
-         
-         const newShapes = shapes.map(s => {
-             if (s.id === id) {
-                 const scaleX = node.scaleX();
-                 const scaleY = node.scaleY();
-                 
-                 // Normalize scale for shapes where stroke shouldn't scale
-                 if (s.type === 'rect') {
-                     node.scaleX(1);
-                     node.scaleY(1);
-                     return {
-                         ...s,
-                         x: node.x(),
-                         y: node.y(),
-                         rotation: node.rotation(),
-                         width: Math.max(5, node.width() * scaleX),
-                         height: Math.max(5, node.height() * scaleY),
-                         scaleX: 1,
-                         scaleY: 1
-                     };
-                 } else if (s.type === 'circle') {
-                     node.scaleX(1);
-                     node.scaleY(1);
-                     // Use max scale for radius to avoid ellipse if locked aspect ratio not enforcing
-                     const scale = Math.max(Math.abs(scaleX), Math.abs(scaleY));
-                     return {
-                         ...s,
-                         x: node.x(),
-                         y: node.y(),
-                         rotation: node.rotation(),
-                         radius: Math.max(5, node.radius() * scale),
-                         scaleX: 1,
-                         scaleY: 1
-                     };
-                 }
-                 
-                 // For Text/Arrow, keep the scale (font size/points scaling)
-                 return {
-                     ...s,
-                     x: node.x(),
-                     y: node.y(),
-                     rotation: node.rotation(),
-                     scaleX: scaleX,
-                     scaleY: scaleY,
-                 };
-             }
-             return s;
-         });
-         
-         setShapes(newShapes);
-         addToHistory(newShapes);
+        const node = e.target;
+        const id = node.id();
+
+        const newShapes = shapes.map(s => {
+            if (s.id === id) {
+                const scaleX = node.scaleX();
+                const scaleY = node.scaleY();
+
+                // Normalize scale for shapes where stroke shouldn't scale
+                if (s.type === 'rect') {
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    return {
+                        ...s,
+                        x: node.x(),
+                        y: node.y(),
+                        rotation: node.rotation(),
+                        width: Math.max(5, node.width() * scaleX),
+                        height: Math.max(5, node.height() * scaleY),
+                        scaleX: 1,
+                        scaleY: 1
+                    };
+                } else if (s.type === 'circle') {
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    // Use max scale for radius to avoid ellipse if locked aspect ratio not enforcing
+                    const scale = Math.max(Math.abs(scaleX), Math.abs(scaleY));
+                    return {
+                        ...s,
+                        x: node.x(),
+                        y: node.y(),
+                        rotation: node.rotation(),
+                        radius: Math.max(5, node.radius() * scale),
+                        scaleX: 1,
+                        scaleY: 1
+                    };
+                }
+
+                // For Text/Arrow, keep the scale (font size/points scaling)
+                return {
+                    ...s,
+                    x: node.x(),
+                    y: node.y(),
+                    rotation: node.rotation(),
+                    scaleX: scaleX,
+                    scaleY: scaleY,
+                };
+            }
+            return s;
+        });
+
+        setShapes(newShapes);
+        addToHistory(newShapes);
     };
 
     const handleDragEnd = (e: any) => {
@@ -557,14 +557,14 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 selectShape(null);
                 // Force sync draw
                 stageRef.current.getLayer().batchDraw();
-                
+
                 // Export at original size
                 // stage scale is (scale * baseZoom)
                 // we want output to be (imageSize.width)
                 // so pixelRatio should be 1 / (scale * baseZoom)
                 const currentScale = scale * baseZoom;
                 const pixelRatio = 1 / currentScale;
-                
+
                 return stageRef.current.toDataURL({ pixelRatio });
             }
             return '';
@@ -598,14 +598,14 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     if (!baseDataUrl) return <div className="flex items-center justify-center h-full text-foreground-muted">Preparing canvas...</div>;
 
     return (
-        <div 
-            ref={containerRef} 
+        <div
+            ref={containerRef}
             className="w-full h-full flex items-center justify-center overflow-hidden bg-transparent"
         >
             <div style={{ position: 'relative', width: imageSize.width * scale * baseZoom, height: imageSize.height * scale * baseZoom }}>
-                <Stage 
+                <Stage
                     ref={stageRef}
-                    width={imageSize.width * scale * baseZoom} 
+                    width={imageSize.width * scale * baseZoom}
                     height={imageSize.height * scale * baseZoom}
                     scaleX={scale * baseZoom}
                     scaleY={scale * baseZoom}
@@ -620,10 +620,10 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                     }}
                 >
                     <Layer>
-                        <URLImage 
-                            src={baseDataUrl} 
-                            width={imageSize.width} 
-                            height={imageSize.height} 
+                        <URLImage
+                            src={baseDataUrl}
+                            width={imageSize.width}
+                            height={imageSize.height}
                         />
                     </Layer>
                     <Layer>
@@ -646,7 +646,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                                     container.style.cursor = 'default';
                                 },
                             };
-                            
+
                             if (shape.type === 'rect') return <Rect {...commonProps} />;
                             if (shape.type === 'circle') return <Circle {...commonProps} />;
                             if (shape.type === 'arrow') return <Arrow {...commonProps} />;
@@ -654,20 +654,20 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                             if (shape.type === 'pen') return <Line {...commonProps} />;
                             if (shape.type === 'text') {
                                 return (
-                                    <KonvaText 
-                                        {...commonProps} 
+                                    <KonvaText
+                                        {...commonProps}
                                         opacity={editingShape === shape.id ? 0 : (shape.opacity ?? 1)}
-                                        onDblClick={(e) => handleTextDblClick(e, shape.id)} 
+                                        onDblClick={(e) => handleTextDblClick(e, shape.id)}
                                     />
                                 );
                             }
-                            
+
                             return null;
                         })}
                         <Transformer ref={transformerRef} />
                     </Layer>
                 </Stage>
-                
+
                 {/* Text Editing Overlay */}
                 {editingShape && (() => {
                     const shape = shapes.find(s => s.id === editingShape);
@@ -680,7 +680,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                     const y = shape.y * currentScale;
                     const rotation = shape.rotation || 0;
                     const fontFamily = shape.fontFamily || 'Inter, sans-serif';
-                    
+
                     return (
                         <textarea
                             value={shape.text}

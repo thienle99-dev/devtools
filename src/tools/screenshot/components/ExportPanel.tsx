@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { CanvasPreviewHandle } from './CanvasPreview';
+import type { CanvasPreviewHandle } from '../types';
 import { Download, Copy, FileImage, CloudUpload, Link } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
@@ -24,7 +24,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
         redactionAreas,
         background,
         backgroundPadding,
-        canvasData,
+
         borderRadius,
         shadowBlur,
         shadowOpacity,
@@ -84,7 +84,6 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
                     redactionAreas,
                     background,
                     backgroundPadding,
-                    annotations: canvasData || undefined,
                     outputConfig: getOutputConfig(),
                     borderRadius,
                     shadowBlur,
@@ -126,20 +125,19 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
             // Generate final processed image
             let processedDataUrl: string;
             if (canvasRef?.current?.exportImage) {
-                 const fullRes = canvasRef.current.exportImage();
-                 const config = getOutputConfig();
-                 if (config) {
-                     processedDataUrl = await applyOutputConfig(fullRes, config, background);
-                 } else {
-                     processedDataUrl = fullRes;
-                 }
+                const fullRes = canvasRef.current.exportImage();
+                const config = getOutputConfig();
+                if (config) {
+                    processedDataUrl = await applyOutputConfig(fullRes, config, background);
+                } else {
+                    processedDataUrl = fullRes;
+                }
             } else {
                 processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
                     autoBalance,
                     redactionAreas,
                     background,
                     backgroundPadding,
-                    annotations: canvasData || undefined,
                     outputConfig: getOutputConfig(),
                     borderRadius,
                     shadowBlur,
@@ -192,7 +190,6 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
                     redactionAreas,
                     background,
                     backgroundPadding,
-                    annotations: canvasData || undefined,
                     outputConfig: getOutputConfig(),
                     borderRadius,
                     shadowBlur,

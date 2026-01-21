@@ -141,7 +141,7 @@ React (existing app)
 - Add feature flag: `USE_KONVA_CANVAS` (env or settings toggle).
 - Ship in beta to compare FPS and UX vs Fabric.
 - Collect feedback on text editing, selection, export correctness.
-- Remove Fabric code after stable release.
+- [x] Remove Fabric code after stable release.
 
 ---
 

@@ -2,9 +2,8 @@ import React, { useState, type JSX } from 'react';
 import { Check, X, Copy, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
-import { CanvasPreview } from './CanvasPreview';
+import type { CanvasPreviewHandle } from '../types';
 import { KonvaCanvas } from '../konva/KonvaCanvas';
-import type { CanvasPreviewHandle } from './CanvasPreview';
 import { cropImage } from '../utils/crop';
 import { generateFinalImage } from '../utils/exportUtils';
 import { toast } from 'sonner';
@@ -14,8 +13,6 @@ interface PreviewSectionProps {
     onHistoryChange: (undo: boolean, redo: boolean, count: number) => void;
     onZoomChange?: (zoom: number) => void;
 }
-
-const USE_KONVA = true;
 
 export const PreviewSection = ({
     canvasRef,
@@ -33,7 +30,6 @@ export const PreviewSection = ({
         setCurrentScreenshot,
         background,
         backgroundPadding,
-        canvasData,
         borderRadius,
         shadowBlur,
         shadowOpacity,
@@ -54,23 +50,28 @@ export const PreviewSection = ({
 
         setIsCopying(true);
         try {
-            // Generate final image with all effects
-            const processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
-                autoBalance,
-                redactionAreas,
-                background,
-                backgroundPadding,
-                annotations: canvasData || undefined,
-                borderRadius,
-                shadowBlur,
-                shadowOpacity,
-                shadowOffsetX,
-                shadowOffsetY,
-                inset,
-                showWindowControls,
-                watermark,
-                aspectRatio,
-            });
+            let processedDataUrl: string;
+
+            if (canvasRef.current?.exportImage) {
+                processedDataUrl = canvasRef.current.exportImage();
+            } else {
+                // Fallback: Generate background only (no annotations)
+                processedDataUrl = await generateFinalImage(currentScreenshot.dataUrl, {
+                    autoBalance,
+                    redactionAreas,
+                    background,
+                    backgroundPadding,
+                    borderRadius,
+                    shadowBlur,
+                    shadowOpacity,
+                    shadowOffsetX,
+                    shadowOffsetY,
+                    inset,
+                    showWindowControls,
+                    watermark,
+                    aspectRatio,
+                });
+            }
 
             // Convert to blob and copy
             const response = await fetch(processedDataUrl);
@@ -200,19 +201,11 @@ export const PreviewSection = ({
                     justifyContent: 'center'
                 }}
             >
-                {USE_KONVA ? (
-                    <KonvaCanvas
-                        ref={canvasRef as any}
-                        onHistoryChange={onHistoryChange}
-                        onZoomChange={onZoomChange}
-                    />
-                ) : (
-                    <CanvasPreview
-                        ref={canvasRef as any}
-                        onHistoryChange={onHistoryChange}
-                        onZoomChange={onZoomChange}
-                    />
-                )}
+                <KonvaCanvas
+                    ref={canvasRef as any}
+                    onHistoryChange={onHistoryChange}
+                    onZoomChange={onZoomChange}
+                />
 
                 {/* Copy Flash Feedback - Premium */}
                 {showCopyFlash && (
