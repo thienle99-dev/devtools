@@ -5,6 +5,7 @@ import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+const TOOL_ID = 'open-graph';
 
 export const OpenGraphGenerator = () => {
   const [values, setValues] = useState({
@@ -66,6 +67,7 @@ export const OpenGraphGenerator = () => {
     <ToolPane
       title="Open Graph Generator"
       description="Generate Open Graph and Twitter Card meta tags not social sharing"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Inputs */}

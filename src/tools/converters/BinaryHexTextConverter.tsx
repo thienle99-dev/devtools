@@ -108,6 +108,7 @@ export const BinaryHexTextConverter: React.FC<BinaryHexTextConverterProps> = ({ 
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Binary/Hex to Text Converter"
             description="Convert between binary/hex strings and ASCII text"
             onClear={handleClear}

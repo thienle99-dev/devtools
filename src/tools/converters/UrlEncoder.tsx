@@ -68,6 +68,7 @@ export const UrlEncoder: React.FC<UrlEncoderProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="URL Encode/Decode"
             description="Encode and decode URL strings"
             onClear={handleClear}

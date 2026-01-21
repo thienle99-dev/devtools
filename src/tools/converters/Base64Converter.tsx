@@ -250,6 +250,7 @@ export const Base64Converter: React.FC<Base64ConverterProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Base64 Converter"
             description="Encode and decode Base64 strings or files"
             onClear={handleClear}

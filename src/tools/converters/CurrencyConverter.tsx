@@ -121,6 +121,7 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Currency Converter"
             description="Convert between different currencies"
             onClear={handleClear}

@@ -71,6 +71,7 @@ export const DataUriGenerator: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Data URI Generator"
             description="Convert any file into a base64 encoded string for direct use in HTML/CSS"
             onClear={() => clearToolData(TOOL_ID)}

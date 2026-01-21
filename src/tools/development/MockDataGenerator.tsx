@@ -154,6 +154,7 @@ export const MockDataGenerator: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Mock Data Generator"
             description="Generate realistic random data sets for testing."
             onClear={() => {}}

@@ -138,6 +138,7 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={tabId}
             title="Service Worker Generator"
             description="Generate a service worker file for offline capabilities"
             onCopy={handleCopy}

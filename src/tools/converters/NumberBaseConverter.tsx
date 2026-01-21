@@ -94,6 +94,7 @@ export const NumberBaseConverter: React.FC<NumberBaseConverterProps> = ({ tabId 
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Number Base Converter"
             description="Convert between decimal, hex, octal, and binary"
             onClear={handleClear}

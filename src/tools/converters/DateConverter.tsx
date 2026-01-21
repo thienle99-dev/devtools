@@ -94,6 +94,7 @@ export const DateConverter: React.FC<DateConverterProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Date-time Converter"
             description="Convert between various date and time formats (ISO, Unix, UTC, etc.)"
             onClear={handleClear}

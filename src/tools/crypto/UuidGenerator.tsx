@@ -163,6 +163,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="UUID / ULID Generator"
             description="Generate and validate unique identifiers"
             onClear={handleClear}

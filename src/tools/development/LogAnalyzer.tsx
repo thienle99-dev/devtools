@@ -24,6 +24,7 @@ export const LogAnalyzer: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Log Analyzer"
             description="Analyze and highlight service logs, errors, and warnings"
             onClear={() => { setInput(''); clearToolData(TOOL_ID); }}

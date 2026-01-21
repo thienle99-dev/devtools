@@ -97,6 +97,7 @@ export const MacAddressConverter: React.FC<MacAddressConverterProps> = ({ tabId 
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="MAC Address Converter"
             description="Convert between different MAC address formats"
             onClear={handleClear}

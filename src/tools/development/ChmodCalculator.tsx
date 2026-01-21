@@ -127,6 +127,7 @@ export const ChmodCalculator: React.FC<ChmodCalculatorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Chmod Calculator"
             description="Calculate Linux file permissions (Octal/Symbolic)"
             onClear={handleClear}

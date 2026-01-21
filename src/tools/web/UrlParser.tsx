@@ -79,6 +79,7 @@ export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="URL Parser"
             description="Parse URL into constituent parts"
             onClear={handleClear}

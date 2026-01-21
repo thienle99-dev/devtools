@@ -41,6 +41,7 @@ export const SlugGenerator: React.FC<SlugGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Slug Generator"
             description="Generate URL-friendly slugs from strings"
             onClear={handleClear}

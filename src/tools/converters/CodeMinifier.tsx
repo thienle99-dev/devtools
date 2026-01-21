@@ -186,6 +186,7 @@ export const CodeMinifier: React.FC<CodeMinifierProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Code Minifier/Beautifier"
             description="Minify or beautify JSON, XML, HTML, CSS, and JavaScript"
             onClear={handleClear}

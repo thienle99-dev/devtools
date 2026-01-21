@@ -5,6 +5,8 @@ import { Button } from '@components/ui/Button';
 import { ArrowRightLeft, Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const TOOL_ID = 'base64-url';
+
 export const Base64UrlConverter = () => {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
@@ -58,6 +60,7 @@ export const Base64UrlConverter = () => {
     <ToolPane
       title="Base64 URL Converter"
       description="Encode and decode data using Base64 URL-safe alphabet (RFC 4648)"
+      toolId={TOOL_ID}
       onClear={() => { setInput(''); setOutput(''); }}
     >
       <div className="h-full flex flex-col p-4 md:grid md:grid-cols-2 gap-6">

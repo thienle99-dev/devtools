@@ -123,6 +123,7 @@ export const MimeTypeConverter: React.FC<MimeTypeConverterProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="MIME Type Converter"
             description="Convert between file extensions and MIME types"
             onClear={handleClear}

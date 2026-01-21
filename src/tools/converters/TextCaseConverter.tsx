@@ -78,6 +78,7 @@ export const TextCaseConverter: React.FC<TextCaseConverterProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Text Case Converter"
             description="Convert text to different case formats"
             onClear={handleClear}

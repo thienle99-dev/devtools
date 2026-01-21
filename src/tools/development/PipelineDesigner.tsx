@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 
 // Lazy load the visual designer to avoid loading ReactFlow heavy chunk when not needed
 const VisualPipelineDesigner = React.lazy(() => import('./VisualPipelineDesigner'));
+const TOOL_ID = 'pipeline-designer';
 
 const PipelineDesigner: React.FC = () => {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, duplicateWorkflow, addStep, updateStep, removeStep, toggleFavorite } = useWorkflowStore();
@@ -304,6 +305,7 @@ const PipelineDesigner: React.FC = () => {
         <ToolPane
             title="Pipeline Mode (Tool Chain)"
             description="Chain multiple tools together to automate complex workflows"
+            toolId={TOOL_ID}
         >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                 {/* File Input for Import */}

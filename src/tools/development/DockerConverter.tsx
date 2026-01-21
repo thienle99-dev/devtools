@@ -51,6 +51,7 @@ export const DockerConverter: React.FC<DockerConverterProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Docker Run to Compose"
             description="Convert 'docker run' commands to docker-compose.yml"
             onClear={handleClear}

@@ -6,6 +6,8 @@ import { Input } from '@components/ui/Input';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
+const TOOL_ID = 'meta-tags-generator';
+
 export const MetaTagsGenerator = () => {
   const [values, setValues] = useState({
     title: '',
@@ -60,6 +62,7 @@ export const MetaTagsGenerator = () => {
     <ToolPane
       title="Meta Tags Generator"
       description="Generate standard SEO meta tags for your website"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Inputs */}

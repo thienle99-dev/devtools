@@ -75,6 +75,7 @@ export const CodeSnippetGenerator: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Code Snippet Generator"
             description="Generate HTTP request code snippets for various languages."
             onClear={() => {}}

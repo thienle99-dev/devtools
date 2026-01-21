@@ -93,6 +93,7 @@ export const ColorConverter: React.FC<ColorConverterProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Color Converter"
             description="Convert colors between Hex, RGB, and HSL"
             onClear={handleClear}

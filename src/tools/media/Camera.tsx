@@ -136,6 +136,7 @@ export const Camera: React.FC<CameraProps> = ({ tabId, mode }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title={activeMode === 'photo' ? "Webcam Photo" : activeMode === 'video' ? "Video Recorder" : "Camera & Recorder"}
             description={activeMode === 'photo' ? "Capture high-quality photos from your webcam" : activeMode === 'video' ? "Record and save videos directly from your webcam" : "Capture photos or record videos directly from your webcam"}
             onClear={onClear}

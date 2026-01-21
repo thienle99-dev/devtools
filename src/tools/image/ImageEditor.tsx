@@ -197,6 +197,7 @@ export const ImageEditor: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Image Editor Pro"
             description="Advanced photo manipulation with filters, crop, and adjustments"
             onClear={() => {

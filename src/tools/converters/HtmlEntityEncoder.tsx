@@ -71,6 +71,7 @@ export const HtmlEntityEncoder: React.FC<HtmlEntityEncoderProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="HTML Entity Encode/Decode"
             description="Escape and unescape HTML entities"
             onClear={handleClear}

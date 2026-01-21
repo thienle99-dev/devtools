@@ -27,6 +27,7 @@ export const CertificateTools: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Certificate Tools"
             description="Parse X.509 certificates and convert between PEM/DER formats"
             onClear={() => { setInput(''); clearToolData(TOOL_ID); }}

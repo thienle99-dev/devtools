@@ -106,6 +106,7 @@ export const CharacterEncodingConverter: React.FC<CharacterEncodingConverterProp
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Character Encoding Converter"
             description="Convert between different character encodings"
             onClear={handleClear}

@@ -129,6 +129,7 @@ export const VoiceRecorder: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Voice Recorder"
             description="Record, play back, and download audio from your microphone"
             onClear={onClear}

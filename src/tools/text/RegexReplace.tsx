@@ -48,6 +48,7 @@ export const RegexReplace: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Regex Replace"
             description="Replace text using regular expressions"
             onClear={() => clearToolData(TOOL_ID)}

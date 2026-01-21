@@ -55,6 +55,7 @@ export const CsrGenerator: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="CSR Generator"
             description="Generate Certificate Signing Requests (PKCS#10) and Private Keys"
             onClear={() => clearToolData(TOOL_ID)}

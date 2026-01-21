@@ -4,6 +4,7 @@ import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+const TOOL_ID = 'manifest-generator';
 
 // Helper Input component with Label
 const ManifestInput = ({ label, className, ...props }: any) => (
@@ -103,6 +104,7 @@ export const ManifestGenerator = () => {
       title="Manifest.json Generator"
       description="Generate a Web App Manifest for Progressive Web Apps (PWA)"
       onClear={handleReset}
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Input */}

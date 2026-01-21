@@ -6,6 +6,8 @@ import { Input } from '@components/ui/Input';
 import { Copy, RefreshCw, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
+const TOOL_ID = 'utm-builder';
+
 export const UtmBuilder = () => {
   const [values, setValues] = useState({
     baseUrl: '',
@@ -78,6 +80,7 @@ export const UtmBuilder = () => {
     <ToolPane
       title="UTM Builder"
       description="Generate URLs with UTM parameters for campaign tracking"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Inputs */}

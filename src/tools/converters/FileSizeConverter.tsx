@@ -94,6 +94,7 @@ export const FileSizeConverter: React.FC<FileSizeConverterProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="File Size Converter"
             description="Convert between bytes, KB, MB, GB, TB, PB"
             onClear={handleClear}

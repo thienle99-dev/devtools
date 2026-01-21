@@ -8,6 +8,8 @@ import { html } from '@codemirror/lang-html';
 import { githubDark } from '@uiw/codemirror-theme-github';
 import { toast } from 'sonner';
 
+const TOOL_ID = 'html-wysiwyg';
+
 export const HtmlWysiwyg = () => {
   const [content, setContent] = useState('<p>Start editing...</p>');
   const [mode, setMode] = useState<'visual' | 'code'>('visual');
@@ -60,6 +62,7 @@ export const HtmlWysiwyg = () => {
     <ToolPane
       title="HTML WYSIWYG Editor"
       description="Rich text editor with HTML source view"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col p-4 gap-4">
         {/* Toolbar */}

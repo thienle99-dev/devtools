@@ -56,6 +56,7 @@ export const ContentTypeParser: React.FC<{ tabId: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={tabId}
             title="Content-Type Parser"
             description="Parse MIME types and Content-Type headers"
             onClear={() => setInput('')}

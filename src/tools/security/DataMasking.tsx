@@ -39,6 +39,7 @@ export const DataMasking: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Data Masking"
             description="Mask sensitive information in text or JSON objects"
             onClear={() => { setInput(''); clearToolData(TOOL_ID); }}

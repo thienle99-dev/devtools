@@ -138,6 +138,7 @@ export const PercentageFractionConverter: React.FC<PercentageFractionConverterPr
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Percentage/Fraction/Decimal Converter"
             description="Convert between percentage, fraction, and decimal formats"
             onClear={handleClear}

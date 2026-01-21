@@ -75,6 +75,7 @@ export const SafelinkDecoder = () => {
             title="Outlook Safelink Decoder"
             description="Decode Microsoft Outlook Safe Links to reveal the original URL"
             onClear={() => { setInput(''); setDecoded(null); }}
+            toolId={TOOL_ID}
         >
             <div className="max-w-4xl mx-auto space-y-6 pt-6 px-4">
                 <Card className="p-4 space-y-4">

@@ -23,6 +23,7 @@ export const Slugify: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Slugify"
             description="Convert text into URL-friendly slugs"
             onClear={() => clearToolData(TOOL_ID)}

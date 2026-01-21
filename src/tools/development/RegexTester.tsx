@@ -143,6 +143,7 @@ export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
             title="Regex Tester"
             description="Test Regular Expressions against text"
             onClear={handleClear}
+            toolId={effectiveId}
         >
             <div className="space-y-6 h-full p-4 overflow-y-auto w-full max-w-4xl mx-auto">
                 {/* Regex Input & Flags */}

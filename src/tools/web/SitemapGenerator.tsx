@@ -68,6 +68,7 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={tabId}
             title="Sitemap Generator"
             description="Generate XML sitemaps for SEO"
             onCopy={handleCopy}

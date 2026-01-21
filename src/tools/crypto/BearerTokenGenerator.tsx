@@ -20,6 +20,7 @@ export const BearerTokenGenerator: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Bearer Token Generator"
             description="Generate secure, random tokens for Authorization headers"
             onClear={() => clearToolData(TOOL_ID)}

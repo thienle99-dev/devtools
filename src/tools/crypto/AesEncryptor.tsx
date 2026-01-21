@@ -84,6 +84,7 @@ export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Elem
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Symmetric Encryptor"
             description="Encrypt/Decrypt text using AES, TripleDES, Rabbit, RC4"
             onClear={handleClear}

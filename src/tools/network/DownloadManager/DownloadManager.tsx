@@ -12,6 +12,7 @@ import { DownloadSidebar } from './components/DownloadSidebar';
 import { DownloadToolbar } from './components/DownloadToolbar';
 import { DownloadEmptyState } from './components/DownloadEmptyState';
 import type { CategoryFilter, FilterStatus, DownloadStats, DownloadViewMode, SortBy } from './types';
+const TOOL_ID = 'download-manager';
 
 export default function DownloadManager() {
     const [history, setHistory] = useState<DownloadTask[]>([]);
@@ -273,6 +274,7 @@ export default function DownloadManager() {
         <ToolPane
             title="Download Manager"
             description="Ultra-fast multi-threaded download engine with AI-ready file management."
+            toolId={TOOL_ID}
             actions={
                 <div className="flex items-center gap-4">
                     <Button

@@ -114,6 +114,7 @@ export const TimeZoneConverter: React.FC<TimeZoneConverterProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Time Zone Converter"
             description="Convert dates between different time zones"
             onClear={handleClear}

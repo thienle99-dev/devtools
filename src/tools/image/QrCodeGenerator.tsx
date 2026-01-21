@@ -96,6 +96,7 @@ export const QrCodeGenerator: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="QR Code Tool"
             description="Generate high-quality stylized QR codes or scan them from images"
             onClear={() => clearToolData(effectiveId)}

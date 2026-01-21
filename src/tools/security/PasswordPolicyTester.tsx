@@ -50,6 +50,7 @@ export const PasswordPolicyTester: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Password Policy Tester"
             description="Verify passwords against security policies and complexity rules"
             onClear={handleClear}

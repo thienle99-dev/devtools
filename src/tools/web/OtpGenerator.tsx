@@ -6,6 +6,7 @@ import { Input } from '@components/ui/Input';
 import { Copy, Trash2, Clock, Plus, Key } from 'lucide-react';
 import * as OTPAuth from 'otpauth';
 import { toast } from 'sonner';
+const TOOL_ID = 'otp';
 
 interface OtpAccount {
   id: string;
@@ -120,6 +121,7 @@ export const OtpGenerator = () => {
     <ToolPane
       title="OTP Code Generator"
       description="Generate TOTP codes for two-factor authentication"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Add Account Form */}

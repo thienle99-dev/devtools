@@ -172,6 +172,7 @@ export const ImageMetadata: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Image Metadata"
             description="View EXIF, GPS, and other embedded metadata or strip it for privacy"
             onClear={onClear}

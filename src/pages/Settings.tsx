@@ -87,6 +87,7 @@ const SettingsPage: React.FC<SettingsPageProps> = () => {
         <ToolPane
             title="Settings"
             description="Customize your experience and manage application preferences"
+            toolId="settings"
         >
             <div className="flex h-full">
                 {/* Sidebar Tabs */}

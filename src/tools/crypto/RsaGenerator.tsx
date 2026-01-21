@@ -122,6 +122,7 @@ export const RsaGenerator: React.FC<RsaGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="RSA Tools"
             description="Generate keys, encrypt, decrypt, sign and verify with RSA"
             onClear={handleClear}

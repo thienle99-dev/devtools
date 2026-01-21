@@ -203,6 +203,7 @@ export const ImageToAscii: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Image to ASCII"
             description="Convert images to stylized text art with color support"
             onClear={onClear}

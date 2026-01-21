@@ -52,6 +52,7 @@ export const JsonDiff: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="JSON Diff"
             description="Compare two JSON structures and identify differences"
             onClear={handleClear}

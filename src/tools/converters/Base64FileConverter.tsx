@@ -57,6 +57,7 @@ export const Base64FileConverter: React.FC<Base64FileConverterProps> = ({ tabId 
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Base64 File Converter"
             description="Convert files (images, docs, etc.) to Base64 strings"
             onClear={handleClear}

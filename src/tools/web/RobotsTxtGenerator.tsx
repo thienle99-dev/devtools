@@ -93,6 +93,7 @@ export const RobotsTxtGenerator = () => {
     <ToolPane
       title="Robots.txt Generator"
       description="Generate robots.txt file for search engine crawlers"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Configuration */}

@@ -143,6 +143,7 @@ export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Hash Generator"
             description="Generate and verify cryptographic hashes"
             onClear={handleClear}

@@ -106,6 +106,7 @@ export const QueryStringConverter: React.FC<QueryStringConverterProps> = ({ tabI
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Query String Converter"
             description="Convert between query strings, form data, and JSON"
             onClear={handleClear}

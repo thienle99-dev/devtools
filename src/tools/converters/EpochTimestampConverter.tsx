@@ -96,6 +96,7 @@ export const EpochTimestampConverter: React.FC<EpochTimestampConverterProps> = (
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Epoch Timestamp Converter"
             description="Convert between Unix timestamps and dates"
             onClear={handleClear}

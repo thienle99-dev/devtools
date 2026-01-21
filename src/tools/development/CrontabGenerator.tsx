@@ -89,6 +89,7 @@ export const CrontabGenerator: React.FC<CrontabGeneratorProps> = ({ tabId }) => 
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Crontab Generator"
             description="Generate and explain cron schedule expressions"
             onClear={handleClear}

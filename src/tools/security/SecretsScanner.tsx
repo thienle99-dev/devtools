@@ -26,6 +26,7 @@ export const SecretsScanner: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Secrets Scanner"
             description="Scan text for API keys, passwords, and sensitive information"
             onClear={() => { setInput(''); clearToolData(TOOL_ID); }}

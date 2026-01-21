@@ -84,6 +84,7 @@ export const AsciiArtGenerator: React.FC<{ tabId?: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="ASCII Art Generator"
             description="Transform your text into stylized ASCII art using various FIGlet fonts"
             onClear={() => {

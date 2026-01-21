@@ -63,6 +63,7 @@ export const JwtParser: React.FC<JwtParserProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="JWT Parser"
             description="Decode JSON Web Tokens (JWT) to view header and payload"
             onClear={handleClear}

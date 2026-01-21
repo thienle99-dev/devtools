@@ -105,6 +105,7 @@ export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Token & Password Generator"
             description="Generate secure random tokens and passwords with strength analysis"
             onClear={handleClear}

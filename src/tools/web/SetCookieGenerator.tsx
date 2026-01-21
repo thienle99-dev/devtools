@@ -59,6 +59,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={tabId}
             title="Set-Cookie Generator"
             description="Generate headers for setting HTTP cookies"
             onCopy={handleCopy}

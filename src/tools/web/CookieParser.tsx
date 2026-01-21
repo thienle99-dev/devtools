@@ -65,6 +65,7 @@ export const CookieParser: React.FC<{ tabId: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={tabId}
             title="Cookie Parser"
             description="Parse and inspect HTTP cookie strings"
             onClear={handleClear}

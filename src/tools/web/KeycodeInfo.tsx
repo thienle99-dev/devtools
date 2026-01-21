@@ -16,6 +16,8 @@ interface KeyInfo {
   repeat: boolean;
 }
 
+const TOOL_ID = 'keycode';
+
 export const KeycodeInfo = () => {
   const [keyInfo, setKeyInfo] = useState<KeyInfo | null>(null);
 
@@ -49,6 +51,7 @@ export const KeycodeInfo = () => {
     <ToolPane
       title="Keycode Info"
       description="Press any key to get its Javascript keyboard event information"
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8 bg-muted/10 rounded-xl border border-border">

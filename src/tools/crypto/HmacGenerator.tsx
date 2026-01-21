@@ -62,6 +62,7 @@ export const HmacGenerator: React.FC<HmacGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="HMAC Generator"
             description="Compute Hash-based Message Authentication Codes"
             onClear={handleClear}

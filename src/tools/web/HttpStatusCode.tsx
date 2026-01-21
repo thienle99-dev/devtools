@@ -60,6 +60,7 @@ export const HttpStatusCode: React.FC<HttpStatusCodeProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="HTTP Status Codes"
             description="Browser-friendly list of HTTP status codes"
             onClear={() => setSearch('')}

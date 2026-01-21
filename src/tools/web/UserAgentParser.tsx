@@ -74,6 +74,7 @@ export const UserAgentParser: React.FC<UserAgentParserProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="User Agent Parser"
             description="Parse User-Agent strings to detect browser, OS, and device"
             onClear={handleClear}

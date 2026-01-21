@@ -5,6 +5,8 @@ import { Button } from '@components/ui/Button';
 import { Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const TOOL_ID = 'http-headers';
+
 export const HttpHeaderParser = () => {
   const [input, setInput] = useState('');
   const [parsed, setParsed] = useState<Record<string, string>>({});
@@ -55,6 +57,7 @@ export const HttpHeaderParser = () => {
       title="HTTP Headers Parser"
       description="Parse raw HTTP headers into JSON and Key-Value pairs"
       onClear={() => setInput('')}
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Input */}

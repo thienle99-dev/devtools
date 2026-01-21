@@ -49,6 +49,7 @@ export const TemperatureConverter: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Temperature Converter"
             description="Convert between Celsius, Fahrenheit, and Kelvin"
         >

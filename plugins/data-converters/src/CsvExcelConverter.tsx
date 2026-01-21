@@ -833,6 +833,7 @@ export const CsvExcelConverter: React.FC<CsvExcelConverterProps> = ({ tabId }) =
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="CSV to Excel Converter"
             description="Convert CSV files to Excel (XLSX) format with advanced options"
             onClear={handleClear}

@@ -132,6 +132,7 @@ export const ImageConverter: React.FC = () => {
 
     return (
         <ToolPane
+            toolId={TOOL_ID}
             title="Image Converter & Compressor"
             description="Professional batch image processing with glassmorphism preview"
             onClear={handleClearAll}

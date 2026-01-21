@@ -122,6 +122,7 @@ export const IpAddressConverter: React.FC<IpAddressConverterProps> = ({ tabId })
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="IP Address Converter"
             description="Convert between IPv4 address formats"
             onClear={handleClear}

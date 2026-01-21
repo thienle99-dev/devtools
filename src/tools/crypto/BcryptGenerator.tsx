@@ -78,6 +78,7 @@ export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Bcrypt Hash Generator"
             description="Generate and compare Bcrypt password hashes"
             onClear={handleClear}

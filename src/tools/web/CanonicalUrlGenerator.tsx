@@ -86,6 +86,7 @@ export const CanonicalUrlGenerator: React.FC<{ tabId: string }> = ({ tabId }) =>
 
     return (
         <ToolPane
+            toolId={tabId}
             title="Canonical URL Generator"
             description="Normalize and generate canonical URLs for SEO"
             onCopy={handleCopy}

@@ -116,6 +116,7 @@ export const UnicodeConverter: React.FC<UnicodeConverterProps> = ({ tabId }) => 
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Unicode Converter"
             description="Convert between text and Unicode codes/escape sequences"
             onClear={handleClear}

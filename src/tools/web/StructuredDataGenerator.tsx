@@ -4,6 +4,7 @@ import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+const TOOL_ID = 'structured-data-generator';
 
 type SchemaType = 'Article' | 'Product' | 'Organization' | 'Person' | 'Website' | 'LocalBusiness' | 'BreadcrumbList';
 
@@ -183,6 +184,7 @@ export const StructuredDataGenerator = () => {
       title="Structured Data Generator"
       description="Generate JSON-LD structured data for better SEO"
       onClear={handleReset}
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Input */}

@@ -6,6 +6,7 @@ import { Input } from '@components/ui/Input';
 import { Checkbox } from '@components/ui/Checkbox';
 import { Copy, RefreshCw, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
+const TOOL_ID = 'csp-generator';
 
 type Directive = 'default-src' | 'script-src' | 'style-src' | 'img-src' | 'connect-src' | 'font-src' | 'object-src' | 'media-src' | 'frame-src' | 'base-uri' | 'form-action';
 
@@ -122,6 +123,7 @@ export const CspGenerator = () => {
       title="CSP Generator"
       description="Generate Content Security Policy (CSP) headers"
       onClear={handleReset}
+      toolId={TOOL_ID}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">

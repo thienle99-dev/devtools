@@ -119,6 +119,7 @@ export const UnitConverter: React.FC<UnitConverterProps> = ({ tabId }) => {
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Unit Converter"
             description="Convert between length, weight, volume, and speed units"
             onClear={handleClear}

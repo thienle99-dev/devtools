@@ -38,6 +38,7 @@ export const BasicAuthGenerator: React.FC<BasicAuthGeneratorProps> = ({ tabId })
 
     return (
         <ToolPane
+            toolId={effectiveId}
             title="Basic Auth Generator"
             description="Generate HTTP Basic Auth headers"
             onClear={handleClear}
