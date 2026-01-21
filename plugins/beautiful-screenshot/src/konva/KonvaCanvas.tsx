@@ -1,9 +1,17 @@
 
-import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText, Line } from 'react-konva';
+import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect, useMemo } from 'react';
 import useImage from 'use-image';
 import { useXnapperStore } from '../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
+type ReactKonvaModule = typeof import('react-konva');
+let konvaModulePromise: Promise<ReactKonvaModule> | null = null;
+
+function loadKonvaModule() {
+    if (!konvaModulePromise) {
+        konvaModulePromise = import('react-konva');
+    }
+    return konvaModulePromise;
+}
 
 export interface CanvasPreviewHandle {
     undo: () => void;
@@ -24,12 +32,6 @@ interface KonvaCanvasProps {
     onHistoryChange?: (canUndo: boolean, canRedo: boolean, count: number) => void;
     onZoomChange?: (zoom: number) => void;
 }
-
-// Helper component to load image
-const URLImage = ({ src, width, height }: { src: string; width: number; height: number }) => {
-    const [image] = useImage(src, 'anonymous');
-    return <KonvaImage image={image} width={width} height={height} listening={false} />;
-};
 
 export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ onHistoryChange, onZoomChange }, ref) => {
     // Suppress unused warning
@@ -55,6 +57,8 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         setCanvasData,
     } = useXnapperStore();
 
+    const [konvaModule, setKonvaModule] = useState<ReactKonvaModule | null>(null);
+    const [moduleError, setModuleError] = useState<string | null>(null);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const [baseDataUrl, setBaseDataUrl] = useState<string | null>(null);
@@ -62,6 +66,32 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     const [scale, setScale] = useState(1);
     const [baseZoom, setBaseZoom] = useState(1);
     
+    useEffect(() => {
+        let mounted = true;
+        loadKonvaModule()
+            .then((mod) => {
+                if (mounted) setKonvaModule(mod);
+            })
+            .catch((err) => {
+                console.error('Failed to load react-konva', err);
+                if (mounted) setModuleError('Unable to load drawing engine');
+            });
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    const konvaRuntime = useMemo(() => {
+        if (!konvaModule) return null;
+        const { Stage, Layer, Image: KonvaImage, Rect, Transformer, Circle, Arrow, Text: KonvaText, Line } = konvaModule;
+        const URLImageComponent = ({ src, width, height }: { src: string; width: number; height: number }) => {
+            const [image] = useImage(src, 'anonymous');
+            return <KonvaImage image={image} width={width} height={height} listening={false} />;
+        };
+        URLImageComponent.displayName = 'URLImage';
+        return { Stage, Layer, Rect, Transformer, Circle, Arrow, KonvaText, Line, URLImage: URLImageComponent };
+    }, [konvaModule]);
+
     // Load the processed background image
     useEffect(() => {
         if (!currentScreenshot) return;
@@ -691,6 +721,16 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             }
         }
     }));
+
+    if (moduleError) {
+        return <div className="flex items-center justify-center h-full text-rose-400 text-sm">{moduleError}</div>;
+    }
+
+    if (!konvaRuntime) {
+        return <div className="flex items-center justify-center h-full text-foreground-muted">Loading canvas engine…</div>;
+    }
+
+    const { Stage, Layer, Rect, Transformer, Circle, Arrow, KonvaText, Line, URLImage } = konvaRuntime;
 
     if (!baseDataUrl) return <div className="flex items-center justify-center h-full text-foreground-muted">Preparing canvas...</div>;
 
