@@ -382,7 +382,7 @@
 - [x] Gradient background
 - [x] Background blur
 - [x] Background thumbnails
-- [x] Fabric canvas
+- [x] Canvas (Konva) [Migrated from Fabric]
 - [x] Arrow tool
 - [x] Text tool
 - [x] Shape tools

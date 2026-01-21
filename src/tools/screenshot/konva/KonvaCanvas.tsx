@@ -1,5 +1,4 @@
-
-import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect, memo } from 'react';
 import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText, Line } from 'react-konva';
 import useImage from 'use-image';
 import { useXnapperStore } from '../../../store/xnapperStore';
@@ -11,11 +10,127 @@ interface KonvaCanvasProps {
     onZoomChange?: (zoom: number) => void;
 }
 
+interface ShapeData {
+    id: string;
+    type: 'rect' | 'circle' | 'arrow' | 'line' | 'text' | 'pen';
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    rotation?: number;
+    scaleX?: number;
+    scaleY?: number;
+    points?: number[];
+    text?: string;
+    fontSize?: number;
+    fontFamily?: string;
+    opacity?: number;
+    radius?: number;
+    draggable?: boolean;
+    tension?: number;
+    lineCap?: 'butt' | 'round' | 'square';
+    lineJoin?: 'round' | 'bevel' | 'miter';
+    pointerLength?: number;
+    pointerWidth?: number;
+}
+
 // Helper component to load image
-const URLImage = ({ src, width, height }: { src: string; width: number; height: number }) => {
+const URLImage = memo(({ src, width, height }: { src: string; width: number; height: number }) => {
     const [image] = useImage(src, 'anonymous');
     return <KonvaImage image={image} width={width} height={height} listening={false} />;
-};
+});
+
+URLImage.displayName = 'URLImage';
+
+// Memoized Shape Component
+const ShapeItem = memo(({
+    shape,
+    isEditing,
+    activeTool,
+    onSelect,
+    onTextDblClick,
+    onDragEnd,
+    onTransformEnd
+}: {
+    shape: ShapeData;
+    isSelected: boolean; // Kept but unused to avoid re-render if selected logic changes in parent
+    isEditing: boolean;
+    activeTool: string | null;
+    onSelect: (id: string) => void;
+    onTextDblClick: (e: any, id: string) => void;
+    onDragEnd: (e: any) => void;
+    onTransformEnd: (e: any) => void;
+}) => {
+    const commonProps = {
+        ...shape,
+        onClick: () => onSelect(shape.id),
+        onTap: () => onSelect(shape.id),
+        onDragEnd,
+        onTransformEnd,
+        draggable: shape.draggable && !activeTool,
+        onMouseEnter: (e: any) => {
+            if (activeTool) return;
+            const container = e.target.getStage().container();
+            container.style.cursor = 'move';
+        },
+        onMouseLeave: (e: any) => {
+            if (activeTool) return;
+            const container = e.target.getStage().container();
+            container.style.cursor = 'default';
+        },
+    };
+
+    if (shape.type === 'rect') return <Rect {...commonProps} />;
+    if (shape.type === 'circle') return <Circle {...commonProps} />;
+
+    if (shape.type === 'arrow') {
+        return (
+            <Arrow
+                {...commonProps}
+                points={shape.points || []}
+                hitStrokeWidth={20}
+            />
+        );
+    }
+
+    if (shape.type === 'line') {
+        return (
+            <Arrow
+                {...commonProps}
+                points={shape.points || []}
+                pointerLength={0}
+                pointerWidth={0}
+                hitStrokeWidth={20}
+            />
+        );
+    }
+
+    if (shape.type === 'pen') {
+        return (
+            <Line
+                {...commonProps}
+                points={shape.points || []}
+                hitStrokeWidth={10}
+            />
+        );
+    }
+
+    if (shape.type === 'text') {
+        return (
+            <KonvaText
+                {...commonProps}
+                opacity={isEditing ? 0 : (shape.opacity ?? 1)}
+                onDblClick={(e) => onTextDblClick(e, shape.id)}
+            />
+        );
+    }
+    return null;
+});
+
+ShapeItem.displayName = 'ShapeItem';
 
 export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ onHistoryChange, onZoomChange }, ref) => {
     // Suppress unused warning
@@ -136,7 +251,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         }
     }, [activeAnnotationTool]);
 
-    const [shapes, setShapes] = useState<any[]>([]);
+    const [shapes, setShapes] = useState<ShapeData[]>([]);
     const [selectedId, selectShape] = useState<string | null>(null);
     const transformerRef = useRef<any>(null);
     const stageRef = useRef<any>(null);
@@ -145,7 +260,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     const [editingShape, setEditingShape] = useState<string | null>(null);
 
     // History
-    const [history, setHistory] = useState<any[][]>([[]]);
+    const [history, setHistory] = useState<ShapeData[][]>([[]]);
     const [historyStep, setHistoryStep] = useState(0);
 
     // Serialization: Load initial data
@@ -181,7 +296,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         onHistoryChange?.(historyStep > 0, historyStep < history.length - 1, shapes.length);
     }, [historyStep, history, shapes.length, onHistoryChange]);
 
-    const addToHistory = (newShapes: any[]) => {
+    const addToHistory = (newShapes: ShapeData[]) => {
         const newHistory = history.slice(0, historyStep + 1);
         newHistory.push(newShapes);
         setHistory(newHistory);
@@ -319,9 +434,9 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             stroke: annotationConfig.color || 'red',
             strokeWidth: annotationConfig.strokeWidth || 4,
             opacity: 1,
-        };
+        } as Partial<ShapeData>;
 
-        let newShape: any = null;
+        let newShape: ShapeData | null = null;
 
         if (activeAnnotationTool === 'rectangle') {
             newShape = {
@@ -331,9 +446,8 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 y: pos.y,
                 width: 0,
                 height: 0,
-                // Simplify: just stroke or fill? Xnapper usually stroke for rects or blur
                 fill: 'transparent',
-            };
+            } as ShapeData;
         } else if (activeAnnotationTool === 'circle') {
             newShape = {
                 ...baseProps,
@@ -342,7 +456,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 y: pos.y,
                 radius: 0,
                 fill: 'transparent',
-            };
+            } as ShapeData;
         } else if (activeAnnotationTool === 'arrow') {
             newShape = {
                 ...baseProps,
@@ -351,13 +465,13 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 pointerLength: 10,
                 pointerWidth: 10,
                 fill: annotationConfig.color || 'red', // Arrow head fill
-            };
+            } as ShapeData;
         } else if (activeAnnotationTool === 'line') {
             newShape = {
                 ...baseProps,
                 type: 'line',
                 points: [pos.x, pos.y, pos.x, pos.y],
-            };
+            } as ShapeData;
         } else if (activeAnnotationTool === 'text') {
             // Instant create text
             newShape = {
@@ -370,7 +484,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 fill: annotationConfig.color || '#ff0000',
                 draggable: true,
                 fontFamily: annotationConfig.fontFamily || 'Inter, sans-serif',
-            };
+            } as ShapeData;
             // For text, we don't drag-to-draw
             const newShapes = [...shapes, newShape];
             setShapes(newShapes);
@@ -386,10 +500,10 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 tension: 0.5,
                 lineCap: 'round',
                 lineJoin: 'round',
-                fill: null,
+                fill: undefined,
                 stroke: annotationConfig.color || 'red',
                 strokeWidth: annotationConfig.strokeWidth || 3,
-            };
+            } as ShapeData;
         }
 
         if (newShape) {
@@ -425,12 +539,12 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 } else if (s.type === 'arrow' || s.type === 'line') {
                     return {
                         ...s,
-                        points: [s.points[0], s.points[1], pos.x, pos.y]
+                        points: [s.points![0], s.points![1], pos.x, pos.y]
                     };
                 } else if (s.type === 'pen') {
                     return {
                         ...s,
-                        points: [...s.points, pos.x, pos.y]
+                        points: [...(s.points || []), pos.x, pos.y]
                     };
                 }
             }
@@ -459,7 +573,6 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         setEditingShape(shapeId);
     };
 
-    // Update history on transform end (drag/resize)
     // Update history on transform end (drag/resize)
     const handleTransformEnd = (e: any) => {
         const node = e.target;
@@ -494,7 +607,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                         x: node.x(),
                         y: node.y(),
                         rotation: node.rotation(),
-                        radius: Math.max(5, node.radius() * scale),
+                        radius: Math.max(5, (s.radius || 10) * scale),
                         scaleX: 1,
                         scaleY: 1
                     };
@@ -627,44 +740,39 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                         />
                     </Layer>
                     <Layer>
-                        {shapes.map((shape) => {
-                            const commonProps = {
-                                key: shape.id,
-                                ...shape,
-                                onClick: () => selectShape(shape.id),
-                                onTap: () => selectShape(shape.id),
-                                onDragEnd: handleDragEnd,
-                                onTransformEnd: handleTransformEnd,
-                                onMouseEnter: (e: any) => {
-                                    if (activeAnnotationTool) return;
-                                    const container = e.target.getStage().container();
-                                    container.style.cursor = 'move';
-                                },
-                                onMouseLeave: (e: any) => {
-                                    if (activeAnnotationTool) return;
-                                    const container = e.target.getStage().container();
-                                    container.style.cursor = 'default';
-                                },
-                            };
-
-                            if (shape.type === 'rect') return <Rect {...commonProps} />;
-                            if (shape.type === 'circle') return <Circle {...commonProps} />;
-                            if (shape.type === 'arrow') return <Arrow {...commonProps} />;
-                            if (shape.type === 'line') return <Arrow {...commonProps} pointerLength={0} pointerWidth={0} />;
-                            if (shape.type === 'pen') return <Line {...commonProps} />;
-                            if (shape.type === 'text') {
-                                return (
-                                    <KonvaText
-                                        {...commonProps}
-                                        opacity={editingShape === shape.id ? 0 : (shape.opacity ?? 1)}
-                                        onDblClick={(e) => handleTextDblClick(e, shape.id)}
-                                    />
-                                );
-                            }
-
-                            return null;
-                        })}
-                        <Transformer ref={transformerRef} />
+                        {shapes.map((shape) => (
+                            <ShapeItem
+                                key={shape.id}
+                                shape={shape}
+                                isSelected={selectedId === shape.id}
+                                isEditing={editingShape === shape.id}
+                                activeTool={activeAnnotationTool}
+                                onSelect={selectShape}
+                                onTextDblClick={handleTextDblClick}
+                                onDragEnd={handleDragEnd}
+                                onTransformEnd={handleTransformEnd}
+                            />
+                        ))}
+                        <Transformer
+                            ref={transformerRef}
+                            boundBoxFunc={(oldBox, newBox) => {
+                                // Limit resize to avoid invalid shapes (width < 5)
+                                if (newBox.width < 5 || newBox.height < 5) {
+                                    return oldBox;
+                                }
+                                return newBox;
+                            }}
+                            // Premium Styles
+                            anchorSize={10}
+                            anchorCornerRadius={5}
+                            anchorStroke="#6366f1" // indigo-500
+                            anchorFill="#ffffff"
+                            anchorStrokeWidth={2}
+                            borderStroke="#6366f1"
+                            borderStrokeWidth={2}
+                            rotateAnchorOffset={24} // Give more space for rotation handle
+                            keepRatio={false} // Allow free resize by default (shift key locks it usually)
+                        />
                     </Layer>
                 </Stage>
 
