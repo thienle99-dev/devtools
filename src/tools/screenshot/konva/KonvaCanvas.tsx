@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect, useCallback } from 'react';
 import { Stage, Layer, Transformer } from 'react-konva';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
@@ -136,15 +136,41 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     const stageRef = useRef<any>(null);
     const isDrawing = useRef(false);
     const activeShapeIdRef = useRef<string | null>(null);
+    const lastScreenshotIdRef = useRef<string | null>(currentScreenshot?.id ?? null);
     const [editingShape, setEditingShape] = useState<string | null>(null);
 
     // History
     const [history, setHistory] = useState<ShapeData[][]>([[]]);
     const [historyStep, setHistoryStep] = useState(0);
+    const isHistoryPristine = history.length === 1 && (history[0]?.length ?? 0) === 0;
+
+    const resetCanvasState = useCallback(() => {
+        setShapes(prev => (prev.length === 0 ? prev : []));
+        setHistory(prev => (prev.length === 1 && prev[0].length === 0 ? prev : [[]]));
+        setHistoryStep(prev => (prev === 0 ? prev : 0));
+        selectShape(prev => (prev === null ? prev : null));
+        setEditingShape(prev => (prev === null ? prev : null));
+        activeShapeIdRef.current = null;
+    }, []);
+
+    // Reset canvas when screenshot changes or annotations are cleared
+    useEffect(() => {
+        const currentId = currentScreenshot?.id ?? null;
+        if (lastScreenshotIdRef.current !== currentId) {
+            lastScreenshotIdRef.current = currentId;
+            resetCanvasState();
+        }
+    }, [currentScreenshot?.id, resetCanvasState]);
+
+    useEffect(() => {
+        if (canvasData === null) {
+            resetCanvasState();
+        }
+    }, [canvasData, resetCanvasState]);
 
     // Serialization: Load initial data
     useEffect(() => {
-        if (canvasData && shapes.length === 0 && history.length === 1 && history[0].length === 0) {
+        if (canvasData && shapes.length === 0 && isHistoryPristine) {
             try {
                 const parsed = JSON.parse(canvasData);
                 if (Array.isArray(parsed)) {
@@ -156,19 +182,22 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 console.error("Failed to parse canvasData", e);
             }
         }
-    }, [canvasData]);
+    }, [canvasData, isHistoryPristine, shapes.length]);
 
     // Serialization: Save on change (debounced)
     useEffect(() => {
         const timeout = setTimeout(() => {
             const json = JSON.stringify(shapes);
-            // Check if different to avoid loop
+            // Avoid re-saving when annotations were explicitly cleared/reset
+            if (canvasData === null && json === '[]') {
+                return;
+            }
             if (json !== canvasData) {
                 setCanvasData(json);
             }
         }, 500);
         return () => clearTimeout(timeout);
-    }, [shapes, setCanvasData]); // canvasData dependency omitted
+    }, [shapes, canvasData, setCanvasData]);
 
     // Sync History to Parent
     useEffect(() => {

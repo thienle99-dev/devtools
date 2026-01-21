@@ -11,6 +11,7 @@ URLImage.displayName = 'URLImage';
 
 interface ShapeItemProps {
     shape: ShapeData;
+    isSelected: boolean;
     isEditing: boolean;
     activeTool: string | null;
     onSelect: (id: string) => void;
@@ -21,6 +22,7 @@ interface ShapeItemProps {
 
 export const ShapeItem = memo<ShapeItemProps>(({
     shape,
+    isSelected,
     isEditing,
     activeTool,
     onSelect,
@@ -28,8 +30,19 @@ export const ShapeItem = memo<ShapeItemProps>(({
     onDragEnd,
     onTransformEnd
 }) => {
+    const selectionStyles = isSelected
+        ? {
+            shadowColor: '#818cf8',
+            shadowBlur: 12,
+            shadowOpacity: 0.6,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+        }
+        : {};
+
     const commonProps = {
         ...shape,
+        ...selectionStyles,
         onClick: () => onSelect(shape.id),
         onTap: () => onSelect(shape.id),
         onDragEnd,
