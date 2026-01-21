@@ -16,6 +16,11 @@ export const useClipboardMonitor = (enabled: boolean, ignoredApps: string[] = []
 
         const checkClipboard = async () => {
             try {
+                const activeApp = await window.ipcRenderer.invoke?.('clipboard-get-active-app');
+                if (activeApp && ignoredApps.some(app => app.trim().length > 0 && app.toLowerCase() === activeApp.toLowerCase())) {
+                    return;
+                }
+
                 // 1. Check for Text changes
                 const text = await window.ipcRenderer.invoke('clipboard-read-text');
                 if (text && text !== lastTextRef.current) {
