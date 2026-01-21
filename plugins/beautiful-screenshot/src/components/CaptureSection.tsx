@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Monitor, Square, MousePointer2, Camera, Clock, Globe, Upload } from 'lucide-react';
+import { Monitor, Square, MousePointer2, Camera, Clock, Globe, Upload, Trash2 } from 'lucide-react';
 import { useXnapperStore } from '../store/xnapperStore';
 import type { CaptureMode, CaptureSource } from '../types';
 import { cn } from '@utils/cn';
@@ -15,6 +15,7 @@ export const CaptureSection: React.FC = () => {
         setShowPreview,
         addToHistory,
         history,
+        removeFromHistory,
         setCanvasData,
         clearRedactionAreas,
         captureDelay,
@@ -613,49 +614,66 @@ export const CaptureSection: React.FC = () => {
                     
                     <div className="grid grid-cols-4 gap-4">
                         {history.slice(0, 4).map((item) => (
-                            <button
+                            <div
                                 key={item.id}
-                                onClick={() => {
-                                    setCurrentScreenshot(item);
-                                    setCanvasData(null);
-                                    clearRedactionAreas();
-                                    setShowPreview(true);
-                                }}
                                 className="group relative aspect-video bg-glass-panel rounded-2xl overflow-hidden border-2 border-border-glass hover:border-indigo-500 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/20"
                             >
-                                {item.dataUrl ? (
-                                    <>
-                                        <img
-                                            src={item.dataUrl}
-                                            alt="Recent capture"
-                                            className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
-                                        />
-                                        {/* Gradient Overlay */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                        
-                                        {/* Timestamp Badge */}
-                                        <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                                            <span className="text-xs text-white font-bold truncate block">
-                                                {format(new Date(item.timestamp), 'MMM d, h:mm a')}
-                                            </span>
+                                <button
+                                    onClick={() => {
+                                        setCurrentScreenshot(item);
+                                        setCanvasData(null);
+                                        clearRedactionAreas();
+                                        setShowPreview(true);
+                                    }}
+                                    className="absolute inset-0 w-full h-full"
+                                >
+                                    {item.dataUrl ? (
+                                        <>
+                                            <img
+                                                src={item.dataUrl}
+                                                alt="Recent capture"
+                                                className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
+                                            />
+                                            {/* Gradient Overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                            
+                                            {/* Timestamp Badge */}
+                                            <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                                                <span className="text-xs text-white font-bold truncate block">
+                                                    {format(new Date(item.timestamp), 'MMM d, h:mm a')}
+                                                </span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Square 
+                                                className="w-8 h-8"
+                                                style={{ color: 'var(--color-text-muted)', opacity: 0.3 }}
+                                            />
                                         </div>
-                                    </>
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Square 
-                                            className="w-8 h-8"
-                                            style={{ color: 'var(--color-text-muted)', opacity: 0.3 }}
-                                        />
+                                    )}
+                                    
+                                    {/* Play Icon Overlay */}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                            <div className="w-0 h-0 border-l-8 border-l-white border-y-6 border-y-transparent ml-1" />
+                                        </div>
                                     </div>
-                                )}
+                                </button>
                                 
-                                {/* Play Icon Overlay */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                                        <div className="w-0 h-0 border-l-8 border-l-white border-y-6 border-y-transparent ml-1" />
-                                    </div>
-                                </div>
-                            </button>
+                                {/* Delete Button */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeFromHistory(item.id);
+                                        toast.success('Capture deleted');
+                                    }}
+                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-2 bg-red-500/90 hover:bg-red-500 text-white rounded-lg transition-all duration-200 z-10 shadow-lg"
+                                    title="Delete this capture"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
                         ))}
                     </div>
                 </div>

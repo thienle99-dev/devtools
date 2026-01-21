@@ -89,7 +89,7 @@ export const HistoryPanel: React.FC = () => {
                                         e.stopPropagation();
                                         removeFromHistory(item.id);
                                     }}
-                                    className="opacity-60 hover:opacity-100 p-1.5 hover:bg-red-500/20 text-red-400 rounded transition-all flex-shrink-0"
+                                    className="opacity-100 p-2 hover:bg-red-500/20 text-red-400 rounded-md transition-all flex-shrink-0 border border-red-500/30 hover:border-red-500/50 bg-red-500/5"
                                     title="Delete this capture"
                                 >
                                     <Trash2 className="w-4 h-4" />
