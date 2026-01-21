@@ -121,17 +121,36 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
             // Wait for user selection - setup handlers FIRST
             return new Promise((resolve, reject) => {
                 let selectionWindow: BrowserWindow | null = null;
+                let isResolved = false;
+
+                // Remove existing handlers to prevent duplicate registration
+                const removeExistingHandlers = () => {
+                    try {
+                        ipcMain.removeHandler('screenshot:area-selected');
+                    } catch (e) {
+                        // Handler might not exist, ignore
+                    }
+                    try {
+                        ipcMain.removeHandler('screenshot:area-cancelled');
+                    } catch (e) {
+                        // Handler might not exist, ignore
+                    }
+                };
 
                 const cleanup = () => {
                     if (selectionWindow && !selectionWindow.isDestroyed()) {
                         selectionWindow.close();
                     }
-                    ipcMain.removeHandler('screenshot:area-selected');
-                    ipcMain.removeHandler('screenshot:area-cancelled');
+                    removeExistingHandlers();
                 };
+
+                // Remove any existing handlers first to prevent duplicate registration
+                removeExistingHandlers();
 
                 // Register IPC handlers BEFORE creating window
                 ipcMain.handle('screenshot:area-selected', async (_event, bounds: { x: number; y: number; width: number; height: number }) => {
+                    if (isResolved) return;
+                    isResolved = true;
                     cleanup();
 
                     // Crop the full screen image to the selected area
@@ -151,6 +170,8 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                 });
 
                 ipcMain.handle('screenshot:area-cancelled', () => {
+                    if (isResolved) return;
+                    isResolved = true;
                     cleanup();
                     reject(new Error('Area selection cancelled'));
                 });

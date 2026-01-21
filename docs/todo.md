@@ -224,6 +224,62 @@
 - [x] Service Worker generator
 - [ ] PWA checklist
 
+**Additional Web Tools (Planned):**
+- [ ] HTTP Request Builder (POST/GET/PUT/DELETE with headers, body, auth)
+- [ ] CORS Checker (Test CORS headers and preflight requests)
+- [ ] HSTS Checker (Check HSTS header configuration)
+- [ ] Security Headers Checker (Analyze security headers: CSP, HSTS, X-Frame-Options, etc.)
+- [ ] URL Shortener/Expander (Shorten URLs or expand shortened URLs)
+- [ ] Accept Header Builder (Build Accept headers for content negotiation)
+- [ ] User-Agent Switcher (Switch between different User-Agent strings)
+- [ ] Referrer Policy Generator (Generate Referrer-Policy headers)
+- [ ] Feature Policy Generator (Generate Permissions-Policy headers)
+- [ ] Favicon Generator (Generate favicon from image or text)
+- [ ] Webhook Tester (Test webhook endpoints)
+- [ ] API Response Formatter (Format API responses with syntax highlighting)
+- [ ] GraphQL Query Builder (Visual GraphQL query builder)
+- [ ] REST API Client (Simple REST client with history)
+- [ ] WebSocket Client (Connect and test WebSocket connections)
+- [ ] Server-Sent Events (SSE) Tester
+- [ ] HTTP/2 Push Simulator
+- [ ] Cache-Control Header Builder
+- [ ] ETag Generator/Validator
+- [ ] Link Header Parser (Parse HTTP Link headers)
+- [ ] Preload/Prefetch Header Generator
+- [ ] DNS Lookup Tool (Resolve domain names to IP addresses)
+- [ ] WHOIS Lookup Tool
+- [ ] SSL/TLS Certificate Checker
+- [ ] Domain Expiry Checker
+- [ ] Subdomain Enumerator
+- [ ] Port Scanner (Check open ports on a domain)
+- [ ] HTTP Redirect Chain Analyzer
+- [ ] URL Validator (Validate URL format and accessibility)
+- [ ] HTML Validator (Validate HTML markup)
+- [ ] CSS Validator (Validate CSS)
+- [ ] JSON Schema Validator
+- [ ] OpenAPI/Swagger Validator
+- [ ] API Rate Limit Calculator
+- [ ] Request Size Calculator
+- [ ] Response Time Analyzer
+- [ ] HTTP Compression Tester
+- [ ] Browser Compatibility Checker
+- [ ] Progressive Web App (PWA) Validator
+- [ ] Web Vitals Calculator
+- [ ] Lighthouse Score Simulator
+- [ ] SEO Meta Tags Validator
+- [ ] Social Media Preview Generator (OG tags, Twitter cards)
+- [ ] Canonical URL Checker
+- [ ] Robots.txt Validator
+- [ ] Sitemap Validator
+- [ ] Schema.org Markup Validator
+- [ ] Microdata Parser
+- [ ] RDFa Parser
+- [ ] Open Graph Debugger
+- [ ] Twitter Card Validator
+- [ ] Facebook Debugger Tool
+- [ ] LinkedIn Post Inspector
+- [ ] WhatsApp Link Preview Generator
+
 ### 3.4 Development Tools
 
 - [x] JSON prettify and format

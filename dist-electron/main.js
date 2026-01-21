@@ -3856,12 +3856,23 @@ function setupScreenshotHandlers(win$1) {
 			console.log(`Display size: ${display.size.width}x${display.size.height} (Scale: ${display.scaleFactor})`);
 			return new Promise((resolve, reject) => {
 				let selectionWindow = null;
+				let isResolved = false;
+				const removeExistingHandlers = () => {
+					try {
+						ipcMain.removeHandler("screenshot:area-selected");
+					} catch (e) {}
+					try {
+						ipcMain.removeHandler("screenshot:area-cancelled");
+					} catch (e) {}
+				};
 				const cleanup = () => {
 					if (selectionWindow && !selectionWindow.isDestroyed()) selectionWindow.close();
-					ipcMain.removeHandler("screenshot:area-selected");
-					ipcMain.removeHandler("screenshot:area-cancelled");
+					removeExistingHandlers();
 				};
+				removeExistingHandlers();
 				ipcMain.handle("screenshot:area-selected", async (_event, bounds) => {
+					if (isResolved) return;
+					isResolved = true;
 					cleanup();
 					const scaleFactor$1 = display.scaleFactor;
 					const croppedImage = fullScreenImage.crop({
@@ -3877,6 +3888,8 @@ function setupScreenshotHandlers(win$1) {
 					});
 				});
 				ipcMain.handle("screenshot:area-cancelled", () => {
+					if (isResolved) return;
+					isResolved = true;
 					cleanup();
 					reject(/* @__PURE__ */ new Error("Area selection cancelled"));
 				});

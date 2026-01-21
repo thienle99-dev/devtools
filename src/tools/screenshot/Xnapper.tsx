@@ -73,11 +73,28 @@ export const Xnapper: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Stats Badge (when screenshot captured) */}
-                    {currentScreenshot && (
-                        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-glass-panel border border-border-glass">
-                            <div className="flex items-center gap-2">
-                                <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                    {/* Right side actions */}
+                    <div className="flex items-center gap-2">
+                        {/* Panel Toggle Button - Compact */}
+                        {currentScreenshot && (
+                            <button
+                                onClick={() => setIsPanelOpen(!isPanelOpen)}
+                                className="p-2 rounded-lg bg-glass-panel border border-border-glass hover:border-indigo-500/50 hover:bg-indigo-500/10 text-indigo-400 transition-all duration-200 group"
+                                title={`${isPanelOpen ? 'Hide' : 'Show'} Panel (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + \\)`}
+                            >
+                                {isPanelOpen ? (
+                                    <PanelRightClose className="w-4 h-4 transition-transform group-hover:scale-110" />
+                                ) : (
+                                    <PanelRightOpen className="w-4 h-4 transition-transform group-hover:scale-110" />
+                                )}
+                            </button>
+                        )}
+
+                        {/* Stats Badge (when screenshot captured) */}
+                        {currentScreenshot && (
+                            <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-glass-panel border border-border-glass">
+                                <div className="flex items-center gap-2">
+                                    <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
                                 <span 
                                     className="text-xs font-mono font-semibold"
                                     style={{ color: 'var(--color-text-secondary)' }}
@@ -125,54 +142,6 @@ export const Xnapper: React.FC = () => {
                                 onZoomChange={handleZoomChange}
                             />
 
-                            {/* Floating Toggle Button */}
-                            <button
-                                onClick={() => setIsPanelOpen(!isPanelOpen)}
-                                className="absolute top-6 right-6 z-20 group"
-                                title={`${isPanelOpen ? 'Hide' : 'Show'} Panel (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + \\)`}
-                            >
-                                {/* Background with glow */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
-                                
-                                {/* Button Content */}
-                                <div className="relative flex items-center gap-3 px-5 py-3 rounded-2xl bg-glass-panel border-2 border-border-glass backdrop-blur-xl transition-all duration-300 group-hover:border-indigo-500 group-hover:shadow-lg group-hover:shadow-indigo-500/30 group-hover:scale-105">
-                                    {/* Icon & Text */}
-                                    <div className="flex items-center gap-2">
-                                        {isPanelOpen ? (
-                                            <>
-                                                <PanelRightClose className="w-5 h-5 text-indigo-400 transition-transform group-hover:scale-110" />
-                                                <span 
-                                                    className="text-sm font-bold text-indigo-400"
-                                                >
-                                                    Hide Panel
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <PanelRightOpen className="w-5 h-5 text-indigo-400 transition-transform group-hover:scale-110" />
-                                                <span 
-                                                    className="text-sm font-bold text-indigo-400"
-                                                >
-                                                    Show Panel
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                    
-                                    {/* Keyboard Shortcut Badge */}
-                                    <div 
-                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono font-bold"
-                                        style={{
-                                            backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                                            color: '#818cf8'
-                                        }}
-                                    >
-                                        <span>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</span>
-                                        <span>+</span>
-                                        <span>\</span>
-                                    </div>
-                                </div>
-                            </button>
                         </div>
 
                         {/* Style Panel - Sliding sidebar with smooth animation */}
