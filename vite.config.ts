@@ -123,6 +123,9 @@ export default defineConfig({
           if (id.includes('crypto-js') || id.includes('bcryptjs') || id.includes('uuid') || id.includes('ulid')) {
             return 'crypto-vendor';
           }
+          if (id.includes('pdfjs-dist')) {
+            return 'pdfjs';
+          }
           if (id.includes('pdf-lib') || id.includes('jspdf')) {
             return 'pdf-vendor';
           }
@@ -156,6 +159,7 @@ export default defineConfig({
       'tesseract.js', // Lazy load
       'fabric',       // Lazy load
       'zxcvbn',
+      'pdfjs-dist',
     ]
   },
 })
