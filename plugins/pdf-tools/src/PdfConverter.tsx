@@ -10,8 +10,10 @@ import { Label } from '@components/ui/Label';
 import { toast } from 'sonner';
 import { cn } from '@utils/cn';
 
-// Set worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Set worker when running in the browser (avoids SSR errors)
+if (typeof window !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+}
 
 type ConvertMode = 'to-image' | 'to-text';
 
