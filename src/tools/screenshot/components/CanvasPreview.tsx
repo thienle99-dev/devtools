@@ -35,6 +35,8 @@ export interface CanvasPreviewHandle {
     resetZoom: () => void;
     getZoom: () => number;
     exportImage?: () => string;
+    bringForward?: () => void;
+    sendBackward?: () => void;
 }
 
 interface CanvasPreviewProps {

@@ -240,6 +240,8 @@ export const XnapperStylePanel: React.FC<XnapperStylePanelProps> = ({
                             onUndo={() => canvasRef?.current?.undo()}
                             onRedo={() => canvasRef?.current?.redo()}
                             onClear={() => canvasRef?.current?.clear()}
+                            onBringForward={() => canvasRef?.current?.bringForward?.()}
+                            onSendBackward={() => canvasRef?.current?.sendBackward?.()}
                             canUndo={historyState.canUndo}
                             canRedo={historyState.canRedo}
                             annotationCount={historyState.count}

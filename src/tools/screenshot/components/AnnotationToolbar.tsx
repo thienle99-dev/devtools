@@ -9,7 +9,10 @@ import {
     Eraser,
     Undo2,
     Redo2,
-    Trash2
+    Trash2,
+    Pen,
+    BringToFront,
+    SendToBack
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
@@ -20,6 +23,8 @@ interface AnnotationToolbarProps {
     onUndo?: () => void;
     onRedo?: () => void;
     onClear?: () => void;
+    onBringForward?: () => void;
+    onSendBackward?: () => void;
     canUndo?: boolean;
     canRedo?: boolean;
     annotationCount?: number;
@@ -29,6 +34,8 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
     onUndo,
     onRedo,
     onClear,
+    onBringForward,
+    onSendBackward,
     canUndo = false,
     canRedo = false,
     annotationCount = 0,
@@ -49,6 +56,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         description: string;
     }> = [
             { type: 'arrow', icon: ArrowRight, label: 'Arrow', description: 'Draw arrows' },
+            { type: 'pen', icon: Pen, label: 'Pen', description: 'Free draw' },
             { type: 'text', icon: Type, label: 'Text', description: 'Add text' },
             { type: 'rectangle', icon: Square, label: 'Rectangle', description: 'Draw rectangle' },
             { type: 'circle', icon: Circle, label: 'Circle', description: 'Draw circle' },
@@ -216,6 +224,23 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                     title="Redo (Ctrl+Y)"
                 >
                     <Redo2 className="w-4 h-4" />
+                </Button>
+                <div className="w-px h-4 bg-border-glass mx-1" />
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onSendBackward}
+                    title="Send Backward ([)"
+                >
+                    <SendToBack className="w-4 h-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onBringForward}
+                    title="Bring Forward (])"
+                >
+                    <BringToFront className="w-4 h-4" />
                 </Button>
                 <div className="flex-1" />
                 {annotationCount > 0 && (

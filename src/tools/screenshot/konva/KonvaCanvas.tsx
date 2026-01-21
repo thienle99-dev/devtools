@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText, Line } from 'react-konva';
 import useImage from 'use-image';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
@@ -14,7 +14,7 @@ interface KonvaCanvasProps {
 // Helper component to load image
 const URLImage = ({ src, width, height }: { src: string; width: number; height: number }) => {
     const [image] = useImage(src, 'anonymous');
-    return <KonvaImage image={image} width={width} height={height} />;
+    return <KonvaImage image={image} width={width} height={height} listening={false} />;
 };
 
 export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ onHistoryChange, onZoomChange }, ref) => {
@@ -37,6 +37,8 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         aspectRatio,
         activeAnnotationTool,
         annotationConfig,
+        canvasData,
+        setCanvasData,
     } = useXnapperStore();
 
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -146,6 +148,34 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     const [history, setHistory] = useState<any[][]>([[]]);
     const [historyStep, setHistoryStep] = useState(0);
 
+    // Serialization: Load initial data
+    useEffect(() => {
+        if (canvasData && shapes.length === 0 && history.length === 1 && history[0].length === 0) {
+            try {
+                const parsed = JSON.parse(canvasData);
+                if (Array.isArray(parsed)) {
+                    setShapes(parsed);
+                    setHistory([parsed]);
+                    setHistoryStep(0);
+                }
+            } catch (e) {
+                console.error("Failed to parse canvasData", e);
+            }
+        }
+    }, [canvasData]);
+
+    // Serialization: Save on change (debounced)
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            const json = JSON.stringify(shapes);
+            // Check if different to avoid loop
+            if (json !== canvasData) {
+                 setCanvasData(json);
+            }
+        }, 500);
+        return () => clearTimeout(timeout);
+    }, [shapes, setCanvasData]); // canvasData dependency omitted
+
     // Sync History to Parent
     useEffect(() => {
         onHistoryChange?.(historyStep > 0, historyStep < history.length - 1, shapes.length);
@@ -191,19 +221,80 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         }
     }, [selectedId]);
 
-    // Keyboard support for Delete
+    // Clipboard
+    const clipboardRef = useRef<any>(null);
+
+    // Keyboard support: Delete, Copy/Paste, Z-Order
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if editing text
+            if (editingShape) return;
+
+            // Delete
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
                 const newShapes = shapes.filter(s => s.id !== selectedId);
                 setShapes(newShapes);
                 addToHistory(newShapes);
                 selectShape(null);
+                return;
+            }
+
+            // Copy (Ctrl+C / Cmd+C)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedId) {
+                const shape = shapes.find(s => s.id === selectedId);
+                if (shape) {
+                    clipboardRef.current = { ...shape };
+                    // Remove id so we generate new one on paste
+                    delete clipboardRef.current.id;
+                }
+                return;
+            }
+
+            // Paste (Ctrl+V / Cmd+V)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboardRef.current) {
+                const newId = crypto.randomUUID();
+                const newShape = {
+                    ...clipboardRef.current,
+                    id: newId,
+                    x: clipboardRef.current.x + 20, // Offset paste
+                    y: clipboardRef.current.y + 20,
+                };
+                const newShapes = [...shapes, newShape];
+                setShapes(newShapes);
+                addToHistory(newShapes);
+                selectShape(newId);
+                return;
+            }
+
+            // Z-Index: Send Backward ([)
+            if (e.key === '[' && selectedId) {
+                const index = shapes.findIndex(s => s.id === selectedId);
+                if (index > 0) {
+                    const newShapes = [...shapes];
+                    // Swap with previous
+                    [newShapes[index - 1], newShapes[index]] = [newShapes[index], newShapes[index - 1]];
+                    setShapes(newShapes);
+                    addToHistory(newShapes);
+                }
+                return;
+            }
+
+            // Z-Index: Bring Forward (])
+            if (e.key === ']' && selectedId) {
+                const index = shapes.findIndex(s => s.id === selectedId);
+                if (index < shapes.length - 1) {
+                    const newShapes = [...shapes];
+                    // Swap with next
+                    [newShapes[index + 1], newShapes[index]] = [newShapes[index], newShapes[index + 1]];
+                    setShapes(newShapes);
+                    addToHistory(newShapes);
+                }
+                return;
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedId, shapes]);
+    }, [selectedId, shapes, editingShape]);
 
     // Drawing Logic
     const handleMouseDown = (e: any) => {
@@ -287,6 +378,18 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             // Select it immediately
             selectShape(id);
             return; 
+        } else if (activeAnnotationTool === 'pen') {
+            newShape = {
+                ...baseProps,
+                type: 'pen',
+                points: [pos.x, pos.y],
+                tension: 0.5,
+                lineCap: 'round',
+                lineJoin: 'round',
+                fill: null,
+                stroke: annotationConfig.color || 'red',
+                strokeWidth: annotationConfig.strokeWidth || 3,
+            };
         }
 
         if (newShape) {
@@ -323,6 +426,11 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                     return {
                         ...s,
                         points: [s.points[0], s.points[1], pos.x, pos.y]
+                    };
+                } else if (s.type === 'pen') {
+                    return {
+                        ...s,
+                        points: [...s.points, pos.x, pos.y]
                     };
                 }
             }
@@ -460,6 +568,30 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 return stageRef.current.toDataURL({ pixelRatio });
             }
             return '';
+        },
+        bringForward: () => {
+            if (selectedId) {
+                const index = shapes.findIndex(s => s.id === selectedId);
+                if (index < shapes.length - 1) {
+                    const newShapes = [...shapes];
+                    // Swap with next
+                    [newShapes[index + 1], newShapes[index]] = [newShapes[index], newShapes[index + 1]];
+                    setShapes(newShapes);
+                    addToHistory(newShapes);
+                }
+            }
+        },
+        sendBackward: () => {
+            if (selectedId) {
+                const index = shapes.findIndex(s => s.id === selectedId);
+                if (index > 0) {
+                    const newShapes = [...shapes];
+                    // Swap with previous
+                    [newShapes[index - 1], newShapes[index]] = [newShapes[index], newShapes[index - 1]];
+                    setShapes(newShapes);
+                    addToHistory(newShapes);
+                }
+            }
         }
     }));
 
@@ -519,6 +651,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                             if (shape.type === 'circle') return <Circle {...commonProps} />;
                             if (shape.type === 'arrow') return <Arrow {...commonProps} />;
                             if (shape.type === 'line') return <Arrow {...commonProps} pointerLength={0} pointerWidth={0} />;
+                            if (shape.type === 'pen') return <Line {...commonProps} />;
                             if (shape.type === 'text') {
                                 return (
                                     <KonvaText 
