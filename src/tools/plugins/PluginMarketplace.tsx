@@ -21,7 +21,7 @@ export const PluginMarketplace: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'browse' | 'installed'>('browse');
 
   const categories = [
-    { id: 'all', label: 'Everything', icon: LayoutGrid },
+    { id: 'all', label: 'Everything' },
     { id: 'media', label: 'Media & Video' },
     { id: 'document', label: 'PDF & Docs' },
     { id: 'developer', label: 'Dev Tools' },
@@ -107,139 +107,134 @@ export const PluginMarketplace: React.FC = () => {
   }, [availablePlugins, installedPlugins, searchQuery, selectedCategory, activeTab]);
 
   return (
-    <div className="plugin-marketplace-container flex-1 flex flex-col min-h-0 overflow-hidden">
-      {/* Immersive Header */}
-      <div className="px-8 pt-6 pb-6 shrink-0 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-[200px] bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
-        
-        <div className="relative z-20 flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[9px] font-black uppercase tracking-widest">
-                <Sparkles size={10} fill="currentColor" />
-                Next-Gen Ecosystem
+    <div className="plugin-marketplace-container flex-1 flex flex-col min-h-0 overflow-hidden bg-[#F8F9FC] dark:bg-[#0a0a0a]">
+      {/* Header Section */}
+      <div className="px-10 pt-8 pb-4 bg-gradient-to-b from-indigo-500/5 to-transparent">
+        <div className="flex items-start justify-between mb-8">
+            <div className="space-y-4">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E0E7FF] dark:bg-indigo-500/20 text-[#6366F1] dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
+                    <Sparkles size={12} className="fill-current" />
+                    Next-Gen Ecosystem
+                </div>
+                <div className="space-y-1">
+                    <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                        Plugin<span className="font-light opacity-90">Marketplace</span>
+                    </h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-lg font-medium">
+                        Extend your workflow with powerful specialist tools. Optimized for speed and security.
+                    </p>
+                </div>
             </div>
-            <h1 className="text-3xl font-black tracking-tighter">
-                Plugin <span className="shimmer-text">Marketplace</span>
-            </h1>
-            <p className="text-[13px] opacity-60 max-w-xl font-medium leading-relaxed">
-                Extend your workflow with powerful specialist tools. Optimized for speed and security.
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-             <button 
+
+            <button 
                 onClick={fetchPlugins}
-                className="group h-10 px-4 rounded-xl bg-white/[0.03] dark:bg-white/[0.03] bg-black/[0.02] border border-black/5 dark:border-white/10 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/20 transition-all flex items-center gap-2.5 font-bold text-[11px]"
-             >
-                <RotateCw className={cn("w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity", isLoading && "animate-spin")} />
+                className="group h-9 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300"
+            >
+                <RotateCw className={cn("w-3.5 h-3.5 group-hover:text-indigo-500 transition-colors", isLoading && "animate-spin")} />
                 Sync Registry
-             </button>
-          </div>
+            </button>
         </div>
 
-        {/* High-Performance Controls */}
-        <div className="relative z-20 flex flex-col gap-4 p-1 rounded-3xl bg-white/40 dark:bg-black/40 border border-black/5 dark:border-white/5 shadow-xl backdrop-blur-3xl">
-            <div className="flex flex-col lg:flex-row items-center gap-3">
-                {/* Tab Switcher - Premium */}
-                <div className="flex p-1 bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl w-full lg:w-fit">
-                    {(['browse', 'installed'] as const).map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={cn(
-                                "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
-                                activeTab === tab ? "bg-indigo-500 text-white shadow-lg" : "opacity-40 hover:opacity-100"
-                            )}
-                        >
-                            {tab === 'browse' ? 'Storefront' : 'Installed'}
-                            {tab === 'installed' && installedPlugins.length > 0 && (
-                                <span className={cn(
-                                    "absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] border-2",
-                                    activeTab === tab ? "bg-white text-indigo-600 border-indigo-500" : "bg-black/10 dark:bg-white/10 border-black/40 dark:border-white/40"
-                                )}>
-                                    {installedPlugins.length}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+        {/* Unified Search & Filter Bar */}
+        <div className="space-y-4">
+            {/* Main Bar */}
+            <div className="h-14 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100/50 dark:border-zinc-800 flex items-center px-2 gap-2">
+                {/* Tabs */}
+                <div className="flex p-1 bg-gray-100/80 dark:bg-zinc-800 rounded-xl shrink-0">
+                    <button
+                        onClick={() => setActiveTab('browse')}
+                        className={cn(
+                            "px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
+                            activeTab === 'browse' 
+                                ? "bg-[#6366F1] text-white shadow-sm" 
+                                : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                        )}
+                    >
+                        Storefront
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('installed')}
+                        className={cn(
+                            "px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all relative",
+                            activeTab === 'installed'
+                                ? "bg-[#6366F1] text-white shadow-sm"
+                                : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                        )}
+                    >
+                        Installed
+                        {installedPlugins.length > 0 && (
+                            <span className={cn(
+                                "ml-2 px-1.5 py-0.5 rounded-full text-[9px]",
+                                activeTab === 'installed' ? "bg-white/20 text-white" : "bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-gray-300"
+                            )}>
+                                {installedPlugins.length}
+                            </span>
+                        )}
+                    </button>
                 </div>
 
-                {/* Search Bar - Advanced */}
-                <div className="flex-1 w-full relative group">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20 group-focus-within:opacity-100 group-focus-within:text-indigo-400 transition-all" />
+                {/* Divider */}
+                <div className="h-6 w-px bg-gray-200 dark:bg-zinc-800 mx-2" />
+
+                {/* Search */}
+                <div className="flex-1 flex items-center gap-3 px-2 group">
+                    <Search className="w-4 h-4 text-gray-400 group-focus-within:text-[#6366F1] transition-colors" />
                     <input
                         type="text"
-                        className="w-full h-11 pl-12 pr-5 bg-black/[0.02] dark:bg-white/[0.02] border border-transparent rounded-2xl text-xs font-medium focus:outline-none focus:bg-black/[0.04] dark:focus:bg-white/[0.05] focus:border-indigo-500/30 transition-all placeholder:opacity-20"
-                        placeholder={activeTab === 'browse' ? "Search for tools..." : "Search locally..."}
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-white placeholder:text-gray-400"
+                        placeholder="Search for tools..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
 
-            {/* Category Filter - Pill System */}
-            <div className="flex items-center gap-3 px-3 pb-1">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                    {categories.map(cat => {
-                        const Icon = cat.icon;
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategory(cat.id)}
-                                className={cn(
-                                    "filter-pill group px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[0.12em] transition-all flex items-center gap-2 border whitespace-nowrap",
-                                    selectedCategory === cat.id ? "active" : ""
-                                )}
-                            >
-                                {Icon && <Icon size={10} className={selectedCategory === cat.id ? "text-indigo-400" : "opacity-20"} />}
-                                {cat.label}
-                            </button>
-                        );
-                    })}
-                </div>
+            {/* Categories */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                {categories.map(cat => (
+                    <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={cn(
+                            "px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all whitespace-nowrap",
+                            selectedCategory === cat.id
+                                ? "bg-[#EEF2FF] dark:bg-indigo-500/20 border-[#6366F1]/20 text-[#6366F1] dark:text-indigo-300"
+                                : "bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-500 hover:border-gray-300 dark:hover:border-zinc-700"
+                        )}
+                    >
+                        {cat.label}
+                    </button>
+                ))}
             </div>
         </div>
       </div>
 
-      {/* Grid Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4 custom-scrollbar">
-        <div className="flex items-center justify-between mb-6 px-1">
-            <div className="flex items-center gap-2">
-                <LayoutGrid size={16} className="opacity-20" />
-                <h2 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">
-                    {activeTab === 'browse' ? 'Curated Collection' : 'My Local Library'}
-                </h2>
-            </div>
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 text-[9px] font-bold opacity-40 uppercase tracking-widest">
-                <Zap size={9} className="text-indigo-500" />
-                {filteredPlugins.length} result{filteredPlugins.length !== 1 ? 's' : ''}
-            </div>
-        </div>
-
+      {/* Content Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-10 py-6 custom-scrollbar">
         {isLoading && filteredPlugins.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className="h-[300px] rounded-3xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 animate-pulse" />
+              <div key={i} className="h-[280px] rounded-2xl bg-gray-100 dark:bg-zinc-900 animate-pulse" />
             ))}
           </div>
         ) : filteredPlugins.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="w-24 h-24 bg-indigo-500/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-indigo-500/10">
-              <PackageCheck className="w-10 h-10 text-indigo-500/40" />
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mb-6">
+              <PackageCheck className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-2xl font-bold mb-3">No tools found</h3>
-            <p className="text-sm opacity-30 mb-10 max-w-sm font-medium">
-                Try a different keyword or browse all categories.
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No tools found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
+                We couldn't find any plugins matching your search criteria.
             </p>
             <button 
               onClick={() => {setSearchQuery(''); setSelectedCategory('all');}}
-              className="h-12 px-8 rounded-2xl bg-indigo-600 dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
+              className="px-6 py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-opacity"
             >
-              Reset Filters
+              Clear Filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
             {filteredPlugins.map(plugin => {
               const installedPlugin = installedPlugins.find(p => p.manifest.id === plugin.id);
               const isUpdateAvailable = installedPlugin 
@@ -250,10 +245,7 @@ export const PluginMarketplace: React.FC = () => {
                 <div 
                   key={plugin.id} 
                   className="contents"
-                  onClick={() => {
-                    console.log('[Marketplace] Card clicked for plugin:', plugin.id);
-                    setSelectedPlugin(plugin);
-                  }}
+                  onClick={() => setSelectedPlugin(plugin)}
                 >
                   <PluginCard 
                     plugin={installedPlugin ? installedPlugin.manifest : plugin} 

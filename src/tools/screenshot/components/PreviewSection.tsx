@@ -3,6 +3,7 @@ import { Check, X, Copy, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { CanvasPreview } from './CanvasPreview';
+import { KonvaCanvas } from '../konva/KonvaCanvas';
 import type { CanvasPreviewHandle } from './CanvasPreview';
 import { cropImage } from '../utils/crop';
 import { generateFinalImage } from '../utils/exportUtils';
@@ -13,6 +14,8 @@ interface PreviewSectionProps {
     onHistoryChange: (undo: boolean, redo: boolean, count: number) => void;
     onZoomChange?: (zoom: number) => void;
 }
+
+const USE_KONVA = true;
 
 export const PreviewSection = ({
     canvasRef,
@@ -197,11 +200,19 @@ export const PreviewSection = ({
                     justifyContent: 'center'
                 }}
             >
-                <CanvasPreview
-                    ref={canvasRef as any}
-                    onHistoryChange={onHistoryChange}
-                    onZoomChange={onZoomChange}
-                />
+                {USE_KONVA ? (
+                    <KonvaCanvas
+                        ref={canvasRef as any}
+                        onHistoryChange={onHistoryChange}
+                        onZoomChange={onZoomChange}
+                    />
+                ) : (
+                    <CanvasPreview
+                        ref={canvasRef as any}
+                        onHistoryChange={onHistoryChange}
+                        onZoomChange={onZoomChange}
+                    />
+                )}
 
                 {/* Copy Flash Feedback - Premium */}
                 {showCopyFlash && (

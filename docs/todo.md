@@ -1925,3 +1925,43 @@
 - [ ] Release large buffers after export
 - [ ] Prevent image blob leaks (revokeObjectURL)
 - [ ] Add memory leak checks for canvas/editor mounts
+
+---
+
+### 31.12 UI Performance Optimizations (Based on Analysis)
+
+#### High Priority
+
+- [ ] Wire `enableAnimations` setting với Framer Motion (disable animations khi setting = false)
+- [ ] Thêm option tắt `backdrop-blur` cho máy cấu hình thấp (đã có `.blur-disabled` class, cần wire với settings)
+- [ ] Audit Framer Motion usage trong Sidebar - giảm AnimatePresence nếu không cần thiết
+- [ ] Profile TabContent render với React DevTools để identify re-render issues
+
+#### Medium Priority
+
+- [ ] Thêm `will-change: transform` cho animated elements (Framer Motion components)
+- [ ] Virtualize Sidebar tool list nếu có >50 tools (consider react-window hoặc react-virtuoso)
+- [ ] Lazy load images/icons trong tool cards và plugin marketplace
+- [ ] Optimize Zustand selectors trong Sidebar để tránh unnecessary re-renders khi search
+- [ ] Consider `react-window` thay `react-virtuoso` cho VirtualizedOutput (nhẹ hơn)
+
+#### Low Priority
+
+- [ ] Implement `contain: layout` cho isolated components (TabContent, ToolPane)
+- [ ] Add performance monitoring/metrics dashboard (dev mode)
+- [ ] Optimize TabBar scroll performance với passive event listeners
+- [ ] Review và optimize all `useMemo` dependencies trong Sidebar.tsx
+- [ ] Add `React.memo` cho ToolNavItem nếu chưa có
+
+---
+
+## Phase 32: Canvas Performance Migration (Konva.js)
+
+- [x] Phase 0: Prep (Deps, Prototype)
+- [x] Phase 1: Core Canvas & Rendering (Stage, Layer, Image Background)
+- [x] Phase 2: Interaction & Selection (Transformer, Basic Shapes)
+- [ ] Phase 3: Shape Tools & Text (Rect, Arrow, Text, etc.)
+- [ ] Phase 4: History & State (Undo/Redo integration)
+- [ ] Phase 5: Export & Import (Replacement of Fabric export)
+- [ ] Phase 6: Performance & Polish
+- [x] Phase 7: QA & Rollout (Feature Flag Integration)
