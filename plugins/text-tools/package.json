@@ -1,0 +1,29 @@
+{
+    "name": "text-tools",
+    "version": "1.0.0",
+    "description": "Comprehensive text manipulation and analysis utilities - Lorem Ipsum, Slugify, Regex Replace, Statistics, Diff, Obfuscator, ASCII Art",
+    "main": "dist/index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc -b && vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "lucide-react": "^0.562.0",
+        "figlet": "^1.7.0",
+        "diff": "^5.1.0",
+        "framer-motion": "^12.23.26"
+    },
+    "devDependencies": {
+        "@types/react": "^18.3.12",
+        "@types/react-dom": "^18.3.1",
+        "@types/figlet": "^1.5.8",
+        "@types/diff": "^5.0.9",
+        "@vitejs/plugin-react": "^5.1.1",
+        "typescript": "~5.9.3",
+        "vite": "^6.0.1"
+    }
+}
