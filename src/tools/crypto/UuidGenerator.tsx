@@ -410,15 +410,15 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
             }
         >
             <div className="max-w-5xl mx-auto space-y-4 py-4 px-4">
-                {/* Tab Switcher */}
-                <div className="flex rounded-lg overflow-hidden border border-border-glass bg-black/20 p-0.5 w-fit">
+                {/* Tab Switcher - Fixed Width */}
+                <div className="flex rounded-lg overflow-hidden border border-border-glass bg-[var(--color-glass-panel-light)] p-0.5 w-fit">
                     <button
                         onClick={() => setActiveTab('generate')}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            "flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md transition-all min-w-[100px]",
                             activeTab === 'generate' 
                                 ? "bg-indigo-500 text-white shadow-lg" 
-                                : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                                : "text-foreground-muted hover:text-foreground hover:bg-[var(--color-glass-button)]"
                         )}
                     >
                         <Sparkles className="w-3.5 h-3.5" />
@@ -427,10 +427,10 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                     <button
                         onClick={() => setActiveTab('validate')}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            "flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md transition-all min-w-[100px]",
                             activeTab === 'validate' 
                                 ? "bg-indigo-500 text-white shadow-lg" 
-                                : "text-foreground-muted hover:text-foreground hover:bg-white/5"
+                                : "text-foreground-muted hover:text-foreground hover:bg-[var(--color-glass-button)]"
                         )}
                     >
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -456,16 +456,16 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                             key={type.id}
                                             onClick={() => updateOption('type', type.id)}
                                             className={cn(
-                                                "relative p-2.5 rounded-lg border transition-all text-left group",
+                                                "relative p-2.5 rounded-lg transition-all text-left group",
                                                 isSelected 
-                                                    ? `${type.borderColor} ${type.bgColor} ring-1 ring-offset-1 ring-offset-background ring-current`
-                                                    : "border-border-glass bg-black/20 hover:bg-white/5"
+                                                    ? `${type.bgColor} ring-2 ring-offset-1 ring-offset-background ring-current ${type.borderColor.replace('border-', 'ring-')}`
+                                                    : "bg-[var(--color-glass-panel-light)] hover:bg-[var(--color-glass-button)] border border-border-glass/50 hover:border-border-glass"
                                             )}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <div className={cn(
                                                     "w-6 h-6 rounded-md flex items-center justify-center shrink-0",
-                                                    isSelected ? type.bgColor : "bg-white/5"
+                                                    isSelected ? type.bgColor : "bg-[var(--color-glass-button)]"
                                                 )}>
                                                     <Icon className={cn("w-3.5 h-3.5", isSelected ? type.color : "text-foreground-muted")} />
                                                 </div>
@@ -533,7 +533,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                         {(options.type === 'v3' || options.type === 'v5') && (
                             <div className={cn(
                                 "p-3 rounded-lg border space-y-3",
-                                options.type === 'v5' ? "border-violet-500/20 bg-violet-500/5" : "border-orange-500/20 bg-orange-500/5"
+                                options.type === 'v5' ? "border-violet-500/30 bg-violet-500/5" : "border-orange-500/30 bg-orange-500/5"
                             )}>
                                 <div className={cn(
                                     "flex items-center gap-1.5 text-xs",
@@ -554,7 +554,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                                         "px-2 py-1 rounded-md text-[10px] font-medium transition-all",
                                                         options.namespace === ns.id
                                                             ? options.type === 'v5' ? "bg-violet-500 text-white" : "bg-orange-500 text-white"
-                                                            : "bg-white/5 text-foreground-muted hover:bg-white/10"
+                                                            : "bg-[var(--color-glass-button)] text-foreground-muted hover:bg-[var(--color-glass-button-hover)]"
                                                     )}
                                                 >
                                                     {ns.name}
@@ -614,10 +614,9 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                             <div
                                                 key={index}
                                                 className={cn(
-                                                    "group flex items-center gap-2 p-2 rounded-lg border transition-all",
-                                                    typeConfig?.borderColor,
+                                                    "group flex items-center gap-2 p-2 rounded-lg transition-all",
                                                     typeConfig?.bgColor,
-                                                    "hover:border-opacity-50"
+                                                    "border border-border-glass/30 hover:border-border-glass/60"
                                                 )}
                                             >
                                                 <div className="flex-1 min-w-0">
@@ -651,7 +650,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-center py-8 border border-dashed border-border-glass rounded-lg">
+                                <div className="text-center py-8 border border-dashed border-border-glass/40 rounded-lg bg-[var(--color-glass-panel-light)]/30">
                                     <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-3">
                                         <Fingerprint className="w-6 h-6 text-indigo-400" />
                                     </div>
@@ -719,7 +718,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                                 </div>
 
                                 {validationResult.valid && validationResult.timestamp && (
-                                    <div className="flex items-center gap-2 p-2.5 rounded-md bg-black/20 border border-white/5">
+                                    <div className="flex items-center gap-2 p-2.5 rounded-md bg-[var(--color-glass-panel-light)] border border-border-glass">
                                         <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                                         <div>
                                             <p className="text-[10px] text-foreground-muted">Embedded Timestamp</p>
@@ -733,7 +732,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
                         )}
 
                         {/* Info Panel - Compact */}
-                        <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
+                        <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/30">
                             <div className="flex items-start gap-2">
                                 <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                                 <div className="space-y-2">
@@ -756,7 +755,7 @@ export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
 
                 {/* Version Comparison Info - Compact */}
                 {activeTab === 'generate' && generatedIds.length === 0 && (
-                    <div className="p-3 rounded-lg bg-gradient-to-r from-indigo-500/5 to-violet-500/5 border border-indigo-500/20">
+                    <div className="p-3 rounded-lg bg-gradient-to-r from-indigo-500/5 to-violet-500/5 border border-indigo-500/30">
                         <div className="flex items-start gap-2">
                             <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                             <div className="space-y-1.5">

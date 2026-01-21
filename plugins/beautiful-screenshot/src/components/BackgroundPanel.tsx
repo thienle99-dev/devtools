@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Image as ImageIcon, Palette, Droplet, Upload } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Slider } from '../../../components/ui/Slider';
+import { Button } from '@components/ui/Button';
+import { Slider } from '@components/ui/Slider';
 import { useXnapperStore } from '../store/xnapperStore';
 import { PRESET_GRADIENTS, generateGradientCSS } from '../utils/backgroundGenerator';
 import { cn } from '@utils/cn';

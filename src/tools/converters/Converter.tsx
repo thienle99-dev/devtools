@@ -5,25 +5,106 @@ import { useToolState } from '../../store/toolStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { cn } from '@utils/cn';
-import { motion } from 'framer-motion';
-import { ArrowRightLeft, Code, Binary, Lock, Type, FileSpreadsheet, FileText, Copy, Eye, EyeOff, Link, Globe } from 'lucide-react';
+import { ArrowRightLeft, Code, Binary, Lock, Type, FileSpreadsheet, FileText, Copy, Eye, EyeOff, Link, Globe, CheckCircle2, ArrowRight, Zap, Info } from 'lucide-react';
 import yaml from 'js-yaml';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import CryptoJS from 'crypto-js';
 import Papa from 'papaparse';
 import { marked } from 'marked';
 import he from 'he';
+import { toast } from 'sonner';
 
 const MODES = [
-    { id: 'json-yaml', name: 'JSON <> YAML', icon: ArrowRightLeft, category: 'data' },
-    { id: 'json-xml', name: 'JSON <> XML', icon: Code, category: 'data' },
-    { id: 'json-csv', name: 'JSON <> CSV', icon: FileSpreadsheet, category: 'data' },
-    { id: 'markdown-html', name: 'Markdown <> HTML', icon: FileText, category: 'markup' },
-    { id: 'base64', name: 'Base64', icon: Lock, category: 'string' },
-    { id: 'url-encode', name: 'URL Encode', icon: Link, category: 'string' },
-    { id: 'html-entity', name: 'HTML Entity', icon: Globe, category: 'string' },
-    { id: 'number-base', name: 'Number Base', icon: Binary, category: 'number' },
-    { id: 'case', name: 'Text Case', icon: Type, category: 'string' },
+    { 
+        id: 'json-yaml', 
+        name: 'JSON ↔ YAML', 
+        icon: ArrowRightLeft, 
+        category: 'data',
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-500/10',
+        borderColor: 'border-emerald-500/20',
+        description: 'Convert between JSON and YAML formats'
+    },
+    { 
+        id: 'json-xml', 
+        name: 'JSON ↔ XML', 
+        icon: Code, 
+        category: 'data',
+        color: 'text-cyan-400',
+        bgColor: 'bg-cyan-500/10',
+        borderColor: 'border-cyan-500/20',
+        description: 'Convert between JSON and XML formats'
+    },
+    { 
+        id: 'json-csv', 
+        name: 'JSON ↔ CSV', 
+        icon: FileSpreadsheet, 
+        category: 'data',
+        color: 'text-violet-400',
+        bgColor: 'bg-violet-500/10',
+        borderColor: 'border-violet-500/20',
+        description: 'Convert between JSON arrays and CSV'
+    },
+    { 
+        id: 'markdown-html', 
+        name: 'Markdown ↔ HTML', 
+        icon: FileText, 
+        category: 'markup',
+        color: 'text-amber-400',
+        bgColor: 'bg-amber-500/10',
+        borderColor: 'border-amber-500/20',
+        description: 'Convert Markdown to HTML and preview'
+    },
+    { 
+        id: 'base64', 
+        name: 'Base64', 
+        icon: Lock, 
+        category: 'string',
+        color: 'text-rose-400',
+        bgColor: 'bg-rose-500/10',
+        borderColor: 'border-rose-500/20',
+        description: 'Encode and decode Base64 strings'
+    },
+    { 
+        id: 'url-encode', 
+        name: 'URL Encode', 
+        icon: Link, 
+        category: 'string',
+        color: 'text-blue-400',
+        bgColor: 'bg-blue-500/10',
+        borderColor: 'border-blue-500/20',
+        description: 'URL encode and decode strings'
+    },
+    { 
+        id: 'html-entity', 
+        name: 'HTML Entity', 
+        icon: Globe, 
+        category: 'string',
+        color: 'text-indigo-400',
+        bgColor: 'bg-indigo-500/10',
+        borderColor: 'border-indigo-500/20',
+        description: 'Escape and unescape HTML entities'
+    },
+    { 
+        id: 'number-base', 
+        name: 'Number Base', 
+        icon: Binary, 
+        category: 'number',
+        color: 'text-orange-400',
+        bgColor: 'bg-orange-500/10',
+        borderColor: 'border-orange-500/20',
+        description: 'Convert between decimal, hex, octal, binary'
+    },
+    { 
+        id: 'case', 
+        name: 'Text Case', 
+        icon: Type, 
+        category: 'string',
+        color: 'text-pink-400',
+        bgColor: 'bg-pink-500/10',
+        borderColor: 'border-pink-500/20',
+        description: 'Convert text to different case formats'
+    },
 ] as const;
 
 type Mode = typeof MODES[number]['id'];

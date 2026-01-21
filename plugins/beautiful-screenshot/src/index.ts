@@ -1,1 +1,1 @@
-export { default as BeautifulScreenshot } from './Xnapper';
+export { Xnapper } from './Xnapper';

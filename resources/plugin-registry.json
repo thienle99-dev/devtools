@@ -275,6 +275,32 @@
       "verified": true,
       "downloads": 56000,
       "rating": 4.8
+    },
+    {
+      "id": "beautiful-screenshot",
+      "name": "Beautiful Screenshot",
+      "version": "1.0.0",
+      "description": "Create professional, mock-up style screenshots instantly. Add backgrounds, shadows, rounded corners, and annotations.",
+      "author": "DevTools Team",
+      "license": "MIT",
+      "category": "media",
+      "tags": ["screenshot", "design", "mockup", "image", "capture", "annotation"],
+      "main": "index.js",
+      "icon": "assets/icon-screenshot.svg",
+      "size": 5242880,
+      "dependencies": {
+        "npm": ["html2canvas", "react-konva", "konva"]
+      },
+      "permissions": {
+        "media": true,
+        "filesystem": true
+      },
+      "minAppVersion": "1.0.0",
+      "platforms": ["win32", "darwin", "linux"],
+      "downloadUrl": "...",
+      "verified": true,
+      "downloads": 1000,
+      "rating": 5.0
     }
   ]
 }
