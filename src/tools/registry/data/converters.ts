@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Lock, Link, Globe, Binary, Type, FileCode, Hash, Network, HardDrive, Ruler, Minus, Clock, Percent, FileType, DollarSign } from 'lucide-react';
+import { ArrowRightLeft, Lock, Link, Globe, Binary, Type, FileCode, Hash, Network, HardDrive, Ruler, Minus, Clock, Percent, FileType, DollarSign, Table } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
 import * as Logic from '../../converters/logic';
@@ -272,6 +272,19 @@ export const converters: ToolDefinition[] = [
         color: 'text-green-400',
         component: Lazy.CurrencyConverter,
         keywords: ['currency', 'money', 'exchange', 'rate', 'usd', 'eur', 'gbp', 'convert']
+    },
+    {
+        id: 'csv-excel',
+        name: 'CSV → Excel Converter',
+        path: '/csv-excel',
+        description: 'Convert CSV files to Excel (XLSX) with formatting, filters, and presets',
+        category: 'converters',
+        icon: Table,
+        color: 'text-emerald-400',
+        component: Lazy.CsvExcelConverter,
+        keywords: ['csv', 'excel', 'xlsx', 'data', 'spreadsheet', 'converter', 'table', 'import', 'export'],
+        inputTypes: ['text', 'csv'],
+        outputTypes: ['file']
     },
 
 ];

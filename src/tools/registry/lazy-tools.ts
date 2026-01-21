@@ -27,6 +27,7 @@ export const TimeZoneConverter = React.lazy(() => import('@tools/converters/Time
 export const PercentageFractionConverter = React.lazy(() => import('@tools/converters/PercentageFractionConverter').then(m => ({ default: m.PercentageFractionConverter })));
 export const MimeTypeConverter = React.lazy(() => import('@tools/converters/MimeTypeConverter').then(m => ({ default: m.MimeTypeConverter })));
 export const CurrencyConverter = React.lazy(() => import('@tools/converters/CurrencyConverter').then(m => ({ default: m.CurrencyConverter })));
+export const CsvExcelConverter = React.lazy(() => import('../../../plugins/data-converters/src/CsvExcelConverter').then(m => ({ default: m.CsvExcelConverter })));
 
 // Crypto
 export const HashGenerator = React.lazy(() => import('@tools/crypto/HashGenerator').then(m => ({ default: m.HashGenerator })));
