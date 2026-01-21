@@ -209,6 +209,30 @@ export const CaptureSection: React.FC = () => {
             }
 
             if (screenshot) {
+                // Calculate file size from dataUrl
+                const base64Data = screenshot.dataUrl.split(',')[1] || screenshot.dataUrl;
+                const fileSizeBytes = Math.ceil((base64Data.length * 3) / 4);
+                const fileSizeKB = (fileSizeBytes / 1024).toFixed(2);
+                const fileSizeMB = (fileSizeBytes / (1024 * 1024)).toFixed(2);
+                
+                // Calculate megapixels
+                const megapixels = ((screenshot.width * screenshot.height) / 1000000).toFixed(2);
+                
+                // Log image quality information
+                console.log('📸 Screenshot Quality Info:', {
+                    resolution: `${screenshot.width} × ${screenshot.height} px`,
+                    megapixels: `${megapixels} MP`,
+                    format: screenshot.format || 'png',
+                    fileSize: fileSizeBytes < 1024 
+                        ? `${fileSizeBytes} B`
+                        : fileSizeBytes < 1024 * 1024
+                        ? `${fileSizeKB} KB`
+                        : `${fileSizeMB} MB`,
+                    fileSizeBytes,
+                    aspectRatio: (screenshot.width / screenshot.height).toFixed(2),
+                    pixelDensity: `${((screenshot.width * screenshot.height) / fileSizeBytes).toFixed(0)} pixels/KB`
+                });
+
                 const screenshotData = {
                     id: Date.now().toString(),
                     dataUrl: screenshot.dataUrl,
@@ -221,7 +245,7 @@ export const CaptureSection: React.FC = () => {
                 setCurrentScreenshot(screenshotData);
                 addToHistory(screenshotData);
                 setShowPreview(true);
-                toast.success('Screenshot captured!');
+                toast.success(`Screenshot captured! ${screenshot.width}×${screenshot.height} (${fileSizeKB} KB)`);
             }
         } catch (error) {
             console.error('Capture failed:', error);

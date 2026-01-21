@@ -49,9 +49,13 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
 
             const primaryScreen = sources[0];
             const image = primaryScreen.thumbnail;
+            
+            // Use toPNG() for better quality instead of toDataURL()
+            const pngBuffer = image.toPNG();
+            const dataUrl = `data:image/png;base64,${pngBuffer.toString('base64')}`;
 
             return {
-                dataUrl: image.toDataURL(),
+                dataUrl: dataUrl,
                 width: image.getSize().width,
                 height: image.getSize().height
             };
@@ -64,9 +68,17 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
     // Capture specific window
     ipcMain.handle('screenshot:capture-window', async (_event, sourceId: string) => {
         try {
+            // Get display scale factor for high DPI support
+            const display = screen.getPrimaryDisplay();
+            const scaleFactor = display.scaleFactor || 1;
+            
+            // Use maximum size to ensure full quality capture
+            // Electron's desktopCapturer will scale down if needed, but we want maximum quality
+            const maxSize = { width: 7680, height: 4320 }; // 8K resolution for maximum quality
+
             const sources = await desktopCapturer.getSources({
                 types: ['window'],
-                thumbnailSize: { width: 1920, height: 1080 }
+                thumbnailSize: maxSize
             });
 
             const source = sources.find(s => s.id === sourceId);
@@ -75,9 +87,16 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
             }
 
             const image = source.thumbnail;
+            
+            // Use toPNG() for lossless quality instead of toDataURL()
+            // toPNG() preserves quality better than toDataURL()
+            const pngBuffer = image.toPNG();
+            const dataUrl = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+
+            console.log(`Window captured: ${image.getSize().width}x${image.getSize().height} (Scale: ${scaleFactor})`);
 
             return {
-                dataUrl: image.toDataURL(),
+                dataUrl: dataUrl,
                 width: image.getSize().width,
                 height: image.getSize().height
             };
@@ -162,8 +181,12 @@ export function setupScreenshotHandlers(win: BrowserWindow) {
                         height: Math.round(bounds.height * scaleFactor)
                     });
 
+                    // Use toPNG() for better quality instead of toDataURL()
+                    const pngBuffer = croppedImage.toPNG();
+                    const dataUrl = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+
                     resolve({
-                        dataUrl: croppedImage.toDataURL(),
+                        dataUrl: dataUrl,
                         width: croppedImage.getSize().width,
                         height: croppedImage.getSize().height
                     });

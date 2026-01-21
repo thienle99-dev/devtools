@@ -91,25 +91,45 @@ export const Xnapper: React.FC = () => {
                         )}
 
                         {/* Stats Badge (when screenshot captured) */}
-                        {currentScreenshot && (
-                            <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-glass-panel border border-border-glass">
-                                <div className="flex items-center gap-2">
-                                    <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                        {currentScreenshot && (() => {
+                            // Calculate file size from dataUrl
+                            const base64Data = currentScreenshot.dataUrl.split(',')[1] || currentScreenshot.dataUrl;
+                            const fileSizeBytes = Math.ceil((base64Data.length * 3) / 4);
+                            const fileSizeKB = (fileSizeBytes / 1024).toFixed(1);
+                            const fileSizeMB = (fileSizeBytes / (1024 * 1024)).toFixed(2);
+                            const fileSizeDisplay = fileSizeBytes < 1024 
+                                ? `${fileSizeBytes} B`
+                                : fileSizeBytes < 1024 * 1024
+                                ? `${fileSizeKB} KB`
+                                : `${fileSizeMB} MB`;
+                            
+                            return (
+                                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-glass-panel border border-border-glass">
+                                    <div className="flex items-center gap-2">
+                                        <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                                        <span 
+                                            className="text-xs font-mono font-semibold"
+                                            style={{ color: 'var(--color-text-secondary)' }}
+                                        >
+                                            {currentScreenshot.width} × {currentScreenshot.height}
+                                        </span>
+                                    </div>
+                                    <div className="w-px h-4 bg-border-glass" />
                                     <span 
-                                        className="text-xs font-mono font-semibold"
-                                        style={{ color: 'var(--color-text-secondary)' }}
+                                        className="text-xs font-mono font-semibold text-indigo-400"
                                     >
-                                        {currentScreenshot.width} × {currentScreenshot.height}
+                                        {currentScreenshot.format.toUpperCase()}
+                                    </span>
+                                    <div className="w-px h-4 bg-border-glass" />
+                                    <span 
+                                        className="text-xs font-mono font-semibold text-emerald-400"
+                                        title={`File size: ${fileSizeDisplay}`}
+                                    >
+                                        {fileSizeDisplay}
                                     </span>
                                 </div>
-                                <div className="w-px h-4 bg-border-glass" />
-                                <span 
-                                    className="text-xs font-mono font-semibold text-indigo-400"
-                                >
-                                    {currentScreenshot.format.toUpperCase()}
-                                </span>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
                 </div>
             </div>

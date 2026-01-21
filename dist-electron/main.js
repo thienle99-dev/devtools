@@ -3803,7 +3803,7 @@ function setupScreenshotHandlers(win$1) {
 			if (sources.length === 0) throw new Error("No screens available");
 			const image = sources[0].thumbnail;
 			return {
-				dataUrl: image.toDataURL(),
+				dataUrl: `data:image/png;base64,${image.toPNG().toString("base64")}`,
 				width: image.getSize().width,
 				height: image.getSize().height
 			};
@@ -3814,17 +3814,20 @@ function setupScreenshotHandlers(win$1) {
 	});
 	ipcMain.handle("screenshot:capture-window", async (_event, sourceId) => {
 		try {
+			const scaleFactor = screen.getPrimaryDisplay().scaleFactor || 1;
 			const source = (await desktopCapturer.getSources({
 				types: ["window"],
 				thumbnailSize: {
-					width: 1920,
-					height: 1080
+					width: 7680,
+					height: 4320
 				}
 			})).find((s) => s.id === sourceId);
 			if (!source) throw new Error("Window not found");
 			const image = source.thumbnail;
+			const dataUrl = `data:image/png;base64,${image.toPNG().toString("base64")}`;
+			console.log(`Window captured: ${image.getSize().width}x${image.getSize().height} (Scale: ${scaleFactor})`);
 			return {
-				dataUrl: image.toDataURL(),
+				dataUrl,
 				width: image.getSize().width,
 				height: image.getSize().height
 			};
@@ -3882,7 +3885,7 @@ function setupScreenshotHandlers(win$1) {
 						height: Math.round(bounds.height * scaleFactor$1)
 					});
 					resolve({
-						dataUrl: croppedImage.toDataURL(),
+						dataUrl: `data:image/png;base64,${croppedImage.toPNG().toString("base64")}`,
 						width: croppedImage.getSize().width,
 						height: croppedImage.getSize().height
 					});
