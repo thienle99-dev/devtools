@@ -61,13 +61,23 @@ export async function performOCR(imageDataUrl: string): Promise<DetectedText[]> 
         // Lazy load Tesseract.js
         const Tesseract = await loadTesseract();
 
-        const result = await Tesseract.recognize(imageDataUrl, 'eng', {
+        // Use createWorker for better control in Electron environment
+        const worker = await Tesseract.createWorker('eng', 1, {
+            workerPath: new URL(
+                "tesseract.js/dist/worker.min.js",
+                import.meta.url
+            ).toString(),
             logger: (m: any) => {
                 if (m.status === 'recognizing text') {
                     console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
                 }
             }
         });
+
+        const result = await worker.recognize(imageDataUrl);
+
+        // Terminate worker after use to free up resources
+        await worker.terminate();
 
         const detectedTexts: DetectedText[] = [];
 
