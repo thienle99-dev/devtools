@@ -4,6 +4,7 @@ type PdfJsModule = typeof import('pdfjs-dist/build/pdf.mjs');
 
 let pdfjsPromise: Promise<PdfJsModule> | null = null;
 let jszipPromise: Promise<JSZipConstructor> | null = null;
+let pdfLibPromise: Promise<typeof import('pdf-lib')> | null = null;
 
 type JSZipConstructor = typeof JSZip;
 
@@ -28,4 +29,11 @@ export async function loadJsZip(): Promise<JSZipConstructor> {
         jszipPromise = import('jszip').then(mod => (mod.default || mod) as JSZipConstructor);
     }
     return jszipPromise;
+}
+
+export async function loadPdfLib() {
+    if (!pdfLibPromise) {
+        pdfLibPromise = import('pdf-lib');
+    }
+    return pdfLibPromise;
 }

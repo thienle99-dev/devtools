@@ -4,8 +4,16 @@ import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { FileUp, Table, Download, Settings, Trash2, ChevronDown, Palette, Filter, Columns, Eye, EyeOff, GripVertical, X, Plus, Search } from 'lucide-react';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { cn } from '@utils/cn';
+type XlsxModule = typeof import('xlsx');
+let xlsxPromise: Promise<XlsxModule> | null = null;
+
+async function loadXlsx(): Promise<XlsxModule> {
+    if (!xlsxPromise) {
+        xlsxPromise = import('xlsx').then(mod => (mod.default ? { ...mod.default, ...mod } : mod));
+    }
+    return xlsxPromise;
+}
 
 const TOOL_ID = 'csv-excel';
 
@@ -197,11 +205,12 @@ export const CsvExcelConverter: React.FC<CsvExcelConverterProps> = ({ tabId }) =
         return widths;
     };
 
-    const handleConvertAndDownload = () => {
+    const handleConvertAndDownload = async () => {
         if (!data.input) return;
         setLoading(true);
 
         try {
+            const XLSX = await loadXlsx();
             // Parse full data
             const parseConfig: any = {
                 header: options.hasHeader,

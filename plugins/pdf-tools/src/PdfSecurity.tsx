@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Lock, Unlock, FileUp, Loader2, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
 import { Button } from '@components/ui/Button';
 import { Card } from '@components/ui/Card';
 import { Label } from '@components/ui/Label';
@@ -8,6 +7,7 @@ import { Input } from '@components/ui/Input';
 import { toast } from 'sonner';
 import { cn } from '@utils/cn';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@components/ui/Tabs';
+import { loadPdfLib } from './utils/lazyDeps';
 
 export function PdfSecurity() {
     const [file, setFile] = useState<File | null>(null);
@@ -50,6 +50,7 @@ export function PdfSecurity() {
 
         setIsProcessing(true);
         try {
+            const { PDFDocument } = await loadPdfLib();
             const arrayBuffer = await file.arrayBuffer();
             const doc = await PDFDocument.load(arrayBuffer);
             
@@ -85,6 +86,7 @@ export function PdfSecurity() {
 
         setIsProcessing(true);
         try {
+            const { PDFDocument } = await loadPdfLib();
             const arrayBuffer = await file.arrayBuffer();
             
             // Try load with password (if needed)
