@@ -129,12 +129,13 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
     useEffect(() => {
         if (!stageRef.current) return;
         const container = stageRef.current.container();
-        if (activeAnnotationTool) {
-            container.style.cursor = 'crosshair';
-        } else {
+        if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
             container.style.cursor = 'default';
+        } else {
+            container.style.cursor = 'crosshair';
         }
     }, [activeAnnotationTool]);
+
 
     const [shapes, setShapes] = useState<any[]>([]);
     const [selectedId, selectShape] = useState<string | null>(null);
@@ -303,7 +304,10 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
             selectShape(null);
         }
 
-        if (!activeAnnotationTool) return;
+        // Select tool: allow selection and dragging, don't draw
+        if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+            return; // Let Konva handle selection and dragging
+        }
 
         // Deselect when starting to draw
         selectShape(null);
@@ -631,19 +635,46 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                             const commonProps = {
                                 key: shape.id,
                                 ...shape,
-                                onClick: () => selectShape(shape.id),
-                                onTap: () => selectShape(shape.id),
+                                onClick: () => {
+                                    if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                                        selectShape(shape.id);
+                                    }
+                                },
+                                onTap: () => {
+                                    if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                                        selectShape(shape.id);
+                                    }
+                                },
+                                draggable: activeAnnotationTool === 'select' || !activeAnnotationTool ? true : shape.draggable,
                                 onDragEnd: handleDragEnd,
                                 onTransformEnd: handleTransformEnd,
                                 onMouseEnter: (e: any) => {
-                                    if (activeAnnotationTool) return;
-                                    const container = e.target.getStage().container();
-                                    container.style.cursor = 'move';
+                                    if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                                        const container = e.target.getStage().container();
+                                        container.style.cursor = 'grab';
+                                    } else if (activeAnnotationTool) {
+                                        return; // Don't change cursor for drawing tools
+                                    }
                                 },
                                 onMouseLeave: (e: any) => {
-                                    if (activeAnnotationTool) return;
-                                    const container = e.target.getStage().container();
-                                    container.style.cursor = 'default';
+                                    if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                                        const container = e.target.getStage().container();
+                                        container.style.cursor = 'default';
+                                    } else if (activeAnnotationTool) {
+                                        return; // Don't change cursor for drawing tools
+                                    }
+                                },
+                                onMouseDown: (e: any) => {
+                                    if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                                        const container = e.target.getStage().container();
+                                        container.style.cursor = 'grabbing';
+                                    }
+                                },
+                                onMouseUp: (e: any) => {
+                                    if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                                        const container = e.target.getStage().container();
+                                        container.style.cursor = 'grab';
+                                    }
                                 },
                             };
                             

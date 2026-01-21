@@ -159,11 +159,11 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         if (!canvasRef.current || fabricCanvasRef.current) return;
 
         const canvas = new Canvas(canvasRef.current, {
-            selection: !activeAnnotationTool, // Allow selection only when no tool is active
+            selection: activeAnnotationTool === 'select' || !activeAnnotationTool, // Allow selection for select tool or no tool
             preserveObjectStacking: true,
             renderOnAddRemove: true,
             moveCursor: 'move',
-            defaultCursor: activeAnnotationTool ? 'crosshair' : 'default',
+            defaultCursor: activeAnnotationTool && activeAnnotationTool !== 'select' ? 'crosshair' : 'default',
         });
 
         fabricCanvasRef.current = canvas;
@@ -182,38 +182,12 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             saveState();
         });
 
-        // Update cursor on hover for select tool
-        canvas.on('mouse:over', (opt: any) => {
-            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
-                if (opt.target && opt.target !== canvas.backgroundImage) {
-                    canvas.defaultCursor = 'grab';
-                    canvas.renderAll();
-                }
-            }
-        });
-
-        canvas.on('mouse:out', (opt: any) => {
-            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
-                canvas.defaultCursor = 'default';
-                canvas.renderAll();
-            }
-        });
-
-        canvas.on('mouse:down', (opt: any) => {
-            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
-                if (opt.target && opt.target !== canvas.backgroundImage) {
-                    canvas.defaultCursor = 'grabbing';
-                    canvas.renderAll();
-                }
-            }
-        });
-
-        canvas.on('mouse:up', () => {
-            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
-                canvas.defaultCursor = 'default';
-                canvas.renderAll();
-            }
-        });
+        // Cursor management for select tool using Fabric.js cursor properties
+        if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+            canvas.defaultCursor = 'default';
+            canvas.hoverCursor = 'grab';
+            canvas.moveCursor = 'grabbing';
+        }
 
         // Pan state - use refs to persist across renders
         const panStateRef = useRef({ isPanning: false, lastPanPoint: { x: 0, y: 0 } });
@@ -249,7 +223,8 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             // Allow panning only with spacebar + drag or middle mouse button
             const shouldPan = spacePressedRef.current || opt.e.button === 1;
             
-            if (shouldPan && !activeAnnotationTool) {
+            // For select tool or no tool, allow panning with spacebar/middle mouse
+            if (shouldPan && (activeAnnotationTool === 'select' || !activeAnnotationTool)) {
                 panStateRef.current.isPanning = true;
                 const pointer = fabricCanvasRef.current.getPointer(opt.e);
                 panStateRef.current.lastPanPoint = { x: pointer.x, y: pointer.y };
@@ -259,13 +234,13 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                 return;
             }
             
-            // If tool is active, use normal handler for drawing
-            if (activeAnnotationTool) {
-                handleMouseDown(opt);
+            // Select tool: let fabric.js handle selection/move (don't call handleMouseDown)
+            if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
+                // Let fabric.js handle selection and object movement
                 return;
             }
             
-            // Otherwise, allow normal fabric.js selection/drag (for moving objects)
+            // For other tools, use normal handler for drawing
             handleMouseDown(opt);
         };
 
@@ -384,12 +359,16 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
                 canvas.selection = true;
                 canvas.defaultCursor = 'default';
-                canvas.moveCursor = 'move';
+                canvas.hoverCursor = 'grab';
+                canvas.moveCursor = 'grabbing';
                 canvas.isDrawingMode = false;
+                // Force update cursor immediately
+                canvas.renderAll();
             } else {
                 canvas.selection = false;
                 canvas.defaultCursor = 'crosshair';
                 canvas.moveCursor = 'crosshair';
+                canvas.hoverCursor = 'crosshair';
                 
                 // Enable/disable drawing mode for pen tool
                 if (activeAnnotationTool === 'pen') {
@@ -399,6 +378,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
                 } else {
                     canvas.isDrawingMode = false;
                 }
+                canvas.renderAll();
             }
         };
 
@@ -409,10 +389,6 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             window.removeEventListener('keydown', handleSpaceDown);
             window.removeEventListener('keyup', handleSpaceUp);
             canvas.off('mouse:wheel', handleWheel);
-            canvas.off('mouse:over');
-            canvas.off('mouse:out');
-            canvas.off('mouse:down');
-            canvas.off('mouse:up');
             canvas.off('path:created');
             canvas.dispose();
             fabricCanvasRef.current = null;
@@ -428,12 +404,15 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
         if (activeAnnotationTool === 'select' || !activeAnnotationTool) {
             canvas.selection = true;
             canvas.defaultCursor = 'default';
-            canvas.moveCursor = 'move';
+            canvas.hoverCursor = 'grab';
+            canvas.moveCursor = 'grabbing';
             canvas.isDrawingMode = false;
+            canvas.renderAll();
         } else {
             canvas.selection = false;
             canvas.defaultCursor = 'crosshair';
             canvas.moveCursor = 'crosshair';
+            canvas.hoverCursor = 'crosshair';
             
             if (activeAnnotationTool === 'pen') {
                 canvas.isDrawingMode = true;
@@ -442,6 +421,7 @@ export const CanvasPreview = forwardRef<CanvasPreviewHandle, CanvasPreviewProps>
             } else {
                 canvas.isDrawingMode = false;
             }
+            canvas.renderAll();
         }
     }, [activeAnnotationTool, annotationConfig.color, annotationConfig.strokeWidth]);
 
