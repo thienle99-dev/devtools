@@ -4,7 +4,7 @@ import { useXnapperStore } from './store/xnapperStore';
 import { CaptureSection } from './components/CaptureSection';
 import { PreviewSection } from './components/PreviewSection';
 import { XnapperStylePanel } from './components/XnapperStylePanel';
-import type { CanvasPreviewHandle } from './components/CanvasPreview';
+import type { CanvasPreviewHandle } from './konva/KonvaCanvas';
 
 export const Xnapper: React.FC = () => {
     const { currentScreenshot } = useXnapperStore();

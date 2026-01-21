@@ -4,7 +4,21 @@ import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Te
 import useImage from 'use-image';
 import { useXnapperStore } from '../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
-import type { CanvasPreviewHandle } from '../components/CanvasPreview';
+
+export interface CanvasPreviewHandle {
+    undo: () => void;
+    redo: () => void;
+    clear: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    zoomIn: () => void;
+    zoomOut: () => void;
+    resetZoom: () => void;
+    getZoom: () => number;
+    exportImage?: (options?: { format?: 'png' | 'jpg' | 'webp'; quality?: number }) => string;
+    bringForward?: () => void;
+    sendBackward?: () => void;
+}
 
 interface KonvaCanvasProps {
     onHistoryChange?: (canUndo: boolean, canRedo: boolean, count: number) => void;
@@ -555,7 +569,7 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         resetZoom: () => setBaseZoom(1),
         getZoom: () => baseZoom,
         // Export logic
-        exportImage: () => {
+        exportImage: (options?: { format?: 'png' | 'jpg' | 'webp'; quality?: number }) => {
             if (stageRef.current) {
                 // Deselect before export to hide transformer
                 selectShape(null);
@@ -563,13 +577,18 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
                 stageRef.current.getLayer().batchDraw();
                 
                 // Export at original size
-                // stage scale is (scale * baseZoom)
-                // we want output to be (imageSize.width)
-                // so pixelRatio should be 1 / (scale * baseZoom)
                 const currentScale = scale * baseZoom;
                 const pixelRatio = 1 / currentScale;
                 
-                return stageRef.current.toDataURL({ pixelRatio });
+                const mimeType = options?.format === 'jpg' ? 'image/jpeg' : 
+                                 options?.format === 'webp' ? 'image/webp' : 'image/png';
+                const quality = (options?.quality || 90) / 100;
+
+                return stageRef.current.toDataURL({ 
+                    pixelRatio,
+                    mimeType,
+                    quality
+                });
             }
             return '';
         },

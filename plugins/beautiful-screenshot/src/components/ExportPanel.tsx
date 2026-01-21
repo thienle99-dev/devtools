@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { CanvasPreviewHandle } from './CanvasPreview';
+import type { CanvasPreviewHandle } from '../konva/KonvaCanvas';
 import { Download, Copy, FileImage, CloudUpload, Link } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../store/xnapperStore';
@@ -71,7 +71,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
             // Generate final processed image
             let processedDataUrl: string;
             if (canvasRef?.current?.exportImage) {
-                const fullRes = canvasRef.current.exportImage();
+                const fullRes = canvasRef.current.exportImage({ format: exportFormat, quality: exportQuality });
                 const config = getOutputConfig();
                 if (config) {
                     processedDataUrl = await applyOutputConfig(fullRes, config, background);
@@ -92,6 +92,8 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
                     shadowOffsetX,
                     shadowOffsetY,
                     inset,
+                    format: exportFormat,
+                    quality: exportQuality,
                 });
             }
 
@@ -126,7 +128,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
             // Generate final processed image
             let processedDataUrl: string;
             if (canvasRef?.current?.exportImage) {
-                 const fullRes = canvasRef.current.exportImage();
+                 const fullRes = canvasRef.current.exportImage({ format: exportFormat, quality: exportQuality });
                  const config = getOutputConfig();
                  if (config) {
                      processedDataUrl = await applyOutputConfig(fullRes, config, background);
@@ -147,6 +149,8 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
                     shadowOffsetX,
                     shadowOffsetY,
                     inset,
+                    format: exportFormat,
+                    quality: exportQuality,
                 });
             }
 
@@ -179,7 +183,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
             // Generate final processed image
             let processedDataUrl: string;
             if (canvasRef?.current?.exportImage) {
-                const fullRes = canvasRef.current.exportImage();
+                const fullRes = canvasRef.current.exportImage({ format: exportFormat, quality: exportQuality });
                 const config = getOutputConfig();
                 if (config) {
                     processedDataUrl = await applyOutputConfig(fullRes, config, background);
@@ -200,6 +204,8 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ canvasRef }) => {
                     shadowOffsetX,
                     shadowOffsetY,
                     inset,
+                    format: exportFormat,
+                    quality: exportQuality,
                 });
             }
 

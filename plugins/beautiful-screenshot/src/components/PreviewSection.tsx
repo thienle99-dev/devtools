@@ -2,9 +2,8 @@ import React, { type JSX } from 'react';
 import { Check, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@components/ui/Button';
 import { useXnapperStore } from '../store/xnapperStore';
-import { CanvasPreview } from './CanvasPreview';
 import { KonvaCanvas } from '../konva/KonvaCanvas';
-import type { CanvasPreviewHandle } from './CanvasPreview';
+import type { CanvasPreviewHandle } from '../konva/KonvaCanvas';
 import { cropImage } from '../utils/crop';
 import { toast } from 'sonner';
 
@@ -14,7 +13,6 @@ interface PreviewSectionProps {
     onZoomChange?: (zoom: number) => void;
 }
 
-const USE_KONVA = true;
 
 export const PreviewSection = ({
     canvasRef,
@@ -146,19 +144,11 @@ export const PreviewSection = ({
                     justifyContent: 'center'
                 }}
             >
-                {USE_KONVA ? (
-                    <KonvaCanvas
-                        ref={canvasRef as any}
-                        onHistoryChange={onHistoryChange}
-                        onZoomChange={onZoomChange}
-                    />
-                ) : (
-                    <CanvasPreview
-                        ref={canvasRef as any}
-                        onHistoryChange={onHistoryChange}
-                        onZoomChange={onZoomChange}
-                    />
-                )}
+                <KonvaCanvas
+                    ref={canvasRef as any}
+                    onHistoryChange={onHistoryChange}
+                    onZoomChange={onZoomChange}
+                />
 
 
                 {/* Crop Controls - Premium overlay */}

@@ -80,8 +80,8 @@ export const HistoryPanel: React.FC = () => {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                                <span className="text-sm font-medium truncate pr-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <span className="text-sm font-medium truncate">
                                     {format(new Date(item.timestamp), 'MMM d, h:mm a')}
                                 </span>
                                 <button
@@ -89,9 +89,10 @@ export const HistoryPanel: React.FC = () => {
                                         e.stopPropagation();
                                         removeFromHistory(item.id);
                                     }}
-                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 text-red-400 rounded transition-all"
+                                    className="opacity-60 hover:opacity-100 p-1.5 hover:bg-red-500/20 text-red-400 rounded transition-all flex-shrink-0"
+                                    title="Delete this capture"
                                 >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                             <div className="text-xs text-foreground-muted mt-1">

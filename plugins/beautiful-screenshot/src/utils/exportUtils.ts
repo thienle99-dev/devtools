@@ -1,5 +1,5 @@
-// Phase 2: Lazy load Fabric.js (15MB saved on initial load)
-import { loadFabric } from '@utils/lazyLoad';
+import type Konva from 'konva';
+// Phase 2: Lazy load specialized utilities if needed
 import { applyAutoBalance } from './imageEnhancement';
 import { applyRedaction, type RedactionArea } from './redaction';
 import { applyGradientBackground, applyImageBackground, applySolidBackground, addPaddingToScreenshot, type Background } from './backgroundGenerator';
@@ -14,7 +14,7 @@ export async function generateFinalImage(
         redactionAreas?: RedactionArea[];
         background?: Background | null;
         backgroundPadding?: number;
-        annotations?: string; // JSON string of Fabric.js objects
+        annotations?: string; // JSON string of Konva.js objects
         outputConfig?: OutputConfig;
         // Xnapper-style controls
         borderRadius?: number;
@@ -26,6 +26,8 @@ export async function generateFinalImage(
         showWindowControls?: boolean;
         watermark?: { text: string; opacity: number; position: string; fontSize?: number };
         aspectRatio?: string;
+        format?: 'png' | 'jpg' | 'webp';
+        quality?: number; // 0-100
     }
 ): Promise<string> {
     // 1. Generate the base image (Auto-balance + Redactions + Background/Padding) using Native Canvas API
@@ -140,52 +142,110 @@ export async function generateFinalImage(
         return styledBaseUrl;
     }
 
-    // 4. Apply annotations using Fabric.js (lazy loaded)
-    // We create a temporary Fabric canvas, load the base image, overlay annotations, and export
+    // 4. Apply annotations using Konva.js
+    // We create a virtual Konva stage, load the base image, overlay annotations, and export
     const annotationPromise = new Promise<string>(async (resolve) => {
         try {
-            // Lazy load Fabric.js
-            const fabric = await loadFabric();
+            // Import Konva (it's already a dependency)
+            const Konva = (await import('konva')).default;
 
-            // Create a virtual canvas element
-            const canvasEl = document.createElement('canvas');
-            const fabricCanvas = new fabric.StaticCanvas(canvasEl);
+            // Load styled base image to get dimensions
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const width = img.width;
+                const height = img.height;
 
-            // Load styled base image (with border radius, shadow already applied)
-            fabric.Image.fromURL(styledBaseUrl, { crossOrigin: 'anonymous' }).then((bgImg) => {
-                const width = bgImg.width!;
-                const height = bgImg.height!;
-
-                fabricCanvas.setDimensions({ width, height });
-                fabricCanvas.backgroundImage = bgImg;
-
-                // Load annotations
-                const objects = JSON.parse(options.annotations!);
-
-                fabric.util.enlivenObjects(objects, {}).then((enlivenedObjects: any[]) => {
-                    enlivenedObjects.forEach((obj) => {
-                        fabricCanvas.add(obj);
-                    });
-
-                    fabricCanvas.renderAll();
-                    const finalDataUrl = fabricCanvas.toDataURL({
-                        format: 'png',
-                        multiplier: 1
-                    });
-
-                    // Cleanup
-                    fabricCanvas.dispose();
-                    resolve(finalDataUrl);
-                }).catch(err => {
-                    console.error('Error enlivening objects:', err);
-                    resolve(styledBaseUrl); // Fallback to styled base
+                // Create a virtual container
+                const container = document.createElement('div');
+                
+                // Create stage
+                const stage = new Konva.Stage({
+                    container,
+                    width,
+                    height,
                 });
-            }).catch(err => {
-                console.error('Error loading base image into fabric:', err);
+
+                const layer = new Konva.Layer();
+                stage.add(layer);
+
+                // Add background image
+                const konvaImg = new Konva.Image({
+                    image: img,
+                    width,
+                    height,
+                });
+                layer.add(konvaImg);
+
+                // Load and add annotations
+                try {
+                    const shapes = JSON.parse(options.annotations!);
+                    if (Array.isArray(shapes)) {
+                        shapes.forEach((shapeData: any) => {
+                            let shape: Konva.Shape | null = null;
+                            const commonProps = {
+                                ...shapeData,
+                                draggable: false,
+                            };
+
+                            switch (shapeData.type) {
+                                case 'rect':
+                                    shape = new Konva.Rect(commonProps);
+                                    break;
+                                case 'circle':
+                                    shape = new Konva.Circle(commonProps);
+                                    break;
+                                case 'arrow':
+                                    shape = new Konva.Arrow(commonProps);
+                                    break;
+                                case 'line':
+                                    shape = new Konva.Arrow({
+                                        ...commonProps,
+                                        pointerLength: 0,
+                                        pointerWidth: 0,
+                                    });
+                                    break;
+                                case 'pen':
+                                    shape = new Konva.Line(commonProps);
+                                    break;
+                                case 'text':
+                                    shape = new Konva.Text(commonProps);
+                                    break;
+                            }
+
+                            if (shape) {
+                                layer.add(shape);
+                            }
+                        });
+                    }
+                } catch (jsonErr) {
+                    console.error('Error parsing annotations JSON:', jsonErr);
+                }
+
+                layer.draw();
+                
+                // Export final image
+                const mimeType = options.format === 'jpg' ? 'image/jpeg' : 
+                                 options.format === 'webp' ? 'image/webp' : 'image/png';
+                const quality = (options.quality || 90) / 100;
+
+                const finalDataUrl = stage.toDataURL({
+                    pixelRatio: 1,
+                    mimeType,
+                    quality,
+                });
+
+                // Cleanup
+                stage.destroy();
+                resolve(finalDataUrl);
+            };
+            img.onerror = (err) => {
+                console.error('Error loading base image for annotation:', err);
                 resolve(styledBaseUrl);
-            });
+            };
+            img.src = styledBaseUrl;
         } catch (e) {
-            console.error('Error in annotation export:', e);
+            console.error('Error in Konva annotation export:', e);
             resolve(styledBaseUrl);
         }
     });

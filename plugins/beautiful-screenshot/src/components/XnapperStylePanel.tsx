@@ -6,7 +6,7 @@ import { cn } from '@utils/cn';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@components/ui/Tabs';
 import { ExportPanel } from './ExportPanel';
 import { AnnotationToolbar } from './AnnotationToolbar';
-import type { CanvasPreviewHandle } from './CanvasPreview';
+import type { CanvasPreviewHandle } from '../konva/KonvaCanvas';
 import { Button } from '@components/ui/Button';
 import { toast } from 'sonner';
 
