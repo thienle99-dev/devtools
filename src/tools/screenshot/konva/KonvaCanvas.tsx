@@ -1,136 +1,15 @@
-import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect, memo } from 'react';
-import { Stage, Layer, Image as KonvaImage, Rect, Transformer, Circle, Arrow, Text as KonvaText, Line } from 'react-konva';
-import useImage from 'use-image';
+import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
+import { Stage, Layer, Transformer } from 'react-konva';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
 import type { CanvasPreviewHandle } from '../types';
+import type { ShapeData } from './types';
+import { URLImage, ShapeItem } from './ShapeItems';
 
 interface KonvaCanvasProps {
     onHistoryChange?: (canUndo: boolean, canRedo: boolean, count: number) => void;
     onZoomChange?: (zoom: number) => void;
 }
-
-interface ShapeData {
-    id: string;
-    type: 'rect' | 'circle' | 'arrow' | 'line' | 'text' | 'pen';
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-    fill?: string;
-    stroke?: string;
-    strokeWidth?: number;
-    rotation?: number;
-    scaleX?: number;
-    scaleY?: number;
-    points?: number[];
-    text?: string;
-    fontSize?: number;
-    fontFamily?: string;
-    opacity?: number;
-    radius?: number;
-    draggable?: boolean;
-    tension?: number;
-    lineCap?: 'butt' | 'round' | 'square';
-    lineJoin?: 'round' | 'bevel' | 'miter';
-    pointerLength?: number;
-    pointerWidth?: number;
-}
-
-// Helper component to load image
-const URLImage = memo(({ src, width, height }: { src: string; width: number; height: number }) => {
-    const [image] = useImage(src, 'anonymous');
-    return <KonvaImage image={image} width={width} height={height} listening={false} />;
-});
-
-URLImage.displayName = 'URLImage';
-
-// Memoized Shape Component
-const ShapeItem = memo(({
-    shape,
-    isEditing,
-    activeTool,
-    onSelect,
-    onTextDblClick,
-    onDragEnd,
-    onTransformEnd
-}: {
-    shape: ShapeData;
-    isSelected: boolean; // Kept but unused to avoid re-render if selected logic changes in parent
-    isEditing: boolean;
-    activeTool: string | null;
-    onSelect: (id: string) => void;
-    onTextDblClick: (e: any, id: string) => void;
-    onDragEnd: (e: any) => void;
-    onTransformEnd: (e: any) => void;
-}) => {
-    const commonProps = {
-        ...shape,
-        onClick: () => onSelect(shape.id),
-        onTap: () => onSelect(shape.id),
-        onDragEnd,
-        onTransformEnd,
-        draggable: shape.draggable && !activeTool,
-        onMouseEnter: (e: any) => {
-            if (activeTool) return;
-            const container = e.target.getStage().container();
-            container.style.cursor = 'move';
-        },
-        onMouseLeave: (e: any) => {
-            if (activeTool) return;
-            const container = e.target.getStage().container();
-            container.style.cursor = 'default';
-        },
-    };
-
-    if (shape.type === 'rect') return <Rect {...commonProps} />;
-    if (shape.type === 'circle') return <Circle {...commonProps} />;
-
-    if (shape.type === 'arrow') {
-        return (
-            <Arrow
-                {...commonProps}
-                points={shape.points || []}
-                hitStrokeWidth={20}
-            />
-        );
-    }
-
-    if (shape.type === 'line') {
-        return (
-            <Arrow
-                {...commonProps}
-                points={shape.points || []}
-                pointerLength={0}
-                pointerWidth={0}
-                hitStrokeWidth={20}
-            />
-        );
-    }
-
-    if (shape.type === 'pen') {
-        return (
-            <Line
-                {...commonProps}
-                points={shape.points || []}
-                hitStrokeWidth={10}
-            />
-        );
-    }
-
-    if (shape.type === 'text') {
-        return (
-            <KonvaText
-                {...commonProps}
-                opacity={isEditing ? 0 : (shape.opacity ?? 1)}
-                onDblClick={(e) => onTextDblClick(e, shape.id)}
-            />
-        );
-    }
-    return null;
-});
-
-ShapeItem.displayName = 'ShapeItem';
 
 export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ onHistoryChange, onZoomChange }, ref) => {
     // Suppress unused warning

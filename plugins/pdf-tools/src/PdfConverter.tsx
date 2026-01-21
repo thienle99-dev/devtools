@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { FileUp, Image as ImageIcon, FileText, Download, Loader2, AlertCircle } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 // Basic worker setup for Vite - in production this might need adjustment for offline
-import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import JSZip from 'jszip';
 import { Button } from '@components/ui/Button';
 import { Card } from '@components/ui/Card';
@@ -42,7 +42,7 @@ export function PdfConverter() {
             setProgress(Math.round((i / totalPages) * 100));
             const page = await pdf.getPage(i);
             const viewport = page.getViewport({ scale: 2.0 }); // High quality
-            
+
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
@@ -98,7 +98,7 @@ export function PdfConverter() {
 
         try {
             const arrayBuffer = await file.arrayBuffer();
-            
+
             if (mode === 'to-image') {
                 await convertToImages(arrayBuffer);
             } else {
@@ -127,21 +127,21 @@ export function PdfConverter() {
 
             <Card className="p-6 space-y-6 bg-slate-900/50 border-slate-800">
                 {/* File Upload Area */}
-                <div 
+                <div
                     className={cn(
                         "border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all cursor-pointer",
                         file ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/50"
                     )}
                     onClick={() => !isProcessing && fileInputRef.current?.click()}
                 >
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileChange} 
-                        accept="application/pdf" 
-                        className="hidden" 
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="application/pdf"
+                        className="hidden"
                     />
-                    
+
                     {file ? (
                         <div className="flex flex-col items-center gap-2 text-emerald-400">
                             <FileText className="w-12 h-12" />
@@ -172,8 +172,8 @@ export function PdfConverter() {
                                 onClick={() => setMode('to-image')}
                                 className={cn(
                                     "p-4 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                                    mode === 'to-image' 
-                                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300" 
+                                    mode === 'to-image'
+                                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
                                         : "bg-slate-800/50 border-slate-700 hover:bg-slate-800 text-slate-400"
                                 )}
                             >
@@ -184,8 +184,8 @@ export function PdfConverter() {
                                 onClick={() => setMode('to-text')}
                                 className={cn(
                                     "p-4 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                                    mode === 'to-text' 
-                                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300" 
+                                    mode === 'to-text'
+                                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
                                         : "bg-slate-800/50 border-slate-700 hover:bg-slate-800 text-slate-400"
                                 )}
                             >
@@ -196,9 +196,9 @@ export function PdfConverter() {
                     </div>
 
                     <div className="flex flex-col justify-end">
-                        <Button 
-                            className="w-full h-14 text-lg" 
-                            variant="primary" 
+                        <Button
+                            className="w-full h-14 text-lg"
+                            variant="primary"
                             disabled={!file || isProcessing}
                             onClick={handleConvert}
                         >
