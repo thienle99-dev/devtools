@@ -1,5 +1,5 @@
 import React from 'react';
-import { Monitor, Square, MousePointer2, Globe, Upload, Camera } from 'lucide-react';
+import { Monitor, Square, MousePointer2, Globe, Upload } from 'lucide-react';
 import { cn } from '@utils/cn';
 import type { CaptureMode } from '../../types';
 

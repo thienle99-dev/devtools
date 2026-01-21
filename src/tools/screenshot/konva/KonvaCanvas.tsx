@@ -1,10 +1,9 @@
 import { useEffect, useState, useRef, useImperativeHandle, forwardRef, useLayoutEffect, useCallback } from 'react';
-import { Stage, Layer, Transformer } from 'react-konva';
 import { useXnapperStore } from '../../../store/xnapperStore';
 import { generateFinalImage } from '../utils/exportUtils';
 import type { CanvasPreviewHandle } from '../types';
 import type { ShapeData } from './types';
-import { URLImage, ShapeItem } from './ShapeItems';
+import { CanvasStageView } from './CanvasStageView';
 
 interface KonvaCanvasProps {
     onHistoryChange?: (canUndo: boolean, canRedo: boolean, count: number) => void;
@@ -210,6 +209,19 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         setHistory(newHistory);
         setHistoryStep(newHistory.length - 1);
     };
+
+    const handleTextChange = useCallback((id: string, text: string) => {
+        setShapes(prev => prev.map(s => (s.id === id ? { ...s, text } : s)));
+    }, []);
+
+    const handleTextCommit = useCallback(() => {
+        addToHistory(shapes);
+        setEditingShape(null);
+    }, [addToHistory, shapes]);
+
+    const handleTextCancel = useCallback(() => {
+        setEditingShape(null);
+    }, []);
 
     const handleUndo = () => {
         if (historyStep > 0) {
@@ -616,133 +628,34 @@ export const KonvaCanvas = forwardRef<CanvasPreviewHandle, KonvaCanvasProps>(({ 
         }
     }));
 
-    if (!baseDataUrl) return <div className="flex items-center justify-center h-full text-foreground-muted">Preparing canvas...</div>;
+    if (!baseDataUrl) {
+        return <div className="flex items-center justify-center h-full text-foreground-muted">Preparing canvas...</div>;
+    }
 
     return (
-        <div
-            ref={containerRef}
-            className="w-full h-full flex items-center justify-center overflow-hidden bg-transparent"
-        >
-            <div style={{ position: 'relative', width: imageSize.width * scale * baseZoom, height: imageSize.height * scale * baseZoom }}>
-                <Stage
-                    ref={stageRef}
-                    width={imageSize.width * scale * baseZoom}
-                    height={imageSize.height * scale * baseZoom}
-                    scaleX={scale * baseZoom}
-                    scaleY={scale * baseZoom}
-                    onMouseDown={handleMouseDown}
-                    onTouchStart={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onTouchMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onTouchEnd={handleMouseUp}
-                    style={{
-                        boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-                    }}
-                >
-                    <Layer>
-                        <URLImage
-                            src={baseDataUrl}
-                            width={imageSize.width}
-                            height={imageSize.height}
-                        />
-                    </Layer>
-                    <Layer>
-                        {shapes.map((shape) => (
-                            <ShapeItem
-                                key={shape.id}
-                                shape={shape}
-                                isSelected={selectedId === shape.id}
-                                isEditing={editingShape === shape.id}
-                                activeTool={activeAnnotationTool}
-                                onSelect={selectShape}
-                                onTextDblClick={handleTextDblClick}
-                                onDragEnd={handleDragEnd}
-                                onTransformEnd={handleTransformEnd}
-                            />
-                        ))}
-                        <Transformer
-                            ref={transformerRef}
-                            boundBoxFunc={(oldBox, newBox) => {
-                                // Limit resize to avoid invalid shapes (width < 5)
-                                if (newBox.width < 5 || newBox.height < 5) {
-                                    return oldBox;
-                                }
-                                return newBox;
-                            }}
-                            // Premium Styles
-                            anchorSize={10}
-                            anchorCornerRadius={5}
-                            anchorStroke="#6366f1" // indigo-500
-                            anchorFill="#ffffff"
-                            anchorStrokeWidth={2}
-                            borderStroke="#6366f1"
-                            borderStrokeWidth={2}
-                            rotateAnchorOffset={24} // Give more space for rotation handle
-                            keepRatio={false} // Allow free resize by default (shift key locks it usually)
-                        />
-                    </Layer>
-                </Stage>
-
-                {/* Text Editing Overlay */}
-                {editingShape && (() => {
-                    const shape = shapes.find(s => s.id === editingShape);
-                    if (!shape || shape.type !== 'text') return null;
-
-                    const currentScale = scale * baseZoom;
-                    // Apply scaleY map if text was resized vertically
-                    const fontSize = (shape.fontSize || 24) * currentScale * (shape.scaleY || 1);
-                    const x = shape.x * currentScale;
-                    const y = shape.y * currentScale;
-                    const rotation = shape.rotation || 0;
-                    const fontFamily = shape.fontFamily || 'Inter, sans-serif';
-
-                    return (
-                        <textarea
-                            value={shape.text}
-                            onChange={(e) => {
-                                const newText = e.target.value;
-                                setShapes(prev => prev.map(s => s.id === editingShape ? { ...s, text: newText } : s));
-                            }}
-                            onBlur={() => {
-                                addToHistory(shapes);
-                                setEditingShape(null);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                    setEditingShape(null);
-                                }
-                                e.stopPropagation();
-                            }}
-                            style={{
-                                position: 'absolute',
-                                left: `${x}px`,
-                                top: `${y}px`,
-                                fontSize: `${fontSize}px`,
-                                lineHeight: 1,
-                                color: shape.fill,
-                                fontFamily: fontFamily,
-                                background: 'transparent',
-                                border: '1px solid rgba(99, 102, 241, 0.5)',
-                                outline: 'none',
-                                padding: '0px',
-                                margin: '0px',
-                                resize: 'none',
-                                overflow: 'hidden',
-                                whiteSpace: 'pre',
-                                transform: `rotate(${rotation}deg)`,
-                                transformOrigin: 'top left',
-                                zIndex: 50,
-                                width: `${(shape.width || 100) * currentScale * (shape.scaleX || 1) + 20}px`, // Slight buffer
-                                height: `${(shape.height || fontSize) * currentScale * (shape.scaleY || 1) + 20}px`,
-                                boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
-                            }}
-                            autoFocus
-                        />
-                    );
-                })()}
-            </div>
-        </div>
+        <CanvasStageView
+            containerRef={containerRef}
+            stageRef={stageRef}
+            transformerRef={transformerRef}
+            baseDataUrl={baseDataUrl}
+            imageSize={imageSize}
+            scale={scale}
+            baseZoom={baseZoom}
+            shapes={shapes}
+            selectedId={selectedId}
+            editingShape={editingShape}
+            activeAnnotationTool={activeAnnotationTool}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onSelectShape={selectShape}
+            onDragEnd={handleDragEnd}
+            onTransformEnd={handleTransformEnd}
+            onTextDblClick={handleTextDblClick}
+            onTextChange={handleTextChange}
+            onTextCommit={handleTextCommit}
+            onTextCancel={handleTextCancel}
+        />
     );
 });
 

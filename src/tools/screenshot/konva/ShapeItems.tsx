@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { Image as KonvaImage, Rect, Circle, Arrow, Line, Text as KonvaText } from 'react-konva';
 import useImage from 'use-image';
 import type { ShapeData } from './types';
