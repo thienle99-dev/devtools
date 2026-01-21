@@ -83,10 +83,28 @@ export const TabBar: React.FC = React.memo(() => {
         }
     };
 
+    const cleanupToolState = useCallback((closingTabIds: string[]) => {
+        if (!closingTabIds.length) return;
+        const closingSet = new Set(closingTabIds);
+        const remainingToolIds = new Set(
+            tabs
+                .filter(tab => !closingSet.has(tab.id))
+                .map(tab => tab.toolId)
+        );
+
+        closingTabIds.forEach(id => {
+            const closingTab = tabs.find(tab => tab.id === id);
+            if (!closingTab) return;
+            if (!remainingToolIds.has(closingTab.toolId)) {
+                removeToolData(closingTab.toolId);
+            }
+        });
+    }, [tabs, removeToolData]);
+
     const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
         e.stopPropagation();
         closeTab(tabId);
-        removeToolData(tabId);
+        cleanupToolState([tabId]);
     };
 
     const handleContextMenu = (e: React.MouseEvent, tabId: string) => {
@@ -105,33 +123,33 @@ export const TabBar: React.FC = React.memo(() => {
 
     const handleCloseTabFromMenu = (tabId: string) => {
         closeTab(tabId);
-        removeToolData(tabId);
+        cleanupToolState([tabId]);
     };
 
     const handleCloseOthersFromMenu = (tabId: string) => {
         const tabsToClose = tabs.filter(t => t.id !== tabId).map(t => t.id);
         closeOtherTabs(tabId);
-        tabsToClose.forEach(id => removeToolData(id));
+        cleanupToolState(tabsToClose);
     };
 
     const handleCloseToRightFromMenu = (tabId: string) => {
         const tabIndex = tabs.findIndex(t => t.id === tabId);
         const tabsToClose = tabs.slice(tabIndex + 1).map(t => t.id);
         closeTabsToRight(tabId);
-        tabsToClose.forEach(id => removeToolData(id));
+        cleanupToolState(tabsToClose);
     };
 
     const handleCloseToLeftFromMenu = (tabId: string) => {
         const tabIndex = tabs.findIndex(t => t.id === tabId);
         const tabsToClose = tabs.slice(0, tabIndex).map(t => t.id);
         closeTabsToLeft(tabId);
-        tabsToClose.forEach(id => removeToolData(id));
+        cleanupToolState(tabsToClose);
     };
 
     const handleCloseAllFromMenu = () => {
         const allTabIds = tabs.map(t => t.id);
         closeAllTabs();
-        allTabIds.forEach(id => removeToolData(id));
+        cleanupToolState(allTabIds);
     };
 
     const scrollLeft = () => {
