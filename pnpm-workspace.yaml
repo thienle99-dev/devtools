@@ -1,4 +1,4 @@
-ignoredBuiltDependencies:
-  - electron
-  - electron-winstaller
-  - esbuild
+{
+  "packages": ["plugins/*"],
+  "ignoredBuiltDependencies": ["electron", "electron-winstaller", "esbuild"],
+}
