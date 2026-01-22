@@ -18,6 +18,7 @@ export default defineConfig({
       '@types': path.resolve(__dirname, './src/types'),
       '@assets': path.resolve(__dirname, './src/assets'),
       '@pages': path.resolve(__dirname, './src/pages'),
+      '@plugins': path.resolve(__dirname, './plugins'),
     },
     // Ensure proper resolution for CommonJS modules like zxcvbn
     dedupe: ['zxcvbn'],

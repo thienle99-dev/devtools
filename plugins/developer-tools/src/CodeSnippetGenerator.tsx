@@ -44,11 +44,17 @@ export const CodeSnippetGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
         addToHistory(TOOL_ID);
     }, [addToHistory]);
 
-    const request = ((data as any)?.request as RequestData) || initialData;
-    const language = ((data as any)?.language as string) || 'curl';
+    const request = ((data?.meta as any)?.request as RequestData) || initialData;
+    const language = ((data?.meta as any)?.language as string) || 'curl';
 
     const updateRequest = (updates: Partial<RequestData>) => {
-        setToolData(effectiveId, { ...data, request: { ...request, ...updates } });
+        setToolData(effectiveId, { 
+            ...data, 
+            meta: { 
+                ...data?.meta, 
+                request: { ...request, ...updates } 
+            } 
+        });
     };
 
     const addHeader = () => {
@@ -165,7 +171,12 @@ export const CodeSnippetGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                         <div className="w-48">
                             <Select
                                 value={language}
-                                onChange={(e) => setToolData(effectiveId, { language: e.target.value })}
+                                onChange={(e) => setToolData(effectiveId, { 
+                                    meta: { 
+                                        ...data?.meta, 
+                                        language: e.target.value 
+                                    } 
+                                })}
                                 options={LANGUAGES}
                                 variant="outline"
                             />

@@ -14,7 +14,7 @@ export const generateKeyPair = async (bits: number): Promise<{ publicKey: string
 
 export const rsaEncrypt = (content: string, publicKeyPem: string): string => {
     try {
-        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem) as forge.pki.rsa.PublicKey;
         const encrypted = publicKey.encrypt(content, 'RSA-OAEP', {
              md: forge.md.sha256.create(),
              mgf1: {
@@ -29,7 +29,7 @@ export const rsaEncrypt = (content: string, publicKeyPem: string): string => {
 
 export const rsaDecrypt = (encryptedContentBase64: string, privateKeyPem: string): string => {
     try {
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem) as forge.pki.rsa.PrivateKey;
         const encrypted = forge.util.decode64(encryptedContentBase64);
         const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP', {
              md: forge.md.sha256.create(),
@@ -45,7 +45,7 @@ export const rsaDecrypt = (encryptedContentBase64: string, privateKeyPem: string
 
 export const rsaSign = (content: string, privateKeyPem: string, hashAlgo: 'sha1' | 'sha256' | 'sha512' = 'sha256'): string => {
     try {
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem) as forge.pki.rsa.PrivateKey;
         const md = forge.md[hashAlgo].create();
         md.update(content, 'utf8');
         const signature = privateKey.sign(md);
@@ -57,7 +57,7 @@ export const rsaSign = (content: string, privateKeyPem: string, hashAlgo: 'sha1'
 
 export const rsaVerify = (content: string, signatureBase64: string, publicKeyPem: string, hashAlgo: 'sha1' | 'sha256' | 'sha512' = 'sha256'): boolean => {
     try {
-        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem) as forge.pki.rsa.PublicKey;
         const md = forge.md[hashAlgo].create();
         md.update(content, 'utf8');
         const signature = forge.util.decode64(signatureBase64);

@@ -117,7 +117,9 @@ export const generateCsr = (options: {
 }) => {
     const keys = forge.pki.rsa.generateKeyPair(options.keySize || 2048);
     const csr = forge.pki.createCertificationRequest();
-    csr.publicKey = keys.publicKey;
+    // RSA keys are compatible with generic PublicKey/PrivateKey at runtime
+    // TypeScript's type system is strict here, so we use type assertion
+    csr.publicKey = keys.publicKey as any;
 
     const attrs = [
         { name: 'commonName', value: options.commonName },
@@ -131,7 +133,8 @@ export const generateCsr = (options: {
     csr.setSubject(attrs);
 
     // sign certification request
-    csr.sign(keys.privateKey);
+    // RSA keys are compatible with generic PublicKey/PrivateKey at runtime
+    csr.sign(keys.privateKey as any);
 
     return {
         csr: forge.pki.certificationRequestToPem(csr),
