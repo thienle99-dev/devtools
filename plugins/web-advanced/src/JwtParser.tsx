@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
+// Remove jwt-decode import as it is in logic
+import type { BaseToolProps } from '@tools/registry/types'; // Import BaseToolProps
+import { parseJwt as parseJwtLogic } from './logic';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 import { CodeEditor } from '@components/ui/CodeEditor';
@@ -9,11 +11,8 @@ import { TOOL_IDS } from '@tools/registry/tool-ids';
 
 const TOOL_ID = TOOL_IDS.JWT_PARSER;
 
-interface JwtParserProps {
-    tabId?: string;
-}
-
-export const JwtParser: React.FC<JwtParserProps> = ({ tabId }) => {
+// interface JwtParserProps removed
+export const JwtParser: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
@@ -39,18 +38,13 @@ export const JwtParser: React.FC<JwtParserProps> = ({ tabId }) => {
         let isValid = false;
 
         if (val) {
-            try {
-                // Decode payload
-                const decodedPayload = jwtDecode(val);
-                payload = JSON.stringify(decodedPayload, null, 2);
-
-                // Decode header
-                const decodedHeader = jwtDecode(val, { header: true });
-                header = JSON.stringify(decodedHeader, null, 2);
-
+            const result = parseJwtLogic(val);
+            if (result.isValid && result.header && result.payload) {
+                // logic returns objects, we need strings for the editor
+                header = JSON.stringify(result.header, null, 2);
+                payload = JSON.stringify(result.payload, null, 2);
                 isValid = true;
-            } catch (error) {
-                // Invalid JWT
+            } else {
                 isValid = false;
             }
         }

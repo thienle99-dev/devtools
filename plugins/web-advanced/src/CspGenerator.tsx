@@ -6,7 +6,10 @@ import { Input } from '@components/ui/Input';
 import { Checkbox } from '@components/ui/Checkbox';
 import { Copy, RefreshCw, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
-const TOOL_ID = 'csp-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.CSP_GENERATOR;
 
 type Directive = 'default-src' | 'script-src' | 'style-src' | 'img-src' | 'connect-src' | 'font-src' | 'object-src' | 'media-src' | 'frame-src' | 'base-uri' | 'form-action';
 
@@ -48,7 +51,7 @@ const initialRule: CspRule = {
     custom: []
 };
 
-export const CspGenerator = () => {
+export const CspGenerator: React.FC<BaseToolProps> = () => {
   const [rules, setRules] = useState<Record<Directive, CspRule>>(() => {
       const initial: any = {};
       DIRECTIVES.forEach(d => initial[d.key] = { ...initialRule, enabled: d.key === 'default-src' ? true : false, self: d.key === 'default-src' ? true : false });

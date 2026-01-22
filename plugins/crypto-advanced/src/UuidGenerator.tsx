@@ -26,20 +26,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
-import { TOOL_ID, ID_TYPES, NAMESPACES, DEFAULT_OPTIONS, type IdType } from '@tools/crypto/uuid/constants';
+import { ID_TYPES, NAMESPACES, DEFAULT_OPTIONS } from '@tools/crypto/uuid/constants';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.UUID_GENERATOR;
 import { extractV1Timestamp, extractV6Timestamp, extractV7Timestamp, validateIdentifier } from '@tools/crypto/uuid/helpers';
+import type { GeneratedId } from './types';
 
-interface GeneratedId {
-    value: string;
-    type: IdType;
-    timestamp?: Date;
-}
+// Interface GeneratedId moved to types.ts
+// Interface UuidGeneratorProps removed
 
-interface UuidGeneratorProps {
-    tabId?: string;
-}
-
-export const UuidGenerator: React.FC<UuidGeneratorProps> = ({ tabId }) => {
+export const UuidGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

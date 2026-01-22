@@ -30,3 +30,7 @@ export interface CategoryDefinition {
     icon: React.ElementType;
     color?: string;
 }
+
+export interface BaseToolProps {
+    tabId?: string;
+}

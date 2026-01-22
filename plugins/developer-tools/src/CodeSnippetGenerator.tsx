@@ -7,9 +7,11 @@ import { Select } from '@components/ui/Select';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateSnippet, type RequestData } from '@tools/development/snippet-logic';
+import { generateSnippet, type RequestData } from './snippet-logic';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-const TOOL_ID = 'code-snippet-generator';
+const TOOL_ID = TOOL_IDS.CODE_SNIPPET_GENERATOR;
 
 const METHODS = [
     { value: 'GET', label: 'GET' },
@@ -26,8 +28,10 @@ const LANGUAGES = [
     { value: 'node-axios', label: 'Node.js (Axios)' },
 ];
 
-export const CodeSnippetGenerator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+export const CodeSnippetGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData } = useToolState(effectiveId);
+    const data = toolData || {};
 
     const initialData: RequestData = {
         method: 'GET',
@@ -40,7 +44,7 @@ export const CodeSnippetGenerator: React.FC = () => {
     const language = ((data as any)?.language as string) || 'curl';
 
     const updateRequest = (updates: Partial<RequestData>) => {
-        setToolData(TOOL_ID, { request: { ...request, ...updates } } as any);
+        setToolData(effectiveId, { request: { ...request, ...updates } });
     };
 
     const addHeader = () => {
@@ -75,7 +79,7 @@ export const CodeSnippetGenerator: React.FC = () => {
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Code Snippet Generator"
             description="Generate HTTP request code snippets for various languages."
             onClear={() => {}}
@@ -157,7 +161,7 @@ export const CodeSnippetGenerator: React.FC = () => {
                         <div className="w-48">
                             <Select
                                 value={language}
-                                onChange={(e) => setToolData(TOOL_ID, { language: e.target.value } as any)}
+                                onChange={(e) => setToolData(effectiveId, { language: e.target.value })}
                                 options={LANGUAGES}
                                 variant="outline"
                             />

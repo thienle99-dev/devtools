@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import type { BaseToolProps } from '@tools/registry/types';
+import { generateBasicAuth } from './logic';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
@@ -8,11 +10,8 @@ import { TOOL_IDS } from '@tools/registry/tool-ids';
 
 const TOOL_ID = TOOL_IDS.BASIC_AUTH_GENERATOR;
 
-interface BasicAuthGeneratorProps {
-    tabId?: string;
-}
-
-export const BasicAuthGenerator: React.FC<BasicAuthGeneratorProps> = ({ tabId }) => {
+// interface definition removed
+export const BasicAuthGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
@@ -29,10 +28,15 @@ export const BasicAuthGenerator: React.FC<BasicAuthGeneratorProps> = ({ tabId })
     }, [addToHistory]);
 
     const updateAuth = (u: string, p: string) => {
-        const token = btoa(`${u}:${p}`);
+        const fullHeader = generateBasicAuth(u, p); // Returns "Authorization: Basic <token>"
+        // Extract just the value part to match previous behavior or use full header? 
+        // Previous behavior: "Basic <token>"
+        // fullHeader: "Authorization: Basic <token>"
+        const value = fullHeader.replace('Authorization: ', '');
+
         setToolData(effectiveId, {
             options: { username: u, password: p },
-            output: `Basic ${token}`
+            output: value
         });
     };
 

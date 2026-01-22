@@ -1,4 +1,7 @@
 import React, { useEffect } from 'react';
+import type { BaseToolProps } from '@tools/registry/types'; // Import BaseToolProps
+ // Import BaseToolProps
+import { parseUrl as parseUrlLogic } from './logic'; // Import logic
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 import { Input } from '@components/ui/Input';
@@ -7,11 +10,11 @@ import { TOOL_IDS } from '@tools/registry/tool-ids';
 
 const TOOL_ID = TOOL_IDS.URL_PARSER;
 
-interface UrlParserProps {
-    tabId?: string;
-}
+// interface UrlParserProps removed, utilize BaseToolProps
+// Or explicit:  export const UrlParser: React.FC<BaseToolProps>
 
-export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
+
+export const UrlParser: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
@@ -42,39 +45,29 @@ export const UrlParser: React.FC<UrlParserProps> = ({ tabId }) => {
     };
 
     const parseUrl = (val: string) => {
-        try {
-            if (!val) {
-                clearToolData(effectiveId);
-                return;
-            }
-            // Add protocol if missing to try and parse flexible inputs
-            let urlToParse = val;
-            if (!val.match(/^https?:\/\//)) {
-                // urlToParse = 'http://' + val; // Optional flexibility
-            }
-
-            const url = new URL(urlToParse);
-            const params: Record<string, string> = {};
-            url.searchParams.forEach((value, key) => {
-                params[key] = value;
-            });
-
+        if (!val) {
+            clearToolData(effectiveId);
+            return;
+        }
+        
+        const result = parseUrlLogic(val);
+        if (result.isValid) {
             setToolData(effectiveId, {
                 options: {
-                    protocol: url.protocol,
-                    host: url.host,
-                    hostname: url.hostname,
-                    port: url.port,
-                    pathname: url.pathname,
-                    search: url.search,
-                    hash: url.hash,
-                    origin: url.origin,
-                    params
+                    protocol: result.protocol,
+                    host: result.host,
+                    hostname: result.hostname,
+                    port: result.port,
+                    pathname: result.pathname,
+                    search: result.search,
+                    hash: result.hash,
+                    origin: result.origin,
+                    params: result.params
                 }
             });
-        } catch (e) {
-            // Invalid URL
         }
+        // If invalid, we might want to handle it or just do nothing/clear options? 
+        // Existing code did nothing on catch. logic.ts returns isValid: false.
     };
 
     const handleClear = () => clearToolData(effectiveId);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import type { BaseToolProps } from '@tools/registry/types';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
@@ -30,11 +31,8 @@ export const process = async (input: string, options: { algorithm?: HashAlgorith
     return generateHash(input, options.algorithm);
 };
 
-interface HashGeneratorProps {
-    tabId?: string;
-}
-
-export const HashGenerator: React.FC<HashGeneratorProps> = ({ tabId }) => {
+// HashGeneratorProps interface removed
+export const HashGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

@@ -5,9 +5,13 @@ import { Button } from '@components/ui/Button';
 import { ArrowRightLeft, Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'base64-url';
+import type { BaseToolProps } from '@tools/registry/types';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import { base64UrlEncode, base64UrlDecode } from './logic';
 
-export const Base64UrlConverter = () => {
+const TOOL_ID = TOOL_IDS.BASE64_URL;
+
+export const Base64UrlConverter: React.FC<BaseToolProps> = () => {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [mode, setMode] = useState<'encode' | 'decode'>('encode');
@@ -19,24 +23,14 @@ export const Base64UrlConverter = () => {
       return;
     }
 
-    try {
-      if (currentMode === 'encode') {
-        // Encode: String -> Base64 -> Base64URL
-        const b64 = btoa(val);
-        const b64url = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        setOutput(b64url);
-      } else {
-        // Decode: Base64URL -> Base64 -> String
-        let b64 = val.replace(/-/g, '+').replace(/_/g, '/');
-        // Pad with =
-        while (b64.length % 4 !== 0) {
-            b64 += '=';
-        }
-        const str = atob(b64);
-        setOutput(str);
-      }
-    } catch (e) {
-      setOutput('Error: Invalid input');
+    if (currentMode === 'encode') {
+      // Encode: String -> Base64 -> Base64URL
+      const b64url = base64UrlEncode(val);
+      setOutput(b64url);
+    } else {
+      // Decode: Base64URL -> Base64 -> String
+      const str = base64UrlDecode(val);
+      setOutput(str);
     }
   };
 
