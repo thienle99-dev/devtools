@@ -1,4 +1,4 @@
-
+import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
@@ -16,7 +16,7 @@ import { DownloadError, ErrorParser } from './errors/DownloadError';
 import { errorLogger } from './errors/ErrorLogger';
 import { retryManager } from './errors/RetryManager';
 
-
+const require = createRequire(import.meta.url);
 
 interface UniversalSettings {
     downloadPath?: string;
@@ -91,8 +91,8 @@ export class UniversalDownloader {
             this.downloadQueue.push({
                 options: item.options,
                 run: () => this.executeDownload(item.options),
-                resolve: () => { },
-                reject: () => { },
+                resolve: () => {},
+                reject: () => {},
                 state: item.state === 'downloading' ? 'paused' : item.state as any
             });
         }
@@ -111,7 +111,7 @@ export class UniversalDownloader {
      */
     prepareForShutdown() {
         console.log('🔄 Preparing downloads for shutdown...');
-
+        
         // Convert all active downloads to paused state in queue
         this.activeProcesses.forEach((process, downloadId) => {
             const options = this.activeOptions.get(downloadId);
@@ -122,8 +122,8 @@ export class UniversalDownloader {
                     this.downloadQueue.push({
                         options,
                         run: () => this.executeDownload(options),
-                        resolve: () => { },
-                        reject: () => { },
+                        resolve: () => {},
+                        reject: () => {},
                         state: 'paused'
                     });
                 } else {
@@ -134,20 +134,20 @@ export class UniversalDownloader {
                     }
                 }
             }
-
+            
             // Kill the process
             if (process.ytDlpProcess) {
                 process.ytDlpProcess.kill('SIGTERM');
             }
         });
-
+        
         // Save the queue
         this.saveQueuePersistently();
-
-        const pendingCount = this.downloadQueue.filter(item =>
+        
+        const pendingCount = this.downloadQueue.filter(item => 
             item.state === 'queued' || item.state === 'paused'
         ).length;
-
+        
         console.log(`✅ Saved ${pendingCount} pending downloads`);
         return pendingCount;
     }
@@ -157,7 +157,7 @@ export class UniversalDownloader {
      */
     getPendingDownloadsCount(): number {
         const persisted = this.store.get('queue') || [];
-        return persisted.filter(item =>
+        return persisted.filter(item => 
             item.state === 'queued' || item.state === 'paused'
         ).length;
     }
@@ -167,17 +167,17 @@ export class UniversalDownloader {
      */
     resumePendingDownloads() {
         console.log('🔄 Resuming pending downloads...');
-        const pending = this.downloadQueue.filter(item =>
+        const pending = this.downloadQueue.filter(item => 
             item.state === 'queued' || item.state === 'paused'
         );
-
+        
         pending.forEach(item => {
             item.state = 'queued';
         });
-
+        
         this.saveQueuePersistently();
         this.processQueue();
-
+        
         console.log(`✅ Resumed ${pending.length} downloads`);
     }
 
@@ -186,7 +186,7 @@ export class UniversalDownloader {
      */
     clearPendingDownloads() {
         console.log('🗑️ Clearing pending downloads...');
-        this.downloadQueue = this.downloadQueue.filter(item =>
+        this.downloadQueue = this.downloadQueue.filter(item => 
             item.state === 'downloading'
         );
         this.saveQueuePersistently();
@@ -203,8 +203,8 @@ export class UniversalDownloader {
         progressCallback?: (progress: UniversalDownloadProgress) => void
     ): DownloadError {
         // Convert to DownloadError if needed
-        const downloadError = error instanceof DownloadError
-            ? error
+        const downloadError = error instanceof DownloadError 
+            ? error 
             : ErrorParser.parse(error, { url, platform });
 
         // Update retry count in metadata
@@ -259,7 +259,7 @@ export class UniversalDownloader {
                     console.log(
                         `[Retry Scheduled] ${downloadId} will retry in ${(retryResult.delay! / 1000).toFixed(1)}s`
                     );
-
+                    
                     // Update progress with retry info
                     if (progressCallback) {
                         progressCallback({
@@ -327,7 +327,9 @@ export class UniversalDownloader {
 
     private async init(): Promise<void> {
         try {
-            const { YTDlpWrap } = await import('./yt-dlp');
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const ytDlpModule = require('yt-dlp-wrap');
+            const YTDlpWrap = ytDlpModule.default || ytDlpModule;
 
             // Ensure binary exists (YouTube downloader should have handled this)
             if (!fs.existsSync(this.binaryPath)) {
@@ -577,8 +579,8 @@ export class UniversalDownloader {
             this.downloadQueue.push({
                 options,
                 run: () => this.executeDownload(options),
-                resolve: () => { },
-                reject: () => { },
+                resolve: () => {},
+                reject: () => {},
                 state: 'queued'
             });
             this.saveQueuePersistently();
@@ -598,8 +600,8 @@ export class UniversalDownloader {
             this.downloadQueue.push({
                 options: reconstructedOptions,
                 run: () => this.executeDownload(reconstructedOptions),
-                resolve: () => { },
-                reject: () => { },
+                resolve: () => {},
+                reject: () => {},
                 state: 'queued'
             });
             this.saveQueuePersistently();
@@ -635,8 +637,8 @@ export class UniversalDownloader {
             this.downloadQueue.unshift({
                 options,
                 run: () => this.executeDownload(options),
-                resolve: () => { },
-                reject: () => { },
+                resolve: () => {},
+                reject: () => {},
                 state: 'queued'
             });
             this.saveQueuePersistently();
@@ -997,7 +999,7 @@ export class UniversalDownloader {
                     } else {
                         // Non-zero exit code - parse error from stderr
                         const errorMsg = stderrOutput || `Download failed (exit code: ${code})`;
-
+                        
                         const error = this.handleDownloadError(
                             new Error(errorMsg),
                             downloadId,
@@ -1012,7 +1014,7 @@ export class UniversalDownloader {
 
                 process.on('error', (err: Error) => {
                     this.activeProcesses.delete(downloadId);
-
+                    
                     const error = this.handleDownloadError(
                         err,
                         downloadId,
