@@ -1,9 +1,9 @@
 import React from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { Copy, RefreshCw, ShieldCheck } from 'lucide-react';
-import { generateBearerToken } from '../crypto/logic';
+import { generateBearerToken } from '@tools/crypto/logic';
 import { toast } from 'sonner';
 
 const TOOL_ID = 'bearer-token';

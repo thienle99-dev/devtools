@@ -1,14 +1,14 @@
 import React from 'react';
 import { faker } from '@faker-js/faker';
-import { useToolState } from '../../store/toolStore';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Select } from '@components/ui/Select';
 import { Trash2, Plus, RefreshCw, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { VirtualizedOutput } from '@components/ui/VirtualizedOutput';
-import { useTask } from '../../hooks/useTask';
+import { useTask } from '@/hooks/useTask';
 
 const TOOL_ID = 'mock-data-generator';
 
@@ -27,7 +27,7 @@ const FIELD_TYPES = [
     { value: 'lorem', label: 'Lorem Ipsum (Sentence)' },
     { value: 'number', label: 'Random Number' },
     { value: 'boolean', label: 'Boolean' },
-    { value: 'username', label: 'Username' },
+    { value: 'userName', label: 'Username' },
     { value: 'website', label: 'Website URL' },
     { value: 'jobTitle', label: 'Job Title' },
     { value: 'price', label: 'Price' },
@@ -109,7 +109,7 @@ export const MockDataGenerator: React.FC = () => {
                             case 'lorem': obj[field.name] = faker.lorem.sentence(); break;
                             case 'number': obj[field.name] = faker.number.int({ min: 1, max: 1000 }); break;
                             case 'boolean': obj[field.name] = faker.datatype.boolean(); break;
-                            case 'username': obj[field.name] = faker.internet.username(); break;
+                                case 'userName': obj[field.name] = faker.internet.userName(); break;
                             case 'website': obj[field.name] = faker.internet.url(); break;
                             case 'jobTitle': obj[field.name] = faker.person.jobTitle(); break;
                             case 'price': obj[field.name] = faker.commerce.price(); break;

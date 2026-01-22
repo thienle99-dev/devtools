@@ -1,2 +1,2 @@
-export { default as QrCodeGenerator } from './QrCodeGenerator';
-export { default as SvgPlaceholderGenerator } from './SvgPlaceholderGenerator';
+export { QrCodeGenerator } from './QrCodeGenerator';
+export { SvgPlaceholderGenerator } from './SvgPlaceholderGenerator';

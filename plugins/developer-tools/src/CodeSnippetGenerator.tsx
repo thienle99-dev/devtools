@@ -1,13 +1,13 @@
 import React from 'react';
-import { useToolState } from '../../store/toolStore';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Select } from '@components/ui/Select';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateSnippet, type RequestData } from './snippet-logic';
+import { generateSnippet, type RequestData } from '@tools/development/snippet-logic';
 
 const TOOL_ID = 'code-snippet-generator';
 
@@ -54,7 +54,7 @@ export const CodeSnippetGenerator: React.FC = () => {
     };
 
     const removeHeader = (index: number) => {
-        updateRequest({ headers: request.headers.filter((_, i) => i !== index) });
+        updateRequest({ headers: request.headers.filter((_: any, i: number) => i !== index) });
     };
 
     const snippet = generateSnippet(request, language);
@@ -109,7 +109,7 @@ export const CodeSnippetGenerator: React.FC = () => {
                                 </Button>
                             </div>
                             <div className="space-y-2">
-                                {request.headers.map((h, i) => (
+                                {request.headers.map((h: any, i: number) => (
                                     <div key={i} className="flex gap-2">
                                         <Input
                                             value={h.key}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { ArrowRightLeft, Copy, Trash2 } from 'lucide-react';

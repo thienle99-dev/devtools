@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Zap, Wifi, Database } from 'lucide-react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 
 type Strategy = 'NetworkFirst' | 'CacheFirst' | 'StaleWhileRevalidate' | 'NetworkOnly' | 'CacheOnly';
 

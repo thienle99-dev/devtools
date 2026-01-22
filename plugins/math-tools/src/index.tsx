@@ -1,4 +1,4 @@
-export { default as Chronometer } from './Chronometer';
-export { default as MathEvaluator } from './MathEvaluator';
-export { default as PercentageCalculator } from './PercentageCalculator';
-export { default as TemperatureConverter } from './TemperatureConverter';
+export { Chronometer } from './Chronometer';
+export { MathEvaluator } from './MathEvaluator';
+export { PercentageCalculator } from './PercentageCalculator';
+export { TemperatureConverter } from './TemperatureConverter';

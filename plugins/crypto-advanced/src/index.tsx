@@ -1,2 +1,2 @@
-export { default as HmacGenerator } from './HmacGenerator';
-export { default as BearerTokenGenerator } from './BearerTokenGenerator';
+export { HmacGenerator } from './HmacGenerator';
+export { BearerTokenGenerator } from './BearerTokenGenerator';

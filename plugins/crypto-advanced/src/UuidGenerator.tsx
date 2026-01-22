@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
-import { TOOL_ID, ID_TYPES, NAMESPACES, DEFAULT_OPTIONS, type IdType } from './uuid/constants';
-import { extractV1Timestamp, extractV6Timestamp, extractV7Timestamp, validateIdentifier } from './uuid/helpers';
+import { TOOL_ID, ID_TYPES, NAMESPACES, DEFAULT_OPTIONS, type IdType } from '@tools/crypto/uuid/constants';
+import { extractV1Timestamp, extractV6Timestamp, extractV7Timestamp, validateIdentifier } from '@tools/crypto/uuid/helpers';
 
 interface GeneratedId {
     value: string;

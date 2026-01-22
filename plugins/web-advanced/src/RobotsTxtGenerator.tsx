@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
@@ -11,6 +11,8 @@ interface Rule {
   allow: string[];
   disallow: string[];
 }
+
+const TOOL_ID = 'robots-txt-generator';
 
 export const RobotsTxtGenerator = () => {
   const [rules, setRules] = useState<Rule[]>([

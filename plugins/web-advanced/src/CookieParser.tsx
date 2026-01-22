@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, Search } from 'lucide-react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 
 interface ParsedCookie {
     key: string;

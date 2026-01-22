@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { UAParser } from 'ua-parser-js';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { TextArea } from '@components/ui/TextArea';
 

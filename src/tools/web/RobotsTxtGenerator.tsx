@@ -12,6 +12,7 @@ interface Rule {
   disallow: string[];
 }
 
+const TOOL_ID = 'robots-txt-generator';
 export const RobotsTxtGenerator = () => {
   const [rules, setRules] = useState<Rule[]>([
     { userAgent: '*', allow: [], disallow: [] }

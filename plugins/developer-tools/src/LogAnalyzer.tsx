@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { Search } from 'lucide-react';
 import { analyzeLogs, highlightLogs } from './logic';

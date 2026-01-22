@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { TextArea } from '@components/ui/TextArea';
 

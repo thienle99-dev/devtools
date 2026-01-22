@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Edge, Node, NodeProps } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useWorkflowStore } from '../../store/workflowStore';
-import { TOOLS } from '../registry';
+import { useWorkflowStore } from '@store/workflowStore';
+import { TOOLS } from '@tools/registry';
 import { cn } from '@utils/cn';
 import { Package, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -82,7 +82,7 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {}, module }: VisualPi
     const { workflows, updateStep } = useWorkflowStore();
     
     const workflow = useMemo(() => 
-        workflows.find(w => w.id === workflowId), 
+        workflows.find((w: any) => w.id === workflowId), 
     [workflows, workflowId]);
 
     const steps = workflow?.steps || [];
@@ -90,8 +90,8 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {}, module }: VisualPi
     // Calculate Nodes from Steps
     const initialNodes: Node[] = useMemo(() => {
         if (!workflow) return [];
-        return workflow.steps.map((step, index) => {
-            const tool = TOOLS.find(t => t.id === step.toolId);
+        return workflow.steps.map((step: any, index: number) => {
+            const tool = TOOLS.find((t: any) => t.id === step.toolId);
             return {
                 id: step.id,
                 type: 'tool',
@@ -146,8 +146,8 @@ const VisualPipelineCanvas = ({ workflowId, stepResults = {}, module }: VisualPi
         const { source, target } = params;
         if (!workflow || source === target) return;
 
-        const sourceIndex = workflow.steps.findIndex(s => s.id === source);
-        const targetIndex = workflow.steps.findIndex(s => s.id === target);
+        const sourceIndex = workflow.steps.findIndex((s: any) => s.id === source);
+        const targetIndex = workflow.steps.findIndex((s: any) => s.id === target);
 
         if (sourceIndex === -1 || targetIndex === -1) return;
 

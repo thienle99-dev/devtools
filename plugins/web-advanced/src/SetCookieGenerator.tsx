@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, Settings, Calendar, Globe,  Shield,  Lock } from 'lucide-react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 
 type SameSite = 'Lax' | 'Strict' | 'None';
 type Priority = 'Low' | 'Medium' | 'High';

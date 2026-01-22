@@ -4,7 +4,7 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@components/ui/Tabs';
-import { generateKeyPair, rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify } from './rsaLogic';
+import { generateKeyPair, rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify } from '@tools/crypto/rsaLogic';
 import { toast } from 'sonner';
 
 const TOOL_ID = 'rsa-generator';

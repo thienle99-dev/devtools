@@ -1,5 +1,5 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 
 interface KeyInfo {

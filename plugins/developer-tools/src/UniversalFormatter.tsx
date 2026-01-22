@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
-import { useToolState } from '../../store/toolStore';
+import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { Select } from '@components/ui/Select';
 import { Checkbox } from '@components/ui/Checkbox';
 import { cn } from '@utils/cn';
-import { formatJson, minifyJson } from '../json/logic';
+import { formatJson, minifyJson } from '@tools/json/logic';
 import xmlFormatter from 'xml-formatter';
 import yaml from 'js-yaml';
 import { format as sqlFormatter } from 'sql-formatter';
 import { Braces, FileCode, FileText, Database, Lightbulb, Copy, Trash2, ArrowRight } from 'lucide-react';
-import { detectContent } from '../../utils/detector';
+import { detectContent } from '@utils/detector';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { getToolById } from '../registry';
+import { getToolById } from '@tools/registry';
 
 const MODES = [
     { id: 'json', name: 'JSON', icon: Braces, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },

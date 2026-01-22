@@ -1,6 +1,6 @@
 import React from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 import { Button } from '@components/ui/Button';
 import { TextArea } from '@components/ui/TextArea';
 import { Input } from '@components/ui/Input';

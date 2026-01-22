@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Bold, Italic, Underline, List, ListOrdered, Link, Code, Type, AlignLeft, AlignCenter, AlignRight, Undo, Redo, Eraser } from 'lucide-react';

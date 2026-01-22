@@ -7,12 +7,12 @@ import { TOOLS } from '@tools/registry';
 import { ConfirmationModal } from '@components/ui/ConfirmationModal';
 import { TemplateSelector } from './TemplateSelector';
 import type { ChainTemplate } from '@store/chainTemplates';
-import { WorkflowListPanel } from './pipeline/components/WorkflowListPanel';
-import { ToolPickerPanel } from './pipeline/components/ToolPickerPanel';
-import { WorkflowHeader } from './pipeline/components/WorkflowHeader';
-import { StepListView } from './pipeline/components/StepListView';
-import { TestingPanel } from './pipeline/components/TestingPanel';
-import type { PipelineViewMode, StepResultsMap } from './pipeline/types';
+import { WorkflowListPanel } from '@tools/development/pipeline/components/WorkflowListPanel';
+import { ToolPickerPanel } from '@tools/development/pipeline/components/ToolPickerPanel';
+import { WorkflowHeader } from '@tools/development/pipeline/components/WorkflowHeader';
+import { StepListView } from '@tools/development/pipeline/components/StepListView';
+import { TestingPanel } from '@tools/development/pipeline/components/TestingPanel';
+import type { PipelineViewMode, StepResultsMap } from '@tools/development/pipeline/types';
 import { Button } from '@/components/ui/Button';
 
 // Lazy load the visual designer to avoid loading ReactFlow heavy chunk when not needed
@@ -151,14 +151,14 @@ const PipelineDesigner: React.FC = () => {
         if (!step) return;
 
         if (step.disabled) {
-            setStepResults(prev => ({
+            setStepResults((prev: StepResultsMap) => ({
                 ...prev,
                 [step.id]: { status: 'success', output: startData } // Pass-through
             }));
             return startData;
         }
 
-        setStepResults(prev => ({
+        setStepResults((prev: StepResultsMap) => ({
             ...prev,
             [step.id]: { status: 'running', output: null, error: undefined }
         }));
@@ -177,7 +177,7 @@ const PipelineDesigner: React.FC = () => {
             }
             
             const duration = performance.now() - startTime;
-            setStepResults(prev => ({
+            setStepResults((prev: StepResultsMap) => ({
                 ...prev,
                 [step.id]: { status: 'success', output: result, duration }
             }));
@@ -185,7 +185,7 @@ const PipelineDesigner: React.FC = () => {
         } catch (error) {
             const duration = performance.now() - startTime;
             const message = (error as Error).message || 'Unknown error';
-            setStepResults(prev => ({
+            setStepResults((prev: StepResultsMap) => ({
                 ...prev,
                 [step.id]: { status: 'error', output: null, error: message, duration }
             }));
@@ -327,7 +327,7 @@ const PipelineDesigner: React.FC = () => {
                         onSelectWorkflow={setActiveWorkflowId}
                         onFavorite={toggleFavorite}
                         onDuplicate={duplicateWorkflow}
-                        onDelete={(id) => setWorkflowToDelete(id)}
+                        onDelete={(id: string) => setWorkflowToDelete(id)}
                         onCreateNew={() => setShowTemplates(true)}
                         onImport={() => fileInputRef.current?.click()}
                     />
@@ -364,7 +364,7 @@ const PipelineDesigner: React.FC = () => {
                                 viewMode={viewMode}
                                 onViewModeChange={setViewMode}
                                 onFavoriteToggle={() => toggleFavorite(activeWorkflow.id)}
-                                onNameChange={(value) => updateWorkflow(activeWorkflowId!, { name: value })}
+                                onNameChange={(value: string) => updateWorkflow(activeWorkflowId!, { name: value })}
                                 onShare={handleShare}
                                 onExport={handleExport}
                                 onReset={handleReset}

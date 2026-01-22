@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings } from 'lucide-react';
-import { ToolPane } from '../../components/layout/ToolPane';
-import { useToolState } from '../../store/toolStore';
+import { ToolPane } from '@components/layout/ToolPane';
+import { useToolState } from '@store/toolStore';
 
 export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
     const { data, setToolData } = useToolState(tabId);

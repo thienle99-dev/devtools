@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ToolPane } from '../../components/layout/ToolPane';
+import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Input } from '@components/ui/Input';
 import { Button } from '@components/ui/Button';
@@ -7,6 +7,7 @@ import { ArrowRight, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const SafelinkDecoder = () => {
+    const TOOL_ID = 'safelink-decoder';
     const [input, setInput] = useState('');
     const [decoded, setDecoded] = useState<{ url: string; params: Record<string, string> } | null>(null);
 
