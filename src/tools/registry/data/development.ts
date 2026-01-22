@@ -1,10 +1,11 @@
 import { Percent, Settings } from 'lucide-react';
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
+import { TOOL_IDS } from '../tool-ids';
 
 export const developmentTools: ToolDefinition[] = [
     {
-        id: 'regex-tester',
+        id: TOOL_IDS.REGEX_TESTER,
         name: 'Regex Tester',
         path: '/regex-tester',
         description: 'Test regular expressions',
@@ -15,7 +16,7 @@ export const developmentTools: ToolDefinition[] = [
         keywords: ['regex', 'test', 'regexp', 'match']
     },
     {
-        id: 'settings',
+        id: TOOL_IDS.SETTINGS,
         name: 'Settings',
         path: '/settings',
         description: 'Customize your experience and manage application preferences',

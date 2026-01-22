@@ -1,0 +1,108 @@
+export const TOOL_IDS = {
+    // Web
+    SAFELINK_DECODER: 'safelink-decoder',
+    URL_PARSER: 'url-parser',
+    BASIC_AUTH_GENERATOR: 'basic-auth-generator',
+    MIME_TYPES: 'mime-types',
+    SLUG_GENERATOR: 'slug-generator',
+    USER_AGENT_PARSER: 'user-agent-parser',
+    JWT_PARSER: 'jwt-parser',
+    HTTP_STATUS_CODE: 'http-status-code',
+    KEYCODE_INFO: 'keycode-info',
+    OTP_GENERATOR: 'otp-generator',
+    BASE64_URL: 'base64-url',
+    HTTP_HEADER_PARSER: 'http-header-parser',
+    COOKIE_PARSER: 'cookie-parser',
+    SET_COOKIE_GENERATOR: 'set-cookie-generator',
+    CONTENT_TYPE_PARSER: 'content-type-parser',
+    ROBOTS_TXT_GENERATOR: 'robots-txt-generator',
+    OPEN_GRAPH_GENERATOR: 'open-graph-generator',
+    META_TAGS_GENERATOR: 'meta-tags-generator',
+    MANIFEST_GENERATOR: 'manifest-generator',
+    HTML_WYSIWYG: 'html-wysiwyg',
+    CSP_GENERATOR: 'csp-generator',
+    UTM_BUILDER: 'utm-builder',
+    STRUCTURED_DATA_GENERATOR: 'structured-data-generator',
+
+    // Development
+    REGEX_TESTER: 'regex-tester',
+    CRONTAB_GENERATOR: 'crontab-generator',
+    CHMOD_CALCULATOR: 'chmod-calculator',
+    DOCKER_CONVERTER: 'docker-converter',
+    MOCK_DATA_GENERATOR: 'mock-data-generator',
+    CODE_SNIPPET_GENERATOR: 'code-snippet-generator',
+    JSON_DIFF: 'json-diff',
+    LOG_ANALYZER: 'log-analyzer',
+    UNIVERSAL_FORMATTER: 'universal-formatter',
+
+    // Media
+    XNAPPER: 'xnapper',
+    VOICE_RECORDER: 'voice-recorder',
+    CAMERA: 'camera',
+    VIDEO_RECORDER: 'video-recorder',
+    VIDEO_COMPRESSOR: 'video-compressor',
+
+    // Image
+    QR_CODE_GENERATOR: 'qr-code-generator',
+    SVG_PLACEHOLDER_GENERATOR: 'svg-placeholder-generator',
+    IMAGE_CONVERTER: 'image-converter',
+    IMAGE_EDITOR: 'image-editor',
+    IMAGE_METADATA: 'image-metadata',
+    IMAGE_TO_ASCII: 'image-to-ascii',
+    DATA_URI_GENERATOR: 'data-uri-generator',
+
+    // Text
+    LOREM_IPSUM_GENERATOR: 'lorem-ipsum-generator',
+    TEXT_STATISTICS: 'text-statistics',
+    TEXT_DIFF: 'text-diff',
+    STRING_OBFUSCATOR: 'string-obfuscator',
+    ASCII_ART_GENERATOR: 'ascii-art-generator',
+    SLUGIFY: 'slugify',
+    REGEX_REPLACE: 'regex-replace',
+
+    // Math
+    MATH_EVALUATOR: 'math-evaluator',
+    PERCENTAGE_CALCULATOR: 'percentage-calculator',
+    TEMPERATURE_CONVERTER: 'temperature-converter',
+    CHRONOMETER: 'chronometer',
+
+    // Converters
+    CONVERTER: 'converter',
+    BASE64: 'base64',
+    URL_ENCODE: 'url-encode',
+    HTML_ENTITY: 'html-entity',
+    NUMBER_BASE: 'number-base',
+    TEXT_CASE: 'text-case',
+    COLOR_CONVERTER: 'color-converter',
+    DATE_CONVERTER: 'date-converter',
+    CODE_MINIFIER: 'code-minifier',
+    UNICODE: 'unicode',
+    BINARY_HEX_TEXT: 'binary-hex-text',
+    QUERY_STRING: 'query-string',
+    IP_ADDRESS: 'ip-address',
+    MAC_ADDRESS: 'mac-address',
+    FILE_SIZE: 'file-size',
+    UNIT_CONVERTER: 'unit-converter',
+    EPOCH_TIMESTAMP: 'epoch-timestamp',
+    TIMEZONE_CONVERTER: 'timezone-converter',
+    PERCENTAGE_FRACTION: 'percentage-fraction',
+    CURRENCY_CONVERTER: 'currency-converter',
+    CSV_EXCEL_CONVERTER: 'csv-excel-converter',
+    CHARACTER_ENCODING_CONVERTER: 'character-encoding-converter',
+    MIME_TYPE_CONVERTER: 'mime-type-converter',
+
+    // Crypto
+    UUID_GENERATOR: 'uuid-generator',
+    HASH_GENERATOR: 'hash-generator',
+    TOKEN_GENERATOR: 'token-generator',
+    HMAC_GENERATOR: 'hmac-generator',
+    RSA_GENERATOR: 'rsa-generator',
+    BEARER_TOKEN_GENERATOR: 'bearer-token-generator',
+
+    // PDF
+    PDF_CONVERTER: 'pdf-converter',
+    PDF_SECURITY: 'pdf-security',
+    
+    // Settings
+    SETTINGS: 'settings',
+} as const;

@@ -2,10 +2,11 @@ import { ArrowRightLeft, Lock, Link, Globe, Binary, Type, Minus } from 'lucide-r
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
 import * as Logic from '@tools/converters/logic';
+import { TOOL_IDS } from '../../../tool-ids';
 
 export const generalConverters: ToolDefinition[] = [
     {
-        id: 'converter',
+        id: TOOL_IDS.CONVERTER,
         name: 'Universal Converter',
         path: '/converter',
         description: 'Convert between JSON/YAML/XML, Markdown/HTML, and CSV',
@@ -36,7 +37,7 @@ export const generalConverters: ToolDefinition[] = [
         }
     },
     {
-        id: 'base64',
+        id: TOOL_IDS.BASE64,
         name: 'Base64 Converter',
         path: '/base64',
         description: 'Encode and decode Base64 strings or files',
@@ -47,7 +48,7 @@ export const generalConverters: ToolDefinition[] = [
         keywords: ['base64', 'encode', 'decode', 'file', 'upload', 'string']
     },
     {
-        id: 'url-encode',
+        id: TOOL_IDS.URL_ENCODE,
         name: 'URL Encode/Decode',
         path: '/url-encode',
         description: 'Encode and decode URL strings',
@@ -58,7 +59,7 @@ export const generalConverters: ToolDefinition[] = [
         keywords: ['url', 'uri', 'encode', 'decode', 'percent', 'encoding']
     },
     {
-        id: 'html-entity',
+        id: TOOL_IDS.HTML_ENTITY,
         name: 'HTML Entity Encode/Decode',
         path: '/html-entity',
         description: 'Escape and unescape HTML entities',
@@ -69,7 +70,7 @@ export const generalConverters: ToolDefinition[] = [
         keywords: ['html', 'entity', 'escape', 'unescape', 'encode', 'decode']
     },
     {
-        id: 'number-base',
+        id: TOOL_IDS.NUMBER_BASE,
         name: 'Number Base Converter',
         path: '/number-base',
         description: 'Convert between decimal, hex, octal, and binary',
@@ -80,7 +81,7 @@ export const generalConverters: ToolDefinition[] = [
         keywords: ['number', 'base', 'hex', 'binary', 'decimal', 'octal', 'convert']
     },
     {
-        id: 'text-case',
+        id: TOOL_IDS.TEXT_CASE,
         name: 'Text Case Converter',
         path: '/text-case',
         description: 'Convert text to different case formats',
@@ -91,7 +92,7 @@ export const generalConverters: ToolDefinition[] = [
         keywords: ['text', 'case', 'camel', 'snake', 'kebab', 'pascal', 'upper', 'lower', 'title', 'convert']
     },
     {
-        id: 'color-converter',
+        id: TOOL_IDS.COLOR_CONVERTER,
         name: 'Color Converter',
         path: '/color-converter',
         description: 'Convert between HEX, RGB, HSL, and CMYK',
@@ -105,7 +106,7 @@ export const generalConverters: ToolDefinition[] = [
         process: (input, options) => Logic.convertColor(input, options?.format || 'hex')
     },
     {
-        id: 'date-converter',
+        id: TOOL_IDS.DATE_CONVERTER,
         name: 'Date Converter',
         path: '/date-converter',
         description: 'Convert timestamps and date formats',
@@ -119,7 +120,7 @@ export const generalConverters: ToolDefinition[] = [
         process: (input, options) => Logic.convertDate(input, options?.format || 'iso')
     },
     {
-        id: 'code-minifier',
+        id: TOOL_IDS.CODE_MINIFIER,
         name: 'Code Minifier/Beautifier',
         path: '/code-minifier',
         description: 'Minify or beautify JSON, XML, HTML, CSS, and JavaScript',

@@ -4,7 +4,9 @@ import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 
-const TOOL_ID = 'basic-auth-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+
+const TOOL_ID = TOOL_IDS.BASIC_AUTH_GENERATOR;
 
 interface BasicAuthGeneratorProps {
     tabId?: string;

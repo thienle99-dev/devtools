@@ -2,10 +2,11 @@ import { Fingerprint, ScanLine, Key } from 'lucide-react';
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
 import * as Logic from '@plugins/crypto-advanced/src/logic';
+import { TOOL_IDS } from '../tool-ids';
 
 export const cryptoTools: ToolDefinition[] = [
     {
-        id: 'hash',
+        id: TOOL_IDS.HASH_GENERATOR,
         name: 'Hash Generator',
         path: '/hash',
         description: 'Generate MD5, SHA1, SHA256 hashes',
@@ -19,7 +20,7 @@ export const cryptoTools: ToolDefinition[] = [
         process: (input, options) => Logic.generateHash(input, options?.algorithm)
     },
     {
-        id: 'uuid',
+        id: TOOL_IDS.UUID_GENERATOR,
         name: 'UUID / ULID',
         path: '/uuid',
         description: 'Generate unique identifiers',
@@ -33,7 +34,7 @@ export const cryptoTools: ToolDefinition[] = [
         process: (_, options) => Logic.generateIds(options)
     },
     {
-        id: 'token-generator',
+        id: TOOL_IDS.TOKEN_GENERATOR,
         name: 'Token Generator',
         path: '/token-generator',
         description: 'Secure passwords and tokens',

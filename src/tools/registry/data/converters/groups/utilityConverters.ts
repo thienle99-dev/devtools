@@ -1,10 +1,11 @@
 import { Network, HardDrive, Ruler, Clock, Globe, Percent, DollarSign } from 'lucide-react';
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
+import { TOOL_IDS } from '../../../tool-ids';
 
 export const utilityConverters: ToolDefinition[] = [
     {
-        id: 'ip-address',
+        id: TOOL_IDS.IP_ADDRESS,
         name: 'IP Address Converter',
         path: '/ip-address',
         description: 'Convert between IPv4 address formats',
@@ -15,7 +16,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['ip', 'address', 'ipv4', 'dotted', 'decimal', 'binary', 'convert']
     },
     {
-        id: 'mac-address',
+        id: TOOL_IDS.MAC_ADDRESS,
         name: 'MAC Address Converter',
         path: '/mac-address',
         description: 'Convert between different MAC address formats',
@@ -26,7 +27,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['mac', 'address', 'format', 'colon', 'hyphen', 'convert']
     },
     {
-        id: 'file-size',
+        id: TOOL_IDS.FILE_SIZE,
         name: 'File Size Converter',
         path: '/file-size',
         description: 'Convert between bytes, KB, MB, GB, TB, PB',
@@ -37,7 +38,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['file', 'size', 'bytes', 'kb', 'mb', 'gb', 'tb', 'pb', 'convert']
     },
     {
-        id: 'unit-converter',
+        id: TOOL_IDS.UNIT_CONVERTER,
         name: 'Unit Converter',
         path: '/unit-converter',
         description: 'Convert between length, weight, volume, and speed units',
@@ -48,7 +49,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['unit', 'length', 'weight', 'volume', 'speed', 'meter', 'kilogram', 'liter', 'convert']
     },
     {
-        id: 'epoch-timestamp',
+        id: TOOL_IDS.EPOCH_TIMESTAMP,
         name: 'Epoch Timestamp Converter',
         path: '/epoch-timestamp',
         description: 'Convert between Unix timestamps and dates',
@@ -59,7 +60,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['epoch', 'timestamp', 'unix', 'date', 'time', 'convert']
     },
     {
-        id: 'timezone-converter',
+        id: TOOL_IDS.TIMEZONE_CONVERTER,
         name: 'Time Zone Converter',
         path: '/timezone-converter',
         description: 'Convert dates between different time zones',
@@ -70,7 +71,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['timezone', 'time', 'zone', 'utc', 'convert', 'date']
     },
     {
-        id: 'percentage-fraction',
+        id: TOOL_IDS.PERCENTAGE_FRACTION,
         name: 'Percentage/Fraction/Decimal Converter',
         path: '/percentage-fraction',
         description: 'Convert between percentage, fraction, and decimal formats',
@@ -81,7 +82,7 @@ export const utilityConverters: ToolDefinition[] = [
         keywords: ['percentage', 'fraction', 'decimal', 'convert', 'percent']
     },
     {
-        id: 'currency-converter',
+        id: TOOL_IDS.CURRENCY_CONVERTER,
         name: 'Currency Converter',
         path: '/currency-converter',
         description: 'Convert between different currencies',

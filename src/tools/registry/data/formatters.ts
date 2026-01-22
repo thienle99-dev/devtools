@@ -1,12 +1,13 @@
 import { Braces, GitCompare } from 'lucide-react';
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
+import { TOOL_IDS } from '../tool-ids';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import yaml from 'js-yaml';
 
 export const formatters: ToolDefinition[] = [
     {
-        id: 'universal-formatter',
+        id: TOOL_IDS.UNIVERSAL_FORMATTER,
         name: 'Code Formatter',
         path: '/code-formatter',
         description: 'Universal formatter and validator for JSON, XML, YAML, and SQL',
@@ -47,7 +48,7 @@ export const formatters: ToolDefinition[] = [
         }
     },
     {
-        id: 'json-diff',
+        id: TOOL_IDS.JSON_DIFF,
         name: 'JSON Diff',
         path: '/json-diff',
         description: 'Compare two JSON objects/arrays',

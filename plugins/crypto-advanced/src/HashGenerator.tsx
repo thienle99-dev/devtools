@@ -9,7 +9,9 @@ import { Copy, Check, FileText, Type, Hash, Shield, Zap, Lock, CheckCircle2, XCi
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'hash-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+
+const TOOL_ID = TOOL_IDS.HASH_GENERATOR;
 
 // Hash algorithm configurations
 const HASH_ALGORITHMS = [

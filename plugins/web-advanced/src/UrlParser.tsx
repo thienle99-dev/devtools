@@ -3,7 +3,9 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 import { Input } from '@components/ui/Input';
 
-const TOOL_ID = 'url-parser';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+
+const TOOL_ID = TOOL_IDS.URL_PARSER;
 
 interface UrlParserProps {
     tabId?: string;

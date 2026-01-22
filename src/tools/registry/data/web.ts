@@ -2,10 +2,11 @@ import { Globe, ShieldCheck } from 'lucide-react';
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
 import * as Logic from '@plugins/web-advanced/src/logic';
+import { TOOL_IDS } from '../tool-ids';
 
 export const webTools: ToolDefinition[] = [
     {
-        id: 'url-parser',
+        id: TOOL_IDS.URL_PARSER,
         name: 'URL Parser',
         path: '/url-parser',
         description: 'Parse URL parameters and components',
@@ -19,7 +20,7 @@ export const webTools: ToolDefinition[] = [
         process: (input) => Logic.parseUrl(input)
     },
     {
-        id: 'jwt',
+        id: TOOL_IDS.JWT_PARSER,
         name: 'JWT Parser',
         path: '/jwt',
         description: 'Parse and inspect JSON Web Tokens',

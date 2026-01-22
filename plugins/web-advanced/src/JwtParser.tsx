@@ -5,7 +5,9 @@ import { useToolState } from '@store/toolStore';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { TextArea } from '@components/ui/TextArea';
 
-const TOOL_ID = 'jwt-parser';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+
+const TOOL_ID = TOOL_IDS.JWT_PARSER;
 
 interface JwtParserProps {
     tabId?: string;

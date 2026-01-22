@@ -1,10 +1,11 @@
 import { Hash, Binary, Link } from 'lucide-react';
 import * as Lazy from '@tools/registry/lazy-tools';
 import type { ToolDefinition } from '@tools/registry/types';
+import { TOOL_IDS } from '../../../tool-ids';
 
 export const structuredConverters: ToolDefinition[] = [
     {
-        id: 'unicode',
+        id: TOOL_IDS.UNICODE,
         name: 'Unicode Converter',
         path: '/unicode',
         description: 'Convert between text and Unicode codes/escape sequences',
@@ -15,7 +16,7 @@ export const structuredConverters: ToolDefinition[] = [
         keywords: ['unicode', 'escape', 'code', 'u+', 'convert']
     },
     {
-        id: 'binary-hex-text',
+        id: TOOL_IDS.BINARY_HEX_TEXT,
         name: 'Binary/Hex to Text Converter',
         path: '/binary-hex-text',
         description: 'Convert between binary/hex strings and ASCII text',
@@ -26,7 +27,7 @@ export const structuredConverters: ToolDefinition[] = [
         keywords: ['binary', 'hex', 'text', 'ascii', 'convert']
     },
     {
-        id: 'query-string',
+        id: TOOL_IDS.QUERY_STRING,
         name: 'Query String Converter',
         path: '/query-string',
         description: 'Convert between query strings, form data, and JSON',
