@@ -14,12 +14,12 @@ export const generateKeyPair = async (bits: number): Promise<{ publicKey: string
 
 export const rsaEncrypt = (content: string, publicKeyPem: string): string => {
     try {
-        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem) as forge.pki.rsa.PublicKey;
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem) as any;
         const encrypted = publicKey.encrypt(content, 'RSA-OAEP', {
-             md: forge.md.sha256.create(),
-             mgf1: {
-                 md: forge.md.sha1.create()
-             }
+            md: forge.md.sha256.create(),
+            mgf1: {
+                md: forge.md.sha1.create()
+            }
         });
         return forge.util.encode64(encrypted);
     } catch (e) {
@@ -29,13 +29,13 @@ export const rsaEncrypt = (content: string, publicKeyPem: string): string => {
 
 export const rsaDecrypt = (encryptedContentBase64: string, privateKeyPem: string): string => {
     try {
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem) as forge.pki.rsa.PrivateKey;
+        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem) as any;
         const encrypted = forge.util.decode64(encryptedContentBase64);
         const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP', {
-             md: forge.md.sha256.create(),
-             mgf1: {
-                 md: forge.md.sha1.create()
-             }
+            md: forge.md.sha256.create(),
+            mgf1: {
+                md: forge.md.sha1.create()
+            }
         });
         return decrypted;
     } catch (e) {
@@ -45,7 +45,7 @@ export const rsaDecrypt = (encryptedContentBase64: string, privateKeyPem: string
 
 export const rsaSign = (content: string, privateKeyPem: string, hashAlgo: 'sha1' | 'sha256' | 'sha512' = 'sha256'): string => {
     try {
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem) as forge.pki.rsa.PrivateKey;
+        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem) as any;
         const md = forge.md[hashAlgo].create();
         md.update(content, 'utf8');
         const signature = privateKey.sign(md);
@@ -57,7 +57,7 @@ export const rsaSign = (content: string, privateKeyPem: string, hashAlgo: 'sha1'
 
 export const rsaVerify = (content: string, signatureBase64: string, publicKeyPem: string, hashAlgo: 'sha1' | 'sha256' | 'sha512' = 'sha256'): boolean => {
     try {
-        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem) as forge.pki.rsa.PublicKey;
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem) as any;
         const md = forge.md[hashAlgo].create();
         md.update(content, 'utf8');
         const signature = forge.util.decode64(signatureBase64);

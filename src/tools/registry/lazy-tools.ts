@@ -13,7 +13,7 @@ export const NumberBaseConverter = React.lazy(() => import('@tools/converters/Nu
 export const TextCaseConverter = React.lazy(() => import('@tools/converters/TextCaseConverter').then(m => ({ default: m.TextCaseConverter })));
 export const ColorConverter = React.lazy(() => import('@tools/converters/ColorConverter').then(m => ({ default: m.ColorConverter })));
 export const DateConverter = React.lazy(() => import('@tools/converters/DateConverter').then(m => ({ default: m.DateConverter })));
-export const CharacterEncodingConverter = React.lazy(() => import('@plugins/advanced-converters/src/CharacterEncodingConverter').then(m => ({ default: m.CharacterEncodingConverter })));
+// export const CharacterEncodingConverter = React.lazy(() => import('@tools/converters/CharacterEncodingConverter').then(m => ({ default: m.CharacterEncodingConverter })));
 export const UnicodeConverter = React.lazy(() => import('@tools/converters/UnicodeConverter').then(m => ({ default: m.UnicodeConverter })));
 export const BinaryHexTextConverter = React.lazy(() => import('@tools/converters/BinaryHexTextConverter').then(m => ({ default: m.BinaryHexTextConverter })));
 export const IpAddressConverter = React.lazy(() => import('@tools/converters/IpAddressConverter').then(m => ({ default: m.IpAddressConverter })));
@@ -25,66 +25,66 @@ export const CodeMinifier = React.lazy(() => import('@tools/converters/CodeMinif
 export const EpochTimestampConverter = React.lazy(() => import('@tools/converters/EpochTimestampConverter').then(m => ({ default: m.EpochTimestampConverter })));
 export const TimeZoneConverter = React.lazy(() => import('@tools/converters/TimeZoneConverter').then(m => ({ default: m.TimeZoneConverter })));
 export const PercentageFractionConverter = React.lazy(() => import('@tools/converters/PercentageFractionConverter').then(m => ({ default: m.PercentageFractionConverter })));
-export const MimeTypeConverter = React.lazy(() => import('@plugins/advanced-converters/src/MimeTypeConverter').then(m => ({ default: m.MimeTypeConverter })));
+// export const MimeTypeConverter = React.lazy(() => import('@tools/converters/MimeTypeConverter').then(m => ({ default: m.MimeTypeConverter })));
 export const CurrencyConverter = React.lazy(() => import('@tools/converters/CurrencyConverter').then(m => ({ default: m.CurrencyConverter })));
-export const CsvExcelConverter = React.lazy(() => import('@plugins/data-converters/src/CsvExcelConverter').then(m => ({ default: m.CsvExcelConverter })));
+export const CsvExcelConverter = React.lazy(() => import('../../../plugins/data-converters/src/CsvExcelConverter').then(m => ({ default: m.CsvExcelConverter })));
 
 // Crypto
 export const HashGenerator = React.lazy(() => import('@plugins/crypto-advanced/src/HashGenerator').then(m => ({ default: m.HashGenerator })));
 export const UuidGenerator = React.lazy(() => import('@plugins/crypto-advanced/src/UuidGenerator').then(m => ({ default: m.UuidGenerator })));
 export const TokenGenerator = React.lazy(() => import('@plugins/crypto-advanced/src/TokenGenerator').then(m => ({ default: m.TokenGenerator })));
-export const HmacGenerator = React.lazy(() => import('@plugins/crypto-advanced/src/HmacGenerator').then(m => ({ default: m.HmacGenerator })));
-export const BearerTokenGenerator = React.lazy(() => import('@plugins/crypto-advanced/src/BearerTokenGenerator').then(m => ({ default: m.BearerTokenGenerator })));
+// export const HmacGenerator = React.lazy(() => import('@tools/crypto/HmacGenerator').then(m => ({ default: m.HmacGenerator })));
+// export const BearerTokenGenerator = React.lazy(() => import('@tools/crypto/BearerTokenGenerator').then(m => ({ default: m.BearerTokenGenerator })));
 
 // Web
 export const UrlParser = React.lazy(() => import('@plugins/web-advanced/src/UrlParser').then(m => ({ default: m.UrlParser })));
-export const BasicAuthGenerator = React.lazy(() => import('@plugins/web-advanced/src/BasicAuthGenerator').then(m => ({ default: m.BasicAuthGenerator })));
-export const MimeTypesList = React.lazy(() => import('@plugins/web-advanced/src/MimeTypesList').then(m => ({ default: m.MimeTypesList })));
-export const SlugGenerator = React.lazy(() => import('@plugins/web-advanced/src/SlugGenerator').then(m => ({ default: m.SlugGenerator })));
-export const UserAgentParser = React.lazy(() => import('@plugins/web-advanced/src/UserAgentParser').then(m => ({ default: m.UserAgentParser })));
+// export const BasicAuthGenerator = React.lazy(() => import('@tools/web/BasicAuthGenerator').then(m => ({ default: m.BasicAuthGenerator })));
+// export const MimeTypesList = React.lazy(() => import('@tools/web/MimeTypesList').then(m => ({ default: m.MimeTypesList })));
+// export const SlugGenerator = React.lazy(() => import('@tools/web/SlugGenerator').then(m => ({ default: m.SlugGenerator })));
+// export const UserAgentParser = React.lazy(() => import('@tools/web/UserAgentParser').then(m => ({ default: m.UserAgentParser })));
 export const JwtParser = React.lazy(() => import('@plugins/web-advanced/src/JwtParser').then(m => ({ default: m.JwtParser })));
-export const HttpStatusCode = React.lazy(() => import('@plugins/web-advanced/src/HttpStatusCode').then(m => ({ default: m.HttpStatusCode })));
-export const KeycodeInfo = React.lazy(() => import('@plugins/web-advanced/src/KeycodeInfo').then(m => ({ default: m.KeycodeInfo })));
-export const OtpGenerator = React.lazy(() => import('@plugins/web-advanced/src/OtpGenerator').then(m => ({ default: m.OtpGenerator })));
-export const SafelinkDecoder = React.lazy(() => import('@plugins/web-advanced/src/SafelinkDecoder').then(m => ({ default: m.SafelinkDecoder })));
-export const Base64UrlConverter = React.lazy(() => import('@plugins/web-advanced/src/Base64UrlConverter').then(m => ({ default: m.Base64UrlConverter })));
-export const HttpHeaderParser = React.lazy(() => import('@plugins/web-advanced/src/HttpHeaderParser').then(m => ({ default: m.HttpHeaderParser })));
-export const CookieParser = React.lazy(() => import('@plugins/web-advanced/src/CookieParser').then(m => ({ default: m.CookieParser })));
-export const SetCookieGenerator = React.lazy(() => import('@plugins/web-advanced/src/SetCookieGenerator').then(m => ({ default: m.SetCookieGenerator })));
-export const ContentTypeParser = React.lazy(() => import('@plugins/web-advanced/src/ContentTypeParser').then(m => ({ default: m.ContentTypeParser })));
+// export const HttpStatusCode = React.lazy(() => import('@tools/web/HttpStatusCode').then(m => ({ default: m.HttpStatusCode })));
+// export const KeycodeInfo = React.lazy(() => import('@tools/web/KeycodeInfo').then(m => ({ default: m.KeycodeInfo })));
+// export const OtpGenerator = React.lazy(() => import('@tools/web/OtpGenerator').then(m => ({ default: m.OtpGenerator })));
+// export const SafelinkDecoder = React.lazy(() => import('@tools/web/SafelinkDecoder').then(m => ({ default: m.SafelinkDecoder })));
+// export const Base64UrlConverter = React.lazy(() => import('@tools/web/Base64UrlConverter').then(m => ({ default: m.Base64UrlConverter })));
+// export const HttpHeaderParser = React.lazy(() => import('@tools/web/HttpHeaderParser').then(m => ({ default: m.HttpHeaderParser })));
+// export const CookieParser = React.lazy(() => import('@tools/web/CookieParser').then(m => ({ default: m.CookieParser })));
+// export const SetCookieGenerator = React.lazy(() => import('@tools/web/SetCookieGenerator').then(m => ({ default: m.SetCookieGenerator })));
+// export const ContentTypeParser = React.lazy(() => import('@tools/web/ContentTypeParser').then(m => ({ default: m.ContentTypeParser })));
 
 // Development
 export const RegexTester = React.lazy(() => import('@plugins/developer-tools/src/RegexTester').then(m => ({ default: m.RegexTester })));
-export const CrontabGenerator = React.lazy(() => import('@plugins/developer-tools/src/CrontabGenerator').then(m => ({ default: m.CrontabGenerator })));
-export const ChmodCalculator = React.lazy(() => import('@plugins/developer-tools/src/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
-export const DockerConverter = React.lazy(() => import('@plugins/developer-tools/src/DockerConverter').then(m => ({ default: m.DockerConverter })));
-export const MockDataGenerator = React.lazy(() => import('@plugins/developer-tools/src/MockDataGenerator').then(m => ({ default: m.MockDataGenerator })));
-export const CodeSnippetGenerator = React.lazy(() => import('@plugins/developer-tools/src/CodeSnippetGenerator').then(m => ({ default: m.CodeSnippetGenerator })));
+// export const CrontabGenerator = React.lazy(() => import('@tools/development/CrontabGenerator').then(m => ({ default: m.CrontabGenerator })));
+// export const ChmodCalculator = React.lazy(() => import('@tools/development/ChmodCalculator').then(m => ({ default: m.ChmodCalculator })));
+// export const DockerConverter = React.lazy(() => import('@tools/development/DockerConverter').then(m => ({ default: m.DockerConverter })));
+// export const MockDataGenerator = React.lazy(() => import('@tools/development/MockDataGenerator').then(m => ({ default: m.MockDataGenerator })));
+// export const CodeSnippetGenerator = React.lazy(() => import('@tools/development/CodeSnippetGenerator').then(m => ({ default: m.CodeSnippetGenerator })));
 export const JsonDiff = React.lazy(() => import('@plugins/web-advanced/src/JsonDiff').then(m => ({ default: m.JsonDiff })));
 
 // Screenshot & Media
-export const Xnapper = React.lazy(() => import('@plugins/beautiful-screenshot/src/Xnapper').then(m => ({ default: m.Xnapper })));
-export const VoiceRecorder = React.lazy(() => import('@plugins/media-tools/src/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
-export const Camera = React.lazy(() => import('@plugins/media-tools/src/Camera').then(m => ({ default: m.Camera })));
+export const Xnapper = React.lazy(() => import('../../../plugins/beautiful-screenshot/src/Xnapper').then(m => ({ default: m.Xnapper })));
+export const VoiceRecorder = React.lazy(() => import('../../../plugins/media-tools/src/VoiceRecorder').then(m => ({ default: m.VoiceRecorder })));
+export const Camera = React.lazy(() => import('../../../plugins/media-tools/src/Camera').then(m => ({ default: m.Camera })));
 
 // Image
-export const QrCodeGenerator = React.lazy(() => import('@plugins/image-tools/src/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));
-export const SvgPlaceholderGenerator = React.lazy(() => import('@plugins/image-tools/src/SvgPlaceholderGenerator').then(m => ({ default: m.SvgPlaceholderGenerator })));
+// export const QrCodeGenerator = React.lazy(() => import('@tools/image/QrCodeGenerator').then(m => ({ default: m.QrCodeGenerator })));
+// export const SvgPlaceholderGenerator = React.lazy(() => import('@tools/image/SvgPlaceholderGenerator').then(m => ({ default: m.SvgPlaceholderGenerator })));
 
 // Text
-export const LoremIpsumGenerator = React.lazy(() => import('@plugins/text-tools/src/LoremIpsumGenerator').then(m => ({ default: m.LoremIpsumGenerator })));
-export const TextStatistics = React.lazy(() => import('@plugins/text-tools/src/TextStatistics').then(m => ({ default: m.TextStatistics })));
-export const TextDiff = React.lazy(() => import('@plugins/text-tools/src/TextDiff').then(m => ({ default: m.TextDiff })));
-export const StringObfuscator = React.lazy(() => import('@plugins/text-tools/src/StringObfuscator').then(m => ({ default: m.StringObfuscator })));
-export const AsciiArtGenerator = React.lazy(() => import('@plugins/text-tools/src/AsciiArtGenerator').then(m => ({ default: m.AsciiArtGenerator })));
-export const Slugify = React.lazy(() => import('@plugins/text-tools/src/Slugify').then(m => ({ default: m.Slugify })));
-export const RegexReplace = React.lazy(() => import('@plugins/text-tools/src/RegexReplace').then(m => ({ default: m.RegexReplace })));
+// export const LoremIpsumGenerator = React.lazy(() => import('@tools/text/LoremIpsumGenerator').then(m => ({ default: m.LoremIpsumGenerator })));
+// export const TextStatistics = React.lazy(() => import('@tools/text/TextStatistics').then(m => ({ default: m.TextStatistics })));
+// export const TextDiff = React.lazy(() => import('@tools/text/TextDiff').then(m => ({ default: m.TextDiff })));
+// export const StringObfuscator = React.lazy(() => import('@tools/text/StringObfuscator').then(m => ({ default: m.StringObfuscator })));
+// export const AsciiArtGenerator = React.lazy(() => import('@tools/text/AsciiArtGenerator').then(m => ({ default: m.AsciiArtGenerator })));
+// export const Slugify = React.lazy(() => import('@tools/text/Slugify').then(m => ({ default: m.Slugify })));
+// export const RegexReplace = React.lazy(() => import('@tools/text/RegexReplace').then(m => ({ default: m.RegexReplace })));
 
 // Math
-export const MathEvaluator = React.lazy(() => import('@plugins/math-tools/src/MathEvaluator').then(m => ({ default: m.MathEvaluator })));
-export const PercentageCalculator = React.lazy(() => import('@plugins/math-tools/src/PercentageCalculator').then(m => ({ default: m.PercentageCalculator })));
-export const TemperatureConverter = React.lazy(() => import('@plugins/math-tools/src/TemperatureConverter').then(m => ({ default: m.TemperatureConverter })));
-export const Chronometer = React.lazy(() => import('@plugins/math-tools/src/Chronometer').then(m => ({ default: m.Chronometer })));
+// export const MathEvaluator = React.lazy(() => import('@tools/math/MathEvaluator').then(m => ({ default: m.MathEvaluator })));
+// export const PercentageCalculator = React.lazy(() => import('@tools/math/PercentageCalculator').then(m => ({ default: m.PercentageCalculator })));
+// export const TemperatureConverter = React.lazy(() => import('@tools/math/TemperatureConverter').then(m => ({ default: m.TemperatureConverter })));
+// export const Chronometer = React.lazy(() => import('@tools/math/Chronometer').then(m => ({ default: m.Chronometer })));
 
 // Pages
 export const SettingsPage = React.lazy(() => import('@pages/Settings'));
@@ -103,4 +103,4 @@ export const PdfConverter = React.lazy(() => import('@plugins/pdf-tools/src/PdfC
 export const PdfSecurity = React.lazy(() => import('@plugins/pdf-tools/src/PdfSecurity').then(m => ({ default: m.PdfSecurity })));
 
 // Data
-export const DataParser = React.lazy(() => import('@tools/data/DataParser'));
+// export const DataParser = React.lazy(() => import('@tools/data/DataParser'));

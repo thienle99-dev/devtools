@@ -70,6 +70,12 @@ export const TabContent: React.FC = React.memo(() => {
                                 </div>
                                 <p className="font-semibold text-lg text-red-400 mb-2">Error Loading Tool</p>
                                 <p className="text-sm opacity-70">Definition not found for ID: {tab.toolId}</p>
+                                <button
+                                    onClick={() => useTabStore.getState().closeTab(tab.id)}
+                                    className="mt-4 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                                >
+                                    Close Tab
+                                </button>
                             </div>
                         </div>
                     );

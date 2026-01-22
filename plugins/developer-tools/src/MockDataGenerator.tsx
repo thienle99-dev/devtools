@@ -85,20 +85,20 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const generateData = async () => {
         await runTask('Generating Mock Data', async (updateProgress) => {
             const result = [];
-            
+
             // Chunk generation to not block UI heavily and allow progress update
             const chunkSize = 100;
             const chunks = Math.ceil(count / chunkSize);
-            
+
             for (let i = 0; i < chunks; i++) {
                 const chunkData = [];
                 const start = i * chunkSize;
                 const end = Math.min((i + 1) * chunkSize, count);
-                
+
                 for (let j = start; j < end; j++) {
                     const obj: Record<string, any> = {};
                     fields.forEach(field => {
-                        switch(field.type) {
+                        switch (field.type) {
                             case 'id': obj[field.name] = faker.string.uuid(); break;
                             case 'firstName': obj[field.name] = faker.person.firstName(); break;
                             case 'lastName': obj[field.name] = faker.person.lastName(); break;
@@ -113,7 +113,7 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                             case 'lorem': obj[field.name] = faker.lorem.sentence(); break;
                             case 'number': obj[field.name] = faker.number.int({ min: 1, max: 1000 }); break;
                             case 'boolean': obj[field.name] = faker.datatype.boolean(); break;
-                                case 'userName': obj[field.name] = faker.internet.userName(); break;
+                            case 'userName': obj[field.name] = faker.internet.username(); break;
                             case 'website': obj[field.name] = faker.internet.url(); break;
                             case 'jobTitle': obj[field.name] = faker.person.jobTitle(); break;
                             case 'price': obj[field.name] = faker.commerce.price(); break;
@@ -123,11 +123,11 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                     chunkData.push(obj);
                 }
                 result.push(...chunkData);
-                
+
                 // Yield to event loop to keep UI responsive and update progress
                 if (i % 5 === 0) {
-                     updateProgress((i / chunks) * 100);
-                     await new Promise(resolve => setTimeout(resolve, 0));
+                    updateProgress((i / chunks) * 100);
+                    await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
 
@@ -161,7 +161,7 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
             toolId={effectiveId}
             title="Mock Data Generator"
             description="Generate realistic random data sets for testing."
-            onClear={() => {}}
+            onClear={() => { }}
         >
             <div className="flex flex-col h-full gap-4 md:flex-row">
                 {/* Configuration Panel */}
@@ -171,7 +171,7 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                             <h3 className="text-sm font-semibold text-foreground/80">Schema</h3>
                             <div className="text-xs text-muted-foreground">{fields.length} fields</div>
                         </div>
-                        
+
                         <div className="space-y-3">
                             {fields.map(field => (
                                 <div key={field.id} className="flex gap-2 items-start bg-background/30 p-2 rounded-lg border border-border/50">
@@ -199,10 +199,10 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                                 </div>
                             ))}
                         </div>
-                        
-                        <Button 
-                            variant="secondary" 
-                            onClick={addField} 
+
+                        <Button
+                            variant="secondary"
+                            onClick={addField}
                             className="w-full text-xs"
                             icon={Plus}
                         >
@@ -222,9 +222,9 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                                 className="font-mono"
                             />
                         </div>
-                        <Button 
-                            variant="primary" 
-                            onClick={generateData} 
+                        <Button
+                            variant="primary"
+                            onClick={generateData}
                             className="w-full"
                             icon={RefreshCw}
                         >
@@ -235,24 +235,24 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
 
                 {/* Output Panel */}
                 <div className="flex-1 flex flex-col glass-panel overflow-hidden">
-                     <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/20">
+                    <div className="flex items-center justify-between p-3 border-b border-border/50 bg-muted/20">
                         <div className="text-xs font-mono text-muted-foreground">
                             {output ? `${(JSON.parse(output) as any[]).length} records` : '0 records'}
                         </div>
                         <div className="flex gap-2">
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={copyToClipboard} 
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={copyToClipboard}
                                 disabled={!output}
                                 icon={Copy}
                             >
                                 Copy
                             </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={downloadFile} 
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={downloadFile}
                                 disabled={!output}
                                 icon={Download}
                             >
@@ -261,7 +261,7 @@ export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
                         </div>
                     </div>
                     <div className="flex-1 overflow-hidden bg-black/5 dark:bg-black/20 p-4">
-                         <VirtualizedOutput content={output} />
+                        <VirtualizedOutput content={output} />
                     </div>
                 </div>
             </div>

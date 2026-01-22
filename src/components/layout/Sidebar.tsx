@@ -15,6 +15,7 @@ import {
 import { cn } from '@utils/cn';
 import { CATEGORIES, TOOLS, getToolsByCategory, getToolById } from '@tools/registry';
 import { useSettingsStore } from '@store/settingsStore';
+import { usePluginStore } from '@store/pluginStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { NavItem } from './sidebar/NavItem';
@@ -40,6 +41,7 @@ export const Sidebar: React.FC = React.memo(() => {
     const collapsedCategories = useSettingsStore(state => state.collapsedCategories);
     const toggleCategoryCollapsed = useSettingsStore(state => state.toggleCategoryCollapsed);
     const categoryOrder = useSettingsStore(state => state.categoryOrder);
+    const activePlugins = usePluginStore(state => state.activePlugins);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -61,15 +63,43 @@ export const Sidebar: React.FC = React.memo(() => {
 
         const results = TOOLS.filter(tool => {
             if (tool.id === 'settings' || tool.id === 'dashboard') return false;
-            if (tool.hideFromSidebar) return false; // Hide tools marked as footer-only
+            // Hide hidden tools, but keep plugin tools visible if needed (though getToolsByCategory handles plugins separately)
+            // Wait, filteredContent iterates STATIC TOOLS. It needs to include plugins too.
+            // Let's merge active plugins here too.
+            if (tool.hideFromSidebar) return false;
 
             return tool.name.toLowerCase().includes(query) ||
                 tool.description.toLowerCase().includes(query) ||
                 (tool as any).keywords?.some((k: string) => k.toLowerCase().includes(query));
         });
 
-        return results.sort((a, b) => a.name.localeCompare(b.name));
-    }, [searchQuery]);
+        // Add plugins to search results
+        const pluginResults = activePlugins.filter(p => {
+            const queryLower = query.toLowerCase();
+            return p.manifest.name.toLowerCase().includes(queryLower) ||
+                p.manifest.description.toLowerCase().includes(queryLower) ||
+                p.manifest.tags.some(t => t.toLowerCase().includes(queryLower));
+        }).map(p => ({
+            id: p.manifest.id,
+            name: p.manifest.name,
+            description: p.manifest.description,
+            category: p.manifest.category as any,
+            path: `/plugin/${p.manifest.id}`,
+            icon: undefined, // Or get icon
+            component: () => null // Not needed for filtering
+        }));
+
+        // Actually, we should probably use a helper 'getAllTools()' that returns everything including plugins.
+        // But for sidebar search, let's keep it simple.
+        // Note: TOOLS import is static. 
+        // We should fix filteredContent to search in getToolsByCategory's universe or similar.
+        // But getToolsByCategory is categorized.
+
+        // Let's look at how categoriesWithTools maps it.
+        // It calls getToolsByCategory(category.id).
+
+        return [...results, ...pluginResults].sort((a, b) => a.name.localeCompare(b.name));
+    }, [searchQuery, activePlugins]);
 
     const categoriesWithTools = useMemo(() => {
         const mapped = CATEGORIES.map(category => {
@@ -89,7 +119,7 @@ export const Sidebar: React.FC = React.memo(() => {
                     })
                     .slice(0, 5);
             } else {
-                // Uses the pre-computed map from the registry
+                // Uses the pre-computed map from the registry, AND NOW fetches plugins inside utils.ts
                 tools = getToolsByCategory(category.id);
             }
             return {
@@ -113,7 +143,7 @@ export const Sidebar: React.FC = React.memo(() => {
             if (indexB === undefined) return -1;
             return indexA - indexB;
         });
-    }, [favorites, history, categoryOrder]);
+    }, [favorites, history, categoryOrder, activePlugins]);
 
     return (
         <aside

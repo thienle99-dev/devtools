@@ -19,8 +19,31 @@ export const TOOLS_BY_CATEGORY = TOOLS.reduce((acc, tool) => {
     return acc;
 }, {} as Record<ToolCategory, ToolDefinition[]>);
 
+// Helper to map plugin to tool definition
+const mapPluginToTool = (plugin: { manifest: any }): ToolDefinition => {
+    return {
+        id: plugin.manifest.id,
+        name: plugin.manifest.name,
+        description: plugin.manifest.description,
+        category: plugin.manifest.category as any,
+        path: `/plugin/${plugin.manifest.id}`,
+        icon: getCategoryIcon(plugin.manifest.category),
+        color: getCategoryColor(plugin.manifest.category),
+        component: (props: any) => PluginHost({ ...props, pluginId: plugin.manifest.id }),
+        keywords: plugin.manifest.tags || []
+    } as ToolDefinition;
+};
+
 export const getToolsByCategory = (category: ToolCategory): ToolDefinition[] => {
-    return TOOLS_BY_CATEGORY[category] || [];
+    const staticTools = TOOLS_BY_CATEGORY[category] || [];
+
+    // Get active plugins for this category
+    const activePlugins = usePluginStore.getState().activePlugins;
+    const pluginTools = activePlugins
+        .filter(p => p.manifest.category === category)
+        .map(mapPluginToTool);
+
+    return [...staticTools, ...pluginTools];
 };
 
 export const getToolById = (id: string): ToolDefinition | undefined => {
@@ -33,17 +56,7 @@ export const getToolById = (id: string): ToolDefinition | undefined => {
     const plugin = activePlugins.find(p => p.manifest.id === id);
 
     if (plugin) {
-        return {
-            id: plugin.manifest.id,
-            name: plugin.manifest.name,
-            description: plugin.manifest.description,
-            category: plugin.manifest.category as any,
-            path: `/plugin/${plugin.manifest.id}`,
-            icon: getCategoryIcon(plugin.manifest.category),
-            color: getCategoryColor(plugin.manifest.category),
-            component: (props: any) => PluginHost({ ...props, pluginId: plugin.manifest.id }),
-            keywords: plugin.manifest.tags || []
-        } as ToolDefinition;
+        return mapPluginToTool(plugin);
     }
 
     return undefined;
