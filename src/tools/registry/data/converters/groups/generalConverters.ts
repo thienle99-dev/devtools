@@ -1,7 +1,7 @@
 import { ArrowRightLeft, Lock, Link, Globe, Binary, Type, Minus } from 'lucide-react';
-import * as Lazy from '../../../lazy-tools';
-import type { ToolDefinition } from '../../../types';
-import * as Logic from '../../../../converters/logic';
+import * as Lazy from '@tools/registry/lazy-tools';
+import type { ToolDefinition } from '@tools/registry/types';
+import * as Logic from '@tools/converters/logic';
 
 export const generalConverters: ToolDefinition[] = [
     {

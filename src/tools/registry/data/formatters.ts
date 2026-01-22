@@ -1,6 +1,6 @@
 import { Braces, GitCompare } from 'lucide-react';
-import * as Lazy from '../lazy-tools';
-import type { ToolDefinition } from '../types';
+import * as Lazy from '@tools/registry/lazy-tools';
+import type { ToolDefinition } from '@tools/registry/types';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import yaml from 'js-yaml';
 

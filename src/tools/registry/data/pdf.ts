@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../types';
+import type { ToolDefinition } from '@tools/registry/types';
 
 // All PDF tools have been moved to the pdf-tools plugin:
 // - pdf-converter → pdf-tools plugin

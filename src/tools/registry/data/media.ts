@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../types';
+import type { ToolDefinition } from '@tools/registry/types';
 
 // All media tools have been moved to plugins:
 // - beautiful-screenshot → beautiful-screenshot plugin

@@ -38,7 +38,8 @@
       "@tools/*": ["src/tools/*"],
       "@types/*": ["src/types/*"],
       "@assets/*": ["src/assets/*"],
-      "@pages/*": ["src/pages/*"]
+      "@pages/*": ["src/pages/*"],
+      "@plugins/*": ["plugins/*"]
     }
   },
   "include": [

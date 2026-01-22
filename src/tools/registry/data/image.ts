@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../types';
+import type { ToolDefinition } from '@tools/registry/types';
 
 // All image tools have been moved to the Image Tools plugin:
 // - QR Code Generator

@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../types';
+import type { ToolDefinition } from '@tools/registry/types';
 
 // All text tools have been moved to the Text Tools plugin:
 // - Lorem Ipsum Generator

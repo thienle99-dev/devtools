@@ -1,6 +1,6 @@
 import { Network, HardDrive, Ruler, Clock, Globe, Percent, DollarSign } from 'lucide-react';
-import * as Lazy from '../../../lazy-tools';
-import type { ToolDefinition } from '../../../types';
+import * as Lazy from '@tools/registry/lazy-tools';
+import type { ToolDefinition } from '@tools/registry/types';
 
 export const utilityConverters: ToolDefinition[] = [
     {
