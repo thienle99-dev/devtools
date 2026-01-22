@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Input } from '@components/ui/Input';
@@ -6,21 +6,24 @@ import { Button } from '@components/ui/Button';
 import { ArrowRight, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-export const SafelinkDecoder = () => {
-    const TOOL_ID = 'safelink-decoder';
-    const [input, setInput] = useState('');
-    const [decoded, setDecoded] = useState<{ url: string; params: Record<string, string> } | null>(null);
+import type { BaseToolProps } from '@tools/registry/types';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import { useToolState } from '@store/toolStore';
 
-    const handleDecode = (val: string) => {
-        setInput(val);
-        if (!val) {
-            setDecoded(null);
-            return;
-        }
+const TOOL_ID = TOOL_IDS.SAFELINK_DECODER;
+
+export const SafelinkDecoder: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || { input: '' };
+    const { input } = data;
+
+    const decoded = useMemo(() => {
+        if (!input) return null;
 
         try {
-            const urlObj = new URL(val);
-            // Outlook Safelinks usually look like: https://.../v2/url?u=TARGET_URL&d=...
+            const urlObj = new URL(input);
             const targetUrl = urlObj.searchParams.get('url') || urlObj.searchParams.get('u');
             
             if (targetUrl) {
@@ -31,16 +34,25 @@ export const SafelinkDecoder = () => {
                     }
                 });
 
-                setDecoded({
+                return {
                     url: targetUrl,
                     params
-                });
-            } else {
-                setDecoded(null);
+                };
             }
         } catch (e) {
-            setDecoded(null);
+            // Silently fail decoding
         }
+        return null;
+    }, [input]);
+
+    useEffect(() => {
+        if (input && decoded) {
+            addToHistory(effectiveId);
+        }
+    }, [input, decoded, addToHistory, effectiveId]);
+
+    const handleInputChange = (val: string) => {
+        setToolData(effectiveId, { input: val });
     };
 
     const handleCopy = () => {
@@ -49,6 +61,8 @@ export const SafelinkDecoder = () => {
             toast.success('Decoded URL copied to clipboard');
         }
     };
+
+    const handleClear = () => clearToolData(effectiveId);
 
     const renderParamDescription = (key: string, value: string) => {
         let description = '';
@@ -75,15 +89,15 @@ export const SafelinkDecoder = () => {
         <ToolPane
             title="Outlook Safelink Decoder"
             description="Decode Microsoft Outlook Safe Links to reveal the original URL"
-            onClear={() => { setInput(''); setDecoded(null); }}
-            toolId={TOOL_ID}
+            onClear={handleClear}
+            toolId={effectiveId}
         >
             <div className="max-w-4xl mx-auto space-y-6 pt-6 px-4">
                 <Card className="p-4 space-y-4">
                     <label className="text-sm font-medium text-muted-foreground">Safe Link URL</label>
                     <Input
                         value={input}
-                        onChange={(e) => handleDecode(e.target.value)}
+                        onChange={(e) => handleInputChange(e.target.value)}
                         placeholder="https://nam01.safelinks.protection.outlook.com/?url=..."
                         className="font-mono text-sm"
                         autoFocus

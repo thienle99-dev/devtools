@@ -1,31 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Settings, Zap, Wifi, Database } from 'lucide-react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 
+import { toast } from 'sonner';
+
+import type { BaseToolProps } from '@tools/registry/types';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+
 type Strategy = 'NetworkFirst' | 'CacheFirst' | 'StaleWhileRevalidate' | 'NetworkOnly' | 'CacheOnly';
 
-export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
-    const { data, setToolData } = useToolState(tabId);
-    
-    // State
-    const options = data.options || {};
-    const [cacheName, setCacheName] = useState<string>(options.cacheName || 'my-app-v1');
-    const [strategy, setStrategy] = useState<Strategy>(options.strategy || 'StaleWhileRevalidate');
-    const [precacheFiles, setPrecacheFiles] = useState<string>(options.precacheFiles || '/\n/index.html\n/styles.css\n/script.js\n/logo.png');
-    const [offlinePage, setOfflinePage] = useState<string>(options.offlinePage || '/offline.html');
-    const [result, setResult] = useState<string>(data.output || '');
+const TOOL_ID = TOOL_IDS.SERVICE_WORKER_GENERATOR;
 
-    // Update store
-    useEffect(() => {
-        setToolData(tabId, { 
-            output: result,
-            options: { cacheName, strategy, precacheFiles, offlinePage }
-        });
-    }, [cacheName, strategy, precacheFiles, offlinePage, result, tabId, setToolData]);
+export const ServiceWorkerGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
-    const generateSW = () => {
-        const files = precacheFiles.split('\n').filter(f => f.trim()).map(f => `'${f.trim()}'`).join(',\n    ');
+    const data = toolData || {
+        options: {
+            cacheName: 'my-app-v1',
+            strategy: 'StaleWhileRevalidate' as Strategy,
+            precacheFiles: '/\n/index.html\n/styles.css\n/script.js\n/logo.png',
+            offlinePage: '/offline.html'
+        }
+    };
+
+    const { options } = data;
+    const { cacheName, strategy, precacheFiles, offlinePage } = options;
+
+    const result = useMemo(() => {
+        const files = precacheFiles.split('\n').filter((f: string) => f.trim()).map((f: string) => `'${f.trim()}'`).join(',\n    ');
         
         let code = `const CACHE_NAME = '${cacheName}';\n`;
         code += `const OFFLINE_URL = '${offlinePage}';\n\n`;
@@ -114,16 +118,25 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
         }
 
         code += `});\n`;
-
-        setResult(code);
-    };
+        return code;
+    }, [cacheName, strategy, precacheFiles, offlinePage]);
 
     useEffect(() => {
-        generateSW();
-    }, [cacheName, strategy, precacheFiles, offlinePage]);
+        if (result) {
+            addToHistory(effectiveId);
+        }
+    }, [result, addToHistory, effectiveId]);
+
+    const updateOptions = (updates: any) => {
+        setToolData(effectiveId, {
+            ...data,
+            options: { ...options, ...updates }
+        });
+    };
 
     const handleCopy = () => {
         navigator.clipboard.writeText(result);
+        toast.success('Copied to clipboard');
     };
 
     const handleDownload = () => {
@@ -136,13 +149,16 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
         URL.revokeObjectURL(url);
     };
 
+    const handleClear = () => clearToolData(effectiveId);
+
     return (
         <ToolPane
-            toolId={tabId}
+            toolId={effectiveId}
             title="Service Worker Generator"
             description="Generate a service worker file for offline capabilities"
             onCopy={handleCopy}
             onDownload={handleDownload}
+            onClear={handleClear}
         >
             <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -162,7 +178,7 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
                                 <input
                                     type="text"
                                     value={cacheName}
-                                    onChange={(e) => setCacheName(e.target.value)}
+                                    onChange={(e) => updateOptions({ cacheName: e.target.value })}
                                     className="w-full bg-transparent text-sm focus:outline-none"
                                     placeholder="v1"
                                 />
@@ -177,7 +193,7 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
                                 <Zap className="w-4 h-4 text-foreground-muted" />
                                 <select
                                     value={strategy}
-                                    onChange={(e) => setStrategy(e.target.value as Strategy)}
+                                    onChange={(e) => updateOptions({ strategy: e.target.value as Strategy })}
                                     className="w-full bg-transparent text-sm focus:outline-none [&>option]:bg-gray-900"
                                 >
                                     <option value="StaleWhileRevalidate">Stale While Revalidate (Recommended)</option>
@@ -198,7 +214,7 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
                                 <input
                                     type="text"
                                     value={offlinePage}
-                                    onChange={(e) => setOfflinePage(e.target.value)}
+                                    onChange={(e) => updateOptions({ offlinePage: e.target.value })}
                                     className="w-full bg-transparent text-sm focus:outline-none"
                                     placeholder="/offline.html"
                                 />
@@ -218,7 +234,7 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
                                     Files to Cache (One per line)
                                 </label>
                                 <button
-                                    onClick={() => setPrecacheFiles('/\n/index.html\n/styles.css\n/script.js\n/logo.png')}
+                                    onClick={() => updateOptions({ precacheFiles: '/\n/index.html\n/styles.css\n/script.js\n/logo.png' })}
                                     className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                                 >
                                     Load Default
@@ -226,7 +242,7 @@ export const ServiceWorkerGenerator: React.FC<{ tabId: string }> = ({ tabId }) =
                             </div>
                             <textarea
                                 value={precacheFiles}
-                                onChange={(e) => setPrecacheFiles(e.target.value)}
+                                onChange={(e) => updateOptions({ precacheFiles: e.target.value })}
                                 className="w-full h-[220px] px-4 py-3 bg-[var(--color-glass-input)] border border-border-glass rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-500/50 transition-all resize-none"
                                 placeholder="/index.html"
                                 spellCheck={false}

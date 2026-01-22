@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { FileCode, Search, Tag } from 'lucide-react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
@@ -18,28 +18,34 @@ interface ParsedContentType {
 
 export const ContentTypeParser: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
-    const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
-    const data = toolData || { input: '' };
-    
-    const [input, setInput] = useState<string>(data.input || 'multipart/form-data; boundary=---------------------------974767299852498929531610575');
-    const [parsed, setParsed] = useState<ParsedContentType | null>(null);
+    const data = toolData || { input: 'multipart/form-data; boundary=---------------------------974767299852498929531610575' };
+    const { input } = data;
+
+    const parsed = useMemo<ParsedContentType | null>(() => {
+        if (!input) return null;
+        return parseContentType(input) as ParsedContentType;
+    }, [input]);
 
     useEffect(() => {
-        addToHistory(TOOL_ID);
-    }, [addToHistory]);
+        if (input && parsed) {
+            addToHistory(effectiveId);
+        }
+    }, [input, parsed, addToHistory, effectiveId]);
 
-    useEffect(() => {
-        setToolData(effectiveId, { input });
-        setParsed(parseContentType(input));
-    }, [input, effectiveId, setToolData]);
+    const handleInputChange = (val: string) => {
+        setToolData(effectiveId, { input: val });
+    };
+
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
             toolId={effectiveId}
             title="Content-Type Parser"
             description="Parse MIME types and Content-Type headers"
-            onClear={() => setInput('')}
+            onClear={handleClear}
         >
              <div className="space-y-6">
                  <div className="space-y-2">
@@ -51,7 +57,7 @@ export const ContentTypeParser: React.FC<BaseToolProps> = ({ tabId }) => {
                         <input
                             type="text"
                             value={input}
-                            onChange={(e) => setInput(e.target.value)}
+                            onChange={(e) => handleInputChange(e.target.value)}
                             className="w-full bg-transparent text-sm focus:outline-none"
                             placeholder="application/json; charset=utf-8"
                         />

@@ -1,37 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Cookie, Settings, Calendar, Globe,  Shield,  Lock } from 'lucide-react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 
+import type { BaseToolProps } from '@tools/registry/types';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+
 type SameSite = 'Lax' | 'Strict' | 'None';
 type Priority = 'Low' | 'Medium' | 'High';
 
-export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
-    const { data, setToolData } = useToolState(tabId);
-    
-    // State
-    const options = data.options || {};
-    const [name, setName] = useState<string>(options.name || 'session_id');
-    const [value, setValue] = useState<string>(options.value || '123456');
-    const [domain, setDomain] = useState<string>(options.domain || 'example.com');
-    const [path, setPath] = useState<string>(options.path || '/');
-    const [secure, setSecure] = useState<boolean>(options.secure ?? true);
-    const [httpOnly, setHttpOnly] = useState<boolean>(options.httpOnly ?? true);
-    const [sameSite, setSameSite] = useState<SameSite>(options.sameSite || 'Lax');
-    const [priority, setPriority] = useState<Priority>(options.priority || 'Medium');
-    const [useMaxAge, setUseMaxAge] = useState<boolean>(options.useMaxAge ?? false);
-    const [maxAge, setMaxAge] = useState<number>(options.maxAge || 3600);
-    const [result, setResult] = useState<string>('');
+const TOOL_ID = TOOL_IDS.SET_COOKIE_GENERATOR;
 
-    // Update store
-    useEffect(() => {
-        setToolData(tabId, { 
-            output: result,
-            options: { name, value, domain, path, secure, httpOnly, sameSite, priority, maxAge, useMaxAge }
-        });
-    }, [name, value, domain, path, secure, httpOnly, sameSite, priority, maxAge, useMaxAge, result, tabId, setToolData]);
+export const SetCookieGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
-    const generateCookie = () => {
+    const data = toolData || {
+        options: {
+            name: 'session_id',
+            value: '123456',
+            domain: 'example.com',
+            path: '/',
+            secure: true,
+            httpOnly: true,
+            sameSite: 'Lax' as SameSite,
+            priority: 'Medium' as Priority,
+            useMaxAge: false,
+            maxAge: 3600
+        }
+    };
+
+    const { options } = data;
+    const { name, value, domain, path, secure, httpOnly, sameSite, priority, maxAge, useMaxAge } = options;
+
+    const result = useMemo(() => {
         let cookie = `${name}=${value}`;
 
         if (domain) cookie += `; Domain=${domain}`;
@@ -46,23 +48,37 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
         if (sameSite) cookie += `; SameSite=${sameSite}`;
         if (priority) cookie += `; Priority=${priority}`;
 
-        setResult(cookie);
-    };
-
-    useEffect(() => {
-        generateCookie();
+        return cookie;
     }, [name, value, domain, path, secure, httpOnly, sameSite, priority, maxAge, useMaxAge]);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(result);
+    useEffect(() => {
+        if (result) {
+            addToHistory(effectiveId);
+        }
+    }, [result, addToHistory, effectiveId]);
+
+    const updateOptions = (updates: any) => {
+        setToolData(effectiveId, {
+            ...data,
+            options: { ...options, ...updates }
+        });
     };
+
+    const handleCopy = () => {
+        if (result) {
+            navigator.clipboard.writeText(result);
+        }
+    };
+
+    const handleClear = () => clearToolData(effectiveId);
 
     return (
         <ToolPane
-            toolId={tabId}
+            toolId={effectiveId}
             title="Set-Cookie Generator"
             description="Generate headers for setting HTTP cookies"
             onCopy={handleCopy}
+            onClear={handleClear}
         >
              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -81,7 +97,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 <input
                                     type="text"
                                     value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                    onChange={(e) => updateOptions({ name: e.target.value })}
                                     className="w-full bg-[var(--color-glass-input)] border border-border-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500/50"
                                     placeholder="session_id"
                                 />
@@ -93,7 +109,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 <input
                                     type="text"
                                     value={value}
-                                    onChange={(e) => setValue(e.target.value)}
+                                    onChange={(e) => updateOptions({ value: e.target.value })}
                                     className="w-full bg-[var(--color-glass-input)] border border-border-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500/50"
                                     placeholder="value"
                                 />
@@ -109,7 +125,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 <input
                                     type="text"
                                     value={domain}
-                                    onChange={(e) => setDomain(e.target.value)}
+                                    onChange={(e) => updateOptions({ domain: e.target.value })}
                                     className="w-full bg-transparent text-sm focus:outline-none"
                                     placeholder="example.com"
                                 />
@@ -123,7 +139,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                             <input
                                 type="text"
                                 value={path}
-                                onChange={(e) => setPath(e.target.value)}
+                                onChange={(e) => updateOptions({ path: e.target.value })}
                                 className="w-full bg-[var(--color-glass-input)] border border-border-glass rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500/50"
                                 placeholder="/"
                             />
@@ -145,7 +161,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 <input 
                                     type="checkbox" 
                                     checked={useMaxAge} 
-                                    onChange={(e) => setUseMaxAge(e.target.checked)} 
+                                    onChange={(e) => updateOptions({ useMaxAge: e.target.checked })} 
                                     className="rounded bg-[var(--color-glass-input)] border-border-glass"
                                 />
                                 <div className={`flex-1 flex items-center gap-2 bg-[var(--color-glass-input)] border border-border-glass rounded-lg px-3 py-2 ${!useMaxAge ? 'opacity-50' : ''}`}>
@@ -153,7 +169,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                     <input
                                         type="number"
                                         value={maxAge}
-                                        onChange={(e) => setMaxAge(parseInt(e.target.value) || 0)}
+                                        onChange={(e) => updateOptions({ maxAge: parseInt(e.target.value) || 0 })}
                                         disabled={!useMaxAge}
                                         className="w-full bg-transparent text-sm focus:outline-none"
                                         placeholder="3600"
@@ -167,7 +183,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 <input
                                     type="checkbox"
                                     checked={secure}
-                                    onChange={(e) => setSecure(e.target.checked)}
+                                    onChange={(e) => updateOptions({ secure: e.target.checked })}
                                     className="rounded bg-transparent border-gray-500"
                                 />
                                 <div className="flex-1">
@@ -183,7 +199,7 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 <input
                                     type="checkbox"
                                     checked={httpOnly}
-                                    onChange={(e) => setHttpOnly(e.target.checked)}
+                                    onChange={(e) => updateOptions({ httpOnly: e.target.checked })}
                                     className="rounded bg-transparent border-gray-500"
                                 />
                                 <div className="flex-1">
@@ -201,10 +217,10 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 SameSite
                             </label>
                             <div className="grid grid-cols-3 gap-2">
-                                {['Lax', 'Strict', 'None'].map((opt) => (
+                                {(['Lax', 'Strict', 'None'] as SameSite[]).map((opt) => (
                                     <button
                                         key={opt}
-                                        onClick={() => setSameSite(opt as SameSite)}
+                                        onClick={() => updateOptions({ sameSite: opt })}
                                         className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
                                             sameSite === opt
                                                 ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
@@ -222,10 +238,10 @@ export const SetCookieGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                                 Priority
                             </label>
                             <div className="grid grid-cols-3 gap-2">
-                                {['Low', 'Medium', 'High'].map((opt) => (
+                                {(['Low', 'Medium', 'High'] as Priority[]).map((opt) => (
                                     <button
                                         key={opt}
-                                        onClick={() => setPriority(opt as Priority)}
+                                        onClick={() => updateOptions({ priority: opt })}
                                         className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
                                             priority === opt
                                                 ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'

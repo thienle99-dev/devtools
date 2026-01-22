@@ -1,1 +1,172 @@
-let e=require(`electron`);e.contextBridge.exposeInMainWorld(`ipcRenderer`,{on(...t){let[n,r]=t,i=(e,...t)=>r(e,...t);return e.ipcRenderer.on(n,i),()=>{e.ipcRenderer.removeListener(n,i)}},off(...t){let[n,...r]=t;return e.ipcRenderer.off(n,...r)},send(...t){let[n,...r]=t;return e.ipcRenderer.send(n,...r)},invoke(...t){let[n,...r]=t;return e.ipcRenderer.invoke(n,...r)},process:{platform:process.platform,versions:process.versions},tray:{updateMenu:t=>e.ipcRenderer.send(`tray-update-menu`,t),updateClipboard:t=>e.ipcRenderer.send(`tray-update-clipboard`,t),syncMonitoring:t=>e.ipcRenderer.send(`sync-clipboard-monitoring`,t)},clipboard:{readText:()=>e.ipcRenderer.invoke(`clipboard-read-text`),readImage:()=>e.ipcRenderer.invoke(`clipboard-read-image`)},window:{minimize:()=>e.ipcRenderer.send(`window-minimize`),maximize:()=>e.ipcRenderer.send(`window-maximize`),close:()=>e.ipcRenderer.send(`window-close`),openDevTools:()=>e.ipcRenderer.send(`window-open-devtools`)},system:{getHomeDir:()=>e.ipcRenderer.invoke(`get-home-dir`),selectFolder:()=>e.ipcRenderer.invoke(`select-folder`),getInfo:()=>e.ipcRenderer.invoke(`system:get-info`),getDiskStats:()=>e.ipcRenderer.invoke(`get-disk-stats`),getGpuStats:()=>e.ipcRenderer.invoke(`get-gpu-stats`),getBatteryStats:()=>e.ipcRenderer.invoke(`get-battery-stats`),getSensorStats:()=>e.ipcRenderer.invoke(`get-sensor-stats`),getBluetoothStats:()=>e.ipcRenderer.invoke(`get-bluetooth-stats`),getTimezonesStats:()=>e.ipcRenderer.invoke(`get-timezones-stats`)}}),e.contextBridge.exposeInMainWorld(`bcryptAPI`,{hash:(t,n)=>e.ipcRenderer.invoke(`bcrypt:hash`,t,n),compare:(t,n)=>e.ipcRenderer.invoke(`bcrypt:compare`,t,n)}),e.contextBridge.exposeInMainWorld(`zipAPI`,{extract:(t,n)=>e.ipcRenderer.invoke(`zip:extract`,t,n),create:(t,n)=>e.ipcRenderer.invoke(`zip:create`,t,n)}),e.contextBridge.exposeInMainWorld(`cleanerAPI`,{getPlatform:()=>e.ipcRenderer.invoke(`cleaner:get-platform`),scanJunk:()=>e.ipcRenderer.invoke(`cleaner:scan-junk`),getSpaceLens:t=>e.ipcRenderer.invoke(`cleaner:get-space-lens`,t),getFolderSize:t=>e.ipcRenderer.invoke(`cleaner:get-folder-size`,t),clearSizeCache:t=>e.ipcRenderer.invoke(`cleaner:clear-size-cache`,t),getPerformanceData:()=>e.ipcRenderer.invoke(`cleaner:get-performance-data`),getStartupItems:()=>e.ipcRenderer.invoke(`cleaner:get-startup-items`),toggleStartupItem:t=>e.ipcRenderer.invoke(`cleaner:toggle-startup-item`,t),killProcess:t=>e.ipcRenderer.invoke(`cleaner:kill-process`,t),getInstalledApps:()=>e.ipcRenderer.invoke(`cleaner:get-installed-apps`),getLargeFiles:t=>e.ipcRenderer.invoke(`cleaner:get-large-files`,t),getDuplicates:t=>e.ipcRenderer.invoke(`cleaner:get-duplicates`,t),runCleanup:t=>e.ipcRenderer.invoke(`cleaner:run-cleanup`,t),freeRam:()=>e.ipcRenderer.invoke(`cleaner:free-ram`),uninstallApp:t=>e.ipcRenderer.invoke(`cleaner:uninstall-app`,t),scanPrivacy:()=>e.ipcRenderer.invoke(`cleaner:scan-privacy`),cleanPrivacy:t=>e.ipcRenderer.invoke(`cleaner:clean-privacy`,t),onSpaceLensProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`cleaner:space-lens-progress`,n),()=>e.ipcRenderer.removeListener(`cleaner:space-lens-progress`,n)}}),e.contextBridge.exposeInMainWorld(`appManagerAPI`,{getInstalledApps:()=>e.ipcRenderer.invoke(`app-manager:get-installed-apps`),getRunningProcesses:()=>e.ipcRenderer.invoke(`app-manager:get-running-processes`),uninstallApp:t=>e.ipcRenderer.invoke(`app-manager:uninstall-app`,t),killProcess:t=>e.ipcRenderer.invoke(`app-manager:kill-process`,t)}),e.contextBridge.exposeInMainWorld(`screenshotAPI`,{getSources:()=>e.ipcRenderer.invoke(`screenshot:get-sources`),captureScreen:()=>e.ipcRenderer.invoke(`screenshot:capture-screen`),captureWindow:t=>e.ipcRenderer.invoke(`screenshot:capture-window`,t),captureArea:()=>e.ipcRenderer.invoke(`screenshot:capture-area`),captureUrl:t=>e.ipcRenderer.invoke(`screenshot:capture-url`,t),saveFile:(t,n)=>e.ipcRenderer.invoke(`screenshot:save-file`,t,n)}),e.contextBridge.exposeInMainWorld(`permissionsAPI`,{checkAll:()=>e.ipcRenderer.invoke(`permissions:check-all`),checkAccessibility:()=>e.ipcRenderer.invoke(`permissions:check-accessibility`),checkFullDiskAccess:()=>e.ipcRenderer.invoke(`permissions:check-full-disk-access`),checkScreenRecording:()=>e.ipcRenderer.invoke(`permissions:check-screen-recording`),testClipboard:()=>e.ipcRenderer.invoke(`permissions:test-clipboard`),testFileAccess:()=>e.ipcRenderer.invoke(`permissions:test-file-access`),openSystemPreferences:t=>e.ipcRenderer.invoke(`permissions:open-system-preferences`,t)}),e.contextBridge.exposeInMainWorld(`electronAPI`,{sendSelection:t=>e.ipcRenderer.invoke(`screenshot:area-selected`,t),cancelSelection:()=>e.ipcRenderer.invoke(`screenshot:area-cancelled`)}),e.contextBridge.exposeInMainWorld(`pluginAPI`,{getAvailablePlugins:()=>e.ipcRenderer.invoke(`plugins:get-available`),getInstalledPlugins:()=>e.ipcRenderer.invoke(`plugins:get-installed`),installPlugin:t=>e.ipcRenderer.invoke(`plugins:install`,t),uninstallPlugin:t=>e.ipcRenderer.invoke(`plugins:uninstall`,t),togglePlugin:(t,n)=>e.ipcRenderer.invoke(`plugins:toggle`,t,n),onPluginProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`plugins:progress`,n),()=>e.ipcRenderer.removeListener(`plugins:progress`,n)},updateRegistry:()=>e.ipcRenderer.invoke(`plugins:update-registry`)}),e.contextBridge.exposeInMainWorld(`videoCompressorAPI`,{getInfo:t=>e.ipcRenderer.invoke(`video-compressor:get-info`,t),generateThumbnail:t=>e.ipcRenderer.invoke(`video-compressor:generate-thumbnail`,t),compress:t=>e.ipcRenderer.invoke(`video-compressor:compress`,t),cancel:t=>e.ipcRenderer.invoke(`video-compressor:cancel`,t),onProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`video-compressor:progress`,n),()=>e.ipcRenderer.removeListener(`video-compressor:progress`,n)},chooseInputFile:()=>e.ipcRenderer.invoke(`audio:choose-input-file`),openFile:t=>e.ipcRenderer.invoke(`universal:open-file`,t),showInFolder:t=>e.ipcRenderer.invoke(`universal:show-in-folder`,t)}),e.contextBridge.exposeInMainWorld(`downloadAPI`,{getHistory:()=>e.ipcRenderer.invoke(`download:get-history`),getSettings:()=>e.ipcRenderer.invoke(`download:get-settings`),saveSettings:t=>e.ipcRenderer.invoke(`download:save-settings`,t),create:t=>e.ipcRenderer.invoke(`download:create`,t),start:t=>e.ipcRenderer.invoke(`download:start`,t),pause:t=>e.ipcRenderer.invoke(`download:pause`,t),resume:t=>e.ipcRenderer.invoke(`download:resume`,t),cancel:t=>e.ipcRenderer.invoke(`download:cancel`,t),verifyChecksum:t=>e.ipcRenderer.invoke(`download:verify-checksum`,t),openFolder:t=>e.ipcRenderer.invoke(`download:open-folder`,t),clearHistory:()=>e.ipcRenderer.invoke(`download:clear-history`),reorder:(t,n)=>e.ipcRenderer.invoke(`download:reorder`,{startIndex:t,endIndex:n}),saveHistory:t=>e.ipcRenderer.invoke(`download:save-history`,t),onAnyProgress:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`download:any-progress`,n),()=>e.ipcRenderer.removeListener(`download:any-progress`,n)},onStarted:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`download:task-started`,n),()=>e.ipcRenderer.removeListener(`download:task-started`,n)},onCompleted:t=>{let n=(e,n)=>t(n);return e.ipcRenderer.on(`download:task-completed`,n),()=>e.ipcRenderer.removeListener(`download:task-completed`,n)}});
+let electron = require("electron");
+electron.contextBridge.exposeInMainWorld("ipcRenderer", {
+	on(...args) {
+		const [channel, listener] = args;
+		const wrappedListener = (event, ...args$1) => listener(event, ...args$1);
+		electron.ipcRenderer.on(channel, wrappedListener);
+		return () => {
+			electron.ipcRenderer.removeListener(channel, wrappedListener);
+		};
+	},
+	off(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.off(channel, ...omit);
+	},
+	send(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.send(channel, ...omit);
+	},
+	invoke(...args) {
+		const [channel, ...omit] = args;
+		return electron.ipcRenderer.invoke(channel, ...omit);
+	},
+	process: {
+		platform: process.platform,
+		versions: process.versions
+	},
+	tray: {
+		updateMenu: (items) => electron.ipcRenderer.send("tray-update-menu", items),
+		updateClipboard: (items) => electron.ipcRenderer.send("tray-update-clipboard", items),
+		syncMonitoring: (enabled) => electron.ipcRenderer.send("sync-clipboard-monitoring", enabled)
+	},
+	clipboard: {
+		readText: () => electron.ipcRenderer.invoke("clipboard-read-text"),
+		readImage: () => electron.ipcRenderer.invoke("clipboard-read-image")
+	},
+	window: {
+		minimize: () => electron.ipcRenderer.send("window-minimize"),
+		maximize: () => electron.ipcRenderer.send("window-maximize"),
+		close: () => electron.ipcRenderer.send("window-close"),
+		openDevTools: () => electron.ipcRenderer.send("window-open-devtools")
+	},
+	system: {
+		getHomeDir: () => electron.ipcRenderer.invoke("get-home-dir"),
+		selectFolder: () => electron.ipcRenderer.invoke("select-folder"),
+		getInfo: () => electron.ipcRenderer.invoke("system:get-info"),
+		getDiskStats: () => electron.ipcRenderer.invoke("get-disk-stats"),
+		getGpuStats: () => electron.ipcRenderer.invoke("get-gpu-stats"),
+		getBatteryStats: () => electron.ipcRenderer.invoke("get-battery-stats"),
+		getSensorStats: () => electron.ipcRenderer.invoke("get-sensor-stats"),
+		getBluetoothStats: () => electron.ipcRenderer.invoke("get-bluetooth-stats"),
+		getTimezonesStats: () => electron.ipcRenderer.invoke("get-timezones-stats")
+	}
+});
+electron.contextBridge.exposeInMainWorld("bcryptAPI", {
+	hash: (text, rounds) => electron.ipcRenderer.invoke("bcrypt:hash", text, rounds),
+	compare: (text, hash) => electron.ipcRenderer.invoke("bcrypt:compare", text, hash)
+});
+electron.contextBridge.exposeInMainWorld("zipAPI", {
+	extract: (zipPath, targetPath) => electron.ipcRenderer.invoke("zip:extract", zipPath, targetPath),
+	create: (sourcePath, targetPath) => electron.ipcRenderer.invoke("zip:create", sourcePath, targetPath)
+});
+electron.contextBridge.exposeInMainWorld("cleanerAPI", {
+	getPlatform: () => electron.ipcRenderer.invoke("cleaner:get-platform"),
+	scanJunk: () => electron.ipcRenderer.invoke("cleaner:scan-junk"),
+	getSpaceLens: (path) => electron.ipcRenderer.invoke("cleaner:get-space-lens", path),
+	getFolderSize: (path) => electron.ipcRenderer.invoke("cleaner:get-folder-size", path),
+	clearSizeCache: (path) => electron.ipcRenderer.invoke("cleaner:clear-size-cache", path),
+	getPerformanceData: () => electron.ipcRenderer.invoke("cleaner:get-performance-data"),
+	getStartupItems: () => electron.ipcRenderer.invoke("cleaner:get-startup-items"),
+	toggleStartupItem: (item) => electron.ipcRenderer.invoke("cleaner:toggle-startup-item", item),
+	killProcess: (pid) => electron.ipcRenderer.invoke("cleaner:kill-process", pid),
+	getInstalledApps: () => electron.ipcRenderer.invoke("cleaner:get-installed-apps"),
+	getLargeFiles: (options) => electron.ipcRenderer.invoke("cleaner:get-large-files", options),
+	getDuplicates: (path) => electron.ipcRenderer.invoke("cleaner:get-duplicates", path),
+	runCleanup: (files) => electron.ipcRenderer.invoke("cleaner:run-cleanup", files),
+	freeRam: () => electron.ipcRenderer.invoke("cleaner:free-ram"),
+	uninstallApp: (app) => electron.ipcRenderer.invoke("cleaner:uninstall-app", app),
+	scanPrivacy: () => electron.ipcRenderer.invoke("cleaner:scan-privacy"),
+	cleanPrivacy: (options) => electron.ipcRenderer.invoke("cleaner:clean-privacy", options),
+	onSpaceLensProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("cleaner:space-lens-progress", listener);
+		return () => electron.ipcRenderer.removeListener("cleaner:space-lens-progress", listener);
+	}
+});
+electron.contextBridge.exposeInMainWorld("appManagerAPI", {
+	getInstalledApps: () => electron.ipcRenderer.invoke("app-manager:get-installed-apps"),
+	getRunningProcesses: () => electron.ipcRenderer.invoke("app-manager:get-running-processes"),
+	uninstallApp: (app) => electron.ipcRenderer.invoke("app-manager:uninstall-app", app),
+	killProcess: (pid) => electron.ipcRenderer.invoke("app-manager:kill-process", pid)
+});
+electron.contextBridge.exposeInMainWorld("screenshotAPI", {
+	getSources: () => electron.ipcRenderer.invoke("screenshot:get-sources"),
+	captureScreen: () => electron.ipcRenderer.invoke("screenshot:capture-screen"),
+	captureWindow: (sourceId) => electron.ipcRenderer.invoke("screenshot:capture-window", sourceId),
+	captureArea: () => electron.ipcRenderer.invoke("screenshot:capture-area"),
+	captureUrl: (url) => electron.ipcRenderer.invoke("screenshot:capture-url", url),
+	saveFile: (dataUrl, options) => electron.ipcRenderer.invoke("screenshot:save-file", dataUrl, options)
+});
+electron.contextBridge.exposeInMainWorld("permissionsAPI", {
+	checkAll: () => electron.ipcRenderer.invoke("permissions:check-all"),
+	checkAccessibility: () => electron.ipcRenderer.invoke("permissions:check-accessibility"),
+	checkFullDiskAccess: () => electron.ipcRenderer.invoke("permissions:check-full-disk-access"),
+	checkScreenRecording: () => electron.ipcRenderer.invoke("permissions:check-screen-recording"),
+	testClipboard: () => electron.ipcRenderer.invoke("permissions:test-clipboard"),
+	testFileAccess: () => electron.ipcRenderer.invoke("permissions:test-file-access"),
+	openSystemPreferences: (permissionType) => electron.ipcRenderer.invoke("permissions:open-system-preferences", permissionType)
+});
+electron.contextBridge.exposeInMainWorld("electronAPI", {
+	sendSelection: (bounds) => electron.ipcRenderer.invoke("screenshot:area-selected", bounds),
+	cancelSelection: () => electron.ipcRenderer.invoke("screenshot:area-cancelled")
+});
+electron.contextBridge.exposeInMainWorld("pluginAPI", {
+	getAvailablePlugins: () => electron.ipcRenderer.invoke("plugins:get-available"),
+	getInstalledPlugins: () => electron.ipcRenderer.invoke("plugins:get-installed"),
+	installPlugin: (pluginId) => electron.ipcRenderer.invoke("plugins:install", pluginId),
+	uninstallPlugin: (pluginId) => electron.ipcRenderer.invoke("plugins:uninstall", pluginId),
+	togglePlugin: (pluginId, active) => electron.ipcRenderer.invoke("plugins:toggle", pluginId, active),
+	onPluginProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("plugins:progress", listener);
+		return () => electron.ipcRenderer.removeListener("plugins:progress", listener);
+	},
+	updateRegistry: () => electron.ipcRenderer.invoke("plugins:update-registry")
+});
+electron.contextBridge.exposeInMainWorld("videoCompressorAPI", {
+	getInfo: (filePath) => electron.ipcRenderer.invoke("video-compressor:get-info", filePath),
+	generateThumbnail: (filePath) => electron.ipcRenderer.invoke("video-compressor:generate-thumbnail", filePath),
+	compress: (options) => electron.ipcRenderer.invoke("video-compressor:compress", options),
+	cancel: (id) => electron.ipcRenderer.invoke("video-compressor:cancel", id),
+	onProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("video-compressor:progress", listener);
+		return () => electron.ipcRenderer.removeListener("video-compressor:progress", listener);
+	},
+	chooseInputFile: () => electron.ipcRenderer.invoke("audio:choose-input-file"),
+	openFile: (path) => electron.ipcRenderer.invoke("universal:open-file", path),
+	showInFolder: (path) => electron.ipcRenderer.invoke("universal:show-in-folder", path)
+});
+electron.contextBridge.exposeInMainWorld("downloadAPI", {
+	getHistory: () => electron.ipcRenderer.invoke("download:get-history"),
+	getSettings: () => electron.ipcRenderer.invoke("download:get-settings"),
+	saveSettings: (settings) => electron.ipcRenderer.invoke("download:save-settings", settings),
+	create: (options) => electron.ipcRenderer.invoke("download:create", options),
+	start: (id) => electron.ipcRenderer.invoke("download:start", id),
+	pause: (id) => electron.ipcRenderer.invoke("download:pause", id),
+	resume: (id) => electron.ipcRenderer.invoke("download:resume", id),
+	cancel: (id) => electron.ipcRenderer.invoke("download:cancel", id),
+	verifyChecksum: (id) => electron.ipcRenderer.invoke("download:verify-checksum", id),
+	openFolder: (path) => electron.ipcRenderer.invoke("download:open-folder", path),
+	clearHistory: () => electron.ipcRenderer.invoke("download:clear-history"),
+	reorder: (startIndex, endIndex) => electron.ipcRenderer.invoke("download:reorder", {
+		startIndex,
+		endIndex
+	}),
+	saveHistory: (history) => electron.ipcRenderer.invoke("download:save-history", history),
+	onAnyProgress: (callback) => {
+		const listener = (_event, progress) => callback(progress);
+		electron.ipcRenderer.on("download:any-progress", listener);
+		return () => electron.ipcRenderer.removeListener("download:any-progress", listener);
+	},
+	onStarted: (callback) => {
+		const listener = (_event, task) => callback(task);
+		electron.ipcRenderer.on("download:task-started", listener);
+		return () => electron.ipcRenderer.removeListener("download:task-started", listener);
+	},
+	onCompleted: (callback) => {
+		const listener = (_event, task) => callback(task);
+		electron.ipcRenderer.on("download:task-completed", listener);
+		return () => electron.ipcRenderer.removeListener("download:task-completed", listener);
+	}
+});

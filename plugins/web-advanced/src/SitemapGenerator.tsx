@@ -1,35 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Settings } from 'lucide-react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 
-export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
-    const { data, setToolData } = useToolState(tabId);
-    
-    // State
-    const [urls, setUrls] = useState<string>(data.input || 'https://example.com/\nhttps://example.com/about\nhttps://example.com/contact');
-    const [baseUrl, setBaseUrl] = useState<string>('https://example.com');
-    const [defaultFreq, setDefaultFreq] = useState<string>('monthly');
-    const [defaultPriority, setDefaultPriority] = useState<string>('0.5');
-    const [result, setResult] = useState<string>('');
+import type { BaseToolProps } from '@tools/registry/types';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
 
-    // Update store
-    useEffect(() => {
-        setToolData(data.id, { input: urls, options: { baseUrl, defaultFreq, defaultPriority } });
-    }, [urls, baseUrl, defaultFreq, defaultPriority, data.id, setToolData]);
+const TOOL_ID = TOOL_IDS.SITEMAP_GENERATOR;
 
-    const generateSitemap = () => {
-        const urlList = urls.split('\n').filter(u => u.trim() !== '');
+export const SitemapGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || {
+        input: 'https://example.com/\nhttps://example.com/about\nhttps://example.com/contact',
+        options: {
+            baseUrl: 'https://example.com',
+            defaultFreq: 'monthly',
+            defaultPriority: '0.5'
+        }
+    };
+
+    const urls = data.input;
+    const { baseUrl, defaultFreq, defaultPriority } = data.options;
+
+    const result = useMemo(() => {
+        const urlList = urls.split('\n').filter((u: string) => u.trim() !== '');
         
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
         xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
         const today = new Date().toISOString().split('T')[0];
 
-        urlList.forEach(url => {
+        urlList.forEach((url: string) => {
             let cleanUrl = url.trim();
             if (!cleanUrl.startsWith('http')) {
-                // If it's a path, append to base
                 const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
                 const path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
                 cleanUrl = base + path;
@@ -44,19 +49,36 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
         });
 
         xml += '</urlset>';
-        setResult(xml);
-        setToolData(tabId, { output: xml });
-    };
-
-    useEffect(() => {
-        generateSitemap();
+        return xml;
     }, [urls, baseUrl, defaultFreq, defaultPriority]);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(result);
+    useEffect(() => {
+        if (result) {
+            addToHistory(effectiveId);
+        }
+    }, [result, addToHistory, effectiveId]);
+
+    const updateOptions = (updates: any) => {
+        setToolData(effectiveId, {
+            ...data,
+            options: { ...data.options, ...updates }
+        });
     };
 
+    const handleUrlsChange = (val: string) => {
+        setToolData(effectiveId, { ...data, input: val });
+    };
+
+    const handleCopy = () => {
+        if (result) {
+            navigator.clipboard.writeText(result);
+        }
+    };
+
+    const handleClear = () => clearToolData(effectiveId);
+
     const handleDownload = () => {
+        if (!result) return;
         const blob = new Blob([result], { type: 'text/xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -68,14 +90,14 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
-            toolId={tabId}
+            toolId={effectiveId}
             title="Sitemap Generator"
             description="Generate XML sitemaps for SEO"
             onCopy={handleCopy}
             onDownload={handleDownload}
+            onClear={handleClear}
         >
             <div className="space-y-6">
-                {/* Configuration */}
                 <div className="space-y-4">
                     <h3 className="text-sm font-medium text-foreground-secondary flex items-center gap-2">
                         <Settings className="w-4 h-4" />
@@ -90,7 +112,7 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                             <input
                                 type="text"
                                 value={baseUrl}
-                                onChange={(e) => setBaseUrl(e.target.value)}
+                                onChange={(e) => updateOptions({ baseUrl: e.target.value })}
                                 className="w-full px-3 py-2 bg-[var(--color-glass-input)] border border-border-glass rounded-lg text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
                                 placeholder="https://example.com"
                             />
@@ -104,7 +126,7 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                             </label>
                             <select
                                 value={defaultFreq}
-                                onChange={(e) => setDefaultFreq(e.target.value)}
+                                onChange={(e) => updateOptions({ defaultFreq: e.target.value })}
                                 className="w-full px-3 py-2 bg-[var(--color-glass-input)] border border-border-glass rounded-lg text-sm text-foreground focus:outline-none focus:border-indigo-500/50 [&>option]:bg-gray-900"
                             >
                                 <option value="always">Always</option>
@@ -123,7 +145,7 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                             </label>
                              <select
                                 value={defaultPriority}
-                                onChange={(e) => setDefaultPriority(e.target.value)}
+                                onChange={(e) => updateOptions({ defaultPriority: e.target.value })}
                                 className="w-full px-3 py-2 bg-[var(--color-glass-input)] border border-border-glass rounded-lg text-sm text-foreground focus:outline-none focus:border-indigo-500/50 [&>option]:bg-gray-900"
                             >
                                 <option value="1.0">1.0 (Highest)</option>
@@ -141,14 +163,13 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                     </div>
                 </div>
 
-                {/* URLs Input */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
                             URLs / Paths (One per line)
                         </label>
                         <button
-                            onClick={() => setUrls('https://example.com/\n/about\n/products\n/contact')}
+                            onClick={() => handleUrlsChange('https://example.com/\n/about\n/products\n/contact')}
                             className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                         >
                             Load Example
@@ -156,14 +177,13 @@ export const SitemapGenerator: React.FC<{ tabId: string }> = ({ tabId }) => {
                     </div>
                     <textarea
                         value={urls}
-                        onChange={(e) => setUrls(e.target.value)}
+                        onChange={(e) => handleUrlsChange(e.target.value)}
                         className="w-full h-40 px-4 py-3 bg-[var(--color-glass-input)] border border-border-glass rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-500/50 transition-all resize-none"
                         placeholder="https://example.com/page1&#10;/page2&#10;/page3"
                         spellCheck={false}
                     />
                 </div>
 
-                {/* Output */}
                 <div className="space-y-2">
                     <label className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
                         Generated Sitemap XML
