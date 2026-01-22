@@ -6,7 +6,10 @@ import { Shield, Lock, Unlock, Copy, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { obfuscate, deobfuscate, type ObfuscationMethod } from './logic';
 
-const TOOL_ID = 'string-obfuscator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.STRING_OBFUSCATOR;
 
 // Export for pipeline support
 export const process = async (input: string, options: { method?: ObfuscationMethod; action?: 'obfuscate' | 'deobfuscate' } = {}) => {
@@ -16,27 +19,28 @@ export const process = async (input: string, options: { method?: ObfuscationMeth
     return obfuscate(input, method);
 };
 
-export const StringObfuscator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+export const StringObfuscator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
     const [method, setMethod] = useState<ObfuscationMethod>((data?.options?.method as ObfuscationMethod) || 'rot13');
     const input = data?.input || '';
     const output = data?.output || '';
 
     const handleInput = (val: string) => {
         const result = obfuscate(val, method);
-        setToolData(TOOL_ID, { input: val, output: result, options: { method } });
+        setToolData(effectiveId, { input: val, output: result, options: { method } });
     };
 
     const handleMethodChange = (m: string) => {
         const newMethod = m as ObfuscationMethod;
         setMethod(newMethod);
         const result = obfuscate(input, newMethod);
-        setToolData(TOOL_ID, { output: result, options: { method: newMethod } });
+        setToolData(effectiveId, { output: result, options: { method: newMethod } });
     };
 
     const handleSwap = () => {
         const result = deobfuscate(output, method);
-        setToolData(TOOL_ID, { input: output, output: result });
+        setToolData(effectiveId, { input: output, output: result });
     };
 
     const handleCopy = () => {
@@ -81,7 +85,7 @@ export const StringObfuscator: React.FC = () => {
                         />
                         <div className="flex justify-between items-center px-1">
                             <span className="text-[10px] text-foreground/20 italic">Characters: {input.length}</span>
-                            <Button size="sm" variant="ghost" icon={Trash2} onClick={() => setToolData(TOOL_ID, { input: '', output: '' })} />
+                            <Button size="sm" variant="ghost" icon={Trash2} onClick={() => setToolData(effectiveId, { input: '', output: '' })} />
                         </div>
                     </div>
 

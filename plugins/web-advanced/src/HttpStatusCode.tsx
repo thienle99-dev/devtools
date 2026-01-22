@@ -4,7 +4,10 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 import { Input } from '@components/ui/Input';
 
-const TOOL_ID = 'http-status-codes';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.HTTP_STATUS_CODE;
 
 const CODES = [
     { code: 100, title: "Continue", desc: "The server has received the request headers and the client should proceed to send the request body." },
@@ -33,11 +36,7 @@ const CODES = [
     { code: 504, title: "Gateway Timeout", desc: "The server was acting as a gateway or proxy and did not receive a timely response from the upstream server." },
 ];
 
-interface HttpStatusCodeProps {
-    tabId?: string;
-}
-
-export const HttpStatusCode: React.FC<HttpStatusCodeProps> = ({ tabId }) => {
+export const HttpStatusCode: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
 

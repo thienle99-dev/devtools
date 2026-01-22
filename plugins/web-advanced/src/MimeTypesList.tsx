@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useToolState } from '@store/toolStore';
 import { Input } from '@components/ui/Input';
 import { FileCode, Search, Copy, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { ToolPane } from '@components/layout/ToolPane';
 
-const TOOL_ID = 'mime-types';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.MIME_TYPES;
 
 const MIME_TYPES = [
     { extension: '.html', type: 'text/html', description: 'HTML document' },
@@ -55,9 +59,15 @@ const MIME_TYPES = [
     { extension: '.7z', type: 'application/x-7z-compressed', description: '7-Zip compressed archive' },
 ];
 
-export const MimeTypesList: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
-    const searchQuery = data?.input || '';
+export const MimeTypesList: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+    const searchQuery = toolData?.input || '';
+
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
 
     const filteredMimeTypes = useMemo(() => {
         if (!searchQuery) return MIME_TYPES;
@@ -75,8 +85,13 @@ export const MimeTypesList: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full gap-6">
-            <div className="glass-panel p-6 space-y-6">
+        <ToolPane
+            toolId={effectiveId}
+            title="MIME Types Reference"
+            description="Comprehensive list of MIME types for web development"
+            onClear={() => setToolData(effectiveId, { input: '' })}
+        >
+            <div className="space-y-6">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <FileCode className="w-5 h-5 text-indigo-400" />
@@ -86,7 +101,7 @@ export const MimeTypesList: React.FC = () => {
                         <Input
                             placeholder="Search by extension, type or description..."
                             value={searchQuery}
-                            onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
+                            onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                             icon={Search}
                         />
                     </div>
@@ -152,6 +167,6 @@ export const MimeTypesList: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </ToolPane>
     );
 };

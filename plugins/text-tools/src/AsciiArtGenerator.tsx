@@ -10,13 +10,16 @@ import figlet from 'figlet';
 // For figlet in browser/electron, we might need to use the bundled ones or 
 // provide a way to select them.
 
-const TOOL_ID = 'ascii-art';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.ASCII_ART_GENERATOR;
 
 const FONTS = [
     'Standard', 'Slant', 'Shadow', 'Big', 'Block', 'Bubble', 'Digital', 'Ivrit', 'Lean', 'Mini', 'Mnemonic', 'Script', 'Small', 'Small Slant', 'Standard', 'Sub-Zero'
 ];
 
-export const AsciiArtGenerator: React.FC<{ tabId?: string }> = ({ tabId }) => {
+export const AsciiArtGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
     const [output, setOutput] = useState<string>('');

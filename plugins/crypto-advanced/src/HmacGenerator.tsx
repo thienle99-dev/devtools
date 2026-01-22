@@ -1,18 +1,17 @@
 import React, { useEffect } from 'react';
-import CryptoJS from 'crypto-js';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 
-const TOOL_ID = 'hmac-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+import { generateHmac } from './logic';
 
-interface HmacGeneratorProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.HMAC_GENERATOR;
 
-export const HmacGenerator: React.FC<HmacGeneratorProps> = ({ tabId }) => {
+export const HmacGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
@@ -40,21 +39,8 @@ export const HmacGenerator: React.FC<HmacGeneratorProps> = ({ tabId }) => {
             return;
         }
 
-        let hash = '';
-        try {
-            switch (algo) {
-                case 'MD5': hash = CryptoJS.HmacMD5(text, key).toString(); break;
-                case 'SHA1': hash = CryptoJS.HmacSHA1(text, key).toString(); break;
-                case 'SHA256': hash = CryptoJS.HmacSHA256(text, key).toString(); break;
-                case 'SHA512': hash = CryptoJS.HmacSHA512(text, key).toString(); break;
-                case 'SHA3': hash = CryptoJS.HmacSHA3(text, key).toString(); break;
-                case 'RIPEMD160': hash = CryptoJS.HmacRIPEMD160(text, key).toString(); break;
-                default: hash = 'Unknown Algorithm';
-            }
-            setToolData(effectiveId, { output: hash });
-        } catch (e) {
-            setToolData(effectiveId, { output: 'Error generating HMAC' });
-        }
+        const hash = generateHmac(text, key, algo.toLowerCase() as any);
+        setToolData(effectiveId, { output: hash });
     };
 
     const handleClear = () => clearToolData(effectiveId);

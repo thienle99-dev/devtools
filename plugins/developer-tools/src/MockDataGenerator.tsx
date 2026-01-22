@@ -10,7 +10,10 @@ import { toast } from 'sonner';
 import { VirtualizedOutput } from '@components/ui/VirtualizedOutput';
 import { useTask } from '@/hooks/useTask';
 
-const TOOL_ID = 'mock-data-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.MOCK_DATA_GENERATOR;
 
 const FIELD_TYPES = [
     { value: 'id', label: 'UUID' },
@@ -39,9 +42,10 @@ interface FieldConfig {
     type: string;
 }
 
-export const MockDataGenerator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
-    const { runTask } = useTask(TOOL_ID);
+export const MockDataGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
+    const { runTask } = useTask(effectiveId);
 
     const initialFields: FieldConfig[] = [
         { id: '1', name: 'id', type: 'id' },
@@ -54,11 +58,11 @@ export const MockDataGenerator: React.FC = () => {
     const output = data?.output || '';
 
     const updateFields = (newFields: FieldConfig[]) => {
-        setToolData(TOOL_ID, { options: { ...data?.options, fields: newFields } });
+        setToolData(effectiveId, { options: { ...data?.options, fields: newFields } });
     };
 
     const updateCount = (newCount: number) => {
-        setToolData(TOOL_ID, { options: { ...data?.options, count: newCount } });
+        setToolData(effectiveId, { options: { ...data?.options, count: newCount } });
     };
 
     const addField = () => {
@@ -128,7 +132,7 @@ export const MockDataGenerator: React.FC = () => {
             }
 
             const jsonOutput = JSON.stringify(result, null, 2);
-            setToolData(TOOL_ID, { output: jsonOutput });
+            setToolData(effectiveId, { output: jsonOutput });
             return jsonOutput;
         }, { warningThresholdMs: 5000 });
     };
@@ -154,7 +158,7 @@ export const MockDataGenerator: React.FC = () => {
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Mock Data Generator"
             description="Generate realistic random data sets for testing."
             onClear={() => {}}

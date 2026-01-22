@@ -54,6 +54,25 @@ export const parseCookies = (cookieStr: string) => {
     return cookies;
 };
 
+export const parseCookiesWithDetails = (str: string) => {
+    if (!str) return [];
+    
+    const items = str.split(';').map(s => s.trim()).filter(Boolean);
+    const parsed: { key: string; value: string; flags: string[] }[] = [];
+    
+    items.forEach(item => {
+        const parts = item.split('=');
+        if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const value = parts.slice(1).join('=').trim();
+            parsed.push({ key, value, flags: [] });
+        } else {
+            parsed.push({ key: item, value: '', flags: ['Flag'] });
+        }
+    });
+    return parsed;
+};
+
 export const base64UrlEncode = (input: string) => {
     try {
         return btoa(input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -173,4 +192,31 @@ export const generateUtmUrl = (url: string, options: {
         if (options.content) parsed.searchParams.set('utm_content', options.content);
         return parsed.toString();
     } catch { return url; }
+};
+
+export const parseContentType = (str: string) => {
+    if (!str) return null;
+    try {
+        const parts = str.split(';').map(s => s.trim());
+        const mimeType = parts[0].toLowerCase();
+        const [type, subtype] = mimeType.split('/');
+        
+        const parameters: Record<string, string> = {};
+        
+        for (let i = 1; i < parts.length; i++) {
+            const param = parts[i];
+            const eqIdx = param.indexOf('=');
+            if (eqIdx > -1) {
+                const key = param.substring(0, eqIdx).trim().toLowerCase();
+                let value = param.substring(eqIdx + 1).trim();
+                if (value.startsWith('"') && value.endsWith('"')) {
+                    value = value.slice(1, -1);
+                }
+                parameters[key] = value;
+            }
+        }
+        return { mimeType, type, subtype, parameters };
+    } catch (e) {
+        return null;
+    }
 };

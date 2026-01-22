@@ -9,9 +9,12 @@ import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'qr-code';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const QrCodeGenerator: React.FC<{ tabId?: string }> = ({ tabId }) => {
+const TOOL_ID = TOOL_IDS.QR_CODE_GENERATOR;
+
+export const QrCodeGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
     const [qrUrl, setQrUrl] = useState<string>('');

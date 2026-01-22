@@ -51,14 +51,28 @@ const initialRule: CspRule = {
     custom: []
 };
 
-export const CspGenerator: React.FC<BaseToolProps> = () => {
+import { useToolState } from '@store/toolStore';
+
+export const CspGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
+
   const [rules, setRules] = useState<Record<Directive, CspRule>>(() => {
-      const initial: any = {};
-      DIRECTIVES.forEach(d => initial[d.key] = { ...initialRule, enabled: d.key === 'default-src' ? true : false, self: d.key === 'default-src' ? true : false });
-      return initial;
+    if (toolData?.options) return toolData.options;
+    const initial: any = {};
+    DIRECTIVES.forEach(d => initial[d.key] = { ...initialRule, enabled: d.key === 'default-src' ? true : false, self: d.key === 'default-src' ? true : false });
+    return initial;
   });
   
   const [output, setOutput] = useState('');
+
+  useEffect(() => {
+    setToolData(effectiveId, { options: rules, output });
+  }, [rules, output, effectiveId, setToolData]);
 
   const updateRule = (directive: Directive, changes: Partial<CspRule>) => {
     setRules(prev => ({
@@ -126,7 +140,7 @@ export const CspGenerator: React.FC<BaseToolProps> = () => {
       title="CSP Generator"
       description="Generate Content Security Policy (CSP) headers"
       onClear={handleReset}
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">

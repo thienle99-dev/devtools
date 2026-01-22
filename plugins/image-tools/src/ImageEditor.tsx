@@ -12,7 +12,10 @@ import type { Crop as CropType, PixelCrop } from 'react-image-crop';
 
 import { toast } from 'sonner';
 
-const TOOL_ID = 'image-editor';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.IMAGE_EDITOR;
 
 interface EditorState {
     zoom: number;
@@ -36,8 +39,9 @@ const DEFAULT_STATE: EditorState = {
     sepia: 0,
 };
 
-export const ImageEditor: React.FC = () => {
-    const { data: toolData, setToolData, clearToolData } = useToolState(TOOL_ID);
+export const ImageEditor: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
     const persistedMeta = (toolData?.meta as any) || {};
     const [imageSrc, setImageSrc] = useState<string | null>(persistedMeta.imageSrc ?? null);
     const [crop, setCrop] = useState<CropType>();
@@ -68,7 +72,7 @@ export const ImageEditor: React.FC = () => {
     // Persist state into tool meta
     useEffect(() => {
         if (imageSrc) {
-            setToolData(TOOL_ID, { 
+            setToolData(effectiveId, { 
                 meta: { 
                     ...(toolData?.meta || {}), 
                     imageSrc, 
@@ -197,12 +201,12 @@ export const ImageEditor: React.FC = () => {
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Image Editor Pro"
             description="Advanced photo manipulation with filters, crop, and adjustments"
             onClear={() => {
                 setImageSrc(null);
-                clearToolData(TOOL_ID);
+                clearToolData(effectiveId);
             }}
         >
             <div className="h-full flex flex-col lg:flex-row gap-6">

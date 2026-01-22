@@ -8,13 +8,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@components/ui/Tabs';
 import { GitCompare, FileText, ArrowRightLeft, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'json-diff';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface JsonDiffProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.JSON_DIFF;
 
-export const JsonDiff: React.FC<JsonDiffProps> = ({ tabId }) => {
+export const JsonDiff: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { 
         data: toolData, setToolData, clearToolData, addToHistory,
@@ -100,7 +99,7 @@ export const JsonDiff: React.FC<JsonDiffProps> = ({ tabId }) => {
         <ToolPane
             title="Advanced JSON / Text Diff"
             description="Professional comparison tool with multi-input tabs"
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             onClear={() => clearToolData(effectiveId)}
         >
             <div className="space-y-6 h-full flex flex-col max-w-6xl mx-auto w-full">

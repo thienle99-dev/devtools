@@ -1,50 +1,35 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useToolState } from '@store/toolStore';
 
-const TOOL_ID = 'http-headers';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+import { parseHttpHeaders } from './logic';
 
-export const HttpHeaderParser = () => {
-  const [input, setInput] = useState('');
+const TOOL_ID = TOOL_IDS.HTTP_HEADER_PARSER;
+
+export const HttpHeaderParser: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  const [input, setInput] = useState(toolData?.input || '');
   const [parsed, setParsed] = useState<Record<string, string>>({});
   const [jsonOutput, setJsonOutput] = useState('');
 
   useEffect(() => {
-    if (!input.trim()) {
-      setParsed({});
-      setJsonOutput('');
-      return;
-    }
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
 
-    const lines = input.split(/\r?\n/);
-    const result: Record<string, string> = {};
-
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-      
-      const colonIndex = trimmed.indexOf(':');
-      if (colonIndex !== -1) {
-        const key = trimmed.substring(0, colonIndex).trim();
-        const value = trimmed.substring(colonIndex + 1).trim();
-        if (key) {
-          result[key] = value;
-        }
-      } else if (trimmed.startsWith('GET') || trimmed.startsWith('POST') || trimmed.startsWith('PUT') || trimmed.startsWith('DELETE') || trimmed.startsWith('PATCH')) {
-         // Ignore request line
-      } else {
-        // Handle malformed or continued lines? 
-        // For simplicity, maybe just treat as key if no colon? No, likely garbage or continuation.
-        // Let's ignore for now.
-      }
-    });
-
+  useEffect(() => {
+    const result = parseHttpHeaders(input);
     setParsed(result);
-    setJsonOutput(JSON.stringify(result, null, 2));
-  }, [input]);
+    setJsonOutput(Object.keys(result).length > 0 ? JSON.stringify(result, null, 2) : '');
+    setToolData(effectiveId, { input });
+  }, [input, effectiveId, setToolData]);
 
   const handleCopyJson = () => {
     if (!jsonOutput) return;
@@ -57,7 +42,7 @@ export const HttpHeaderParser = () => {
       title="HTTP Headers Parser"
       description="Parse raw HTTP headers into JSON and Key-Value pairs"
       onClear={() => setInput('')}
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Input */}

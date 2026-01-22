@@ -6,10 +6,14 @@ import { Copy, RefreshCw, ShieldCheck } from 'lucide-react';
 import { generateBearerToken } from '@tools/crypto/logic';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'bearer-token';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const BearerTokenGenerator: React.FC = () => {
-    const { data: toolData, setToolData, clearToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.BEARER_TOKEN_GENERATOR;
+
+export const BearerTokenGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
 
     const handleGenerate = () => {
         const token = generateBearerToken(32);

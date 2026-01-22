@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useToolState } from '@store/toolStore';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Button } from '@components/ui/Button';
@@ -30,7 +30,7 @@ const LANGUAGES = [
 
 export const CodeSnippetGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
-    const { data: toolData, setToolData } = useToolState(effectiveId);
+    const { data: toolData, setToolData, addToHistory, clearToolData } = useToolState(effectiveId);
     const data = toolData || {};
 
     const initialData: RequestData = {
@@ -40,11 +40,15 @@ export const CodeSnippetGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
         body: '{\n  "key": "value"\n}'
     };
 
+    useEffect(() => {
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
+
     const request = ((data as any)?.request as RequestData) || initialData;
     const language = ((data as any)?.language as string) || 'curl';
 
     const updateRequest = (updates: Partial<RequestData>) => {
-        setToolData(effectiveId, { request: { ...request, ...updates } });
+        setToolData(effectiveId, { ...data, request: { ...request, ...updates } });
     };
 
     const addHeader = () => {
@@ -82,7 +86,7 @@ export const CodeSnippetGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
             toolId={effectiveId}
             title="Code Snippet Generator"
             description="Generate HTTP request code snippets for various languages."
-            onClear={() => {}}
+            onClear={() => clearToolData(effectiveId)}
         >
             <div className="flex flex-col h-full gap-4 md:flex-row">
                 {/* Configuration Panel */}

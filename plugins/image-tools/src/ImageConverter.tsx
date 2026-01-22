@@ -9,7 +9,10 @@ import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
 import { formatBytes } from '@utils/format';
 
-const TOOL_ID = 'image-converter';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.IMAGE_CONVERTER;
 
 interface ImageJob {
     id: string;
@@ -23,8 +26,9 @@ interface ImageJob {
     error?: string;
 }
 
-export const ImageConverter: React.FC = () => {
-    const { data: toolData, setToolData, clearToolData } = useToolState(TOOL_ID);
+export const ImageConverter: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
     const [jobs, setJobs] = useState<ImageJob[]>([]);
     const [globalIsProcessing, setGlobalIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,12 +131,12 @@ export const ImageConverter: React.FC = () => {
             if (job.preview) URL.revokeObjectURL(job.preview);
         });
         setJobs([]);
-        clearToolData(TOOL_ID);
+        clearToolData(effectiveId);
     };
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Image Converter & Compressor"
             description="Professional batch image processing with glassmorphism preview"
             onClear={handleClearAll}
@@ -146,7 +150,7 @@ export const ImageConverter: React.FC = () => {
                         </div>
                         <Select
                             value={options.format}
-                            onChange={(e) => setToolData(TOOL_ID, { options: { ...options, format: e.target.value } })}
+                            onChange={(e) => setToolData(effectiveId, { options: { ...options, format: e.target.value } })}
                             options={[
                                 { label: 'WebP (Optimal)', value: 'image/webp' },
                                 { label: 'JPEG (Standard)', value: 'image/jpeg' },
@@ -162,7 +166,7 @@ export const ImageConverter: React.FC = () => {
                             min={200}
                             max={4000}
                             step={100}
-                            onChange={(v) => setToolData(TOOL_ID, { options: { ...options, maxWidthOrHeight: v } })}
+                            onChange={(v) => setToolData(effectiveId, { options: { ...options, maxWidthOrHeight: v } })}
                         />
                     </div>
                     <div className="space-y-3">
@@ -173,7 +177,7 @@ export const ImageConverter: React.FC = () => {
                             min={0.1}
                             max={20}
                             step={0.1}
-                            onChange={(v) => setToolData(TOOL_ID, { options: { ...options, maxSizeMB: v } })}
+                            onChange={(v) => setToolData(effectiveId, { options: { ...options, maxSizeMB: v } })}
                         />
                     </div>
                     <div className="flex items-end">

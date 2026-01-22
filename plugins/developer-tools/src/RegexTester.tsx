@@ -6,13 +6,12 @@ import { Card } from '@components/ui/Card';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolStore } from '@store/toolStore';
 
-const TOOL_ID = 'regex-tester';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface RegexTesterProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.REGEX_TESTER;
 
-export const RegexTester: React.FC<RegexTesterProps> = ({ tabId }) => {
+export const RegexTester: React.FC<BaseToolProps> = ({ tabId }) => {
     const { tools, setToolData, clearToolData, addToHistory } = useToolStore();
 
     const effectiveId = tabId || TOOL_ID;

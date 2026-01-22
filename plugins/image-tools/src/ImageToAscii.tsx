@@ -18,7 +18,10 @@ import {
 import { cn } from '@utils/cn';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'image-to-ascii';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.IMAGE_TO_ASCII;
 
 const CHAR_SETS = {
     standard: '@%#*+=-:. ',
@@ -36,7 +39,7 @@ interface AsciiOptions {
     pixelSize: number;
 }
 
-export const ImageToAscii: React.FC<{ tabId?: string }> = ({ tabId }) => {
+export const ImageToAscii: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
 

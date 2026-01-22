@@ -92,14 +92,21 @@ export const generateHash = (input: string, algorithm: 'md5' | 'sha1' | 'sha256'
         default: return CryptoJS.SHA256(input).toString();
     }
 };
-export const generateHmac = (input: string, key: string, algorithm: 'md5' | 'sha1' | 'sha256' | 'sha512' = 'sha256') => {
+export const generateHmac = (input: string, key: string, algorithm: 'md5' | 'sha1' | 'sha256' | 'sha512' | 'sha3' | 'ripemd160' = 'sha256') => {
     if (!input || !key) return '';
-    switch (algorithm) {
-        case 'md5': return CryptoJS.HmacMD5(input, key).toString();
-        case 'sha1': return CryptoJS.HmacSHA1(input, key).toString();
-        case 'sha256': return CryptoJS.HmacSHA256(input, key).toString();
-        case 'sha512': return CryptoJS.HmacSHA512(input, key).toString();
-        default: return CryptoJS.HmacSHA256(input, key).toString();
+    try {
+        switch (algorithm) {
+            case 'md5': return CryptoJS.HmacMD5(input, key).toString();
+            case 'sha1': return CryptoJS.HmacSHA1(input, key).toString();
+            case 'sha256': return CryptoJS.HmacSHA256(input, key).toString();
+            case 'sha512': return CryptoJS.HmacSHA512(input, key).toString();
+            case 'sha3': return CryptoJS.HmacSHA3(input, key).toString();
+            case 'ripemd160': return CryptoJS.HmacRIPEMD160(input, key).toString();
+            default: return CryptoJS.HmacSHA256(input, key).toString();
+        }
+    } catch (e) {
+        console.error('HMAC generation error:', e);
+        return '';
     }
 };
 

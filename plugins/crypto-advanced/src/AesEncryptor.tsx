@@ -6,7 +6,10 @@ import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 import { symmetricEncrypt, symmetricDecrypt } from './logic';
 
-const TOOL_ID = 'symmetric-encryptor';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.SYMMETRIC_ENCRYPTOR;
 
 // Export for pipeline support
 export const process = async (input: string, options: { key: string; action?: 'encrypt' | 'decrypt'; algorithm?: 'AES' | 'TripleDES' | 'Rabbit' | 'RC4' }) => {
@@ -17,11 +20,7 @@ export const process = async (input: string, options: { key: string; action?: 'e
     return symmetricEncrypt(input, options.key, algo);
 };
 
-interface SymmetricEncryptorProps {
-    tabId?: string;
-}
-
-export const SymmetricEncryptor = ({ tabId }: SymmetricEncryptorProps): JSX.Element => {
+export const SymmetricEncryptor: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

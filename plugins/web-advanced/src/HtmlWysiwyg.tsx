@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
@@ -7,13 +7,28 @@ import CodeMirror from '@uiw/react-codemirror';
 import { html } from '@codemirror/lang-html';
 import { githubDark } from '@uiw/codemirror-theme-github';
 import { toast } from 'sonner';
+import { useToolState } from '@store/toolStore';
 
-const TOOL_ID = 'html-wysiwyg';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const HtmlWysiwyg = () => {
-  const [content, setContent] = useState('<p>Start editing...</p>');
+const TOOL_ID = TOOL_IDS.HTML_WYSIWYG;
+
+export const HtmlWysiwyg: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  const [content, setContent] = useState(toolData?.input || '<p>Start editing...</p>');
   const [mode, setMode] = useState<'visual' | 'code'>('visual');
   const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
+
+  useEffect(() => {
+    setToolData(effectiveId, { input: content });
+  }, [content, effectiveId, setToolData]);
 
   useEffect(() => {
     if (mode === 'visual' && editorRef.current) {
@@ -62,7 +77,7 @@ export const HtmlWysiwyg = () => {
     <ToolPane
       title="HTML WYSIWYG Editor"
       description="Rich text editor with HTML source view"
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col p-4 gap-4">
         {/* Toolbar */}

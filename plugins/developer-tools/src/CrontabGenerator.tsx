@@ -4,7 +4,10 @@ import { useToolState } from '@store/toolStore';
 import { Input } from '@components/ui/Input';
 import cronstrue from 'cronstrue';
 
-const TOOL_ID = 'crontab-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.CRONTAB_GENERATOR;
 
 const STANDARD_PRESETS = [
     { label: 'Every minute', value: '* * * * *' },
@@ -16,11 +19,7 @@ const STANDARD_PRESETS = [
     { label: 'Every month (1st)', value: '0 0 1 * *' },
 ];
 
-interface CrontabGeneratorProps {
-    tabId?: string;
-}
-
-export const CrontabGenerator: React.FC<CrontabGeneratorProps> = ({ tabId }) => {
+export const CrontabGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

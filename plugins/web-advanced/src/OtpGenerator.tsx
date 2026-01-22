@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
@@ -6,7 +6,12 @@ import { Input } from '@components/ui/Input';
 import { Copy, Trash2, Clock, Plus, Key } from 'lucide-react';
 import * as OTPAuth from 'otpauth';
 import { toast } from 'sonner';
-const TOOL_ID = 'otp';
+import { useToolState } from '@store/toolStore';
+
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.OTP_GENERATOR;
 
 interface OtpAccount {
   id: string;
@@ -18,11 +23,22 @@ interface OtpAccount {
   algorithm?: string;
 }
 
-export const OtpGenerator = () => {
-  const [accounts, setAccounts] = useState<OtpAccount[]>([]);
+export const OtpGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
+
+  const [accounts, setAccounts] = useState<OtpAccount[]>(toolData?.options?.accounts || []);
   const [codes, setCodes] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    setToolData(effectiveId, { options: { accounts } });
+  }, [accounts, effectiveId, setToolData]);
 
   // Form state
   const [newAccount, setNewAccount] = useState<Partial<OtpAccount>>({
@@ -121,7 +137,7 @@ export const OtpGenerator = () => {
     <ToolPane
       title="OTP Code Generator"
       description="Generate TOTP codes for two-factor authentication"
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Add Account Form */}

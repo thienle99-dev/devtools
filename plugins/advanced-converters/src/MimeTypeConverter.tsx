@@ -7,11 +7,10 @@ import { cn } from '@utils/cn';
 import { Copy, ArrowRight, FileType } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'mime-type';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface MimeTypeConverterProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.MIME_TYPE_CONVERTER;
 
 const MODES = [
     { id: 'extension-to-mime', label: 'Extension → MIME', description: 'Get MIME type from file extension' },
@@ -53,7 +52,7 @@ Object.entries(MIME_TYPES).forEach(([mime, exts]) => {
     });
 });
 
-export const MimeTypeConverter: React.FC<MimeTypeConverterProps> = ({ tabId }) => {
+export const MimeTypeConverter: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

@@ -29,8 +29,10 @@ export const JwtParser: React.FC<BaseToolProps> = ({ tabId }) => {
     const { input, options } = data;
 
     useEffect(() => {
-        addToHistory(TOOL_ID);
-    }, [addToHistory]);
+        if (input) {
+            addToHistory(effectiveId);
+        }
+    }, [input, addToHistory, effectiveId]);
 
     const handleInputChange = (val: string) => {
         let header = '';

@@ -5,10 +5,14 @@ import { Button } from '@components/ui/Button';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'slugify';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const Slugify: React.FC = () => {
-    const { data, setToolData, clearToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.SLUGIFY;
+
+export const Slugify: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData, clearToolData } = useToolState(effectiveId);
     const input = data?.input || '';
     const output = data?.output || '';
 
@@ -18,15 +22,15 @@ export const Slugify: React.FC = () => {
             .replace(/[^\w\s-]/g, '')
             .replace(/[\s_-]+/g, '-')
             .replace(/^-+|-+$/g, '');
-        setToolData(TOOL_ID, { input: val, output: slug });
+        setToolData(effectiveId, { input: val, output: slug });
     };
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Slugify"
             description="Convert text into URL-friendly slugs"
-            onClear={() => clearToolData(TOOL_ID)}
+            onClear={() => clearToolData(effectiveId)}
         >
             <div className="flex flex-col h-full gap-6 p-6">
                 <div className="flex-1 flex flex-col gap-2">

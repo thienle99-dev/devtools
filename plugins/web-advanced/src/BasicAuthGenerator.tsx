@@ -24,14 +24,13 @@ export const BasicAuthGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const { options, output } = data;
 
     useEffect(() => {
-        addToHistory(TOOL_ID);
-    }, [addToHistory]);
+        if (output) {
+            addToHistory(effectiveId);
+        }
+    }, [output, addToHistory, effectiveId]);
 
     const updateAuth = (u: string, p: string) => {
-        const fullHeader = generateBasicAuth(u, p); // Returns "Authorization: Basic <token>"
-        // Extract just the value part to match previous behavior or use full header? 
-        // Previous behavior: "Basic <token>"
-        // fullHeader: "Authorization: Basic <token>"
+        const fullHeader = generateBasicAuth(u, p);
         const value = fullHeader.replace('Authorization: ', '');
 
         setToolData(effectiveId, {

@@ -7,10 +7,14 @@ import { Select } from '@components/ui/Select';
 import { FileImage, Copy, Download, RefreshCw, Type, Maximize, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'svg-placeholder-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const SvgPlaceholderGenerator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.SVG_PLACEHOLDER_GENERATOR;
+
+export const SvgPlaceholderGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
 
     const options = data?.options || {
         width: 300,
@@ -34,7 +38,7 @@ export const SvgPlaceholderGenerator: React.FC = () => {
 
     const handleOptionChange = (key: string, value: any) => {
         const newOptions = { ...options, [key]: value };
-        setToolData(TOOL_ID, { options: newOptions });
+        setToolData(effectiveId, { options: newOptions });
     };
 
     const handleCopy = () => {

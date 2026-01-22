@@ -8,14 +8,17 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { cn } from '@utils/cn';
 
-const TOOL_ID = 'image-metadata';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.IMAGE_METADATA;
 
 interface MetadataGroup {
     title: string;
     items: { label: string; value: string; description?: string }[];
 }
 
-export const ImageMetadata: React.FC<{ tabId?: string }> = ({ tabId }) => {
+export const ImageMetadata: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
     const [image, setImage] = useState<{ file: File; url: string } | null>(null);

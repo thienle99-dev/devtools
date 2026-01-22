@@ -3,6 +3,12 @@ import { FileCode, Search, Tag } from 'lucide-react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+import { parseContentType } from './logic';
+
+const TOOL_ID = TOOL_IDS.CONTENT_TYPE_PARSER;
+
 interface ParsedContentType {
     mimeType: string;
     type: string;
@@ -10,53 +16,27 @@ interface ParsedContentType {
     parameters: Record<string, string>;
 }
 
-export const ContentTypeParser: React.FC<{ tabId: string }> = ({ tabId }) => {
-    const { data, setToolData } = useToolState(tabId);
+export const ContentTypeParser: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || { input: '' };
     
     const [input, setInput] = useState<string>(data.input || 'multipart/form-data; boundary=---------------------------974767299852498929531610575');
     const [parsed, setParsed] = useState<ParsedContentType | null>(null);
 
     useEffect(() => {
-        setToolData(tabId, { input });
-        parseContentType(input);
-    }, [input, tabId, setToolData]);
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
 
-    const parseContentType = (str: string) => {
-        try {
-            if (!str) {
-                setParsed(null);
-                return;
-            }
-
-            const parts = str.split(';').map(s => s.trim());
-            const mimeType = parts[0].toLowerCase();
-            const [type, subtype] = mimeType.split('/');
-            
-            const parameters: Record<string, string> = {};
-            
-            for (let i = 1; i < parts.length; i++) {
-                const param = parts[i];
-                const eqIdx = param.indexOf('=');
-                if (eqIdx > -1) {
-                    const key = param.substring(0, eqIdx).trim().toLowerCase();
-                    let value = param.substring(eqIdx + 1).trim();
-                    // Remove quotes if present
-                    if (value.startsWith('"') && value.endsWith('"')) {
-                        value = value.slice(1, -1);
-                    }
-                    parameters[key] = value;
-                }
-            }
-
-            setParsed({ mimeType, type, subtype, parameters });
-        } catch (e) {
-            setParsed(null);
-        }
-    };
+    useEffect(() => {
+        setToolData(effectiveId, { input });
+        setParsed(parseContentType(input));
+    }, [input, effectiveId, setToolData]);
 
     return (
         <ToolPane
-            toolId={tabId}
+            toolId={effectiveId}
             title="Content-Type Parser"
             description="Parse MIME types and Content-Type headers"
             onClear={() => setInput('')}

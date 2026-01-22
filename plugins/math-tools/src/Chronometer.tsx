@@ -4,10 +4,14 @@ import { Button } from '@components/ui/Button';
 import { Timer, Play, Pause, RotateCcw, Clock, Bell, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'chronometer';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const Chronometer: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.CHRONOMETER;
+
+export const Chronometer: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
     const [mode, setMode] = useState<'stopwatch' | 'timer'>('stopwatch');
 
     // Stopwatch state
@@ -83,14 +87,14 @@ export const Chronometer: React.FC = () => {
     const handleLap = () => {
         const newLaps = [swTime, ...laps];
         setLaps(newLaps.slice(0, 50));
-        setToolData(TOOL_ID, { options: { laps: newLaps } });
+        setToolData(effectiveId, { options: { laps: newLaps } });
     };
 
     const resetSw = () => {
         setSwRunning(false);
         setSwTime(0);
         setLaps([]);
-        setToolData(TOOL_ID, { options: { laps: [] } });
+        setToolData(effectiveId, { options: { laps: [] } });
     };
 
     const startTimer = () => {

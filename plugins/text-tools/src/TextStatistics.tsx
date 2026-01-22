@@ -5,10 +5,14 @@ import { Copy, Trash2, Hash, Clock, BarChart3, Type } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatETA } from '@utils/format';
 
-const TOOL_ID = 'text-statistics';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const TextStatistics: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.TEXT_STATISTICS;
+
+export const TextStatistics: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
 
     const input = data?.input || '';
 
@@ -74,7 +78,7 @@ export const TextStatistics: React.FC = () => {
 
 
     const handleClear = () => {
-        setToolData(TOOL_ID, { input: '' });
+        setToolData(effectiveId, { input: '' });
         toast.info('Text cleared');
     };
 
@@ -100,7 +104,7 @@ export const TextStatistics: React.FC = () => {
                     </div>
                     <textarea
                         value={input}
-                        onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
+                        onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                         placeholder="Paste or type your text here to analyze..."
                         className="flex-1 p-6 bg-transparent text-foreground/80 resize-none font-mono text-sm focus:outline-none custom-scrollbar"
                     />

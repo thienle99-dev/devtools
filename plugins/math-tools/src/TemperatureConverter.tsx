@@ -5,12 +5,16 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { Thermometer, ThermometerSnowflake, ThermometerSun } from 'lucide-react';
 import { cn } from '@utils/cn';
 
-const TOOL_ID = 'temperature-converter';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.TEMPERATURE_CONVERTER;
 
 type Unit = 'C' | 'F' | 'K';
 
-export const TemperatureConverter: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+export const TemperatureConverter: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
     const [val, setVal] = useState(data?.input || '0');
     const [unit, setUnit] = useState<Unit>((data?.options?.unit as Unit) || 'C');
 
@@ -33,12 +37,12 @@ export const TemperatureConverter: React.FC = () => {
 
     const handleValChange = (v: string) => {
         setVal(v);
-        setToolData(TOOL_ID, { input: v, options: { unit } });
+        setToolData(effectiveId, { input: v, options: { unit } });
     };
 
     const handleUnitChange = (u: Unit) => {
         setUnit(u);
-        setToolData(TOOL_ID, { input: val, options: { unit: u } });
+        setToolData(effectiveId, { input: val, options: { unit: u } });
     };
 
     const getIcon = () => {
@@ -49,7 +53,7 @@ export const TemperatureConverter: React.FC = () => {
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Temperature Converter"
             description="Convert between Celsius, Fahrenheit, and Kelvin"
         >

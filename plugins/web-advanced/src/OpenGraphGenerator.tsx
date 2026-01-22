@@ -1,14 +1,26 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-const TOOL_ID = 'open-graph';
+import { useToolState } from '@store/toolStore';
 
-export const OpenGraphGenerator = () => {
-  const [values, setValues] = useState({
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.OPEN_GRAPH_GENERATOR;
+
+export const OpenGraphGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
+
+  const [values, setValues] = useState(toolData?.options || {
     title: '',
     siteName: '',
     url: '',
@@ -44,7 +56,8 @@ export const OpenGraphGenerator = () => {
     ].filter(line => line !== '').join('\n'); // Keep empty lines for separation
     
     setOutput(lines);
-  }, [values]);
+    setToolData(effectiveId, { options: values, output: lines });
+  }, [values, effectiveId, setToolData]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(output);
@@ -66,8 +79,8 @@ export const OpenGraphGenerator = () => {
   return (
     <ToolPane
       title="Open Graph Generator"
-      description="Generate Open Graph and Twitter Card meta tags not social sharing"
-      toolId={TOOL_ID}
+      description="Generate Open Graph and Twitter Card meta tags for social sharing"
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Inputs */}

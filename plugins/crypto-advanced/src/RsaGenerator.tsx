@@ -4,16 +4,15 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@components/ui/Tabs';
-import { generateKeyPair, rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify } from '@tools/crypto/rsaLogic';
+import { generateKeyPair, rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify } from './rsaLogic';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'rsa-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface RsaGeneratorProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.RSA_GENERATOR;
 
-export const RsaGenerator: React.FC<RsaGeneratorProps> = ({ tabId }) => {
+export const RsaGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
     

@@ -25,13 +25,17 @@ const MODES = [
 
 type Mode = typeof MODES[number]['id'];
 
-interface UniversalFormatterProps {
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.UNIVERSAL_FORMATTER;
+
+interface UniversalFormatterProps extends BaseToolProps {
     initialMode?: Mode;
-    tabId?: string;
 }
 
 export const UniversalFormatter: React.FC<UniversalFormatterProps> = ({ initialMode = 'json', tabId }) => {
-    const effectiveId = tabId || 'universal-formatter';
+    const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 
     const data = toolData || { input: '', output: '', options: { mode: initialMode } };

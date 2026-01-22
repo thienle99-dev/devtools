@@ -7,11 +7,10 @@ import { cn } from '@utils/cn';
 import { Copy, ArrowRight, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'character-encoding';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface CharacterEncodingConverterProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.CHARACTER_ENCODING_CONVERTER;
 
 const ENCODINGS = [
     { id: 'utf-8', label: 'UTF-8', description: 'Unicode Transformation Format' },
@@ -22,7 +21,7 @@ const ENCODINGS = [
     { id: 'utf-32', label: 'UTF-32', description: '32-bit Unicode' },
 ];
 
-export const CharacterEncodingConverter: React.FC<CharacterEncodingConverterProps> = ({ tabId }) => {
+export const CharacterEncodingConverter: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

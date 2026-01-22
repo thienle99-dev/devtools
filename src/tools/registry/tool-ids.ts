@@ -23,6 +23,9 @@ export const TOOL_IDS = {
     CSP_GENERATOR: 'csp-generator',
     UTM_BUILDER: 'utm-builder',
     STRUCTURED_DATA_GENERATOR: 'structured-data-generator',
+    CANONICAL_URL_GENERATOR: 'canonical-url-generator',
+    SERVICE_WORKER_GENERATOR: 'service-worker-generator',
+    SITEMAP_GENERATOR: 'sitemap-generator',
 
     // Development
     REGEX_TESTER: 'regex-tester',
@@ -98,6 +101,8 @@ export const TOOL_IDS = {
     HMAC_GENERATOR: 'hmac-generator',
     RSA_GENERATOR: 'rsa-generator',
     BEARER_TOKEN_GENERATOR: 'bearer-token-generator',
+    SYMMETRIC_ENCRYPTOR: 'symmetric-encryptor',
+    BCRYPT_GENERATOR: 'bcrypt-generator',
 
     // PDF
     PDF_CONVERTER: 'pdf-converter',

@@ -1,15 +1,26 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useToolState } from '@store/toolStore';
 
-const TOOL_ID = 'meta-tags-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const MetaTagsGenerator = () => {
-  const [values, setValues] = useState({
+const TOOL_ID = TOOL_IDS.META_TAGS_GENERATOR;
+
+export const MetaTagsGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
+
+  const [values, setValues] = useState(toolData?.options || {
     title: '',
     description: '',
     keywords: '',
@@ -39,7 +50,8 @@ export const MetaTagsGenerator = () => {
     ].filter(Boolean).join('\n');
     
     setOutput(lines);
-  }, [values]);
+    setToolData(effectiveId, { options: values, output: lines });
+  }, [values, effectiveId, setToolData]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(output);
@@ -62,7 +74,7 @@ export const MetaTagsGenerator = () => {
     <ToolPane
       title="Meta Tags Generator"
       description="Generate standard SEO meta tags for your website"
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Inputs */}

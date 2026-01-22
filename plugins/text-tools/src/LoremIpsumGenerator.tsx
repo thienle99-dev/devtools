@@ -8,7 +8,10 @@ import { Copy, RefreshCw, AlignLeft, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { VirtualizedOutput } from '@components/ui/VirtualizedOutput';
 
-const TOOL_ID = 'lorem-ipsum-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.LOREM_IPSUM_GENERATOR;
 
 const LOREM_WORDS = [
     'lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing', 'elit', 'curabitur', 'vel', 'hendrerit', 'libero',
@@ -21,8 +24,9 @@ const LOREM_WORDS = [
     'sollicitudin', 'nulla', 'risus', 'id', 'feugiat', 'suspendisse', 'id', 'varius', 'enim', 'viverra', 'nunc', 'faucibus'
 ];
 
-export const LoremIpsumGenerator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+export const LoremIpsumGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
 
     const options = data?.options || {
         count: 3,
@@ -79,8 +83,8 @@ export const LoremIpsumGenerator: React.FC = () => {
             result = sentences.join(' ');
         }
 
-        setToolData(TOOL_ID, { output: result, options });
-    }, [options, setToolData]);
+        setToolData(effectiveId, { output: result, options });
+    }, [options, setToolData, effectiveId]);
 
     useEffect(() => {
         if (!output) {
@@ -89,7 +93,7 @@ export const LoremIpsumGenerator: React.FC = () => {
     }, [output, generateText]);
 
     const handleOptionChange = (key: string, value: any) => {
-        setToolData(TOOL_ID, {
+        setToolData(effectiveId, {
             options: {
                 ...options,
                 [key]: value

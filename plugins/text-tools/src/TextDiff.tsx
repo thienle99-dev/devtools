@@ -6,10 +6,14 @@ import { Hash, AlignLeft, RefreshCw, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPatch } from 'diff';
 
-const TOOL_ID = 'text-diff';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const TextDiff: React.FC = () => {
-    const { data, setToolData, clearToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.TEXT_DIFF;
+
+export const TextDiff: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData, clearToolData } = useToolState(effectiveId);
 
     // input stores the original text
     // options.right stores the text to compare with
@@ -25,7 +29,7 @@ export const TextDiff: React.FC = () => {
             const patch = createPatch('diff', leftText, rightText, 'Original', 'Modified');
             // Remove the header part of the patch to make it cleaner for display
             const cleanDiff = patch.split('\n').slice(4).join('\n');
-            setToolData(TOOL_ID, { output: cleanDiff || 'No differences found' });
+            setToolData(effectiveId, { output: cleanDiff || 'No differences found' });
             toast.success('Comparison complete');
         } catch (error) {
             toast.error('Error generating diff');
@@ -33,7 +37,7 @@ export const TextDiff: React.FC = () => {
     };
 
     const handleClear = () => {
-        clearToolData(TOOL_ID);
+        clearToolData(effectiveId);
         toast.info('Cleared');
     };
 
@@ -55,7 +59,7 @@ export const TextDiff: React.FC = () => {
                     </div>
                     <CodeEditor
                         value={leftText}
-                        onChange={(val) => setToolData(TOOL_ID, { input: val })}
+                        onChange={(val) => setToolData(effectiveId, { input: val })}
                         language="text"
                         placeholder="Paste original text here..."
                         className="flex-1"
@@ -70,7 +74,7 @@ export const TextDiff: React.FC = () => {
                     </div>
                     <CodeEditor
                         value={rightText}
-                        onChange={(val) => setToolData(TOOL_ID, { options: { ...data?.options, right: val } })}
+                        onChange={(val) => setToolData(effectiveId, { options: { ...data?.options, right: val } })}
                         language="text"
                         placeholder="Paste modified text here..."
                         className="flex-1"

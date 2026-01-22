@@ -8,10 +8,14 @@ import { Checkbox } from '@components/ui/Checkbox';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'regex-replace';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const RegexReplace: React.FC = () => {
-    const { data, setToolData, clearToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.REGEX_REPLACE;
+
+export const RegexReplace: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData, clearToolData } = useToolState(effectiveId);
     const input = data?.input || '';
     const output = data?.output || '';
     const options = data?.options || {
@@ -24,7 +28,7 @@ export const RegexReplace: React.FC = () => {
 
     const handleReplace = () => {
         if (!options.pattern) {
-            setToolData(TOOL_ID, { output: input });
+            setToolData(effectiveId, { output: input });
             return;
         }
 
@@ -36,22 +40,22 @@ export const RegexReplace: React.FC = () => {
 
             const regex = new RegExp(options.pattern, flags);
             const res = input.replace(regex, options.replacement);
-            setToolData(TOOL_ID, { output: res });
+            setToolData(effectiveId, { output: res });
         } catch (e) {
             toast.error('Invalid Regex: ' + (e as Error).message);
         }
     };
 
     const updateOption = (key: string, val: any) => {
-        setToolData(TOOL_ID, { options: { ...options, [key]: val } });
+        setToolData(effectiveId, { options: { ...options, [key]: val } });
     };
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Regex Replace"
             description="Replace text using regular expressions"
-            onClear={() => clearToolData(TOOL_ID)}
+            onClear={() => clearToolData(effectiveId)}
         >
             <div className="flex flex-col h-full gap-6 p-6 overflow-y-auto custom-scrollbar">
                 <div className="space-y-4">
@@ -82,7 +86,7 @@ export const RegexReplace: React.FC = () => {
                         <label className="text-[10px] font-bold uppercase opacity-50 ml-1">Source Text</label>
                         <TextArea
                             value={input}
-                            onChange={(e) => setToolData(TOOL_ID, { input: e.target.value })}
+                            onChange={(e) => setToolData(effectiveId, { input: e.target.value })}
                             className="flex-1 font-mono text-xs"
                             placeholder="Paste your source text here..."
                             fullWidth

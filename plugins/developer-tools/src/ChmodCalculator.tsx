@@ -4,13 +4,12 @@ import { useToolState } from '@store/toolStore';
 import { Input } from '@components/ui/Input';
 import { Checkbox } from '@components/ui/Checkbox';
 
-const TOOL_ID = 'chmod-calculator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface ChmodCalculatorProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.CHMOD_CALCULATOR;
 
-export const ChmodCalculator: React.FC<ChmodCalculatorProps> = ({ tabId }) => {
+export const ChmodCalculator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

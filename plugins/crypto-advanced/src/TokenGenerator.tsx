@@ -6,20 +6,13 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 // import zxcvbn from 'zxcvbn'; // Lazy loaded
 
-const TOOL_ID = 'token-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+import { CHAR_SETS } from './logic';
 
-const CHAR_SETS = {
-    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    lowercase: 'abcdefghijklmnopqrstuvwxyz',
-    numbers: '0123456789',
-    symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-='
-};
+const TOOL_ID = TOOL_IDS.TOKEN_GENERATOR;
 
-interface TokenGeneratorProps {
-    tabId?: string;
-}
-
-export const TokenGenerator: React.FC<TokenGeneratorProps> = ({ tabId }) => {
+export const TokenGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

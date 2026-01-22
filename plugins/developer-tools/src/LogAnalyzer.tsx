@@ -5,17 +5,21 @@ import { Button } from '@components/ui/Button';
 import { Search } from 'lucide-react';
 import { analyzeLogs, highlightLogs } from './logic';
 
-const TOOL_ID = 'log-analyzer';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const LogAnalyzer: React.FC = () => {
-    const { data: toolData, setToolData, clearToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.LOG_ANALYZER;
+
+export const LogAnalyzer: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
     const [input, setInput] = useState('');
 
     const handleAnalyze = () => {
         if (!input.trim()) return;
         const analysis = analyzeLogs(input);
         const highlighted = highlightLogs(input);
-        setToolData(TOOL_ID, { output: { analysis, highlighted } });
+        setToolData(effectiveId, { output: { analysis, highlighted } });
     };
 
     const output = toolData?.output;
@@ -24,10 +28,10 @@ export const LogAnalyzer: React.FC = () => {
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Log Analyzer"
             description="Analyze and highlight service logs, errors, and warnings"
-            onClear={() => { setInput(''); clearToolData(TOOL_ID); }}
+            onClear={() => { setInput(''); clearToolData(effectiveId); }}
         >
             <div className="space-y-6">
                 <div className="space-y-2">

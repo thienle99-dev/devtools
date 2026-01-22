@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
+import { useToolState } from '@store/toolStore';
+
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.KEYCODE_INFO;
 
 interface KeyInfo {
   key: string;
@@ -16,10 +22,15 @@ interface KeyInfo {
   repeat: boolean;
 }
 
-const TOOL_ID = 'keycode';
+export const KeycodeInfo: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { addToHistory } = useToolState(effectiveId);
 
-export const KeycodeInfo = () => {
   const [keyInfo, setKeyInfo] = useState<KeyInfo | null>(null);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,7 +62,7 @@ export const KeycodeInfo = () => {
     <ToolPane
       title="Keycode Info"
       description="Press any key to get its Javascript keyboard event information"
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8 bg-muted/10 rounded-xl border border-border">

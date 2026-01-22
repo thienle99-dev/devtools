@@ -5,13 +5,12 @@ import { Button } from '@components/ui/Button';
 import { TextArea } from '@components/ui/TextArea';
 import composerize from 'composerize';
 
-const TOOL_ID = 'docker-converter';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface DockerConverterProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.DOCKER_CONVERTER;
 
-export const DockerConverter: React.FC<DockerConverterProps> = ({ tabId }) => {
+export const DockerConverter: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

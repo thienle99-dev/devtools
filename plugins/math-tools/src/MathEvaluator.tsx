@@ -5,10 +5,14 @@ import { Input } from '@components/ui/Input';
 import { Calculator, Equal, Trash2, History, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TOOL_ID = 'math-evaluator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const MathEvaluator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.MATH_EVALUATOR;
+
+export const MathEvaluator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
     const [expr, setExpr] = useState(data?.input || '');
     const [result, setResult] = useState(data?.output || '');
     const [history, setHistory] = useState<string[]>(data?.options?.history || []);
@@ -53,7 +57,7 @@ export const MathEvaluator: React.FC = () => {
             const newHistory = [expr + ' = ' + formattedResult, ...history.slice(0, 9)];
             setHistory(newHistory);
 
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 input: expr,
                 output: formattedResult,
                 options: { history: newHistory }
@@ -67,7 +71,7 @@ export const MathEvaluator: React.FC = () => {
     const handleClear = () => {
         setExpr('');
         setResult('');
-        setToolData(TOOL_ID, { input: '', output: '' });
+        setToolData(effectiveId, { input: '', output: '' });
     };
 
     const handleKey = (e: React.KeyboardEvent) => {

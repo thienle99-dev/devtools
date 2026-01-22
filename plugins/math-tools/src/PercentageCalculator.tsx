@@ -4,10 +4,14 @@ import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { Percent, ArrowRight, RefreshCw } from 'lucide-react';
 
-const TOOL_ID = 'percentage-calculator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const PercentageCalculator: React.FC = () => {
-    const { data, setToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.PERCENTAGE_CALCULATOR;
+
+export const PercentageCalculator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data, setToolData } = useToolState(effectiveId);
     const [vals, setVals] = useState(data?.options || {
         p1: '', y1: '', // what is X% of Y
         x2: '', y2: '', // X is what % of Y
@@ -23,13 +27,13 @@ export const PercentageCalculator: React.FC = () => {
     const handleChange = (key: string, val: string) => {
         const newVals = { ...vals, [key]: val };
         setVals(newVals);
-        setToolData(TOOL_ID, { options: newVals });
+        setToolData(effectiveId, { options: newVals });
     };
 
     const handleClear = () => {
         const cleared = { p1: '', y1: '', x2: '', y2: '', x3: '', y3: '' };
         setVals(cleared);
-        setToolData(TOOL_ID, { options: cleared });
+        setToolData(effectiveId, { options: cleared });
     };
 
     return (

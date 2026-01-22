@@ -1,10 +1,15 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import React, { useState, useEffect, type ChangeEvent } from 'react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-const TOOL_ID = 'manifest-generator';
+import { useToolState } from '@store/toolStore';
+
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+
+const TOOL_ID = TOOL_IDS.MANIFEST_GENERATOR;
 
 // Helper Input component with Label
 const ManifestInput = ({ label, className, ...props }: any) => (
@@ -19,8 +24,15 @@ const ManifestInput = ({ label, className, ...props }: any) => (
     </div>
 );
 
-export const ManifestGenerator = () => {
-  const [data, setData] = useState({
+export const ManifestGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+  const effectiveId = tabId || TOOL_ID;
+  const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+  useEffect(() => {
+    addToHistory(TOOL_ID);
+  }, [addToHistory]);
+
+  const [data, setData] = useState(toolData?.options || {
       name: '',
       short_name: '',
       start_url: '/',
@@ -35,8 +47,12 @@ export const ManifestGenerator = () => {
   const [output, setOutput] = useState('');
 
   const updateField = (key: string, value: string) => {
-      setData(prev => ({ ...prev, [key]: value }));
+      setData((prev: any) => ({ ...prev, [key]: value }));
   };
+
+  useEffect(() => {
+      setToolData(effectiveId, { options: data, output });
+  }, [data, output, effectiveId, setToolData]);
 
   useEffect(() => {
       const manifest = {
@@ -104,7 +120,7 @@ export const ManifestGenerator = () => {
       title="Manifest.json Generator"
       description="Generate a Web App Manifest for Progressive Web Apps (PWA)"
       onClear={handleReset}
-      toolId={TOOL_ID}
+      toolId={effectiveId}
     >
       <div className="h-full flex flex-col md:flex-row gap-6 p-4">
         {/* Input */}

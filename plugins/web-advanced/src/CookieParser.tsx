@@ -3,56 +3,36 @@ import { Cookie, Search } from 'lucide-react';
 import { ToolPane } from '@components/layout/ToolPane';
 import { useToolState } from '@store/toolStore';
 
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
+import { parseCookiesWithDetails } from './logic';
+
+const TOOL_ID = TOOL_IDS.COOKIE_PARSER;
+
 interface ParsedCookie {
     key: string;
     value: string;
     flags: string[];
 }
 
-export const CookieParser: React.FC<{ tabId: string }> = ({ tabId }) => {
-    const { data, setToolData } = useToolState(tabId);
+export const CookieParser: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, addToHistory } = useToolState(effectiveId);
+
+    const data = toolData || { input: '' };
     
     const [input, setInput] = useState<string>(data.input || 'session_id=123456; user=john_doe; Path=/; Secure; HttpOnly');
     const [cookies, setCookies] = useState<ParsedCookie[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        setToolData(tabId, { input });
-        parseCookies(input);
-    }, [input, tabId, setToolData]);
+        addToHistory(TOOL_ID);
+    }, [addToHistory]);
 
-    const parseCookies = (str: string) => {
-        if (!str) {
-            setCookies([]);
-            return;
-        }
-
-        const items = str.split(';').map(s => s.trim()).filter(Boolean);
-        const parsed: ParsedCookie[] = [];
-        
-        items.forEach(item => {
-            const parts = item.split('=');
-            if (parts.length >= 2) {
-                const key = parts[0].trim();
-                const value = parts.slice(1).join('=').trim();
-                parsed.push({ key, value, flags: [] });
-            } else {
-                // It might be a flag like 'Secure' or 'HttpOnly' belonging to the previous cookie?
-                // Standard cookie string is key=value; key=value.
-                // Flags usually appear in Set-Cookie headers, but in 'Cookie' header (request), there are no flags, just k=v.
-                // If the input is a Set-Cookie header value, it looks like: theme=dark; Path=/; Secure
-                // In that case, the first pair is the cookie, others are attributes.
-                
-                // Let's assume input can be multiple cookies (Cookie header) OR a single Set-Cookie string.
-                // If it's a Set-Cookie string, we treat flags as separate items for now or try to attach them.
-                
-                // Simple parser: show everything as key-value or key-only (flag)
-                parsed.push({ key: item, value: '', flags: ['Flag'] });
-            }
-        });
-
-        setCookies(parsed);
-    };
+    useEffect(() => {
+        setToolData(effectiveId, { input });
+        setCookies(parseCookiesWithDetails(input));
+    }, [input, effectiveId, setToolData]);
 
     const filteredCookies = cookies.filter(c => 
         c.key.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -65,7 +45,7 @@ export const CookieParser: React.FC<{ tabId: string }> = ({ tabId }) => {
 
     return (
         <ToolPane
-            toolId={tabId}
+            toolId={effectiveId}
             title="Cookie Parser"
             description="Parse and inspect HTTP cookie strings"
             onClear={handleClear}

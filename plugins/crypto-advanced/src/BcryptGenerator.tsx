@@ -6,13 +6,12 @@ import { ToolPane } from '@components/layout/ToolPane';
 import { CodeEditor } from '@components/ui/CodeEditor';
 import { useToolState } from '@store/toolStore';
 
-const TOOL_ID = 'bcrypt-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-interface BcryptGeneratorProps {
-    tabId?: string;
-}
+const TOOL_ID = TOOL_IDS.BCRYPT_GENERATOR;
 
-export const BcryptGenerator: React.FC<BcryptGeneratorProps> = ({ tabId }) => {
+export const BcryptGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
     const effectiveId = tabId || TOOL_ID;
     const { data: toolData, setToolData, clearToolData, addToHistory } = useToolState(effectiveId);
 

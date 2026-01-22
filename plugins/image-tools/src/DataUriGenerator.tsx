@@ -5,10 +5,14 @@ import { FileUp, Trash2, FileCode, ImageIcon, Code } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@utils/format';
 
-const TOOL_ID = 'data-uri-generator';
+import { TOOL_IDS } from '@tools/registry/tool-ids';
+import type { BaseToolProps } from '@tools/registry/types';
 
-export const DataUriGenerator: React.FC = () => {
-    const { data: toolData, setToolData, clearToolData } = useToolState(TOOL_ID);
+const TOOL_ID = TOOL_IDS.DATA_URI_GENERATOR;
+
+export const DataUriGenerator: React.FC<BaseToolProps> = ({ tabId }) => {
+    const effectiveId = tabId || TOOL_ID;
+    const { data: toolData, setToolData, clearToolData } = useToolState(effectiveId);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const data = toolData || {
@@ -30,7 +34,7 @@ export const DataUriGenerator: React.FC = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const result = event.target?.result as string;
-            setToolData(TOOL_ID, {
+            setToolData(effectiveId, {
                 input: result,
                 options: {
                     fileName: file.name,
@@ -71,10 +75,10 @@ export const DataUriGenerator: React.FC = () => {
 
     return (
         <ToolPane
-            toolId={TOOL_ID}
+            toolId={effectiveId}
             title="Data URI Generator"
             description="Convert any file into a base64 encoded string for direct use in HTML/CSS"
-            onClear={() => clearToolData(TOOL_ID)}
+            onClear={() => clearToolData(effectiveId)}
         >
             <div className="flex flex-col h-full space-y-6">
                 {!uri ? (
@@ -108,7 +112,7 @@ export const DataUriGenerator: React.FC = () => {
                                 <p className="text-xs text-foreground-muted uppercase tracking-widest font-bold">{formatBytes(fileSize)}</p>
                             </div>
                             <button
-                                onClick={() => clearToolData(TOOL_ID)}
+                                onClick={() => clearToolData(effectiveId)}
                                 className="p-3 hover:bg-red-500/10 text-foreground-muted hover:text-red-500 rounded-2xl transition-colors"
                             >
                                 <Trash2 size={20} />
