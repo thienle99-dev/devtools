@@ -1,7 +1,7 @@
 import { Globe, ShieldCheck } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import * as Logic from '../../web/logic';
+import * as Logic from '../../../../plugins/web-advanced/src/logic';
 
 export const webTools: ToolDefinition[] = [
     {

@@ -1,7 +1,7 @@
 import { Fingerprint, ScanLine, Key } from 'lucide-react';
 import * as Lazy from '../lazy-tools';
 import type { ToolDefinition } from '../types';
-import * as Logic from '../../crypto/logic';
+import * as Logic from '../../../../plugins/crypto-advanced/src/logic';
 
 export const cryptoTools: ToolDefinition[] = [
     {
