@@ -94,6 +94,7 @@ export const UniversalFormatter = React.lazy(() => import('@plugins/developer-to
 export const Converter = React.lazy(() => import('@tools/converters/Converter').then(m => ({ default: m.Converter })));
 
 export const VideoCompressor = React.lazy(() => import('@plugins/media-tools/src/VideoCompressor').then(m => ({ default: m.VideoCompressor })));
+export const UniversalDownloader = React.lazy(() => import('@plugins/universal-downloader/src/index').then(m => ({ default: m.UniversalDownloader })));
 
 export const PluginMarketplace = React.lazy(() => import('@tools/plugins/PluginMarketplace').then(m => ({ default: m.default })));
 

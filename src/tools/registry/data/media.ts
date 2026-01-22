@@ -8,4 +8,20 @@ import type { ToolDefinition } from '@tools/registry/types';
 // - video-compressor → media-tools plugin
 // These tools will appear in the footer when their respective plugins are installed
 
-export const mediaTools: ToolDefinition[] = [];
+import { Download } from 'lucide-react';
+import * as Lazy from '@tools/registry/lazy-tools';
+
+
+export const mediaTools: ToolDefinition[] = [
+    {
+        id: 'universal-downloader', // Matches plugin ID
+        name: 'Universal Media Downloader',
+        path: '/media/downloader', // Use a tool path, not plugin path, to distinguish? Or same?
+        description: 'Download video and audio from 1000+ sites',
+        icon: Download,
+        category: 'media',
+        component: Lazy.UniversalDownloader,
+        keywords: ['download', 'youtube', 'tiktok', 'video'],
+        color: 'text-rose-500'
+    }
+];

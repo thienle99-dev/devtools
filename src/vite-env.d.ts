@@ -120,4 +120,31 @@ interface Window {
         onStarted: (callback: (task: any) => void) => () => void;
         onCompleted: (callback: (task: any) => void) => () => void;
     };
+    universalAPI: {
+        getInfo: (url: string) => Promise<any>;
+        download: (options: any) => Promise<any>;
+        cancel: (id?: string) => Promise<any>;
+        getHistory: () => Promise<any[]>;
+        clearHistory: () => Promise<any>;
+        removeFromHistory: (id: string) => Promise<any>;
+        getSettings: () => Promise<any>;
+        saveSettings: (settings: any) => Promise<any>;
+        chooseFolder: () => Promise<any>;
+        openFile: (path: string) => Promise<any>;
+        showInFolder: (path: string) => Promise<any>;
+        checkDiskSpace: (path?: string) => Promise<any>;
+        getQueue: () => Promise<any[]>;
+        pause: (id: string) => Promise<any>;
+        resume: (id: string) => Promise<any>;
+        reorderQueue: (id: string, newIndex: number) => Promise<any>;
+        retry: (id: string) => Promise<any>;
+        getPendingCount: () => Promise<number>;
+        resumePending: () => Promise<any>;
+        clearPending: () => Promise<any>;
+        getErrorLog: (limit?: number) => Promise<any[]>;
+        exportErrorLog: (format: 'json' | 'csv' | 'txt') => Promise<any>;
+        getErrorStats: () => Promise<any>;
+        clearErrorLog: (type: 'all' | 'resolved') => Promise<any>;
+        onProgress: (callback: (progress: any) => void) => () => void;
+    };
 }

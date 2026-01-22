@@ -91,8 +91,8 @@ export class UniversalDownloader {
             this.downloadQueue.push({
                 options: item.options,
                 run: () => this.executeDownload(item.options),
-                resolve: () => {},
-                reject: () => {},
+                resolve: () => { },
+                reject: () => { },
                 state: item.state === 'downloading' ? 'paused' : item.state as any
             });
         }
@@ -111,7 +111,7 @@ export class UniversalDownloader {
      */
     prepareForShutdown() {
         console.log('🔄 Preparing downloads for shutdown...');
-        
+
         // Convert all active downloads to paused state in queue
         this.activeProcesses.forEach((process, downloadId) => {
             const options = this.activeOptions.get(downloadId);
@@ -122,8 +122,8 @@ export class UniversalDownloader {
                     this.downloadQueue.push({
                         options,
                         run: () => this.executeDownload(options),
-                        resolve: () => {},
-                        reject: () => {},
+                        resolve: () => { },
+                        reject: () => { },
                         state: 'paused'
                     });
                 } else {
@@ -134,20 +134,20 @@ export class UniversalDownloader {
                     }
                 }
             }
-            
+
             // Kill the process
             if (process.ytDlpProcess) {
                 process.ytDlpProcess.kill('SIGTERM');
             }
         });
-        
+
         // Save the queue
         this.saveQueuePersistently();
-        
-        const pendingCount = this.downloadQueue.filter(item => 
+
+        const pendingCount = this.downloadQueue.filter(item =>
             item.state === 'queued' || item.state === 'paused'
         ).length;
-        
+
         console.log(`✅ Saved ${pendingCount} pending downloads`);
         return pendingCount;
     }
@@ -157,7 +157,7 @@ export class UniversalDownloader {
      */
     getPendingDownloadsCount(): number {
         const persisted = this.store.get('queue') || [];
-        return persisted.filter(item => 
+        return persisted.filter(item =>
             item.state === 'queued' || item.state === 'paused'
         ).length;
     }
@@ -167,17 +167,17 @@ export class UniversalDownloader {
      */
     resumePendingDownloads() {
         console.log('🔄 Resuming pending downloads...');
-        const pending = this.downloadQueue.filter(item => 
+        const pending = this.downloadQueue.filter(item =>
             item.state === 'queued' || item.state === 'paused'
         );
-        
+
         pending.forEach(item => {
             item.state = 'queued';
         });
-        
+
         this.saveQueuePersistently();
         this.processQueue();
-        
+
         console.log(`✅ Resumed ${pending.length} downloads`);
     }
 
@@ -186,7 +186,7 @@ export class UniversalDownloader {
      */
     clearPendingDownloads() {
         console.log('🗑️ Clearing pending downloads...');
-        this.downloadQueue = this.downloadQueue.filter(item => 
+        this.downloadQueue = this.downloadQueue.filter(item =>
             item.state === 'downloading'
         );
         this.saveQueuePersistently();
@@ -203,8 +203,8 @@ export class UniversalDownloader {
         progressCallback?: (progress: UniversalDownloadProgress) => void
     ): DownloadError {
         // Convert to DownloadError if needed
-        const downloadError = error instanceof DownloadError 
-            ? error 
+        const downloadError = error instanceof DownloadError
+            ? error
             : ErrorParser.parse(error, { url, platform });
 
         // Update retry count in metadata
@@ -259,7 +259,7 @@ export class UniversalDownloader {
                     console.log(
                         `[Retry Scheduled] ${downloadId} will retry in ${(retryResult.delay! / 1000).toFixed(1)}s`
                     );
-                    
+
                     // Update progress with retry info
                     if (progressCallback) {
                         progressCallback({
@@ -473,7 +473,10 @@ export class UniversalDownloader {
             if (formatsSource && Array.isArray(formatsSource)) {
                 const qualitySet = new Set<string>();
                 formatsSource.forEach((fmt: any) => {
-                    if (fmt.vcodec && fmt.vcodec !== 'none') {
+                    // More robust video detection: check vcodec OR dimensions
+                    const isVideo = (fmt.vcodec && fmt.vcodec !== 'none') || (fmt.height && fmt.height > 0) || (fmt.width && fmt.width > 0);
+
+                    if (isVideo) {
                         if (fmt.height) {
                             qualitySet.add(`${fmt.height}p`);
                         } else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) {
@@ -579,8 +582,8 @@ export class UniversalDownloader {
             this.downloadQueue.push({
                 options,
                 run: () => this.executeDownload(options),
-                resolve: () => {},
-                reject: () => {},
+                resolve: () => { },
+                reject: () => { },
                 state: 'queued'
             });
             this.saveQueuePersistently();
@@ -600,8 +603,8 @@ export class UniversalDownloader {
             this.downloadQueue.push({
                 options: reconstructedOptions,
                 run: () => this.executeDownload(reconstructedOptions),
-                resolve: () => {},
-                reject: () => {},
+                resolve: () => { },
+                reject: () => { },
                 state: 'queued'
             });
             this.saveQueuePersistently();
@@ -637,8 +640,8 @@ export class UniversalDownloader {
             this.downloadQueue.unshift({
                 options,
                 run: () => this.executeDownload(options),
-                resolve: () => {},
-                reject: () => {},
+                resolve: () => { },
+                reject: () => { },
                 state: 'queued'
             });
             this.saveQueuePersistently();
@@ -999,7 +1002,7 @@ export class UniversalDownloader {
                     } else {
                         // Non-zero exit code - parse error from stderr
                         const errorMsg = stderrOutput || `Download failed (exit code: ${code})`;
-                        
+
                         const error = this.handleDownloadError(
                             new Error(errorMsg),
                             downloadId,
@@ -1014,7 +1017,7 @@ export class UniversalDownloader {
 
                 process.on('error', (err: Error) => {
                     this.activeProcesses.delete(downloadId);
-                    
+
                     const error = this.handleDownloadError(
                         err,
                         downloadId,

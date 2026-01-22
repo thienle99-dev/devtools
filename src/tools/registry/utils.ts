@@ -41,6 +41,8 @@ export const getToolsByCategory = (category: ToolCategory): ToolDefinition[] => 
     const activePlugins = usePluginStore.getState().activePlugins;
     const pluginTools = activePlugins
         .filter(p => p.manifest.category === category)
+        // Deduplicate: Don't add plugin if a static tool with same ID already exists
+        .filter(p => !staticTools.some(t => t.id === p.manifest.id))
         .map(mapPluginToTool);
 
     return [...staticTools, ...pluginTools];

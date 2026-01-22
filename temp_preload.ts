@@ -1,0 +1,357 @@
+import { contextBridge, ipcRenderer } from 'electron'
+
+// --------- Expose some API to the Renderer process ---------
+contextBridge.exposeInMainWorld('ipcRenderer', {
+  on(...args: Parameters<typeof ipcRenderer.on>) {
+    const [channel, listener] = args
+    const wrappedListener = (event: any, ...args: any[]) => listener(event, ...args)
+    ipcRenderer.on(channel, wrappedListener)
+    // Return cleanup function
+    return () => {
+      ipcRenderer.removeListener(channel, wrappedListener)
+    }
+  },
+  off(...args: Parameters<typeof ipcRenderer.off>) {
+    const [channel, ...omit] = args
+    return ipcRenderer.off(channel, ...omit)
+  },
+  send(...args: Parameters<typeof ipcRenderer.send>) {
+    const [channel, ...omit] = args
+    return ipcRenderer.send(channel, ...omit)
+  },
+  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
+    const [channel, ...omit] = args
+    return ipcRenderer.invoke(channel, ...omit)
+  },
+
+  // You can expose other weird methods here
+  process: {
+    platform: process.platform,
+    versions: process.versions,
+  },
+  tray: {
+    updateMenu: (items: any[]) => ipcRenderer.send('tray-update-menu', items),
+    updateClipboard: (items: any[]) => ipcRenderer.send('tray-update-clipboard', items),
+    syncMonitoring: (enabled: boolean) => ipcRenderer.send('sync-clipboard-monitoring', enabled),
+  },
+  clipboard: {
+    readText: () => ipcRenderer.invoke('clipboard-read-text'),
+    readImage: () => ipcRenderer.invoke('clipboard-read-image'),
+  },
+  window: {
+    minimize: () => ipcRenderer.send('window-minimize'),
+    maximize: () => ipcRenderer.send('window-maximize'),
+    close: () => ipcRenderer.send('window-close'),
+    openDevTools: () => ipcRenderer.send('window-open-devtools'),
+  },
+  system: {
+    getHomeDir: () => ipcRenderer.invoke('get-home-dir'),
+    selectFolder: () => ipcRenderer.invoke('select-folder'),
+    getInfo: () => ipcRenderer.invoke('system:get-info'),
+  }
+})
+
+contextBridge.exposeInMainWorld('statsAPI', {
+  getCPUStats: () => ipcRenderer.invoke('get-cpu-stats'),
+  getMemoryStats: () => ipcRenderer.invoke('get-memory-stats'),
+  getNetworkStats: () => ipcRenderer.invoke('get-network-stats'),
+  getDiskStats: () => ipcRenderer.invoke('get-disk-stats'),
+  getGPUStats: () => ipcRenderer.invoke('get-gpu-stats'),
+  getBatteryStats: () => ipcRenderer.invoke('get-battery-stats'),
+  getSensorStats: () => ipcRenderer.invoke('get-sensor-stats'),
+  getBluetoothStats: () => ipcRenderer.invoke('get-bluetooth-stats'),
+  getTimeZonesStats: () => ipcRenderer.invoke('get-timezones-stats'),
+})
+
+contextBridge.exposeInMainWorld('cleanerAPI', {
+  getPlatform: () => ipcRenderer.invoke('cleaner:get-platform'),
+  scanJunk: () => ipcRenderer.invoke('cleaner:scan-junk'),
+  getLargeFiles: (options: any) => ipcRenderer.invoke('cleaner:get-large-files', options),
+  getDuplicates: (scanPath: string) => ipcRenderer.invoke('cleaner:get-duplicates', scanPath),
+  getSpaceLens: (scanPath: string) => ipcRenderer.invoke('cleaner:get-space-lens', scanPath),
+  getFolderSize: (folderPath: string) => ipcRenderer.invoke('cleaner:get-folder-size', folderPath),
+  clearSizeCache: (folderPath?: string) => ipcRenderer.invoke('cleaner:clear-size-cache', folderPath),
+  getPerformanceData: () => ipcRenderer.invoke('cleaner:get-performance-data'),
+  getStartupItems: () => ipcRenderer.invoke('cleaner:get-startup-items'),
+  toggleStartupItem: (item: any) => ipcRenderer.invoke('cleaner:toggle-startup-item', item),
+  killProcess: (pid: number) => ipcRenderer.invoke('cleaner:kill-process', pid),
+  getInstalledApps: () => ipcRenderer.invoke('cleaner:get-installed-apps'),
+  uninstallApp: (app: any) => ipcRenderer.invoke('cleaner:uninstall-app', app),
+  runCleanup: (files: string[]) => ipcRenderer.invoke('cleaner:run-cleanup', files),
+  freeRam: () => ipcRenderer.invoke('cleaner:free-ram'),
+  scanPrivacy: () => ipcRenderer.invoke('cleaner:scan-privacy'),
+  cleanPrivacy: (options: any) => ipcRenderer.invoke('cleaner:clean-privacy', options),
+  scanBrowserData: () => ipcRenderer.invoke('cleaner:scan-browser-data'),
+  cleanBrowserData: (options: any) => ipcRenderer.invoke('cleaner:clean-browser-data', options),
+  getWifiNetworks: () => ipcRenderer.invoke('cleaner:get-wifi-networks'),
+  removeWifiNetwork: (networkName: string) => ipcRenderer.invoke('cleaner:remove-wifi-network', networkName),
+  onSpaceLensProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('cleaner:space-lens-progress', listener);
+    return () => ipcRenderer.removeListener('cleaner:space-lens-progress', listener);
+  },
+  runMaintenance: (task: any) => ipcRenderer.invoke('cleaner:run-maintenance', task),
+  getHealthStatus: () => ipcRenderer.invoke('cleaner:get-health-status'),
+  checkSafety: (files: string[]) => ipcRenderer.invoke('cleaner:check-safety', files),
+  createBackup: (files: string[]) => ipcRenderer.invoke('cleaner:create-backup', files),
+  listBackups: () => ipcRenderer.invoke('cleaner:list-backups'),
+  getBackupInfo: (backupId: string) => ipcRenderer.invoke('cleaner:get-backup-info', backupId),
+  restoreBackup: (backupId: string) => ipcRenderer.invoke('cleaner:restore-backup', backupId),
+  deleteBackup: (backupId: string) => ipcRenderer.invoke('cleaner:delete-backup', backupId),
+  startHealthMonitoring: () => ipcRenderer.invoke('health-start-monitoring'),
+  stopHealthMonitoring: () => ipcRenderer.invoke('health-stop-monitoring'),
+  updateHealthTray: (data: any) => ipcRenderer.send('health-update-tray', data),
+})
+
+contextBridge.exposeInMainWorld('appManagerAPI', {
+  getInstalledApps: () => ipcRenderer.invoke('app-manager:get-installed-apps'),
+  getRunningProcesses: () => ipcRenderer.invoke('app-manager:get-running-processes'),
+  uninstallApp: (app: any) => ipcRenderer.invoke('app-manager:uninstall-app', app),
+  killProcess: (pid: number) => ipcRenderer.invoke('app-manager:kill-process', pid),
+})
+
+contextBridge.exposeInMainWorld('screenshotAPI', {
+  getSources: () => ipcRenderer.invoke('screenshot:get-sources'),
+  captureScreen: () => ipcRenderer.invoke('screenshot:capture-screen'),
+  captureWindow: (sourceId: string) => ipcRenderer.invoke('screenshot:capture-window', sourceId),
+  captureArea: () => ipcRenderer.invoke('screenshot:capture-area'),
+  captureUrl: (url: string) => ipcRenderer.invoke('screenshot:capture-url', url),
+  saveFile: (dataUrl: string, options: { filename?: string; format?: string }) =>
+    ipcRenderer.invoke('screenshot:save-file', dataUrl, options),
+})
+
+contextBridge.exposeInMainWorld('permissionsAPI', {
+  checkAll: () => ipcRenderer.invoke('permissions:check-all'),
+  checkAccessibility: () => ipcRenderer.invoke('permissions:check-accessibility'),
+  checkFullDiskAccess: () => ipcRenderer.invoke('permissions:check-full-disk-access'),
+  checkScreenRecording: () => ipcRenderer.invoke('permissions:check-screen-recording'),
+  testClipboard: () => ipcRenderer.invoke('permissions:test-clipboard'),
+  testFileAccess: () => ipcRenderer.invoke('permissions:test-file-access'),
+  openSystemPreferences: (permissionType?: string) => ipcRenderer.invoke('permissions:open-system-preferences', permissionType),
+})
+
+// API for screenshot area selection overlay
+contextBridge.exposeInMainWorld('electronAPI', {
+  sendSelection: (bounds: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke('screenshot:area-selected', bounds),
+  cancelSelection: () =>
+    ipcRenderer.invoke('screenshot:area-cancelled'),
+})
+
+// YouTube Downloader API
+contextBridge.exposeInMainWorld('youtubeAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('youtube:getInfo', url),
+  getPlaylistInfo: (url: string) => ipcRenderer.invoke('youtube:getPlaylistInfo', url),
+  download: (options: any) => ipcRenderer.invoke('youtube:download', options),
+  cancel: () => ipcRenderer.invoke('youtube:cancel'),
+  openFile: (filePath: string) => ipcRenderer.invoke('youtube:openFile', filePath),
+  showInFolder: (filePath: string) => ipcRenderer.invoke('youtube:showInFolder', filePath),
+  chooseFolder: () => ipcRenderer.invoke('youtube:chooseFolder'),
+  getHistory: () => ipcRenderer.invoke('youtube:getHistory'),
+  clearHistory: () => ipcRenderer.invoke('youtube:clearHistory'),
+  removeFromHistory: (id: string) => ipcRenderer.invoke('youtube:removeFromHistory', id),
+  getSettings: () => ipcRenderer.invoke('youtube:getSettings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('youtube:saveSettings', settings),
+  getCapabilities: () => ipcRenderer.invoke('youtube:getCapabilities'),
+  installAria2: () => ipcRenderer.invoke('youtube:installAria2'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('youtube:progress', listener);
+    return () => ipcRenderer.removeListener('youtube:progress', listener);
+  }
+})
+
+contextBridge.exposeInMainWorld('tiktokAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('tiktok:get-info', url),
+  download: (options: any) => ipcRenderer.invoke('tiktok:download', options),
+  cancel: (id?: string) => ipcRenderer.invoke('tiktok:cancel', id),
+  getHistory: () => ipcRenderer.invoke('tiktok:get-history'),
+  clearHistory: () => ipcRenderer.invoke('tiktok:clear-history'),
+  removeFromHistory: (id: string) => ipcRenderer.invoke('tiktok:remove-from-history', id),
+  getSettings: () => ipcRenderer.invoke('tiktok:get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('tiktok:save-settings', settings),
+  chooseFolder: () => ipcRenderer.invoke('tiktok:choose-folder'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('tiktok:progress', listener);
+    return () => ipcRenderer.removeListener('tiktok:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
+
+contextBridge.exposeInMainWorld('universalAPI', {
+  getInfo: (url: string) => ipcRenderer.invoke('universal:get-info', url),
+  download: (options: any) => ipcRenderer.invoke('universal:download', options),
+  cancel: (id?: string) => ipcRenderer.invoke('universal:cancel', id),
+  getHistory: () => ipcRenderer.invoke('universal:get-history'),
+  clearHistory: () => ipcRenderer.invoke('universal:clear-history'),
+  removeFromHistory: (id: string) => ipcRenderer.invoke('universal:remove-from-history', id),
+  getSettings: () => ipcRenderer.invoke('universal:get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('universal:save-settings', settings),
+  chooseFolder: () => ipcRenderer.invoke('universal:choose-folder'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('universal:progress', listener);
+    return () => ipcRenderer.removeListener('universal:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+  checkDiskSpace: (path?: string) => ipcRenderer.invoke('universal:check-disk-space', path),
+  getQueue: () => ipcRenderer.invoke('universal:get-queue'),
+  pause: (id: string) => ipcRenderer.invoke('universal:pause', id),
+  resume: (id: string) => ipcRenderer.invoke('universal:resume', id),
+  reorderQueue: (id: string, newIndex: number) => ipcRenderer.invoke('universal:reorder-queue', id, newIndex),
+  retry: (id: string) => ipcRenderer.invoke('universal:retry', id),
+  getPendingCount: () => ipcRenderer.invoke('universal:get-pending-count'),
+  resumePending: () => ipcRenderer.invoke('universal:resume-pending'),
+  clearPending: () => ipcRenderer.invoke('universal:clear-pending'),
+  getErrorLog: (limit?: number) => ipcRenderer.invoke('universal:get-error-log', limit),
+  exportErrorLog: (format: 'json' | 'csv' | 'txt') => ipcRenderer.invoke('universal:export-error-log', format),
+  getErrorStats: () => ipcRenderer.invoke('universal:get-error-stats'),
+  clearErrorLog: (type: 'all' | 'resolved') => ipcRenderer.invoke('universal:clear-error-log', type),
+})
+
+
+
+
+contextBridge.exposeInMainWorld('audioAPI', {
+  getInfo: (filePath: string) => ipcRenderer.invoke('audio:get-info', filePath),
+  extract: (options: any) => ipcRenderer.invoke('audio:extract', options),
+  cancel: (id: string) => ipcRenderer.invoke('audio:cancel', id),
+  cancelAll: () => ipcRenderer.invoke('audio:cancel-all'),
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  chooseInputFiles: () => ipcRenderer.invoke('audio:choose-input-files'),
+  chooseOutputFolder: () => ipcRenderer.invoke('audio:choose-output-folder'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('audio:progress', listener);
+    return () => ipcRenderer.removeListener('audio:progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
+
+contextBridge.exposeInMainWorld('videoMergerAPI', {
+  getVideoInfo: (filePath: string) => ipcRenderer.invoke('video-merger:get-info', filePath),
+  generateThumbnail: (filePath: string, time: number) => ipcRenderer.invoke('video-merger:generate-thumbnail', filePath, time),
+  generateFilmstrip: (filePath: string, duration: number, count?: number) => ipcRenderer.invoke('video-filmstrip:generate', filePath, duration, count),
+  extractWaveform: (filePath: string) => ipcRenderer.invoke('video-merger:extract-waveform', filePath),
+  merge: (options: any) => ipcRenderer.invoke('video-merger:merge', options),
+  createFromImages: (options: any) => ipcRenderer.invoke('video-merger:create-from-images', options),
+  cancel: (id: string) => ipcRenderer.invoke('video-merger:cancel', id),
+  chooseInputFiles: () => ipcRenderer.invoke('video-merger:choose-files'),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-merger:progress', listener);
+    return () => ipcRenderer.removeListener('video-merger:progress', listener);
+  },
+  onFilmstripProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('filmstrip-progress', listener);
+    return () => ipcRenderer.removeListener('filmstrip-progress', listener);
+  },
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
+
+contextBridge.exposeInMainWorld('audioManagerAPI', {
+  getAudioInfo: (filePath: string) => ipcRenderer.invoke('audio-manager:get-info', filePath),
+  apply: (options: any) => ipcRenderer.invoke('audio-manager:apply', options),
+  cancel: (id: string) => ipcRenderer.invoke('audio-manager:cancel', id),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('audio-manager:progress', listener);
+    return () => ipcRenderer.removeListener('audio-manager:progress', listener);
+  },
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  chooseInputFiles: () => ipcRenderer.invoke('audio:choose-input-files'),
+})
+
+contextBridge.exposeInMainWorld('videoTrimmerAPI', {
+  process: (options: any) => ipcRenderer.invoke('video-trimmer:process', options),
+  cancel: (id: string) => ipcRenderer.invoke('video-trimmer:cancel', id),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-trimmer:progress', listener);
+    return () => ipcRenderer.removeListener('video-trimmer:progress', listener);
+  },
+})
+contextBridge.exposeInMainWorld('videoEffectsAPI', {
+  apply: (options: any) => ipcRenderer.invoke('video-effects:apply', options),
+  cancel: (id: string) => ipcRenderer.send('video-effects:cancel', id),
+  getInfo: (filePath: string) => ipcRenderer.invoke('video-effects:get-info', filePath),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-effects:progress', listener);
+    return () => ipcRenderer.removeListener('video-effects:progress', listener);
+  },
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
+
+contextBridge.exposeInMainWorld('downloadAPI', {
+  getHistory: () => ipcRenderer.invoke('download:get-history'),
+  getSettings: () => ipcRenderer.invoke('download:get-settings'),
+  saveSettings: (settings: any) => ipcRenderer.invoke('download:save-settings', settings),
+  create: (options: any) => ipcRenderer.invoke('download:create', options),
+  start: (taskId: string) => ipcRenderer.invoke('download:start', taskId),
+  pause: (taskId: string) => ipcRenderer.invoke('download:pause', taskId),
+  resume: (taskId: string) => ipcRenderer.invoke('download:resume', taskId),
+  cancel: (taskId: string) => ipcRenderer.invoke('download:cancel', taskId),
+  openFolder: (filePath: string) => ipcRenderer.invoke('download:open-folder', filePath),
+  clearHistory: () => ipcRenderer.invoke('download:clear-history'),
+  saveHistory: (history: any[]) => ipcRenderer.invoke('download:save-history', history),
+  reorder: (startIndex: number, endIndex: number) => ipcRenderer.invoke('download:reorder', { startIndex, endIndex }),
+  verifyChecksum: (taskId: string) => ipcRenderer.invoke('download:verify-checksum', taskId),
+  onProgress: (taskId: string, callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on(`download:progress:${taskId}`, listener);
+    return () => ipcRenderer.removeListener(`download:progress:${taskId}`, listener);
+  },
+  onAnyProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('download:any-progress', listener);
+    return () => ipcRenderer.removeListener('download:any-progress', listener);
+  },
+  onStarted: (callback: (task: any) => void) => {
+    const listener = (_event: any, task: any) => callback(task);
+    ipcRenderer.on('download:task-started', listener);
+    return () => ipcRenderer.removeListener('download:task-started', listener);
+  },
+  onCompleted: (callback: (task: any) => void) => {
+    const listener = (_event: any, task: any) => callback(task);
+    ipcRenderer.on('download:task-completed', listener);
+    return () => ipcRenderer.removeListener('download:task-completed', listener);
+  }
+})
+
+contextBridge.exposeInMainWorld('pluginAPI', {
+  getAvailablePlugins: () => ipcRenderer.invoke('plugins:get-available'),
+  getInstalledPlugins: () => ipcRenderer.invoke('plugins:get-installed'),
+  installPlugin: (pluginId: string) => ipcRenderer.invoke('plugins:install', pluginId),
+  uninstallPlugin: (pluginId: string) => ipcRenderer.invoke('plugins:uninstall', pluginId),
+  togglePlugin: (pluginId: string, active: boolean) => ipcRenderer.invoke('plugins:toggle', pluginId, active),
+  onPluginProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('plugins:progress', listener);
+    return () => ipcRenderer.removeListener('plugins:progress', listener);
+  },
+  updateRegistry: () => ipcRenderer.invoke('plugins:update-registry'),
+})
+
+contextBridge.exposeInMainWorld('videoCompressorAPI', {
+  getInfo: (filePath: string) => ipcRenderer.invoke('video-compressor:get-info', filePath),
+  generateThumbnail: (filePath: string) => ipcRenderer.invoke('video-compressor:generate-thumbnail', filePath),
+  compress: (options: any) => ipcRenderer.invoke('video-compressor:compress', options),
+  cancel: (id: string) => ipcRenderer.invoke('video-compressor:cancel', id),
+  onProgress: (callback: (progress: any) => void) => {
+    const listener = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('video-compressor:progress', listener);
+    return () => ipcRenderer.removeListener('video-compressor:progress', listener);
+  },
+  chooseInputFile: () => ipcRenderer.invoke('audio:choose-input-file'),
+  openFile: (path: string) => ipcRenderer.invoke('universal:open-file', path),
+  showInFolder: (path: string) => ipcRenderer.invoke('universal:show-in-folder', path),
+})
