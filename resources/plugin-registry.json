@@ -19,12 +19,12 @@
         "binary": [
           {
             "name": "yt-dlp",
-            "version": "2024.12.06",
+            "version": "2025.12.08",
             "size": 52428800,
             "platforms": {
               "win32": {
-                "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp.exe",
-                "checksum": "8902d334578902d334578902d334578902d334578902d334578902d334578902"
+                "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp.exe",
+                "checksum": "86c3280caa696b567c917ac138bbe0d17e45dc2b329f67562302ee4c3973a06f"
               },
               "darwin": {
                 "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2024.12.06/yt-dlp_macos",
@@ -47,7 +47,7 @@
       },
       "minAppVersion": "1.0.0",
       "platforms": ["win32", "darwin", "linux"],
-      "downloadUrl": "https://github.com/chithien0909/devtools-plugins/releases/download/v2.0.0/universal-downloader.zip",
+      "downloadUrl": "...",
       "checksum": "c902d334578902d334578902d334578902d334578902d334578902d334578902",
       "verified": true,
       "downloads": 52400,

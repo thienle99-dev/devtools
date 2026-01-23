@@ -455,11 +455,17 @@ export class PluginManager {
         continue;
       }
 
-      const binaryPath = path.join(this.binariesDir, dep.name);
+      // Determine correct filename/extension
+      let binaryName = dep.name;
+      if (platform === 'win32' && !binaryName.endsWith('.exe')) {
+        binaryName += '.exe';
+      }
+
+      const binaryPath = path.join(this.binariesDir, binaryName);
 
       // Check if already installed
       if (await this.fileExists(binaryPath)) {
-        console.log(`[PluginManager] Binary ${dep.name} already exists`);
+        console.log(`[PluginManager] Binary ${binaryName} already exists`);
         continue;
       }
 
@@ -470,15 +476,31 @@ export class PluginManager {
         message: `Installing ${dep.name}...`
       });
 
-      // Download binary
-      const tempPath = path.join(app.getPath('temp'), `${dep.name}.zip`);
+      // Determine download type (Zip or direct binary)
+      const isZip = platformInfo.url.toLowerCase().endsWith('.zip');
+      const tempFileName = isZip ? `${dep.name}.zip` : binaryName;
+      const tempPath = path.join(app.getPath('temp'), tempFileName);
+
+      // Download
       await this.downloadFile(platformInfo.url, tempPath);
 
       // Verify checksum
-      await this.verifyChecksum(tempPath, platformInfo.checksum);
+      try {
+        await this.verifyChecksum(tempPath, platformInfo.checksum);
+      } catch (err) {
+        // Cleanup temp file if checksum fails
+        await fsp.unlink(tempPath).catch(() => { });
+        throw err;
+      }
 
-      // Extract
-      await this.extractZip(tempPath, this.binariesDir);
+      // Install
+      if (isZip) {
+        await this.extractZip(tempPath, this.binariesDir);
+      } else {
+        // Move direct binary
+        // Copy then unlink is safer across partitions than rename
+        await fsp.copyFile(tempPath, binaryPath);
+      }
 
       // Make executable (Unix systems)
       if (platform !== 'win32') {
@@ -546,6 +568,42 @@ export class PluginManager {
     onProgress?: (percent: number) => void
   ): Promise<string> {
     console.log(`[PluginManager] Downloading from ${url} to ${destination}`);
+
+    // Handle local file URLs
+    if (url.startsWith('file://')) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const srcPath = url.replace('file://', '');
+          // Remove leading slash on Windows if it looks like /C:/...
+          const normalizedSrc = process.platform === 'win32' && srcPath.startsWith('/') && srcPath.includes(':')
+            ? srcPath.substring(1)
+            : srcPath;
+
+          const totalSize = (await fsp.stat(normalizedSrc)).size;
+          let copiedSize = 0;
+
+          const readStream = fs.createReadStream(normalizedSrc);
+          const writeStream = fs.createWriteStream(destination);
+
+          readStream.on('data', (chunk) => {
+            copiedSize += chunk.length;
+            if (totalSize > 0) {
+              const percent = Math.round((copiedSize / totalSize) * 100);
+              onProgress?.(percent);
+            }
+          });
+
+          readStream.pipe(writeStream);
+
+          writeStream.on('finish', () => resolve(destination));
+          writeStream.on('error', reject);
+          readStream.on('error', reject);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
     const response = await axios({
       method: 'GET',
       url,
@@ -660,7 +718,13 @@ export class PluginManager {
   }
 
   getBinaryPath(binaryName: string): string {
-    return path.join(this.binariesDir, binaryName);
+    const p = path.join(this.binariesDir, binaryName);
+    if (process.platform === 'win32' && !binaryName.endsWith('.exe')) {
+      // If direct match doesn't exist, try adding .exe
+      if (fs.existsSync(p)) return p;
+      return p + '.exe';
+    }
+    return p;
   }
 
   async togglePlugin(pluginId: string, active: boolean): Promise<void> {

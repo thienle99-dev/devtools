@@ -2885,6 +2885,66 @@ var UniversalDownloader = class {
 		if (u.includes("vimeo.com")) return "other";
 		return "other";
 	}
+	normalizeQualityLabel(value) {
+		if (value === void 0 || value === null) return null;
+		if (typeof value === "number") {
+			if (!Number.isFinite(value) || value <= 0) return null;
+			return `${Math.round(value)}p`;
+		}
+		const raw = value.toString().trim().toLowerCase();
+		if (!raw) return null;
+		const resolutionMatch = raw.match(/x(\d{3,4})/i);
+		if (resolutionMatch?.[1]) return `${resolutionMatch[1]}p`;
+		const directMatch = raw.match(/(\d{3,4})p/);
+		if (directMatch?.[1]) return `${directMatch[1]}p`;
+		const numberMatch = raw.match(/(\d{3,4})/);
+		if (numberMatch?.[1]) return `${numberMatch[1]}p`;
+		return null;
+	}
+	extractAvailableQualities(info) {
+		const formatCollections = [];
+		if (Array.isArray(info?.formats)) formatCollections.push(info.formats);
+		if (Array.isArray(info?.requested_formats)) formatCollections.push(info.requested_formats);
+		if (Array.isArray(info?.entries)) info.entries.forEach((entry) => {
+			if (Array.isArray(entry?.formats)) formatCollections.push(entry.formats);
+			else if (Array.isArray(entry?.requested_formats)) formatCollections.push(entry.requested_formats);
+		});
+		const addQuality = (candidate, set) => {
+			const normalized = this.normalizeQualityLabel(candidate);
+			if (normalized) set.add(normalized);
+		};
+		const looksLikeVideo = (fmt) => {
+			if (!fmt || typeof fmt !== "object") return false;
+			if (fmt.vcodec && fmt.vcodec !== "none") return true;
+			if (fmt.video_ext && fmt.video_ext !== "none") return true;
+			if (typeof fmt.height === "number" && fmt.height > 0) return true;
+			if (typeof fmt.width === "number" && fmt.width > 0) return true;
+			if (typeof fmt.resolution === "string" && /\d+x\d+/i.test(fmt.resolution)) return true;
+			if (typeof fmt.format_note === "string" && /(\d{3,4})/i.test(fmt.format_note)) return true;
+			return false;
+		};
+		const qualitySet = /* @__PURE__ */ new Set();
+		formatCollections.forEach((formats) => {
+			formats.forEach((fmt) => {
+				if (!looksLikeVideo(fmt)) return;
+				addQuality(fmt.height, qualitySet);
+				addQuality(fmt.quality, qualitySet);
+				addQuality(fmt.format_note, qualitySet);
+				addQuality(fmt.resolution, qualitySet);
+				addQuality(fmt.format, qualitySet);
+			});
+		});
+		if (qualitySet.size === 0) {
+			addQuality(info?.height, qualitySet);
+			addQuality(info?.quality, qualitySet);
+			addQuality(info?.format_note, qualitySet);
+			addQuality(info?.resolution, qualitySet);
+		}
+		return Array.from(qualitySet).sort((a, b) => {
+			const heightA = parseInt(a, 10) || 0;
+			return (parseInt(b, 10) || 0) - heightA;
+		});
+	}
 	async getMediaInfo(url) {
 		await this.ensureInitialized();
 		try {
@@ -2946,27 +3006,7 @@ var UniversalDownloader = class {
 			const platform = this.detectPlatform(url, info.extractor);
 			const isPlaylist = info._type === "playlist" || !!info.entries || info._type === "multi_video";
 			const hasPlaylistContext = hasPlaylistId || !!info.playlist_id;
-			const availableQualities = [];
-			const formatsSource = isPlaylist && info.entries && info.entries[0] ? info.entries[0].formats : info.formats;
-			if (formatsSource && Array.isArray(formatsSource)) {
-				const qualitySet = /* @__PURE__ */ new Set();
-				formatsSource.forEach((fmt) => {
-					if (fmt.vcodec && fmt.vcodec !== "none") {
-						if (fmt.height) qualitySet.add(`${fmt.height}p`);
-						else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) qualitySet.add(fmt.format_note);
-						else if (fmt.resolution && /^\d+x\d+$/.test(fmt.resolution)) {
-							const h = fmt.resolution.split("x")[1];
-							qualitySet.add(`${h}p`);
-						}
-					}
-				});
-				if (qualitySet.size === 0 && info.height) qualitySet.add(`${info.height}p`);
-				const sortedQualities = Array.from(qualitySet).sort((a, b) => {
-					const hA = parseInt(a);
-					return parseInt(b) - hA;
-				});
-				availableQualities.push(...sortedQualities);
-			}
+			const availableQualities = this.extractAvailableQualities(info);
 			const playlistVideos = isPlaylist && info.entries ? info.entries.map((entry) => ({
 				id: entry.id,
 				title: entry.title,
@@ -3674,9 +3714,11 @@ var PluginManager = class {
 				console.warn(`[PluginManager] Binary ${dep.name} not available for ${platform}`);
 				continue;
 			}
-			const binaryPath = path$1.join(this.binariesDir, dep.name);
+			let binaryName = dep.name;
+			if (platform === "win32" && !binaryName.endsWith(".exe")) binaryName += ".exe";
+			const binaryPath = path$1.join(this.binariesDir, binaryName);
 			if (await this.fileExists(binaryPath)) {
-				console.log(`[PluginManager] Binary ${dep.name} already exists`);
+				console.log(`[PluginManager] Binary ${binaryName} already exists`);
 				continue;
 			}
 			const basePercent = 70 + i / dependencies.length * 20;
@@ -3685,10 +3727,18 @@ var PluginManager = class {
 				percent: basePercent,
 				message: `Installing ${dep.name}...`
 			});
-			const tempPath = path$1.join(app.getPath("temp"), `${dep.name}.zip`);
+			const isZip = platformInfo.url.toLowerCase().endsWith(".zip");
+			const tempFileName = isZip ? `${dep.name}.zip` : binaryName;
+			const tempPath = path$1.join(app.getPath("temp"), tempFileName);
 			await this.downloadFile(platformInfo.url, tempPath);
-			await this.verifyChecksum(tempPath, platformInfo.checksum);
-			await this.extractZip(tempPath, this.binariesDir);
+			try {
+				await this.verifyChecksum(tempPath, platformInfo.checksum);
+			} catch (err) {
+				await fsp.unlink(tempPath).catch(() => {});
+				throw err;
+			}
+			if (isZip) await this.extractZip(tempPath, this.binariesDir);
+			else await fsp.copyFile(tempPath, binaryPath);
 			if (platform !== "win32") await fsp.chmod(binaryPath, 493);
 			await fsp.unlink(tempPath).catch(() => {});
 			console.log(`[PluginManager] Binary installed: ${dep.name}`);
@@ -3724,6 +3774,29 @@ var PluginManager = class {
 	}
 	async downloadFile(url, destination, onProgress) {
 		console.log(`[PluginManager] Downloading from ${url} to ${destination}`);
+		if (url.startsWith("file://")) return new Promise(async (resolve, reject) => {
+			try {
+				const srcPath = url.replace("file://", "");
+				const normalizedSrc = process.platform === "win32" && srcPath.startsWith("/") && srcPath.includes(":") ? srcPath.substring(1) : srcPath;
+				const totalSize$1 = (await fsp.stat(normalizedSrc)).size;
+				let copiedSize = 0;
+				const readStream = fs$1.createReadStream(normalizedSrc);
+				const writeStream = fs$1.createWriteStream(destination);
+				readStream.on("data", (chunk) => {
+					copiedSize += chunk.length;
+					if (totalSize$1 > 0) {
+						const percent = Math.round(copiedSize / totalSize$1 * 100);
+						onProgress?.(percent);
+					}
+				});
+				readStream.pipe(writeStream);
+				writeStream.on("finish", () => resolve(destination));
+				writeStream.on("error", reject);
+				readStream.on("error", reject);
+			} catch (error) {
+				reject(error);
+			}
+		});
 		const response = await axios({
 			method: "GET",
 			url,
@@ -3802,7 +3875,12 @@ var PluginManager = class {
 		return this.loadedPlugins.get(pluginId);
 	}
 	getBinaryPath(binaryName) {
-		return path$1.join(this.binariesDir, binaryName);
+		const p = path$1.join(this.binariesDir, binaryName);
+		if (process.platform === "win32" && !binaryName.endsWith(".exe")) {
+			if (fs$1.existsSync(p)) return p;
+			return p + ".exe";
+		}
+		return p;
 	}
 	async togglePlugin(pluginId, active) {
 		const installed = this.store.get("installed");
