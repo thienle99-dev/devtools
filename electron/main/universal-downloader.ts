@@ -390,6 +390,101 @@ export class UniversalDownloader {
         return 'other';
     }
 
+    private normalizeQualityLabel(value: string | number | null | undefined): string | null {
+        if (value === undefined || value === null) return null;
+
+        if (typeof value === 'number') {
+            if (!Number.isFinite(value) || value <= 0) return null;
+            return `${Math.round(value)}p`;
+        }
+
+        const raw = value.toString().trim().toLowerCase();
+        if (!raw) return null;
+
+        const resolutionMatch = raw.match(/x(\d{3,4})/i);
+        if (resolutionMatch?.[1]) {
+            return `${resolutionMatch[1]}p`;
+        }
+
+        const directMatch = raw.match(/(\d{3,4})p/);
+        if (directMatch?.[1]) {
+            return `${directMatch[1]}p`;
+        }
+
+        const numberMatch = raw.match(/(\d{3,4})/);
+        if (numberMatch?.[1]) {
+            return `${numberMatch[1]}p`;
+        }
+
+        return null;
+    }
+
+    private extractAvailableQualities(info: any): string[] {
+        const formatCollections: any[][] = [];
+
+        if (Array.isArray(info?.formats)) {
+            formatCollections.push(info.formats);
+        }
+
+        if (Array.isArray(info?.requested_formats)) {
+            formatCollections.push(info.requested_formats);
+        }
+
+        if (Array.isArray(info?.entries)) {
+            info.entries.forEach((entry: any) => {
+                if (Array.isArray(entry?.formats)) {
+                    formatCollections.push(entry.formats);
+                } else if (Array.isArray(entry?.requested_formats)) {
+                    formatCollections.push(entry.requested_formats);
+                }
+            });
+        }
+
+        const addQuality = (candidate: string | number | null | undefined, set: Set<string>) => {
+            const normalized = this.normalizeQualityLabel(candidate);
+            if (normalized) {
+                set.add(normalized);
+            }
+        };
+
+        const looksLikeVideo = (fmt: any): boolean => {
+            if (!fmt || typeof fmt !== 'object') return false;
+            if (fmt.vcodec && fmt.vcodec !== 'none') return true;
+            if (fmt.video_ext && fmt.video_ext !== 'none') return true;
+            if (typeof fmt.height === 'number' && fmt.height > 0) return true;
+            if (typeof fmt.width === 'number' && fmt.width > 0) return true;
+            if (typeof fmt.resolution === 'string' && /\d+x\d+/i.test(fmt.resolution)) return true;
+            if (typeof fmt.format_note === 'string' && /(\d{3,4})/i.test(fmt.format_note)) return true;
+            return false;
+        };
+
+        const qualitySet = new Set<string>();
+
+        formatCollections.forEach(formats => {
+            formats.forEach(fmt => {
+                if (!looksLikeVideo(fmt)) return;
+                addQuality(fmt.height, qualitySet);
+                addQuality(fmt.quality, qualitySet);
+                addQuality(fmt.format_note, qualitySet);
+                addQuality(fmt.resolution, qualitySet);
+                addQuality(fmt.format, qualitySet);
+            });
+        });
+
+        if (qualitySet.size === 0) {
+            addQuality(info?.height, qualitySet);
+            addQuality(info?.quality, qualitySet);
+            addQuality(info?.format_note, qualitySet);
+            addQuality(info?.resolution, qualitySet);
+        }
+
+        return Array.from(qualitySet).sort((a, b) => {
+            const heightA = parseInt(a, 10) || 0;
+            const heightB = parseInt(b, 10) || 0;
+            return heightB - heightA;
+        });
+    }
+
     async getMediaInfo(url: string): Promise<UniversalMediaInfo> {
         await this.ensureInitialized();
 
@@ -464,41 +559,7 @@ export class UniversalDownloader {
             // If it's not a playlist but the URL has a list ID, it might be a "watch & list" link
             const hasPlaylistContext = hasPlaylistId || !!info.playlist_id;
 
-            // Extract available video qualities
-            const availableQualities: string[] = [];
-
-            // If it's a playlist mode, get formats from first entry. Otherwise from root.
-            const formatsSource = (isPlaylist && info.entries && info.entries[0]) ? info.entries[0].formats : info.formats;
-
-            if (formatsSource && Array.isArray(formatsSource)) {
-                const qualitySet = new Set<string>();
-                formatsSource.forEach((fmt: any) => {
-                    // More robust video detection: check vcodec OR dimensions
-                    const isVideo = (fmt.vcodec && fmt.vcodec !== 'none') || (fmt.height && fmt.height > 0) || (fmt.width && fmt.width > 0);
-
-                    if (isVideo) {
-                        if (fmt.height) {
-                            qualitySet.add(`${fmt.height}p`);
-                        } else if (fmt.format_note && /^\d+p$/.test(fmt.format_note)) {
-                            qualitySet.add(fmt.format_note);
-                        } else if (fmt.resolution && /^\d+x\d+$/.test(fmt.resolution)) {
-                            const h = fmt.resolution.split('x')[1];
-                            qualitySet.add(`${h}p`);
-                        }
-                    }
-                });
-                // If it's a direct file or no standard qualities found, check if info itself has resolution
-                if (qualitySet.size === 0 && info.height) {
-                    qualitySet.add(`${info.height}p`);
-                }
-
-                const sortedQualities = Array.from(qualitySet).sort((a, b) => {
-                    const hA = parseInt(a);
-                    const hB = parseInt(b);
-                    return hB - hA;
-                });
-                availableQualities.push(...sortedQualities);
-            }
+            const availableQualities = this.extractAvailableQualities(info);
 
             // Playlist videos
             const playlistVideos = isPlaylist && info.entries ? info.entries.map((entry: any) => ({
